@@ -18,8 +18,8 @@
 #include<Eigen/StdVector>
 #include <opencv2/opencv.hpp>
 #include <tbb/concurrent_vector.h>
-
-#include "util/settings.h"
+#include <sophus/se3.hpp>
+//#include "util/settings.h"
 //#define PYR_LEVELS 3
 
 namespace cvo{
@@ -40,7 +40,7 @@ namespace cvo{
 
 
   typedef Sophus::SE3d SE3;
-  typedef Sophus::Sim3d Sim3;
+  //typedef Sophus::Sim3d Sim3;
   typedef Sophus::SO3d SO3;
 
 
@@ -155,7 +155,7 @@ namespace cvo{
   typedef std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> ArrayVec3f;
   typedef ArrayVec3f cloud_t;
   typedef Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> MatrixXf_row;
-  
+  /*  
   struct frame{
 
     int frame_id;
@@ -190,7 +190,7 @@ namespace cvo{
     // 7. cyclist 8. signate 9. fence 10. pole
 
   };
-
+  */
 
 
 }

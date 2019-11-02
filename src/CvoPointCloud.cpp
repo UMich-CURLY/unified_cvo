@@ -7,5 +7,9 @@ namespace cvo{
     
     
   }
+  CvoPointCloud::~CvoPointCloud() {
+    
+    
+  }
   
 }

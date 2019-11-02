@@ -9,7 +9,7 @@
 #include <pcl/point_cloud.h>
 #include <opencv2/opencv.hpp>
 
-#include "utils/data_types.hpp"
+#include "utils/data_type.hpp"
 #include "Frame.hpp"
 
 namespace cvo {
@@ -23,15 +23,15 @@ namespace cvo {
     // interfacing with outside
     void add_new_frame(std::shared_ptr<Frame> new_frame);
 
-    void write_trajectory(std::string filename);
+    //void write_trajectory(std::string filename);
 
     void optimize();
     
   private:
     std::list<std::shared_ptr<Frame>> frames;
-    NonlinearFactorGraph factor_graph;
+    gtsam::NonlinearFactorGraph factor_graph;
     
     
-  }
+  };
   
 }

@@ -16,9 +16,10 @@ namespace cvo{
                          int num_semantic_class,
                          std::vector<float> & left_semantics);
     
-    /*
+   
     int read_next_lidar_mono(cv::Mat & image,
                              pcl::PointCloud<pcl::PointXYZ>::Ptr pc  );
+    /*
     int read_next_lidar_mono(cv::Mat & image,
                              std::vector<float> & semantics,
                              pcl::PointCloud<pcl::PointXYZ>::Ptr pc  );
@@ -34,6 +35,6 @@ namespace cvo{
     std::ifstream infile;
 
     bool debug_plot;
-  }
+  };
   
 }

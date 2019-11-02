@@ -36,7 +36,7 @@ namespace cvo {
     CvoPointCloud points;
 
     //std::unique_ptr local_map;
-    std::unique_ptr<RawImage> raw_image;
+    RawImage raw_image;
     
   };
 

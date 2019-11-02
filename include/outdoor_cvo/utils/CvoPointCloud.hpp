@@ -1,9 +1,7 @@
 #pragma once
-#include "utils/data_types.hpp"
+#include "utils/data_type.hpp"
 namespace cvo {
 
-  typedef std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> ArrayVec3f;
-  typedef ArrayVec3f cloud_t;
 
   struct CvoPointCloud{
     //public:
@@ -17,13 +15,10 @@ namespace cvo {
                   const cv::Mat & semantic_left_img);
     ~CvoPointCloud();
     
-    const int num_points;
-    const int num_classes;
+    int num_points;
+    int num_classes;
     
-
-    //typedef std::vector<Eigen::Vector3f> cloud_t;
     ArrayVec3f positions;  // points position. x,y,z
-    //Eigen::Matrix<float, Eigen::Dynamic, 5> features;   // features are rgb dx dy
     Eigen::Matrix<float, Eigen::Dynamic, 5> features;   // rgb, gradient
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> labels; // number of points by number of classes  
     // 0. building 1. sky 2. road

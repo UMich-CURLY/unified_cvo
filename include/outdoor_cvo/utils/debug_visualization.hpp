@@ -9,7 +9,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
-
+#include "utils/data_type.hpp"
 namespace cvo {
 
 
