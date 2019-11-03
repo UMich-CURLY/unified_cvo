@@ -1,13 +1,13 @@
 #include "utils/StaticStereo.hpp"
 
 namespace cvo{
-  static StaticStereo::TraceStatus StaticStereo::trace_stereo(const cv::Mat & left,
-                                                              const cv::Mat & right,
-                                                              const Mat33f & intrinsic,
-                                                              const float baseline, // left->right < 0, right->left > 0
-                                                              const pair<float, float> & input
-                                                              pair<float, float> & result
-                                                              ) const  {
+  StaticStereo::TraceStatus StaticStereo::trace_stereo(const cv::Mat & left,
+                                                       const cv::Mat & right,
+                                                       const Mat33f & intrinsic,
+                                                       const float baseline, // left->right < 0, right->left > 0
+                                                       const pair<float, float> & input
+                                                       pair<float, float> & result
+                                                       ) const  {
     Vec3f bl;
     bl << baseline, 0, 0;
     float u_stereo = input.first;

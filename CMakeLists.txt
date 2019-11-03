@@ -75,3 +75,6 @@ target_link_libraries(mapping)
 add_executable(cvo_kitti_color_stereo ${PROJECT_SOURCE_DIR}/src/main_kitti_stereo_color.cpp )
 target_link_libraries(cvo_kitti_color_stereo cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES}  )
 
+add_executable(cvo_align ${PROJECT_SOURCE_DIR}/src/main_cvo_align.cpp )
+target_link_libraries(cvo_align cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES}  )
+
