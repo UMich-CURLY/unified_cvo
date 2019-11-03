@@ -1,4 +1,6 @@
 build/
+test_data/
+*.pcd
 
 # Prerequisites
 *.d

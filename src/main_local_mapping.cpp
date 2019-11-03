@@ -6,11 +6,71 @@
 #include <fstream>
 #include <cmath>
 #include <boost/filesystem.hpp>
+#include <pcl/io/pcd_io.h>
+#include <pcl/common/transforms.h>
 #include "utils/CvoPointCloud.hpp"
+#include "mapping/bkioctomap.h"
+
 using namespace std;
 using namespace boost::filesystem;
 
+typedef Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> MatrixXf_row;
 
+int load_cvo_pointcloud(const cvo::CvoPointCloud& pc, semantic_bki::PCLPointCloud& cloud) {
+  for (int i = 0; i < pc.num_points(); ++i) {
+    pcl::PointXYZL point;
+    point.x = pc.positions()[i][0];
+    point.y = pc.positions()[i][1];
+    point.z = pc.positions()[i][2];
+    int pix_label;
+    pc.labels().row(i).maxCoeff(&pix_label);
+    point.label = pix_label + 1;
+    cloud.push_back(point);
+  }
+}
+
+bool read_camera_poses(const std::string camera_pose_name, Eigen::MatrixXf& camera_poses) {
+  if (std::ifstream(camera_pose_name)) {
+    std::vector<std::vector<float>> camera_poses_v;
+    std::ifstream fPoses;
+    fPoses.open(camera_pose_name.c_str());
+    int counter = 0;
+    while (!fPoses.eof()) {
+      std::vector<float> camera_pose_v;
+      std::string s;
+      std::getline(fPoses, s);
+      if (!s.empty()) {
+        std::stringstream ss;
+        ss << s;
+        float t;
+        for (int i = 0; i < 12; ++i) {
+          ss >> t;
+          camera_pose_v.push_back(t);
+        }
+        camera_poses_v.push_back(camera_pose_v);
+        counter++;
+      }
+    }
+    fPoses.close();
+    camera_poses.resize(counter, 12);
+    for (int c = 0; c < counter; ++c) {
+      for (int i = 0; i < 12; ++i)
+        camera_poses(c, i) = camera_poses_v[c][i];
+    }
+    return true;
+ } else {
+   std::cout << "Cannot open camera pose file " << camera_pose_name << std::endl;
+   return false;
+ }
+}
+
+Eigen::Matrix4f get_current_pose(const Eigen::MatrixXf& camera_poses, const int scan_id) {
+  Eigen::VectorXf curr_pose_v = camera_poses.row(scan_id);
+  Eigen::MatrixXf curr_pose = Eigen::Map<MatrixXf_row>(curr_pose_v.data(), 3, 4);
+  Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+  transform.block(0, 0, 3, 4) = curr_pose;
+  return transform;
+}
 
 int main(int argc, char *argv[]) {
   // list all files in current directory.
@@ -24,7 +84,8 @@ int main(int argc, char *argv[]) {
   
   
   path p (argv[1] );
-  std::ofstream output_file(argv[2]);
+  //std::ofstream output_file(argv[2]);
+  std::string output_file(argv[2]);
   int start_frame = stoi(argv[3]);
   int num_frames = stoi(argv[4]);
   
@@ -32,8 +93,7 @@ int main(int argc, char *argv[]) {
   vector<string> files;
   // cycle through the directory
   int total_num = 0;
-  for(auto & p : boost::filesystem::directory_iterator( p ) )
-  {
+  for(auto & p : boost::filesystem::directory_iterator( p ) ) {
     // If it's not a directory, list it. If you want to list directories too, just remove this check.
     if (is_regular_file(p.path())) {
       // assign current file name to current_file and echo it out to the console.
@@ -45,51 +105,69 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  std::cout<<"Just read file names\n";
-  //sort(files.begin(), files.end());
-  //vector<vector<dso::CvoTrackingPoints> > all_pts(files.size());
-  //vector<vector<dso::CvoTrackingPoints>> downsampled(files.size());
+  
+  // Mapping
+  // Set parameters
+  int block_depth = 4;
+  double sf2 = 1.0;
+  double ell = 1.0;
+  float prior = 1.0f;
+  float var_thresh = 1.0f;
+  double free_thresh = 0.3;
+  double occupied_thresh = 0.7;
+  double resolution = 0.1;
+  double free_resolution = 100;
+  double ds_resolution = -1;
+  int scan_num = 0;
+  double max_range = -1;
+
+  // Read camera poses
+  Eigen::MatrixXf camera_poses;
+  std::string camera_pose_file = string(argv[1]) + "/" + "poses.txt";
+  read_camera_poses(camera_pose_file, camera_poses);
+  
+  // Build map
   std::vector<cvo::CvoPointCloud> pc_vec(files.size());
+  semantic_bki::SemanticBKIOctoMap map_csm(resolution, 1, num_class, sf2, ell, prior, var_thresh, free_thresh, occupied_thresh);
+  std::cout<<"Just read file names\n";
   int i = 0;
-  for (auto &f:  files) {
-    std::cout<<"Reading "<<f<<std::endl;
-    //dso::read_cvo_pointcloud_from_file<dso::CvoTrackingPoints>(f, all_pts[i]);
+  for ( auto &f: files) {
+    std::cout << "Reading " << f << std::endl;
     pc_vec[i].read_cvo_pointcloud_from_file(f);
-    i ++;
+    semantic_bki::PCLPointCloud cloud;
+    load_cvo_pointcloud(pc_vec[i], cloud);
+
+    // transform point cloud
+    Eigen::Matrix4f transform = get_current_pose(camera_poses, i);
+    pcl::transformPointCloud (cloud, cloud, transform);
+    semantic_bki::point3f origin;
+    origin.x() = transform(0, 3);
+    origin.y() = transform(1, 3);
+    origin.z() = transform(2, 3);
+
+    // insert point cloud
+    map_csm.insert_pointcloud_csm(cloud, origin, ds_resolution, free_resolution, max_range);
+    std::cout << "Build map for " << i << std::endl;
+    ++i;
     if (i == num_frames) break;
   }
   std::cout<<"Just reading  names\n";
 
-  /*
-  cvo::rkhs_se3 cvo_align;
-  Eigen::Affine3f init_guess;
-  init_guess.matrix().setIdentity();
-  init_guess.matrix()(2, 3) = -0.75;
-
-  for (int i = start_frame; i< downsampled.size()-2 ; i++) {
-    if (i > start_frame)
-      init_guess = cvo_align.get_transform().inverse();
-    //    init_guess.matrix()(2,3) = -2.5;
-    //init_guess.setIdentity();
-    std::cout<<"\n=============================================\nat"<<i<<"\n iter";
-    cvo_align.set_pcd(downsampled[0+i], downsampled[1+i], init_guess, true);
-    cvo_align.align();
-    init_guess= cvo_align.get_accum_transform();
-    Eigen::Matrix4f result = init_guess.matrix();
-    std::cout<<"\n The inner product between "<<i <<" and "<< i+1 <<" is "<<cvo_align.inner_product()<<"\n";
-    std::cout<<"Transform is \n";
-    std::cout<<cvo_align.get_transform().matrix() <<"\n\n";
-     output_file << result(0,0)<<" "<<result(0,1)<<" "<<result(0,2)<<" "<<result(0,3)<<" "
-                <<result(1,0)<<" " <<result(1,1)<<" "<<result(1,2)<<" "<<result(1,3)<<" "
-                <<result(2,0)<<" " <<result(2,1)<<" "<<result(2,2)<<" "<<result(2,3);
-     //output_file << result.block<3,4>(0,0);
-    output_file<<"\n";
-    output_file<<std::flush;
-
+  // Query map
+  semantic_bki::PCLPointCloud query_cloud;
+  for (auto it = map_csm.begin_leaf(); it != map_csm.end_leaf(); ++it) {
+    if (it.get_node().get_state() == semantic_bki::State::OCCUPIED) {
+        semantic_bki::point3f p = it.get_loc();
+        int semantics = it.get_node().get_semantics();
+        pcl::PointXYZL point;
+        point.x = p.x();
+        point.y = p.y();
+        point.z = p.z();
+        point.label = semantics;
+        query_cloud.push_back(point);
+    }
   }
-  
-
-  output_file.close();
-  */
+  pcl::io::savePCDFileASCII(output_file, query_cloud);
+ 
   return 0;
 }
