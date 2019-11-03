@@ -19,6 +19,7 @@ int main(int argc, char ** argv) {
   for (int i = 0; i < total_iters; i++) {
     cv::Mat left, right;
     if (kitti.read_next_stereo(left, right) == 0) {
+      std::cout<<"construct new frame "<<i<<"\n"<<std::flush;
       std::shared_ptr<cvo::Frame> new_frame(new cvo::Frame(i, left, right));
       pose_graph.add_new_frame(new_frame);
       pose_graph.optimize();

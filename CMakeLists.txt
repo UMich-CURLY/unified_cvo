@@ -42,7 +42,17 @@ set(CVO_LIB_SOURCE
   ${PROJECT_SOURCE_DIR}/src/Frame.cpp
   ${PROJECT_SOURCE_DIR}/src/KittiHandler.cpp
   ${PROJECT_SOURCE_DIR}/src/PoseGraph.cpp
-)
+  ${PROJECT_SOURCE_DIR}/src/StaticStereo.cpp
+  )
+
+# thirdparty elas
+set(ELAS_LIB_SOURCE
+  ${PROJECT_SOURCE_DIR}/thirdparty/libelas/descriptor.cpp
+  ${PROJECT_SOURCE_DIR}/thirdparty/libelas/elas.cpp
+  ${PROJECT_SOURCE_DIR}/thirdparty/libelas/filter.cpp
+  ${PROJECT_SOURCE_DIR}/thirdparty/libelas/matrix.cpp
+  ${PROJECT_SOURCE_DIR}/thirdparty/libelas/triangle.cpp
+  )
 
 include_directories(
   ${PROJECT_SOURCE_DIR}/include/outdoor_cvo/
@@ -54,11 +64,17 @@ include_directories(
   ${CHOLMOD_INCLUDE_DIR}
   ${Sophus_INCLUDE_DIRS}
   ${GTSAM_INCLUDE_DIR}
+  # thirdparty
+  ${PROJECT_SOURCE_DIR}/thirdparty/
 ) 
 
 # compile main library.
+add_library(elas ${ELAS_LIB_SOURCE})
+
 add_library(cvo ${CVO_LIB_SOURCE})
-target_link_libraries(cvo ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARY_DIRS}  ${OpenCV_LIBS} gtsam)
+target_link_libraries(cvo elas ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARY_DIRS}  ${OpenCV_LIBS} gtsam)
+
+
 
 add_executable(cvo_kitti_color_stereo ${PROJECT_SOURCE_DIR}/src/main_kitti_stereo_color.cpp )
 target_link_libraries(cvo_kitti_color_stereo cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES}  )
