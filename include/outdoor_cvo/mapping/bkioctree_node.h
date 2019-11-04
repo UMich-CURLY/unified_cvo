@@ -47,6 +47,7 @@ namespace semantic_bki {
 
         /// Get probability of occupancy.
         void get_probs(std::vector<float>& probs) const;
+        void get_occupied_probs(std::vector<float>& probs) const;
 
         /// Get variance of occupancy (uncertainty)
 	      void get_vars(std::vector<float>& vars) const;

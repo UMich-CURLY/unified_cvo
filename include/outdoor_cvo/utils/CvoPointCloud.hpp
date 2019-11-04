@@ -1,8 +1,14 @@
 #pragma once
 #include <string>
+#include <tbb/tbb.h>
 #include "utils/data_type.hpp"
-namespace cvo {
+#include "mapping/bkioctomap.h"
 
+namespace semantic_bki {
+  class SemanticBKIOctoMap;
+}
+
+namespace cvo {
 
   class CvoPointCloud{
   public:
@@ -10,6 +16,8 @@ namespace cvo {
     
     CvoPointCloud(const cv::Mat & left_image,
                   const cv::Mat & right_image);
+    CvoPointCloud(const semantic_bki::SemanticBKIOctoMap& map,
+                  int num_semantic_class);
     CvoPointCloud();
     CvoPointCloud(const cv::Mat & left_image,
                   const cv::Mat & right_image,
@@ -18,6 +26,9 @@ namespace cvo {
     ~CvoPointCloud();
 
     int read_cvo_pointcloud_from_file(const std::string & filename);
+    void transform(const Eigen::Matrix4f& pose);
+    void write_to_color_pcd(const std::string & name) const;
+    void write_to_label_pcd(const std::string & name) const;
 
     // getters
     int num_points() const {return num_points_;}

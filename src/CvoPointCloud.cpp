@@ -2,6 +2,8 @@
 #include <fstream>
 #include <cstdio>
 #include <iostream>
+#include <algorithm>
+#include <pcl/io/pcd_io.h>
 #include "utils/CvoPointCloud.hpp"
 
 namespace cvo{
@@ -11,6 +13,42 @@ namespace cvo{
     
     
   }
+  
+  CvoPointCloud::CvoPointCloud(const semantic_bki::SemanticBKIOctoMap& map,
+                               const int num_classes) {
+    num_classes_ = num_classes;
+    std::vector<std::vector<float>> features;
+    std::vector<std::vector<float>> labels;
+    for (auto it = map.begin_leaf(); it != map.end_leaf(); ++it) {
+      if (it.get_node().get_state() == semantic_bki::State::OCCUPIED) {
+        // position
+        semantic_bki::point3f p = it.get_loc();
+        Vec3f xyz;
+        xyz << p.x(), p.y(), p.z();
+        positions_.push_back(xyz);
+        // features
+        std::vector<float> feature(5, 0);
+        it.get_node().get_features(feature);
+        features.push_back(feature);
+        // labels
+        std::vector<float> label(num_classes_, 0);
+        it.get_node().get_occupied_probs(label);
+        labels.push_back(label);
+      }
+    }
+    num_points_ = positions_.size();
+    features_.resize(num_points_, 5);
+    labels_.resize(num_points_, num_classes_);
+    for (int i = 0; i < num_points_; ++i) {
+      for (int j = 0; j < 5; ++j) {
+        features_(i, j) = features[i][j];
+      }
+      for (int j = 0; j < num_classes_; ++j) {
+        labels_(i, j) = labels[i][j];
+      }
+    }
+  }
+
   CvoPointCloud::CvoPointCloud(){}
   CvoPointCloud::~CvoPointCloud() {
     
@@ -61,4 +99,40 @@ namespace cvo{
     
   }
   
+  void CvoPointCloud::transform(const Eigen::Matrix4f& pose) {
+    tbb::parallel_for(int(0), num_points_, [&](int j) {
+      positions_[j] = (pose.block(0, 0, 3, 3) * positions_[j] + pose.block(0, 3, 3, 1)).eval();
+    });
+  }
+
+  void CvoPointCloud::write_to_color_pcd(const std::string & name) const {
+    pcl::PointCloud<pcl::PointXYZRGB> pc;
+    for (int i = 0; i < num_points_; i++) {
+      pcl::PointXYZRGB p;
+      p.x = positions_[i](0);
+      p.y = positions_[i](1);
+      p.z = positions_[i](2);
+      p.r = static_cast<uint8_t>(std::min(255.0f, features_(i, 0) * 255));
+      p.g = static_cast<uint8_t>(std::min(255.0f, features_(i, 1) * 255));
+      p.b = static_cast<uint8_t>(std::min(255.0f, features_(i, 2) * 255));
+      pc.push_back(p);
+    }
+    pcl::io::savePCDFileASCII(name ,pc);
+  }
+  
+  void CvoPointCloud::write_to_label_pcd(const std::string & name) const {
+    if (num_classes_ < 1)
+      return;
+    pcl::PointCloud<pcl::PointXYZL> pc;
+    for (int i = 0; i < num_points_; i++) {
+      pcl::PointXYZL p;
+      p.x = positions_[i](0);
+      p.y = positions_[i](1);
+      p.z = positions_[i](2);
+      labels_.row(i).maxCoeff(&(p.label));
+      pc.push_back(p);
+    }
+    pcl::io::savePCDFileASCII(name, pc);
+  }
+
 }

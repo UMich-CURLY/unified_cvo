@@ -7,12 +7,18 @@
 #include "rtree.h"
 #include "bkiblock.h"
 #include "bkioctree_node.h"
+#include "utils/CvoPointCloud.hpp"
+
+namespace cvo {
+    class CvoPointCloud;
+}
 
 namespace semantic_bki {
 
     /// PCL PointCloud types as input
     typedef pcl::PointXYZL PCLPointType;
     typedef pcl::PointCloud<PCLPointType> PCLPointCloud;
+    typedef cvo::CvoPointCloud CVOPointCloud;
 
     /*
      * @brief BGKOctoMap
@@ -26,7 +32,7 @@ namespace semantic_bki {
     public:
         /// Types used internally
         typedef std::vector<point3f> PointCloud;
-        typedef std::pair<point3f, float> GPPointType;
+        typedef std::pair<point3f, std::vector<float>> GPPointType;
         typedef std::vector<GPPointType> GPPointCloud;
         typedef RTree<GPPointType *, float, 3, float> MyRTree;
 
@@ -78,14 +84,14 @@ namespace semantic_bki {
          * @param free_res resolution for sampling free training points along sensor beams (default 2.0)
          * @param max_range maximum range for beams to be considered as valid measurements (-1 if no limitation)
          */
-        void insert_pointcloud_csm(const PCLPointCloud &cloud, const point3f &origin, float ds_resolution,
+        void insert_pointcloud_csm(const CVOPointCloud &cloud, const point3f &origin, float ds_resolution,
                                float free_res = 2.0f,
                                float max_range = -1);
 
 
-        void insert_pointcloud(const PCLPointCloud &cloud, const point3f &origin, float ds_resolution,
-                               float free_res = 2.0f,
-                               float max_range = -1);
+        //void insert_pointcloud(const PCLPointCloud &cloud, const point3f &origin, float ds_resolution,
+          //                     float free_res = 2.0f,
+            //                   float max_range = -1);
 
         //void insert_training_data(const GPPointCloud &cloud);
 
@@ -364,14 +370,14 @@ namespace semantic_bki {
         static bool search_callback(GPPointType *p, void *arg);
 
         /// Downsample PCLPointCloud using PCL VoxelGrid Filtering.
-        void downsample(const PCLPointCloud &in, PCLPointCloud &out, float ds_resolution) const;
+        //void downsample(const PCLPointCloud &in, PCLPointCloud &out, float ds_resolution) const;
 
         /// Sample free training points along sensor beams.
         void beam_sample(const point3f &hits, const point3f &origin, PointCloud &frees,
                          float free_resolution) const;
 
         /// Get training data from one sensor scan.
-        void get_training_data(const PCLPointCloud &cloud, const point3f &origin, float ds_resolution,
+        void get_training_data(const CVOPointCloud &cloud, const point3f &origin, float ds_resolution,
                                float free_resolution, float max_range, GPPointCloud &xy) const;
 
         float resolution;

@@ -25,6 +25,15 @@ namespace semantic_bki {
         probs[i] = ms[i] / sum;
     }
 
+    void Semantics::get_occupied_probs(std::vector<float>& probs) const {
+      assert (probs.size() == num_class - 1);
+      float sum = 0;
+      for (auto m : ms)
+        sum += m;
+      for (int i = 1; i < num_class; ++i)
+        probs[i - 1] = ms[i] / sum;
+    }
+
     void Semantics::get_vars(std::vector<float>& vars) const {
       assert (vars.size() == num_class);
       float sum = 0;
