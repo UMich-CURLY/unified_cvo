@@ -18,9 +18,10 @@
 
 // #include "data_type.h"
 #include "cvo/LieGroup.h"
-#include "cvo/nanoflann.h"
+#include "cvo/nanoflann.hpp"
 #include "cvo/KDTreeVectorOfVectorsAdaptor.h"
-#include "pcd_generator.hpp"
+#include "utils/CvoPointCloud.hpp"
+// #include "pcd_generator.hpp"
 
 
 #include <vector>
@@ -59,13 +60,13 @@ namespace cvo{
 
   private:
     // private variables
-    std::unique_ptr<CvoPointCloud> ptr_fixed_pcd;
-    std::unique_ptr<CvoPointCloud> ptr_moving_pcd;
+    CvoPointCloud* ptr_fixed_pcd;
+    CvoPointCloud* ptr_moving_pcd;
 
     int num_fixed;              // target point cloud counts
     int num_moving;             // source point cloud counts
-    cloud_t *cloud_x;    // target points represented as a matrix (num_fixed,3)
-    cloud_t *cloud_y;    // source points represented as a matrix (num_moving,3)
+    ArrayVec3f *cloud_x;    // target points represented as a matrix (num_fixed,3)
+    ArrayVec3f *cloud_y;    // source points represented as a matrix (num_moving,3)
 
     float ell;          // kernel characteristic length-scale
     float ell_init;
@@ -102,9 +103,6 @@ namespace cvo{
     typedef Eigen::Triplet<float> Trip_t;
     tbb::concurrent_vector<Trip_t> A_trip_concur;
 
-    //pcl::visualization::PCLVisualizer::Ptr viewer;
-    //int frame_id = 0;
-    //    int pcd_id = 0;
 
   public:
     
@@ -192,8 +190,8 @@ namespace cvo{
         @brief: set pcd from vector of xyz and rgb image directly
 
     */
-    void set_pcd(const CvoPointCloud& source_points,
-                const CvoPointCloud& target_points,
+    void set_pcd(CvoPointCloud& source_points,
+                CvoPointCloud& target_points,
                 Eigen::Affine3f & init_guess_transform,
                 bool is_using_init_guess);
     
@@ -206,12 +204,10 @@ namespace cvo{
     // callable after each align
     float inner_product() const ;
     // just compute the inner product
-    float inner_product(const CvoPointCloud& source_points,
-                        const CvoPointCloud& target_points,
+    float inner_product(CvoPointCloud& source_points,
+                        CvoPointCloud& target_points,
                         const Eigen::Affine3f & source_frame_to_target_frame);
 
-
-    //void visualize_pcd();
 
 
     Eigen::Affine3f get_transform() {return transform;}

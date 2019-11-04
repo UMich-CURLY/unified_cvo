@@ -11,7 +11,7 @@
  *  @date   November 03, 2019
  **/
 
-#include "Cvo.hpp"
+#include "cvo/Cvo.hpp"
 #include <chrono>
 #include <cstdio>
 #include <fstream>
@@ -27,8 +27,6 @@ namespace cvo{
   cvo::cvo():
     // initialize parameters
     init(false),           // initialization indicator
-    // ptr_fixed_pcd(new point_cloud),
-    // ptr_moving_pcd(new point_cloud),
     ell_init(0.15*7),             // kernel characteristic length-scale
     ell(0.1*7),
     ell_min(0.0391*7),
@@ -223,16 +221,6 @@ namespace cvo{
     if (debug_print ) std::cout<<"l is "<<l<<",d2_thres is "<<d2_thres<<std::endl;
     const float d2_c_thres = -2.0*c_ell*c_ell*log(sp_thres/c_sigma/c_sigma);
     if (debug_print) std::cout<<"d2_c_thres is "<<d2_c_thres<<std::endl;
-
-    /*
-    for (int i = 0; i < 10; i++){
-      std::cout<<"x \n"
-               <<(*cloud_a_pos)[i]
-               <<"y \n"
-               <<(*cloud_b_pos)[i]<<"\n";
-
-               }*/
-
     
     /** 
      * kdtreeeeeeeeeeeeeeeeeeeee
@@ -312,16 +300,16 @@ namespace cvo{
     auto end = chrono::system_clock::now();
                             
     // compute SE kernel for Axy
-    se_kernel(ptr_fixed_pcd.get(),ptr_moving_pcd.get(),cloud_x,cloud_y,A, A_trip_concur);
+    se_kernel(ptr_fixed_pcd,ptr_moving_pcd,cloud_x,cloud_y,A, A_trip_concur);
 
     if (debug_print ) {std::cout<<"nonzeros in A "<<A.nonZeros()<<std::endl;
     }
     
     // compute SE kernel for Axx and Ayy
-    se_kernel(ptr_fixed_pcd.get(),ptr_fixed_pcd.get(),cloud_x,cloud_x,Axx, A_trip_concur);
+    se_kernel(ptr_fixed_pcd,ptr_fixed_pcd,cloud_x,cloud_x,Axx, A_trip_concur);
     
     //start = chrono::system_clock::now();
-    se_kernel(ptr_moving_pcd.get(),ptr_moving_pcd.get(),cloud_y,cloud_y,Ayy, A_trip_concur);
+    se_kernel(ptr_moving_pcd,ptr_moving_pcd,cloud_y,cloud_y,Ayy, A_trip_concur);
     //end = chrono::system_clock::now();
     //std::cout<<"time for this kernel is "<<(end- start).count()<<std::endl;
 
@@ -548,7 +536,7 @@ namespace cvo{
 
   void cvo::transform_pcd(){
     tbb::parallel_for(int(0), num_moving, [&]( int j ){
-                                            (*cloud_y)[j] = transform.linear()*ptr_moving_pcd->positions[j]+transform.translation();
+                                            (*cloud_y)[j] = transform.linear()*ptr_moving_pcd->positions()[j]+transform.translation();
                                           });
     
   }
@@ -637,11 +625,7 @@ namespace cvo{
     accum_tf_vis = accum_tf_vis * transform.matrix();   // accumilate tf for visualization
     update_tf();
 
-    // visualize_pcd();
-
-    // if frame to frame only
-    // ptr_fixed_pcd = std::move(ptr_moving_pcd);
- 
+    delete cloud_x;
     delete cloud_y;
 
     if (is_logging) {
@@ -657,18 +641,18 @@ namespace cvo{
   }
  
 
-  void cvo::set_pcd(const CvoPointCloud& source_points,
-                         const CvoPointCloud& target_points,
+  void cvo::set_pcd(CvoPointCloud& source_points,
+                         CvoPointCloud& target_points,
                          Eigen::Affine3f & init_guess_transform,
                          bool is_using_init_guess) {
 
-    if (source_points->num_points() == 0 || target_points->num_points() == 0) {
+    if (source_points.num_points() == 0 || target_points.num_points() == 0) {
       return;
     }
 
     //  set the unique_ptr to the source and target point clouds
-    ptr_fixed_pcd.reset(& source_points);
-    ptr_moving_pcd.reset(& target_points);
+    ptr_fixed_pcd = & source_points;
+    ptr_moving_pcd = & target_points;
 
     
     // get total number of points
@@ -678,10 +662,10 @@ namespace cvo{
     std::cout<<"num moving: "<<num_moving<<std::endl;
 
     // extract cloud x and y
-    cloud_x = &(ptr_fixed_pcd->positions());
-    cloud_y = new cloud_t (ptr_moving_pcd->positions());
+    cloud_x = new ArrayVec3f (ptr_fixed_pcd->positions());
+    cloud_y = new ArrayVec3f (ptr_moving_pcd->positions());
     std::cout<<"fixed[0] \n"<<(*cloud_x)[0]<<"\nmoving[0] "<<(*cloud_y)[0]<<"\n";
-    std::cout<<"fixed[0] features \n "<<ptr_fixed_pcd->features.row(0)<<"\n  moving[0] feature "<<ptr_moving_pcd->features.row(0)<<"\n";
+    std::cout<<"fixed[0] features \n "<<ptr_fixed_pcd->features().row(0)<<"\n  moving[0] feature "<<ptr_moving_pcd->features().row(0)<<"\n";
 
     std::cout<<"init cvo: \n"<<transform.matrix()<<std::endl;
     if (is_using_init_guess) {
@@ -718,15 +702,15 @@ namespace cvo{
   }
 
 
-  float cvo::inner_product(const CvoPointCloud& source_points,
-                                const CvoPointCloud& target_points,
+  float cvo::inner_product(CvoPointCloud& source_points,
+                                CvoPointCloud& target_points,
                                 const Eigen::Affine3f & s2t_frame_transform) {
-    if (source_points->num_points() == 0 || target_points->num_points() == 0) {
+    if (source_points.num_points() == 0 || target_points.num_points() == 0) {
       return 0;
       }
 
-    cloud_t & fixed_positions = source_points.positions();
-    cloud_t moving_positions = target_points.positions();
+    ArrayVec3f fixed_positions = source_points.positions();
+    ArrayVec3f moving_positions = target_points.positions();
 
     Eigen::Matrix3f rot = s2t_frame_transform.linear();
     Eigen::Vector3f trans = s2t_frame_transform.translation();
@@ -743,3 +727,5 @@ namespace cvo{
     se_kernel(&source_points, &target_points, &fixed_positions, &moving_positions, A_mat, A_trip_concur_  );
     return A_mat.sum()/A_mat.nonZeros();
   }
+
+}
