@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
   cvo::cvo cvo_align;
   Eigen::Affine3f init_guess;
   init_guess.matrix().setIdentity();
-  init_guess.matrix()(2, 3) = -0.75;
+  // init_guess.matrix()(2, 3) = 0.75;
   Eigen::Matrix4f tf_kf_minus_2= Eigen::Matrix4f::Identity();
   Eigen::Matrix4f tf_kf_minus_1= Eigen::Matrix4f::Identity();
   Eigen::Matrix4f tf_kf_init_guess = Eigen::Matrix4f::Identity();

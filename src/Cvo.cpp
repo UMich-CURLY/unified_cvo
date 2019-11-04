@@ -613,6 +613,8 @@ namespace cvo{
       }
               
       ell = (ell<ell_min)? ell_min:ell;
+
+      // std::cout<<"iter: "<<k<<std::endl;
     }
 
     std::cout<<"cvo # of iterations is "<<iter<<std::endl;
