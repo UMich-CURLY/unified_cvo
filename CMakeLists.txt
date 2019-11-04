@@ -38,6 +38,7 @@ set(CMAKE_CXX_FLAGS
 
 # Sources files
 set(CVO_LIB_SOURCE
+  ${PROJECT_SOURCE_DIR}/src/Cvo.cpp
   ${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
   ${PROJECT_SOURCE_DIR}/src/Frame.cpp
   ${PROJECT_SOURCE_DIR}/src/KittiHandler.cpp

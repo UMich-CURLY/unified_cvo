@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
   std::cout<<"Just reading  names\n";
 
   /*
-  cvo::rkhs_se3 cvo_align;
+  cvo::cvo cvo_align;
   Eigen::Affine3f init_guess;
   init_guess.matrix().setIdentity();
   init_guess.matrix()(2, 3) = -0.75;

@@ -5,14 +5,13 @@
  * -------------------------------------------------------------------------- */
 
 /**
- *  @file   rkhs_se3.cpp
+ *  @file   cvo.cpp
  *  @author Tzu-yuan Lin, Maani Ghaffari 
- *  @brief  Source file for contineuous visual odometry rkhs_se3 registration
- *  @date   August 15, 2019
+ *  @brief  Source file for contineuous visual odometry registration
+ *  @date   November 03, 2019
  **/
 
-#include "rkhs_se3.hpp"
-#include "util/settings.h"
+#include "Cvo.hpp"
 #include <chrono>
 #include <cstdio>
 #include <fstream>
@@ -25,14 +24,11 @@ namespace cvo{
 
   static bool is_logging = true;
 
-  rkhs_se3::rkhs_se3():
+  cvo::cvo():
     // initialize parameters
     init(false),           // initialization indicator
-    ptr_fixed_fr(new frame),
-    ptr_moving_fr(new frame),
-    ptr_fixed_pcd(new point_cloud),
-    ptr_moving_pcd(new point_cloud),
-    
+    // ptr_fixed_pcd(new point_cloud),
+    // ptr_moving_pcd(new point_cloud),
     ell_init(0.15*7),             // kernel characteristic length-scale
     ell(0.1*7),
     ell_min(0.0391*7),
@@ -99,7 +95,7 @@ namespace cvo{
     }
   }
 
-  rkhs_se3::~rkhs_se3() {
+  cvo::~cvo() {
     if (is_logging){
       if (relative_transform_file)
         fclose(relative_transform_file);
@@ -108,7 +104,7 @@ namespace cvo{
     }
   }
 
-  inline Eigen::VectorXcf rkhs_se3::poly_solver(const Eigen::VectorXf& coef){
+  inline Eigen::VectorXcf cvo::poly_solver(const Eigen::VectorXf& coef){
     // extract order
     int order = coef.size()-1;
     Eigen::VectorXcf roots;
@@ -126,7 +122,7 @@ namespace cvo{
     return roots;
   }
 
-  inline float rkhs_se3::dist_se3(const Eigen::Matrix3f& R, const Eigen::Vector3f& T){
+  inline float cvo::dist_se3(const Eigen::Matrix3f& R, const Eigen::Vector3f& T){
     // create transformation matrix
     Eigen::Matrix4f temp_transform = Eigen::Matrix4f::Identity();
     temp_transform.block<3,3>(0,0)=R;
@@ -138,7 +134,7 @@ namespace cvo{
     return d;
   }
 
-  inline void rkhs_se3::update_tf(){
+  inline void cvo::update_tf(){
     // transform = [R', -R'*T; 0,0,0,1]
     transform.matrix().block<3,3>(0,0) = R.transpose();
     transform.matrix().block<3,1>(0,3) = -R.transpose()*T;
@@ -147,18 +143,11 @@ namespace cvo{
   }
 
 
-  inline float rkhs_se3::color_kernel(const int i, const int j){
-    Eigen::VectorXf features_x = ptr_fixed_pcd->features.row(i).transpose();
-    Eigen::VectorXf features_y = ptr_moving_pcd->features.row(j).transpose();
-
-    return((features_x-features_y).squaredNorm());
-  }
-
   typedef KDTreeVectorOfVectorsAdaptor<cloud_t, float>  kd_tree_t;
 
   /*
   __global__
-  void rkhs_se3::se_kernelgpu(point_cloud* cloud_a, point_cloud* cloud_b, 
+  void cvo::se_kernelgpu(point_cloud* cloud_a, point_cloud* cloud_b, 
                                cloud_t* cloud_a_pos, cloud_t* cloud_b_pos,
                                kd_tree_t * mat_index, 
                                Eigen::SparseMatrix<float,Eigen::RowMajor>& A_temp){
@@ -218,11 +207,10 @@ namespace cvo{
     A_temp.setFromTriplets(A_trip_concur.begin(), A_trip_concur.end());
     A_temp.makeCompressed();
   }
-
   */
   
 
-  void rkhs_se3::se_kernel(point_cloud* cloud_a, point_cloud* cloud_b, \
+  void cvo::se_kernel(CvoPointCloud* cloud_a, CvoPointCloud* cloud_b, \
                            cloud_t* cloud_a_pos, cloud_t* cloud_b_pos,\
                            Eigen::SparseMatrix<float,Eigen::RowMajor>& A_temp,
                            tbb::concurrent_vector<Trip_t> & A_trip_concur_)const {
@@ -255,7 +243,7 @@ namespace cvo{
     mat_index.index->buildIndex();
 
     // loop through points
-    tbb::parallel_for(int(0),cloud_a->num_points,[&](int i){
+    tbb::parallel_for(int(0),cloud_a->num_points(),[&](int i){
     //for(int i=0; i<num_fixed; ++i){
 
         const float search_radius = d2_thres;
@@ -266,10 +254,10 @@ namespace cvo{
 
         const size_t nMatches = mat_index.index->radiusSearch(&(*cloud_a_pos)[i](0), search_radius, ret_matches, params);
 
-        Eigen::Matrix<float,Eigen::Dynamic,1> feature_a = cloud_a->features.row(i).transpose();
+        Eigen::Matrix<float,Eigen::Dynamic,1> feature_a = cloud_a->features().row(i).transpose();
 
 #ifdef IS_USING_SEMANTICS        
-        Eigen::VectorXf label_a = cloud_a->labels.row(i);
+        Eigen::VectorXf label_a = cloud_a->labels().row(i);
 #endif
         // for(int j=0; j<num_moving; j++){
         for(size_t j=0; j<nMatches; ++j){
@@ -283,10 +271,10 @@ namespace cvo{
           float d2_semantic = 0;
           float a = 0;
           if(d2<d2_thres){
-            Eigen::Matrix<float,Eigen::Dynamic,1> feature_b = cloud_b->features.row(idx).transpose();
+            Eigen::Matrix<float,Eigen::Dynamic,1> feature_b = cloud_b->features().row(idx).transpose();
             d2_color = ((feature_a-feature_b).squaredNorm());
 #ifdef IS_USING_SEMANTICS            
-            Eigen::VectorXf label_b = cloud_b->labels.row(idx);
+            Eigen::VectorXf label_b = cloud_b->labels().row(idx);
             d2_semantic = ((label_a-label_b).squaredNorm());
 #endif
             
@@ -318,7 +306,7 @@ namespace cvo{
 
   
   
-  void rkhs_se3::compute_flow(){
+  void cvo::compute_flow(){
 
     auto start = chrono::system_clock::now();
     auto end = chrono::system_clock::now();
@@ -455,7 +443,7 @@ namespace cvo{
   }
 
 
-  void rkhs_se3::compute_step_size(){
+  void cvo::compute_step_size(){
     // compute skew matrix
     Eigen::Matrix3f omega_hat = skew(omega);
     
@@ -558,60 +546,14 @@ namespace cvo{
       std::cout<<"step size "<<step<<"\n\n--------------------------------------------------------------\n";
   }
 
-  void rkhs_se3::transform_pcd(){
+  void cvo::transform_pcd(){
     tbb::parallel_for(int(0), num_moving, [&]( int j ){
                                             (*cloud_y)[j] = transform.linear()*ptr_moving_pcd->positions[j]+transform.translation();
                                           });
     
   }
 
-
-  /*
-    void rkhs_se3::set_pcd(const int dataset_seq ,const cv::Mat& features_img,const cv::Mat& dep_img,MatrixXf_row semantic_labels){
-
-    // create pcd_generator class
-    pcd_generator pcd_gen(pcd_id);
-    pcd_gen.dataset_seq = dataset_seq;
-    pcd_id ++;
-    // if it's the first image
-    if(init == false){
-    std::cout<<"initializing cvo..."<<std::endl;
-    pcd_gen.load_image(features_img,dep_img,semantic_labels,ptr_fixed_fr.get());
-    pcd_gen.create_pointcloud(ptr_fixed_fr.get(), ptr_fixed_pcd.get());
-    std::cout<<"first pcd generated!"<<std::endl;
-    init = true;
-    return;
-    }
-
-    ptr_moving_fr.reset(new frame);
-    ptr_moving_pcd.reset(new point_cloud);
-
-    pcd_gen.load_image(features_img,dep_img,semantic_labels,ptr_moving_fr.get());
-    pcd_gen.create_pointcloud(ptr_moving_fr.get(), ptr_moving_pcd.get());
-
-    // get total number of points
-    num_fixed = ptr_fixed_pcd->num_points;
-    num_moving = ptr_moving_pcd->num_points;
-    std::cout<<"num fixed: "<<num_fixed<<std::endl;
-    std::cout<<"num moving: "<<num_moving<<std::endl;
-
-    // extract cloud x and y
-    cloud_x = &(ptr_fixed_pcd->positions);
-    cloud_y = new std::vector<Eigen::Vector3f>(ptr_moving_pcd->positions);
-
-    // transform = Eigen::Affine3f::Identity();
-    // R = Eigen::Matrix3f::Identity(3,3); // initialize rotation matrix to I
-    // T = Eigen::Vector3f::Zero();        // initialize translation matrix to zeros
-
-    // initialization of parameters
-    A_trip_concur.reserve(num_moving*20);
-    A.resize(num_fixed,num_moving);
-    A.setZero();
-    }
-
-  */
-
-  void rkhs_se3::align(){
+  void cvo::align(){
     int n = tbb::task_scheduler_init::default_num_threads();
     std::cout<<"num_thread: "<<n<<std::endl;
 
@@ -680,23 +622,9 @@ namespace cvo{
       if(ell>=ell_max){
         ell = ell_max*0.7;
         ell_max = ell_max*0.7;
-            // ell = (k>2)? 0.10:ell;
-            // ell = (k>9)? 0.06:ell;
-            // ell = (k>19)? 0.03:ell;
-
-            // ell_max = (k>2)? 0.11:ell_max;
-            // ell_max = (k>9)? 0.07:ell_max;
-            // ell_max = (k>19)? 0.04:ell_max;
       }
               
       ell = (ell<ell_min)? ell_min:ell;
-      // ell = (ell>ell_max)? ell_max:ell;
-      //      ell = (k>2)? 0.1*7:ell;
-      // ell = (k>9)? 0.06*7:ell;
-      // ell = (k>19)? 0.03*7:ell;
-      // std::cout<<"omega: "<<omega<<std::endl;
-      // std::cout<<"v: "<<v<<std::endl;
-        
     }
 
     std::cout<<"cvo # of iterations is "<<iter<<std::endl;
@@ -710,190 +638,50 @@ namespace cvo{
     update_tf();
 
     // visualize_pcd();
-    ptr_fixed_pcd = std::move(ptr_moving_pcd);
+
+    // if frame to frame only
+    // ptr_fixed_pcd = std::move(ptr_moving_pcd);
  
-   delete cloud_y;
+    delete cloud_y;
 
-   if (is_logging) {
-     auto & Tmat = transform.matrix();
-     fprintf(relative_transform_file , "%.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f\n",
-             Tmat(0,0), Tmat(0,1), Tmat(0,2), Tmat(0,3),
-             Tmat(1,0), Tmat(1,1), Tmat(1,2), Tmat(1,3),
-             Tmat(2,0), Tmat(2,1), Tmat(2,2), Tmat(2,3)
-             );
-     fflush(relative_transform_file);
-   }
+    if (is_logging) {
+      auto & Tmat = transform.matrix();
+      fprintf(relative_transform_file , "%.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f\n",
+              Tmat(0,0), Tmat(0,1), Tmat(0,2), Tmat(0,3),
+              Tmat(1,0), Tmat(1,1), Tmat(1,2), Tmat(1,3),
+              Tmat(2,0), Tmat(2,1), Tmat(2,2), Tmat(2,3)
+              );
+      fflush(relative_transform_file);
+    }
 
   }
+ 
 
-  /*
-    template <class PointType>
-    void rkhs_se3::set_pcd(int w, int h,
-    const dso::FrameShell * img_source,
-    const vector<PointType> & source_points,
-    const dso::FrameShell * img_target,
-    const vector<PointType> & target_points,
-    const Eigen::Affine3f & init_guess_transform) {
-
-    if (source_points.size() == 0 || target_points.size() == 0) {
-    return;
-    }
-
-    // function: fill in the features and pointcloud 
-    auto loop_fill_pcd =
-    [w, h] (const std::vector<PointType> & dso_pts,
-    const dso::FrameShell * frame,
-    point_cloud & output_cvo_pcd ) {
-        
-    output_cvo_pcd.positions.clear();
-    output_cvo_pcd.positions.resize(dso_pts.size());
-    output_cvo_pcd.num_points = dso_pts.size();
-    output_cvo_pcd.features = Eigen::MatrixXf::Zero(dso_pts.size(), 3);
-        
-    if (dso_pts.size() && dso_pts[0].num_semantic_classes ) {
-    output_cvo_pcd.labels = Eigen::MatrixXf::Zero(dso_pts.size(), dso_pts[0].num_semantic_classes );
-    output_cvo_pcd.num_classes = dso_pts[0].num_semantic_classes;
-    } else
-    output_cvo_pcd.num_classes = 0;
-        
-    for (int i = 0; i < dso_pts.size(); i++ ) {
-    int semantic_class = -1;
-    auto & p = dso_pts[i];
-    if (dso_pts[0].num_semantic_classes) {
-    p.semantics.maxCoeff(&semantic_class);
-    }
-    //if (semantic_class && dso::classToIgnore.find(semantic_class) != dso::classToIgnore.end() ) {
-    //  continue;
-    //} 
-
-    // TODO: type of float * img???
-    output_cvo_pcd.features(i, 2) = p.rgb(2);
-    output_cvo_pcd.features(i, 1) = p.rgb(1);
-    output_cvo_pcd.features(i, 0) = p.rgb(0);
-    output_cvo_pcd.labels.row(i) = p.semantics; //output_cvo_pcd.semantic_labels.row(y*w+x);
-    // gradient??
-    //output_cvo_pcd.features(i,3) = frame->dI[(int)p.v * w + (int)p.u][1];
-    //output_cvo_pcd.features(i,4) = frame->dI[(int)p.v * w + (int)p.u][2];
-
-    // is dso::Pnt's 3d coordinates already generated??
-    output_cvo_pcd.positions[i] = p.local_coarse_xyz;
-
-    }
-        
-    };
-    //ptr_moving_fr.reset(new frame);
-    ptr_moving_pcd.reset(new point_cloud);
-
-    loop_fill_pcd(source_points, img_source, *ptr_fixed_pcd);
-    loop_fill_pcd(target_points, img_target, *ptr_moving_pcd);
-
-    // get total number of points
-    num_fixed = ptr_fixed_pcd->num_points;
-    num_moving = ptr_moving_pcd->num_points;
-    std::cout<<"num fixed: "<<num_fixed<<std::endl;
-    std::cout<<"num moving: "<<num_moving<<std::endl;
-
-    // extract cloud x and y
-    cloud_x = &(ptr_fixed_pcd->positions);
-    cloud_y = new cloud_t (ptr_moving_pcd->positions);
-
-    // initialization of parameters
-    A_trip_concur.reserve(num_moving*20);
-    A.resize(num_fixed,num_moving);
-    A.setZero();
-
-    transform = init_guess_transform.inverse();
-    R = transform.linear();
-    T = transform.translation();
-    std::cout<<"[Cvo ] the init guess for the transformation is \n"
-    <<R<<std::endl<<T<<std::endl; 
-    }
-
-  */
-
-  template <typename PointType>
-  void  rkhs_se3::loop_fill_pcd (const std::vector<PointType> & dso_pts,
-                       point_cloud & output_cvo_pcd )  {
-        
-    output_cvo_pcd.positions.clear();
-    output_cvo_pcd.positions.resize(dso_pts.size());
-    output_cvo_pcd.num_points = dso_pts.size();
-    output_cvo_pcd.features = Eigen::MatrixXf::Zero(dso_pts.size(), 5);
-        
-    if (dso_pts.size() && dso_pts[0].num_semantic_classes ) {
-      output_cvo_pcd.labels = Eigen::MatrixXf::Zero(dso_pts.size(), dso_pts[0].num_semantic_classes );
-      output_cvo_pcd.num_classes = dso_pts[0].num_semantic_classes;
-    } else
-      output_cvo_pcd.num_classes = 0;
-        
-    for (int i = 0; i < dso_pts.size(); i++ ) {
-      int semantic_class = -1;
-      auto & p = dso_pts[i];
-      if (dso_pts[0].num_semantic_classes) {
-        p.semantics.maxCoeff(&semantic_class);
-        output_cvo_pcd.labels.row(i) = p.semantics; //output_cvo_pcd.semantic_labels.row(y*w+x);
-      }
-      //if (semantic_class && dso::classToIgnore.find(semantic_class) != dso::classToIgnore.end() ) {
-      //  continue;
-      //} 
-
-      // TODO: 
-      // TODO: change to HSV.
-      //  H =  H/180, S=S/255, V=V/255 from opencv's original
-      output_cvo_pcd.features(i, 2) = p.rgb(2)/255.0;
-      output_cvo_pcd.features(i, 1) = p.rgb(1)/255.0;
-      output_cvo_pcd.features(i, 0) = p.rgb(0)/255.0;
-
-      // gradient??
-      // TOOD: if using graident, grad = grad / 255 * 2
-      output_cvo_pcd.features(i,3) = p.dI_xy[0]/255.0 / 2  + 0.5;
-      output_cvo_pcd.features(i,4) = p.dI_xy[1]/255.0 / 2.0+ 0.5;
-
-      // is dso::Pnt's 3d coordinates already generated??
-      output_cvo_pcd.positions[i] = p.local_coarse_xyz;
-
-    }
-        
-  }
-  template 
-  void rkhs_se3::loop_fill_pcd<dso::CvoTrackingPoints>(const std::vector<dso::CvoTrackingPoints> & dso_pts,
-                                             point_cloud & output) ;
-
-  
-  template <class PointType>
-  void rkhs_se3::set_pcd(const vector<PointType> & source_points,
-                         const vector<PointType> & target_points,
+  void cvo::set_pcd(const CvoPointCloud& source_points,
+                         const CvoPointCloud& target_points,
                          Eigen::Affine3f & init_guess_transform,
                          bool is_using_init_guess) {
 
-    if (source_points.size() == 0 || target_points.size() == 0) {
+    if (source_points->num_points() == 0 || target_points->num_points() == 0) {
       return;
     }
 
-    // function: fill in the features and pointcloud 
-    //ptr_moving_fr.reset(new frame);
-    ptr_moving_pcd.reset(new point_cloud);
+    //  set the unique_ptr to the source and target point clouds
+    ptr_fixed_pcd.reset(& source_points);
+    ptr_moving_pcd.reset(& target_points);
 
-    loop_fill_pcd(source_points, *ptr_fixed_pcd);
-    loop_fill_pcd(target_points, *ptr_moving_pcd);
     
     // get total number of points
-    num_fixed = ptr_fixed_pcd->num_points;
-    num_moving = ptr_moving_pcd->num_points;
+    num_fixed = ptr_fixed_pcd->num_points();
+    num_moving = ptr_moving_pcd->num_points();
     std::cout<<"num fixed: "<<num_fixed<<std::endl;
     std::cout<<"num moving: "<<num_moving<<std::endl;
 
     // extract cloud x and y
-    cloud_x = &(ptr_fixed_pcd->positions);
-    cloud_y = new cloud_t (ptr_moving_pcd->positions);
+    cloud_x = &(ptr_fixed_pcd->positions());
+    cloud_y = new cloud_t (ptr_moving_pcd->positions());
     std::cout<<"fixed[0] \n"<<(*cloud_x)[0]<<"\nmoving[0] "<<(*cloud_y)[0]<<"\n";
     std::cout<<"fixed[0] features \n "<<ptr_fixed_pcd->features.row(0)<<"\n  moving[0] feature "<<ptr_moving_pcd->features.row(0)<<"\n";
-
-
-    // initialization of parameters
-    //A_trip_concur.reserve(num_moving*20);
-    //A.resize(num_fixed,num_moving);
-    //A.setZero();
 
     std::cout<<"init cvo: \n"<<transform.matrix()<<std::endl;
     if (is_using_init_guess) {
@@ -922,171 +710,36 @@ namespace cvo{
     A.setZero();
     Axx.setZero();
     Ayy.setZero();
-
   }
 
   
-
-  template void rkhs_se3::set_pcd<dso::CvoTrackingPoints>(const vector<dso::CvoTrackingPoints> & source_points,
-                                                          const vector<dso::CvoTrackingPoints> & target_points,
-                                                          Eigen::Affine3f & init_guess_transform, bool);
-
-  
-  template <class PointType>
-  void rkhs_se3::set_pcd(int w, int h,
-                         const dso::FrameHessian * img_source,
-                         const vector<PointType> & source_points,
-                         const dso::FrameHessian * img_target,
-                         const vector<PointType> & target_points,
-                         const Eigen::Affine3f & init_guess_transform,
-                         bool is_using_init_guess) {
-
-    if (source_points.size() == 0 || target_points.size() == 0) {
-      return;
-    }
-
-    // function: fill in the features and pointcloud 
-    auto loop_fill_pcd_img =
-      [w, h] (const std::vector<PointType> & dso_pts,
-              const dso::FrameHessian *frame,
-              point_cloud & output_cvo_pcd ) {
-        
-        output_cvo_pcd.positions.clear();
-        output_cvo_pcd.positions.resize(dso_pts.size());
-        output_cvo_pcd.num_points = dso_pts.size();
-        output_cvo_pcd.features = Eigen::MatrixXf::Zero(dso_pts.size(), 5);
-        
-        if (dso_pts.size() && dso_pts[0].num_semantic_classes ) {
-          output_cvo_pcd.labels = Eigen::MatrixXf::Zero(dso_pts.size(), dso_pts[0].num_semantic_classes );
-          output_cvo_pcd.num_classes = dso_pts[0].num_semantic_classes;
-        } else
-          output_cvo_pcd.num_classes = 0;
-        
-        for (int i = 0; i < dso_pts.size(); i++ ) {
-          int semantic_class = -1;
-          auto & p = dso_pts[i];
-          if (dso_pts[0].num_semantic_classes) {
-            p.semantics.maxCoeff(&semantic_class);
-            output_cvo_pcd.labels.row(i) = p.semantics; //output_cvo_pcd.semantic_labels.row(y*w+x);
-          }
-          //if (semantic_class && dso::classToIgnore.find(semantic_class) != dso::classToIgnore.end() ) {
-          //  continue;
-          //} 
-
-          // TODO: 
-          // TODO: change to HSV.
-          //  H =  H/180, S=S/255, V=V/255 from opencv's original
-          output_cvo_pcd.features(i, 2) = p.rgb(2)/255.0;
-          output_cvo_pcd.features(i, 1) = p.rgb(1)/255.0;
-          output_cvo_pcd.features(i, 0) = p.rgb(0)/255.0;
-
-          // gradient??
-          // TOOD: if using graident, grad = grad / 255 * 2
-          output_cvo_pcd.features(i,3) = p.dI_xy[0] / 255.0 / 2 + 0.5;
-          output_cvo_pcd.features(i,4) = p.dI_xy[1] /255.0 / 2 + 0.5;
-
-
-          
-          // is dso::Pnt's 3d coordinates already generated??
-          output_cvo_pcd.positions[i] = p.local_coarse_xyz;
-
-        }
-        
-      };
-    //ptr_moving_fr.reset(new frame);
-    ptr_moving_pcd.reset(new point_cloud);
-
-    loop_fill_pcd_img(source_points, img_source, *ptr_fixed_pcd);
-
-    loop_fill_pcd_img(target_points, img_target, *ptr_moving_pcd);
-
-    // get total number of points
-    num_fixed = ptr_fixed_pcd->num_points;
-    num_moving = ptr_moving_pcd->num_points;
-    std::cout<<"num fixed: "<<num_fixed<<std::endl;
-    std::cout<<"num moving: "<<num_moving<<std::endl;
-
-    // extract cloud x and y
-    cloud_x = &(ptr_fixed_pcd->positions);
-    cloud_y = new cloud_t (ptr_moving_pcd->positions);
-
-    // initialization of parameters
-    //A_trip_concur.reserve(num_moving*20);
-    //A.resize(num_fixed,num_moving);
-    //A.setZero();
-
-    if (is_using_init_guess) {
-      transform = init_guess_transform;
-      R = transform.linear();
-      T = transform.translation();
-    }
-    std::cout<<"[Cvo ] the init guess for the transformation is \n"
-             <<R<<std::endl<<T<<std::endl;
-
-    ell = ell_init;
-    dl = 0;
-    A_trip_concur.reserve(num_moving*20);
-    A.resize(num_fixed,num_moving);
-    Axx.resize(num_fixed,num_fixed);
-    Ayy.resize(num_moving,num_moving);
-    A.setZero();
-    Axx.setZero();
-    Ayy.setZero();
-
-  }
-
-
-  template void rkhs_se3::set_pcd<dso::Pnt>(int w, int h,
-                                            const dso::FrameHessian * img_source,
-                                            const std::vector<dso::Pnt> & source_points,
-                                            const dso::FrameHessian * img_target,
-                                            const vector<dso::Pnt> & target_points,
-                                            const Eigen::Affine3f & init_guess_transform, bool);
-
-  template void rkhs_se3::set_pcd<dso::CvoTrackingPoints>(int w, int h,
-                                                          const dso::FrameHessian * img_source,
-                                                          const std::vector<dso::CvoTrackingPoints> & source_points,
-                                                          const dso::FrameHessian * img_target,
-                                                          const vector<dso::CvoTrackingPoints> & target_points,
-                                                          const Eigen::Affine3f & init_guess_transform, bool);
-
-
-  float rkhs_se3::inner_product() const {
+  float cvo::inner_product() const {
     return A.sum() / A.nonZeros();
   }
 
-  template <typename PointType>
-  float rkhs_se3::inner_product(const vector<PointType> & source_points,
-                                const vector<PointType> & target_points,
+
+  float cvo::inner_product(const CvoPointCloud& source_points,
+                                const CvoPointCloud& target_points,
                                 const Eigen::Affine3f & s2t_frame_transform) {
-    if (source_points.size() ==0 || target_points.size() == 0)
+    if (source_points->num_points() == 0 || target_points->num_points() == 0) {
       return 0;
+      }
 
-    point_cloud fixed_pcd, moving_pcd;
-    loop_fill_pcd(source_points, fixed_pcd);
-    loop_fill_pcd(target_points, moving_pcd);
-
-    cloud_t & fixed_positions = fixed_pcd.positions;
-    cloud_t & moving_positions = moving_pcd.positions;
+    cloud_t & fixed_positions = source_points.positions();
+    cloud_t moving_positions = target_points.positions();
 
     Eigen::Matrix3f rot = s2t_frame_transform.linear();
     Eigen::Vector3f trans = s2t_frame_transform.translation();
 
-    tbb::parallel_for(int(0), moving_pcd.num_points, [&]( int j ){
+    // transform moving points
+    tbb::parallel_for(int(0), target_points.num_points(), [&]( int j ){
                                                        moving_positions[j] = (rot*moving_positions[j]+trans).eval();
                                                      });
-     Eigen::SparseMatrix<float,Eigen::RowMajor> A_mat;
-     tbb::concurrent_vector<Trip_t> A_trip_concur_;
-     A_trip_concur_.reserve(moving_pcd.num_points * 20);
-     A_mat.resize(fixed_pcd.num_points, moving_pcd.num_points);
-     A_mat.setZero();
-     se_kernel(&fixed_pcd, &moving_pcd, &fixed_positions, &moving_positions,A_mat, A_trip_concur_  );
-     return A_mat.sum()/A_mat.nonZeros();
-    
+    Eigen::SparseMatrix<float,Eigen::RowMajor> A_mat;
+    tbb::concurrent_vector<Trip_t> A_trip_concur_;
+    A_trip_concur_.reserve(target_points.num_points() * 20);
+    A_mat.resize(source_points.num_points(), target_points.num_points());
+    A_mat.setZero();
+    se_kernel(&source_points, &target_points, &fixed_positions, &moving_positions, A_mat, A_trip_concur_  );
+    return A_mat.sum()/A_mat.nonZeros();
   }
-
-  template
-  float rkhs_se3::inner_product<dso::CvoTrackingPoints>(const vector<dso::CvoTrackingPoints> & source_points,
-                                                        const vector<dso::CvoTrackingPoints> & target_points,
-                                                        const Eigen::Affine3f & s2t_frame_transform);
-}
