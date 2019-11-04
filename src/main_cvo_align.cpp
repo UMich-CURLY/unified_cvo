@@ -100,9 +100,9 @@ int main(int argc, char *argv[]) {
     cvo_align.set_pcd(kf, fr, init_guess, true);
     cvo_align.align();
 
-    init_guess= cvo_align.get_accum_transform();
+    init_guess= cvo_align.get_transform();
     Eigen::Matrix4f result = init_guess.matrix();
-    std::cout<<"\n The inner product between "<<i <<" and "<< i+1 <<" is "<<cvo_align.inner_product()<<"\n";
+    std::cout<<"\n The inner product between "<<i-1 <<" and "<< i <<" is "<<cvo_align.inner_product()<<"\n";
     std::cout<<"Transform is \n";
     std::cout<<cvo_align.get_transform().matrix() <<"\n\n";
      output_file << result(0,0)<<" "<<result(0,1)<<" "<<result(0,2)<<" "<<result(0,3)<<" "
