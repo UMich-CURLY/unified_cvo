@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <assert.h>
+#include <iostream>
 
 #include "mapping/bkioctree_node.h"
 
@@ -14,6 +15,7 @@ namespace semantic_bki {
     float Semantics::free_thresh = 0.3f;
     float Semantics::occupied_thresh = 0.7f;
 
+    
     void Semantics::get_probs(std::vector<float>& probs) const {
       assert (probs.size() == num_class);
       float sum = 0;
@@ -32,7 +34,15 @@ namespace semantic_bki {
         vars[i] = ((ms[i] / sum) - (ms[i] / sum) * (ms[i] / sum)) / (sum + 1);
     }
 
-    void Semantics::update(std::vector<float>& ybars) {
+    void Semantics::get_features(std::vector<float>& features) const {
+      float sum = 0;
+      for (auto m : ms)
+        sum += m;
+      for (int i = 0; i < 5; ++i)
+        features[i] = this->fs[i] / sum;
+    }
+
+    void Semantics::update(std::vector<float>& ybars, std::vector<float>& fbars) {
       assert(ybars.size() == num_class);
       classified = true;
       for (int i = 0; i < num_class; ++i)
@@ -40,6 +50,11 @@ namespace semantic_bki {
 
       std::vector<float> probs(num_class);
       get_probs(probs);
+
+      // update features
+      for (int i = 0; i < 5; ++i) {
+        fs[i] += fbars[i];
+      }
 
       semantics = std::distance(probs.begin(), std::max_element(probs.begin(), probs.end()));
 

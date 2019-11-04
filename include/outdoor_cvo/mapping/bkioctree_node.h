@@ -24,11 +24,12 @@ namespace semantic_bki {
         /*
          * @brief Constructors and destructor.
          */
-        Semantics() : ms(std::vector<float>(num_class, prior)), state(State::UNKNOWN) { classified = false; }
+        Semantics() : fs(std::vector<float>(5, 0)), ms(std::vector<float>(num_class, prior)), state(State::UNKNOWN) { classified = false; }
 
-        Semantics(const Semantics &other) : ms(other.ms), state(other.state), semantics(other.semantics) { }
+        Semantics(const Semantics &other) : fs(other.fs), ms(other.ms), state(other.state), semantics(other.semantics) { }
 
         Semantics &operator=(const Semantics &other) {
+          fs = other.fs;
           ms = other.ms;
           state = other.state;
           semantics = other.semantics;
@@ -42,7 +43,7 @@ namespace semantic_bki {
          * @param ybar kernel density estimate of positive class (occupied)
          * @param kbar kernel density of negative class (unoccupied)
          */
-        void update(std::vector<float>& ybars);
+        void update(std::vector<float>& ybars, std::vector<float>& fbars);
 
         /// Get probability of occupancy.
         void get_probs(std::vector<float>& probs) const;
@@ -50,6 +51,7 @@ namespace semantic_bki {
         /// Get variance of occupancy (uncertainty)
 	      void get_vars(std::vector<float>& vars) const;
         
+        void get_features(std::vector<float>& features) const;
         /*
          * @brief Get occupancy state of the node.
          * @return occupancy state (see State).
@@ -61,6 +63,7 @@ namespace semantic_bki {
         bool classified;
 
     private:
+        std::vector<float> fs;  // sum of features
         std::vector<float> ms;
         State state;
         int semantics;

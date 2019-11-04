@@ -141,19 +141,23 @@ namespace semantic_bki {
             if (block_xy.size() < 1)
                 continue;
 
-            vector<float> block_x, block_y;
+            vector<float> block_x, block_y, block_f;
             for (auto it = block_xy.cbegin(); it != block_xy.cend(); ++it) {
                 block_x.push_back(it->first.x());
                 block_x.push_back(it->first.y());
                 block_x.push_back(it->first.z());
                 block_y.push_back(it->second);
-            
-            
+                block_f.push_back(1);  // r
+                block_f.push_back(0);  // g
+                block_f.push_back(0);  // b
+                block_f.push_back(0);  // gx
+                block_f.push_back(0);  // gy
             //std::cout << search(it->first.x(), it->first.y(), it->first.z()) << std::endl;
             }
+          
 
             SemanticBKI3f *bgk = new SemanticBKI3f(SemanticOcTreeNode::num_class, SemanticOcTreeNode::sf2, SemanticOcTreeNode::ell);
-            bgk->train(block_x, block_y);
+            bgk->train(block_x, block_y, block_f);
 #ifdef OPENMP
 #pragma omp critical
 #endif
@@ -189,7 +193,6 @@ namespace semantic_bki {
                 xs.push_back(p.y());
                 xs.push_back(p.z());
             }
-            //std::cout << "xs size: "<<xs.size() << std::endl;
 
 	          // For counting sensor model
             auto bgk = bgk_arr.find(key);
@@ -197,14 +200,15 @@ namespace semantic_bki {
               continue;
 
             vector<vector<float>> ybars;
-            bgk->second->predict_csm(xs, ybars);
+            vector<vector<float>> fbars;
+            bgk->second->predict_csm(xs, ybars, fbars);
 
             int j = 0;
             for (auto leaf_it = block->begin_leaf(); leaf_it != block->end_leaf(); ++leaf_it, ++j) {
                 SemanticOcTreeNode &node = leaf_it.get_node();
 
                 // Only need to update if kernel density total kernel density est > 0
-                node.update(ybars[j]);
+                node.update(ybars[j], fbars[j]);
             }
 
         }
@@ -221,7 +225,7 @@ namespace semantic_bki {
     }
 
 
-    void SemanticBKIOctoMap::insert_pointcloud(const PCLPointCloud &cloud, const point3f &origin, float ds_resolution,
+    /*void SemanticBKIOctoMap::insert_pointcloud(const PCLPointCloud &cloud, const point3f &origin, float ds_resolution,
                                       float free_res, float max_range) {
 
 #ifdef DEBUG
@@ -354,7 +358,7 @@ namespace semantic_bki {
             delete it->second;
 
         rtree.RemoveAll();
-    }
+    }*/
 
     void SemanticBKIOctoMap::get_bbox(point3f &lim_min, point3f &lim_max) const {
         lim_min = point3f(0, 0, 0);

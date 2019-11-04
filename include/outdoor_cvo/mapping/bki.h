@@ -26,12 +26,13 @@ namespace semantic_bki {
          * @param x input vector (3N, row major)
          * @param y target vector (N)
          */
-        void train(const std::vector<T> &x, const std::vector<T> &y) {
+        void train(const std::vector<T> &x, const std::vector<T> &y, const std::vector<T> &f) {
             assert(x.size() % dim == 0 && (int) (x.size() / dim) == y.size());
             MatrixXType _x = Eigen::Map<const MatrixXType>(x.data(), x.size() / dim, dim);
             MatrixYType _y = Eigen::Map<const MatrixYType>(y.data(), y.size(), 1);
+            MatrixKType _f = Eigen::Map<const MatrixKType>(f.data(), f.size() / 5, 5);
             this->y_vec = y;
-            train(_x, _y);
+            train(_x, _y, _f);
         }
 
         /*
@@ -39,9 +40,10 @@ namespace semantic_bki {
          * @param x input matrix (NX3)
          * @param y target matrix (NX1)
          */
-        void train(const MatrixXType &x, const MatrixYType &y) {
+        void train(const MatrixXType &x, const MatrixYType &y, const MatrixKType &f) {
             this->x = MatrixXType(x);
             this->y = MatrixYType(y);
+            this->f = MatrixKType(f);
             trained = true;
         }
 
@@ -75,7 +77,7 @@ namespace semantic_bki {
           }
       }
 
-      void predict_csm(const std::vector<T> &xs, std::vector<std::vector<T>> &ybars) {
+      void predict_csm(const std::vector<T> &xs, std::vector<std::vector<T>> &ybars, std::vector<std::vector<T>> &fbars) {
           assert(xs.size() % dim == 0);
           MatrixXType _xs = Eigen::Map<const MatrixXType>(xs.data(), xs.size() / dim, dim);
           assert(trained == true);
@@ -87,21 +89,32 @@ namespace semantic_bki {
           for (int r = 0; r < _xs.rows(); ++r)
             ybars[r].resize(nc);
 
-            MatrixYType _y_vec = Eigen::Map<const MatrixYType>(y_vec.data(), y_vec.size(), 1);
-            for (int k = 0; k < nc; ++k) {
-              for (int i = 0; i < y_vec.size(); ++i) {
-                if (y_vec[i] == k)
-                  _y_vec(i, 0) = 1;
-                else
-                  _y_vec(i, 0) = 0;
-              }
-            
+          MatrixYType _y_vec = Eigen::Map<const MatrixYType>(y_vec.data(), y_vec.size(), 1);
+          for (int k = 0; k < nc; ++k) {
+            for (int i = 0; i < y_vec.size(); ++i) {
+              if (y_vec[i] == k)
+                _y_vec(i, 0) = 1;
+              else
+                _y_vec(i, 0) = 0;
+            }
+          
             MatrixYType _ybar;
             _ybar = (Ks * _y_vec);
-            
+          
             for (int r = 0; r < _ybar.rows(); ++r)
               ybars[r][k] = _ybar(r, 0);
           }
+
+          // update features
+          fbars.resize(_xs.rows());
+          for (int r = 0; r < _xs.rows(); ++r)
+            fbars[r].resize(5);
+          MatrixKType _fbars = Ks * f;
+          for (int r = 0; r < _xs.rows(); ++r) {
+            for (int f = 0; f < 5; ++f)
+              fbars[r][f] = _fbars(r, f);
+          }
+        
       }
 
         
@@ -162,6 +175,7 @@ namespace semantic_bki {
 
         MatrixXType x;   // temporary storage of training data
         MatrixYType y;   // temporary storage of training labels
+        MatrixKType f;   // temporary storage of training features
         std::vector<T> y_vec;
 
         bool trained;    // true if bgkinference stored training data

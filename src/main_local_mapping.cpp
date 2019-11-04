@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
   int block_depth = 4;
   double sf2 = 1.0;
   double ell = 1.0;
-  float prior = 1.0f;
+  float prior = 0.0f;
   float var_thresh = 1.0f;
   double free_thresh = 0.3;
   double occupied_thresh = 0.7;
@@ -154,16 +154,20 @@ int main(int argc, char *argv[]) {
   std::cout<<"Just reading  names\n";
 
   // Query map
-  semantic_bki::PCLPointCloud query_cloud;
+  pcl::PointCloud<pcl::PointXYZRGB> query_cloud;
   for (auto it = map_csm.begin_leaf(); it != map_csm.end_leaf(); ++it) {
     if (it.get_node().get_state() == semantic_bki::State::OCCUPIED) {
         semantic_bki::point3f p = it.get_loc();
         int semantics = it.get_node().get_semantics();
-        pcl::PointXYZL point;
+        std::vector<float> features(5, 0);
+        it.get_node().get_features(features);
+        pcl::PointXYZRGB point;
         point.x = p.x();
         point.y = p.y();
         point.z = p.z();
-        point.label = semantics;
+        point.r = features[0] * 255;
+        point.g = features[1] * 255;
+        point.b = features[2] * 255;
         query_cloud.push_back(point);
     }
   }
