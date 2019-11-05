@@ -19,7 +19,7 @@ int main(int argc, char** argv){
     
 
     // create our registration class
-    cvo::rkhs_se3 cvo;
+    cvo::cvo cvo;
 
     // load associate file
     vector<string> vstrRGBName;     // vector for image names

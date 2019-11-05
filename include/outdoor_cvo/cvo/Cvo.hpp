@@ -6,24 +6,22 @@
  * -------------------------------------------------------------------------- */
 
 /**
- *  @file   rkhs_se3.hpp
+ *  @file   cvo.hpp
  *  @author Tzu-yuan Lin, Maani Ghaffari 
- *  @brief  Header file for contineuous visual odometry rkhs_se3 registration
- *  @date   August 15, 2019
+ *  @brief  Header file for contineuous visual odometry registration
+ *  @date   November 03, 2019
  **/
 
-#ifndef RKHS_SE3_H
-#define RKHS_SE3_H
+#ifndef CVO_H
+#define CVO_H
 
 
 // #include "data_type.h"
-#include "LieGroup.h"
-#include "pcd_generator.hpp"
-#include "util/nanoflann.h"
-#include "util/Pnt.h"
-#include "util/settings.h"
-#include "FullSystem/HessianBlocks.h"
-#include "KDTreeVectorOfVectorsAdaptor.h"
+#include "cvo/LieGroup.h"
+#include "cvo/nanoflann.hpp"
+#include "cvo/KDTreeVectorOfVectorsAdaptor.h"
+#include "utils/CvoPointCloud.hpp"
+// #include "pcd_generator.hpp"
 
 
 #include <vector>
@@ -58,24 +56,21 @@
 using namespace nanoflann;
 
 namespace cvo{
-  class rkhs_se3{
+  class cvo{
 
   private:
     // private variables
-    std::unique_ptr<frame> ptr_fixed_fr;
-    std::unique_ptr<frame> ptr_moving_fr;
-
-    std::unique_ptr<point_cloud> ptr_fixed_pcd;
-    std::unique_ptr<point_cloud> ptr_moving_pcd;
+    CvoPointCloud* ptr_fixed_pcd;
+    CvoPointCloud* ptr_moving_pcd;
 
     int num_fixed;              // target point cloud counts
     int num_moving;             // source point cloud counts
-    cloud_t *cloud_x;    // target points represented as a matrix (num_fixed,3)
-    cloud_t *cloud_y;    // source points represented as a matrix (num_moving,3)
+    ArrayVec3f *cloud_x;    // target points represented as a matrix (num_fixed,3)
+    ArrayVec3f *cloud_y;    // source points represented as a matrix (num_moving,3)
 
     float ell;          // kernel characteristic length-scale
     float ell_init;
-   float ell_min;
+    float ell_min;
     float ell_max;
     double dl;           // changes for ell in each iteration
     double dl_step;
@@ -108,9 +103,6 @@ namespace cvo{
     typedef Eigen::Triplet<float> Trip_t;
     tbb::concurrent_vector<Trip_t> A_trip_concur;
 
-    //pcl::visualization::PCLVisualizer::Ptr viewer;
-    //int frame_id = 0;
-    //    int pcd_id = 0;
 
   public:
     
@@ -152,26 +144,13 @@ namespace cvo{
 
 
     /**
-     * @brief compute color inner product of ith row in fixed and jth row in moving
-     * @param i: index of desired row in fixed
-     * @param j: indxe of desired row in moving
-     * @return CI: the inner product
-     */
-    inline float color_inner_product(const int i, const int j);
-        
-    /**
-     * @brief compute color kernel
-     */
-    inline float color_kernel(const int i, const int j);
-
-    /**
      * @brief isotropic (same length-scale for all dimensions) squared-exponential kernel
-     * @param l: kernel characteristic length-scale, aka rkhs_se3.ell
-     * @prarm s2: signal variance, square of rkhs_se3.sigma
+     * @param l: kernel characteristic length-scale, aka cvo.ell
+     * @param s2: signal variance, square of cvo.sigma
      * @return k: n-by-m kernel matrix 
      */
     //void se_kernel(const float l, const float s2);
-    void se_kernel(point_cloud* cloud_a, point_cloud* cloud_b, \
+    void se_kernel(CvoPointCloud* cloud_a, CvoPointCloud* cloud_b, \
                    cloud_t* cloud_a_pos, cloud_t* cloud_b_pos,          \
                    Eigen::SparseMatrix<float,Eigen::RowMajor>& A_temp,
                    tbb::concurrent_vector<Trip_t> & A_trip_concur_) const;
@@ -198,8 +177,8 @@ namespace cvo{
     // public funcitons
 
     // constructor and destructor
-    rkhs_se3();
-    ~rkhs_se3();
+    cvo();
+    ~cvo();
 
     /**
      * @brief initialize new point cloud and extract pcd as matrices
@@ -211,41 +190,24 @@ namespace cvo{
         @brief: set pcd from vector of xyz and rgb image directly
 
     */
-    template <class PointType>
-    void set_pcd(int w, int h,
-                 const dso::FrameHessian * img_source,
-                 const std::vector<PointType> & source_points,
-                 const dso::FrameHessian * img_target,
-                 const std::vector<PointType> & target_points,
-                 const Eigen::Affine3f & init_guess,
-                 bool is_using_init_guess);
-
-    
-  template <class PointType>
-  void set_pcd(const vector<PointType> & source_points,
-               const vector<PointType> & target_points,
-               Eigen::Affine3f & init_guess_transform,
-               bool is_using_init_guess);
-
-
+    void set_pcd(CvoPointCloud& source_points,
+                CvoPointCloud& target_points,
+                Eigen::Affine3f & init_guess_transform,
+                bool is_using_init_guess);
     
     /**
      * @brief align two rgbd pointcloud
      *        the function will iterate MAX_ITER times unless break conditions are met
      */
     void align();
+
     // callable after each align
     float inner_product() const ;
-
     // just compute the inner product
-    template <typename PointType>
-    float inner_product(const std::vector<PointType> & source_points,
-                        const std::vector<PointType> & target_points,
+    float inner_product(CvoPointCloud& source_points,
+                        CvoPointCloud& target_points,
                         const Eigen::Affine3f & source_frame_to_target_frame);
-    template <typename PointType>
-    void  loop_fill_pcd (const std::vector<PointType> & dso_pts,
-                         point_cloud & output_cvo_pcd )  ;
-    //void visualize_pcd();
+
 
 
     Eigen::Affine3f get_transform() {return transform;}
@@ -259,4 +221,4 @@ namespace cvo{
 
   
 }
-#endif  // RKHS_SE3_H
+#endif  // cvo_H
