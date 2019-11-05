@@ -6,7 +6,8 @@
 namespace cvo {
   RawImage::RawImage(const cv::Mat & image)
     : gradient_(image.total()),
-      gradient_square_(image.total(), 0){
+      gradient_square_(image.total(), 0) {
+    num_class_ = 0;
     color_ = image.clone();
     //cv::fastNlMeansDenoising (color_, color_);
     //cv::imwrite("denoised.png", color_);
@@ -18,8 +19,9 @@ namespace cvo {
     compute_image_gradient();
   }
 
-  RawImage::RawImage(const cv::Mat & image, const std::vector<float> & semantic)
-    : RawImage(image) {
+  RawImage::RawImage(const cv::Mat & image, int num_classes, const std::vector<float> & semantic)
+    : RawImage(image)  {
+    num_class_ = num_classes;
     semantic_image_.resize(semantic.size());
     memcpy(semantic_image_.data(), semantic.data(), sizeof(float) * semantic.size() );
   }

@@ -25,7 +25,7 @@ int main(int argc, char ** argv) {
       std::cout<<"construct new frame "<<i<<"\n"<<std::flush;
       std::shared_ptr<cvo::Frame> new_frame(new cvo::Frame(i, left, right, calib ));
       pose_graph.add_new_frame(new_frame);
-      pose_graph.optimize();
+      pose_graph.pose_graph_optimize();
     }
   }
   return 0;

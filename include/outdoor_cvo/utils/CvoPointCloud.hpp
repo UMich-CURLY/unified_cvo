@@ -3,12 +3,21 @@
 #include <cassert>
 #include <Eigen/Dense>
 #include <opencv2/opencv.hpp>
+#include <tbb/tbb.h>
+
 #include "utils/data_type.hpp"
 #include "utils/RawImage.hpp"
 #include "utils/StaticStereo.hpp"
 #include "utils/Calibration.hpp"
-namespace cvo {
+#include "utils/data_type.hpp"
+#include "mapping/bkioctomap.h"
 
+namespace semantic_bki {
+  class SemanticBKIOctoMap;
+}
+
+
+namespace cvo {
 
   class CvoPointCloud{
   public:
@@ -17,11 +26,13 @@ namespace cvo {
     //const int pixel_pattern[8][2] = {{0,0}, {-2, 0},{-1,-1}, {-1,1}, {0,2},{0,-2},{1,1},{2,0} };
     const int pixel_pattern[8][2] = {{0,0}, {-1, 0},{-1,-1}, {-1,1}, {0,1},{0,-1},{1,1},{1,0} };
     
-    //CvoPointCloud(const cv::Mat & left_image,
-    //              const cv::Mat & right_image);
     CvoPointCloud(const RawImage & left_raw_image,
                   const cv::Mat & right_image,
                   const Calibration &calib);
+
+    CvoPointCloud(const semantic_bki::SemanticBKIOctoMap& map,
+                  int num_semantic_class);
+
     CvoPointCloud();
     CvoPointCloud(const RawImage & left_image,
                   const cv::Mat & right_image,
@@ -31,6 +42,10 @@ namespace cvo {
     ~CvoPointCloud();
 
     int read_cvo_pointcloud_from_file(const std::string & filename);
+    
+    static void transform(const Eigen::Matrix4f& pose,
+                          const CvoPointCloud & input,
+                          CvoPointCloud & output);
 
     // getters
     int num_points() const {return num_points_;}

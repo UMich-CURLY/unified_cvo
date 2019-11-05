@@ -4,6 +4,8 @@
 #include <cmath>
 #include <cstdio>
 #include <iostream>
+#include <algorithm>
+
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl/io/pcd_io.h>
@@ -15,7 +17,7 @@ namespace cvo{
   static bool is_good_point(const Vec3f & xyz, const Vec2i uv, int h, int w ) {
     int u = uv(0);
     int v = uv(1);
-    if ( u < 2 || u > w -3 || v < 2 || v > h-30 )
+    if ( u < 2 || u > w -3 || v < 2 || v > h-50 )
       return false;
 
     if (xyz.norm() > 150)
@@ -107,6 +109,42 @@ namespace cvo{
                   
     
   }
+  
+  CvoPointCloud::CvoPointCloud(const semantic_bki::SemanticBKIOctoMap& map,
+                               const int num_classes) {
+    num_classes_ = num_classes;
+    std::vector<std::vector<float>> features;
+    std::vector<std::vector<float>> labels;
+    for (auto it = map.begin_leaf(); it != map.end_leaf(); ++it) {
+      if (it.get_node().get_state() == semantic_bki::State::OCCUPIED) {
+        // position
+        semantic_bki::point3f p = it.get_loc();
+        Vec3f xyz;
+        xyz << p.x(), p.y(), p.z();
+        positions_.push_back(xyz);
+        // features
+        std::vector<float> feature(5, 0);
+        it.get_node().get_features(feature);
+        features.push_back(feature);
+        // labels
+        std::vector<float> label(num_classes_, 0);
+        it.get_node().get_occupied_probs(label);
+        labels.push_back(label);
+      }
+    }
+    num_points_ = positions_.size();
+    features_.resize(num_points_, 5);
+    labels_.resize(num_points_, num_classes_);
+    for (int i = 0; i < num_points_; ++i) {
+      for (int j = 0; j < 5; ++j) {
+        features_(i, j) = features[i][j];
+      }
+      for (int j = 0; j < num_classes_; ++j) {
+        labels_(i, j) = labels[i][j];
+      }
+    }
+  }
+
   CvoPointCloud::CvoPointCloud(){}
   CvoPointCloud::~CvoPointCloud() {
     
@@ -198,4 +236,17 @@ namespace cvo{
   }
 
   
+  void CvoPointCloud::transform(const Eigen::Matrix4f& pose,
+                                const CvoPointCloud & input,
+                                CvoPointCloud & output) {
+    output.num_points_ = input.num_points();
+    output.num_classes_ = input.num_classes();
+    output.features_ = input.features();
+    output.labels_ = input.labels();
+    tbb::parallel_for(int(0), input.num_points(), [&](int j) {
+                                                    output.positions_[j] = (pose.block(0, 0, 3, 3) * input.positions()[j] + pose.block(0, 3, 3, 1)).eval();
+                                           });
+  }
+
+
 }
