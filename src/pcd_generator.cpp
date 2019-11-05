@@ -42,8 +42,6 @@ namespace cvo{
      **/
 
     // initialize array for storing the pyramid
-    int wl = ptr_fr->w;     // wl is the width of image at level l
-    int hl = ptr_fr->h;     // hl is the height of image at level l
     for(int i=0; i<PYR_LEVELS; ++i){
       ptr_fr->dI_pyr[i] = new Eigen::Vector3f[wl*hl];
       ptr_fr->abs_squared_grad[i] = new float[wl*hl];
@@ -64,62 +62,32 @@ namespace cvo{
       }
     }
         
-    // initialize w and l to first level
-    wl = w;
-    hl = h;
-    // start making pyramid, loop through different levels
-    for(int lvl=0; lvl<PYR_LEVELS; ++lvl){
-            
-      // create a pointer point to dI at current level
-      Eigen::Vector3f* dI_l = ptr_fr->dI_pyr[lvl];
+    // create a pointer point to dI at current level
+    Eigen::Vector3f* dI_l = ptr_fr->dI_pyr[lvl];
         
 
-      // create a pointer point to abs_squared_grad at current level
-      float* abs_l = ptr_fr->abs_squared_grad[lvl];
+    // create a pointer point to abs_squared_grad at current level
+    float* abs_l = ptr_fr->abs_squared_grad[lvl];
 
-      // if it's not the finest level, downsample 
-      if(lvl>0){
-        // create pointer to previous level
-        int prev_lvl = lvl-1;
-        int prev_wl = wl*2;
-        Eigen::Vector3f* prev_dI_l = ptr_fr->dI_pyr[prev_lvl];
-
-        // downsampling
-        for(int y=0; y<hl; ++y){
-          for(int x=0; x<wl; ++x){
-            dI_l[x+y*wl][0] = 0.25f*(prev_dI_l[2*x   + 2*y*prev_wl][0] + \
-                                     prev_dI_l[2*x+1 + 2*y*prev_wl][0] + \
-                                     prev_dI_l[2*x   + 2*y*prev_wl+prev_wl][0] + \
-                                     prev_dI_l[2*x+1 + 2*y*prev_wl+prev_wl][0]);
-          }
-        }
-      }
-
-      // calculate gradient
-      // we skip the first row&col and the last row&col
-      for(int idx=wl; idx<wl*(hl-1); ++idx){
+    // calculate gradient
+    // we skip the first row&col and the last row&col
+    for(int idx=w; idx<w*(h-1); ++idx){
                 
-        float dx = 0.5f*(dI_l[idx+1][0] - dI_l[idx-1][0]);
-        float dy = 0.5f*(dI_l[idx+wl][0] - dI_l[idx-wl][0]);
+      float dx = 0.5f*(dI_l[idx+1][0] - dI_l[idx-1][0]);
+      float dy = 0.5f*(dI_l[idx+wl][0] - dI_l[idx-wl][0]);
 
-        // if it's not finite, set to 0
-        if(!std::isfinite(dx)) dx=0;
-        if(!std::isfinite(dy)) dy=0;
+      // if it's not finite, set to 0
+      if(!std::isfinite(dx)) dx=0;
+      if(!std::isfinite(dy)) dy=0;
                 
-        dI_l[idx][1] = dx;
-        dI_l[idx][2] = dy;
+      dI_l[idx][1] = dx;
+      dI_l[idx][2] = dy;
 
-        // save current absolute gradient value (dx^2+dy^2) into ptr_fr->abs_squared_grad[lvl]
-        abs_l[idx] = dx*dx+dy*dy;
-        // abs_l[idx] = sqrt(dx*dx+dy*dy);    
-            
-
-      }
-
-      // update level 
-      wl/=2;
-      hl/=2;
+      // save current absolute gradient value (dx^2+dy^2) into ptr_fr->abs_squared_grad[lvl]
+      abs_l[idx] = dx*dx+dy*dy;
+      // abs_l[idx] = sqrt(dx*dx+dy*dy);    
     }
+    
   }
 
   int pcd_generator::select_point(const cv::Mat & image ,

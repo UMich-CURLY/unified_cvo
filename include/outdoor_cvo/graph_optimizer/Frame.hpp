@@ -8,22 +8,18 @@
 
 #include "utils/data_type.hpp"
 #include "utils/CvoPointCloud.hpp"
-
+#include "utils/RawImage.hpp"
+#include "utils/Calibration.hpp"
 namespace cvo {
 
-  struct RawImage {
-    // assume all data to be float32
-    cv::Mat color_image;
-    std::vector<float> semantic_image;
-  };
-  
   class Frame {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
     Frame(int ind,
           const cv::Mat & left_image,
-          const cv::Mat & right_image);
+          const cv::Mat & right_image,
+          const Calibration & calib);
     
     ~Frame();
     
@@ -31,13 +27,16 @@ namespace cvo {
     const int h;
     const int w;
 
+    const CvoPointCloud & points() {return points_;}
+    const RawImage & raw_image() { return raw_image_;}
+
   private:
-    
-    CvoPointCloud points;
 
     //std::unique_ptr local_map;
-    RawImage raw_image;
-    
+    RawImage raw_image_;
+
+
+    CvoPointCloud points_;
   };
 
     

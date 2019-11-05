@@ -10,7 +10,8 @@
 
 #include "libelas/elas.h"
 #include "utils/data_type.hpp"
-
+#include "utils/RawImage.hpp"
+#include "utils/Calibration.hpp"
 namespace cvo {
   namespace StaticStereo {
     
@@ -25,12 +26,12 @@ namespace cvo {
                    const cv::Mat & right_gray,
                    std::vector<float> & output_left_disparity); 
 
-    TraceStatus pt_depth_from_disparity(const std::vector<float> & left_disparity,
-                                        const Mat33f & intrinsic,
-                                        const float baseline,
-                                        const Vec2f & input,
+    TraceStatus pt_depth_from_disparity(const RawImage & left_image,
+                                        const std::vector<float> & left_disparity,
+                                        const Calibration & calib,
                                         // output
-                                        Eigen::Ref<Vec2f> result
+                                        const Vec2i & uv,
+                                        Eigen::Ref<Vec3f> result
                                         );
 
 

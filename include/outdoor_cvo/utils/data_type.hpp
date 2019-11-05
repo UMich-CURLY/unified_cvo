@@ -95,6 +95,8 @@ namespace cvo{
   typedef Eigen::Matrix<float,2,1> Vec2f;
   typedef Eigen::Matrix<float,6,1> Vec6f;
 
+  typedef Eigen::Vector2i Vec2i;
+  typedef Eigen::Vector3i Vec3i;
 
 
   typedef Eigen::Matrix<double,4,9> Mat49;

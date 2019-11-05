@@ -25,7 +25,7 @@
 
 
 
-#include "CvoPixelSelector.h"
+#include "utils/CvoPixelSelector.hpp"
 
 
 namespace cvo
@@ -36,33 +36,28 @@ namespace cvo
   const float setting_minGradHistCut  = 0.5;
   const float setting_minGradHistAdd = 7;
 
-  PixelSelector::PixelSelector(int w, int h)
+  PixelSelector::PixelSelector(int w_, int h_) :
+    w(w_), h(h_)
   {
-    randomPattern = new unsigned char[w*h];
+    randomPattern.resize(w*h);
     std::srand(3141592);	// want to be deterministic.
     for(int i=0;i<w*h;i++) randomPattern[i] = rand() & 0xFF;
 
     currentPotential=3;
 
 
-    gradHist = new int[100*(1+w/32)*(1+h/32)];
-    ths = new float[(w/32)*(h/32)+100];
-    thsSmoothed = new float[(w/32)*(h/32)+100];
-
-    allowFast=false;
+    gradHist .resize( 100*(1+w/32)*(1+h/32));
+    ths.resize( (w/32)*(h/32)+100 );
+    thsSmoothed.resize( (w/32)*(h/32)+100 );
+  
+    allowFastCornerSelector=false;
     gradHistFrame=0;
   }
 
-  PixelSelector::~PixelSelector()
-  {
-    delete[] randomPattern;
-    delete[] gradHist;
-    delete[] ths;
-    delete[] thsSmoothed;
+  PixelSelector::~PixelSelector() {
   }
 
-  int computeHistQuantil(int* hist, float below)
-  {
+  static int computeHistQuantil(int* hist, float below) {
     int th = hist[0]*below+0.5f;
     for(int i=0;i<90;i++)
     {
@@ -73,13 +68,13 @@ namespace cvo
   }
 
 
-  void PixelSelector::makeHists(const cvo::frame* const ptr_fr)
+  void PixelSelector::makeHists(const RawImage & raw_image)
   {	
-    gradHistFrame = ptr_fr;
-    float * mapmax0 = ptr_fr->abs_squared_grad[0];
+    gradHistFrame = &raw_image;
+    const float * mapmax0 = raw_image.gradient_square().data();
 
-    int w = ptr_fr->w;
-    int h = ptr_fr->h;
+    int w = raw_image.color().cols;
+    int h = raw_image.color().rows;
 
     int w32 = w/32;
     int h32 = h/32;
@@ -88,22 +83,22 @@ namespace cvo
     for(int y=0;y<h32;y++)
       for(int x=0;x<w32;x++)
       {	
-        float* map0 = mapmax0+32*x+32*y*w;
-        int* hist0 = gradHist;// + 50*(x+y*w32);
+        auto map0 = mapmax0+32*x+32*y*w;
+        auto hist0 = gradHist.data();// + 50*(x+y*w32);
         memset(hist0,0,sizeof(int)*50);
 			
-        for(int j=0;j<32;j++) for(int i=0;i<32;i++)
-                              {
-				int it = i+32*x;
-				int jt = j+32*y;
+        for(int j=0;j<32;j++)
+          for(int i=0;i<32;i++) {
+            int it = i+32*x;
+            int jt = j+32*y;
 
-				if(it>w-2 || jt>h-2 || it<1 || jt<1) continue;
-				int g = sqrtf(map0[i+j*w]);
+            if(it>w-2 || jt>h-2 || it<1 || jt<1) continue;
+            int g = sqrtf(map0[i+j*w]);
 
-				if(g>48) g=48;
-				hist0[g+1]++;
-				hist0[0]++;
-                              }
+            if(g>48) g=48;
+            hist0[g+1]++;
+            hist0[0]++;
+          }
 			
         ths[x+y*w32] = computeHistQuantil(hist0,setting_minGradHistCut) + setting_minGradHistAdd;
 			
@@ -139,17 +134,19 @@ namespace cvo
 
 
   }
-  int PixelSelector::makeMaps(
-                              const cvo::frame* const ptr_fr,
-                              float* map_out, float density, int recursionsLeft, bool plot, float thFactor)
+  int PixelSelector::makeHeatMaps(const RawImage & raw_image,
+                                  float density, 
+                                  // output
+                                  float * map_out,
+                                  std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv,
+                                  // default inputs
+                                  int recursionsLeft, bool plot, float thFactor)
   {
     float numHave=0;
     float numWant=density;
     float quotia;
     int idealPotential = currentPotential;
-
-
-    //	if(setting_pixelSelectionUseFast>0 && allowFast)
+    //	if(setting_pixelSelectionUseFast>0 && allowFastCornerS)
     //	{
     //		memset(map_out, 0, sizeof(float)*wG[0]*hG[0]);
     //		std::vector<cv::KeyPoint> pts;
@@ -173,18 +170,15 @@ namespace cvo
     //	}
     //	else
     {
-
-
-
-
       // the number of selected pixels behaves approximately as
       // K / (pot+1)^2, where K is a scene-dependent constant.
       // we will allow sub-selecting pixels by up to a quotia of 0.25, otherwise we will re-select.
 
-      if(ptr_fr != gradHistFrame) makeHists(ptr_fr);
+      if(&raw_image != gradHistFrame)
+        makeHists(raw_image);
 
       // select!
-      Eigen::Vector3i n = this->select(ptr_fr, map_out, currentPotential, thFactor);
+      Eigen::Vector3i n = this->select(raw_image,  currentPotential, thFactor, map_out, output_uv);
 
       // sub-select!
       numHave = n[0]+n[1]+n[2];
@@ -202,13 +196,13 @@ namespace cvo
         if(idealPotential>=currentPotential)
           idealPotential = currentPotential-1;
 
-	//		printf("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
-	//				100*numHave/(float)(wG[0]*hG[0]),
-	//				100*numWant/(float)(wG[0]*hG[0]),
-	//				currentPotential,
-	//				idealPotential);
+        //		printf("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
+        //				100*numHave/(float)(wG[0]*hG[0]),
+        //				100*numWant/(float)(wG[0]*hG[0]),
+        //				currentPotential,
+        //				idealPotential);
         currentPotential = idealPotential;
-        return makeMaps(ptr_fr,map_out, density, recursionsLeft-1, plot,thFactor);
+        return makeHeatMaps(raw_image,density, map_out, output_uv, recursionsLeft-1, plot,thFactor);
       }
       else if(recursionsLeft>0 && quotia < 0.25)
       {
@@ -217,13 +211,13 @@ namespace cvo
         if(idealPotential<=currentPotential)
           idealPotential = currentPotential+1;
 
-	//		printf("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
-	//				100*numHave/(float)(wG[0]*hG[0]),
-	//				100*numWant/(float)(wG[0]*hG[0]),
-	//				currentPotential,
-	//				idealPotential);
+        //		printf("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
+        //				100*numHave/(float)(wG[0]*hG[0]),
+        //				100*numWant/(float)(wG[0]*hG[0]),
+        //				currentPotential,
+        //				idealPotential);
         currentPotential = idealPotential;
-        return makeMaps(ptr_fr,map_out, density, recursionsLeft-1, plot,thFactor);
+        return makeHeatMaps(raw_image, density,  map_out, output_uv, recursionsLeft-1, plot,thFactor);
 
       }
     }
@@ -231,7 +225,7 @@ namespace cvo
     int numHaveSub = numHave;
     if(quotia < 0.95)
     {
-      int wh=ptr_fr->w*ptr_fr->h;
+      int wh=raw_image.color().total();
       int rn=0;
       unsigned char charTH = 255*quotia;
       for(int i=0;i<wh;i++)
@@ -248,66 +242,32 @@ namespace cvo
       }
     }
 
-    //	printf("PixelSelector: have %.2f%%, need %.2f%%. KEEPCURR with pot %d -> %d. Subsampled to %.2f%%\n",
-    //			100*numHave/(float)(wG[0]*hG[0]),
-    //			100*numWant/(float)(wG[0]*hG[0]),
-    //			currentPotential,
-    //			idealPotential,
-    //			100*numHaveSub/(float)(wG[0]*hG[0]));
     currentPotential = idealPotential;
-
-
-    // if(plot)
-    // {
-    // 	int w = ptr_fr->w;
-    // 	int h = ptr_fr->h;
-
-
-    // 	MinimalImageB3 img(w,h);
-
-    // 	for(int i=0;i<w*h;i++)
-    // 	{
-    // 		float c = ptr_fr->dI[i][0]*0.7;
-    // 		if(c>255) c=255;
-    // 		img.at(i) = Vec3b(c,c,c);
-    // 	}
-    // 	IOWrap::displayImage("Selector Image", &img);
-
-    // 	for(int y=0; y<h;y++)
-    // 		for(int x=0;x<w;x++)
-    // 		{
-    // 			int i=x+y*w;
-    // 			if(map_out[i] == 1)
-    // 				img.setPixelCirc(x,y,Vec3b(0,255,0));
-    // 			else if(map_out[i] == 2)
-    // 				img.setPixelCirc(x,y,Vec3b(255,0,0));
-    // 			else if(map_out[i] == 4)
-    // 				img.setPixelCirc(x,y,Vec3b(0,0,255));
-    // 		}
-    // 	IOWrap::displayImage("Selector Pixels", &img);
-    // }
 
     return numHaveSub;
   }
 
 
 
-  Eigen::Vector3i PixelSelector::select(const cvo::frame* const ptr_fr,
-                                        float* map_out, int pot, float thFactor)
+  Eigen::Vector3i PixelSelector::select(const RawImage & raw_image, 
+                                        int pot, float thFactor,
+                                        // outputs
+                                        float * map_out,
+                                        std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv 
+                                        )
   {
 
-    Eigen::Vector3f const * const map0 = ptr_fr->dI;
+    auto map0 = raw_image.intensity().data(); //ptr_fr->dI;
+    auto grad0 = raw_image.gradient();
+    auto mapmax0 = raw_image.gradient_square().data();
+    //float * mapmax0 = ptr_fr->abs_squared_grad[0];
+    //float * mapmax1 = ptr_fr->abs_squared_grad[1];
+    //float * mapmax2 = ptr_fr->abs_squared_grad[2];
 
-    float * mapmax0 = ptr_fr->abs_squared_grad[0];
-    float * mapmax1 = ptr_fr->abs_squared_grad[1];
-    float * mapmax2 = ptr_fr->abs_squared_grad[2];
-
-
-    int w = ptr_fr->w;
+    int w = raw_image.color().cols;
     int w1 = w/2;
     int w2 = w/4;
-    int h = ptr_fr->h;
-
+    int h = raw_image.color().rows;
 
     const Vec2f directions[16] = {
                                   Vec2f(0,    1.0000),
@@ -329,8 +289,6 @@ namespace cvo
 
     memset(map_out,0,w*h*sizeof(PixelSelectorStatus));
 
-
-
     float dw1 = setting_gradDownweightPerLevel;
     float dw2 = dw1*dw1;
 
@@ -343,89 +301,96 @@ namespace cvo
         int mx3 = std::min((4*pot), w-x4);
         int bestIdx4=-1; float bestVal4=0;
         Vec2f dir4 = directions[randomPattern[n2] & 0xF];
-        for(int y3=0;y3<my3;y3+=(2*pot)) for(int x3=0;x3<mx3;x3+=(2*pot))
-                                         {
-                                           int x34 = x3+x4;
-                                           int y34 = y3+y4;
-                                           int my2 = std::min((2*pot), h-y34);
-                                           int mx2 = std::min((2*pot), w-x34);
-                                           int bestIdx3=-1; float bestVal3=0;
-                                           Vec2f dir3 = directions[randomPattern[n2] & 0xF];
-                                           for(int y2=0;y2<my2;y2+=pot) for(int x2=0;x2<mx2;x2+=pot)
-                                                                        {
-                                                                          int x234 = x2+x34;
-                                                                          int y234 = y2+y34;
-                                                                          int my1 = std::min(pot, h-y234);
-                                                                          int mx1 = std::min(pot, w-x234);
-                                                                          int bestIdx2=-1; float bestVal2=0;
-                                                                          Vec2f dir2 = directions[randomPattern[n2] & 0xF];
-                                                                          for(int y1=0;y1<my1;y1+=1) for(int x1=0;x1<mx1;x1+=1)
-                                                                                                     {
-                                                                                                       assert(x1+x234 < w);
-                                                                                                       assert(y1+y234 < h);
-                                                                                                       int idx = x1+x234 + w*(y1+y234);
-                                                                                                       int xf = x1+x234;
-                                                                                                       int yf = y1+y234;
+        for(int y3=0;y3<my3;y3+=(2*pot))
+          for(int x3=0;x3<mx3;x3+=(2*pot))
+          {
+            int x34 = x3+x4;
+            int y34 = y3+y4;
+            int my2 = std::min((2*pot), h-y34);
+            int mx2 = std::min((2*pot), w-x34);
+            int bestIdx3=-1; float bestVal3=0;
+            Vec2f dir3 = directions[randomPattern[n2] & 0xF];
+            for(int y2=0;y2<my2;y2+=pot)
+              for(int x2=0;x2<mx2;x2+=pot)
+              {
+                int x234 = x2+x34;
+                int y234 = y2+y34;
+                int my1 = std::min(pot, h-y234);
+                int mx1 = std::min(pot, w-x234);
+                int bestIdx2=-1; float bestVal2=0;
+                Vec2f dir2 = directions[randomPattern[n2] & 0xF];
+                for(int y1=0;y1<my1;y1+=1)
+                  for(int x1=0;x1<mx1;x1+=1)
+                  {
+                    assert(x1+x234 < w);
+                    assert(y1+y234 < h);
+                    int idx = x1+x234 + w*(y1+y234);
+                    int xf = x1+x234;
+                    int yf = y1+y234;
 
-                                                                                                       if(xf<4 || xf>=w-5 || yf<4 || yf>h-4) continue;
-
-
-                                                                                                       float pixelTH0 = thsSmoothed[(xf>>5) + (yf>>5) * thsStep];
-                                                                                                       float pixelTH1 = pixelTH0*dw1;
-                                                                                                       float pixelTH2 = pixelTH1*dw2;
+                    if(xf<4 || xf>=w-5 || yf<4 || yf>h-4) continue;
 
 
-                                                                                                       float ag0 = mapmax0[idx];
-                                                                                                       if(ag0 > pixelTH0*thFactor)
-                                                                                                       {
-                                                                                                         Vec2f ag0d = map0[idx].tail<2>();
-                                                                                                         float dirNorm = fabsf((float)(ag0d.dot(dir2)));
-                                                                                                         if(!setting_selectDirectionDistribution) dirNorm = ag0;
+                    float pixelTH0 = thsSmoothed[(xf>>5) + (yf>>5) * thsStep];
+                    float pixelTH1 = pixelTH0*dw1;
+                    float pixelTH2 = pixelTH1*dw2;
 
-                                                                                                         if(dirNorm > bestVal2)
-                                                                                                         { bestVal2 = dirNorm; bestIdx2 = idx; bestIdx3 = -2; bestIdx4 = -2;}
-                                                                                                       }
-                                                                                                       if(bestIdx3==-2) continue;
 
-                                                                                                       // float ag1 = mapmax1[(int)(xf*0.5f+0.25f) + (int)(yf*0.5f+0.25f)*w1];
-                                                                                                       // if(ag1 > pixelTH1*thFactor)
-                                                                                                       // {
-                                                                                                       // 	Vec2f ag0d = map0[idx].tail<2>();
-                                                                                                       // 	float dirNorm = fabsf((float)(ag0d.dot(dir3)));
-                                                                                                       // 	if(!setting_selectDirectionDistribution) dirNorm = ag1;
+                    float ag0 = mapmax0[idx];
+                    if(ag0 > pixelTH0*thFactor)
+                    {
+                      //Vec2f ag0d = map0[idx].tail<2> ();
+                      Vec2f ag0d = grad0[idx];
+                      float dirNorm = fabsf((float)(ag0d.dot(dir2)));
+                      if(!setting_selectDirectionDistribution) dirNorm = ag0;
 
-                                                                                                       // 	if(dirNorm > bestVal3)
-                                                                                                       // 	{ bestVal3 = dirNorm; bestIdx3 = idx; bestIdx4 = -2;}
-                                                                                                       // }
-                                                                                                       // if(bestIdx4==-2) continue;
+                      if(dirNorm > bestVal2)
+                      { bestVal2 = dirNorm; bestIdx2 = idx; bestIdx3 = -2; bestIdx4 = -2;}
+                    }
+                    if(bestIdx3==-2) continue;
 
-                                                                                                       // float ag2 = mapmax2[(int)(xf*0.25f+0.125) + (int)(yf*0.25f+0.125)*w2];
-                                                                                                       // if(ag2 > pixelTH2*thFactor)
-                                                                                                       // {
-                                                                                                       // 	Vec2f ag0d = map0[idx].tail<2>();
-                                                                                                       // 	float dirNorm = fabsf((float)(ag0d.dot(dir4)));
-                                                                                                       // 	if(!setting_selectDirectionDistribution) dirNorm = ag2;
+                    // float ag1 = mapmax1[(int)(xf*0.5f+0.25f) + (int)(yf*0.5f+0.25f)*w1];
+                    // if(ag1 > pixelTH1*thFactor)
+                    // {
+                    // 	Vec2f ag0d = map0[idx].tail<2>();
+                    // 	float dirNorm = fabsf((float)(ag0d.dot(dir3)));
+                    // 	if(!setting_selectDirectionDistribution) dirNorm = ag1;
 
-                                                                                                       // 	if(dirNorm > bestVal4)
-                                                                                                       // 	{ bestVal4 = dirNorm; bestIdx4 = idx; }
-                                                                                                       // }
-                                                                                                     }
+                    // 	if(dirNorm > bestVal3)
+                    // 	{ bestVal3 = dirNorm; bestIdx3 = idx; bestIdx4 = -2;}
+                    // }
+                    // if(bestIdx4==-2) continue;
 
-                                                                          if(bestIdx2>0)
-                                                                          {
-                                                                            map_out[bestIdx2] = 1;
-                                                                            bestVal3 = 1e10;
-                                                                            n2++;
-                                                                          }
-                                                                        }
+                    // float ag2 = mapmax2[(int)(xf*0.25f+0.125) + (int)(yf*0.25f+0.125)*w2];
+                    // if(ag2 > pixelTH2*thFactor)
+                    // {
+                    // 	Vec2f ag0d = map0[idx].tail<2>();
+                    // 	float dirNorm = fabsf((float)(ag0d.dot(dir4)));
+                    // 	if(!setting_selectDirectionDistribution) dirNorm = ag2;
 
-                                           // if(bestIdx3>0)
-                                           // {
-                                           // 	map_out[bestIdx3] = 2;
-                                           // 	bestVal4 = 1e10;
-                                           // 	n3++;
-                                           // }
-                                         }
+                    // 	if(dirNorm > bestVal4)
+                    // 	{ bestVal4 = dirNorm; bestIdx4 = idx; }
+                    // }
+                  }
+
+                if(bestIdx2>0)
+                {
+                  map_out[bestIdx2] = 1;
+                  Vec2i uv;
+                  uv << bestIdx2 % w , bestIdx2 / w;
+                  output_uv.push_back(uv);
+                  bestVal3 = 1e10;
+                  n2++;
+                }
+              }
+
+            // if(bestIdx3>0)
+            // {
+            // 	map_out[bestIdx3] = 2;
+            // 	bestVal4 = 1e10;
+            // 	n3++;
+            // }
+          }
 
         // if(bestIdx4>0)
         // {
@@ -439,5 +404,35 @@ namespace cvo
   }
 
 
+
+  void select_pixels(const RawImage & raw_image,
+                     int num_want,
+                     // output
+                     std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv ) {
+    PixelSelector selector(raw_image.color().cols, raw_image.color().rows);
+    std::vector<float> heat_map(raw_image.color().total(), 0);
+    selector.makeHeatMaps(raw_image,(float) num_want, heat_map.data(), output_uv );
+    
+    bool debug_plot = true;
+    if (debug_plot) {
+      //std::cout<<"Selected points is "<<output_uv.size()<<"\n";
+      cv::Mat heatmap(raw_image.color().rows, raw_image.color().cols, CV_32FC1, heat_map.data());
+      int w = heatmap.cols;
+      int h = heatmap.rows;
+      for (int i = 0; i < output_uv.size(); i++) {
+
+        cv::circle(heatmap, cv::Point( output_uv[i](0), output_uv[i](1) ), 1, cv::Scalar(255, 0 ,0), 1);
+
+        
+      }
+      //cv::imshow("heat map", heatmap);
+      //cv::waitKey(0);
+      cv::imwrite("heatmap.png", heatmap);
+      
+    }
+  }
+
+
+  
 }
 

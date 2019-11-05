@@ -1,5 +1,5 @@
 /**
- * This file is part of DSO.
+ * This file is part of DSO. used by CVO SLAM. 
  * 
  * Copyright 2016 Technical University of Munich and Intel.
  * Developed by Jakob Engel <engelj at in dot tum dot de>,
@@ -23,51 +23,68 @@
 
 
 #pragma once
- 
-#include "util/NumType.h"
-#include "data_type.h"
+#include <vector>
 #include <Eigen/Dense>
+#include <opencv2/opencv.hpp>
+#include "utils/data_type.hpp"
+#include "utils/RawImage.hpp"
+
 
 namespace cvo
 {
 
-   typedef Eigen::Matrix<float,2,1> Vec2f;
+
+  void select_pixels(const RawImage & raw_image,
+                     int num_want,
+                     // output
+                     std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv );
+
+
   
-  enum PixelSelectorStatus {PIXSEL_VOID=0, PIXSEL_1, PIXSEL_2, PIXSEL_3};
-
-
   class PixelSelector
   {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    int makeMaps(
-                 const cvo::frame* const fh,
-                 float* map_out, float density, int recursionsLeft=1, bool plot=false, float thFactor=1);
+    
+    enum PixelSelectorStatus {PIXSEL_VOID=0, PIXSEL_1, PIXSEL_2, PIXSEL_3};
+
+    int makeHeatMaps(const RawImage & raw_image,
+                     float density, 
+                     // output
+                     float* map_out,
+                     std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv,
+                     // default inputs
+                     int recursionsLeft=1, bool plot=false, float thFactor=1
+                     );
 
     PixelSelector(int w, int h);
     ~PixelSelector();
-    int currentPotential;
+    int currentPotential; // ????
 
 
-    bool allowFast;
-    void makeHists(const cvo::frame* const fh);
+    bool allowFastCornerSelector; //
+    void makeHists(const RawImage & raw_image );
+
+    
+    
   private:
 
-    Eigen::Vector3i select(const cvo::frame* const fh,
-                           float* map_out, int pot, float thFactor=1);
+    Eigen::Vector3i select(const RawImage & raw_image,
+                           int pot, float thFactor,
+                           // outputs
+                           float* map_out,
+                           std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv
+                           );
 
 
-    unsigned char* randomPattern;
+    std::vector<unsigned char> randomPattern;
 
-
-    int* gradHist;
-    float* ths;
-    float* thsSmoothed;
+    int w, h;
+    std::vector<int> gradHist;
+    std::vector<float> ths;
+    std::vector<float> thsSmoothed;
     int thsStep;
-    const cvo::frame* gradHistFrame;
+    const cvo::RawImage * gradHistFrame;
   };
-
-
-
 
 }

@@ -1,14 +1,110 @@
 #include <string>
 #include <fstream>
+#include <cassert>
+#include <cmath>
 #include <cstdio>
 #include <iostream>
+#include <pcl/point_types.h>
+#include <pcl/point_cloud.h>
+#include <pcl/io/pcd_io.h>
 #include "utils/CvoPointCloud.hpp"
-
+#include "utils/StaticStereo.hpp"
+#include "utils/CvoPixelSelector.hpp"
 namespace cvo{
 
-  CvoPointCloud::CvoPointCloud(const cv::Mat & left_image,
-                               const cv::Mat & right_image) {
+  static bool is_good_point(const Vec3f & xyz, const Vec2i uv, int h, int w ) {
+    int u = uv(0);
+    int v = uv(1);
+    if ( u < 2 || u > w -3 || v < 2 || v > h-30 )
+      return false;
+
+    if (xyz.norm() > 150)
+      return false;
+
+    return true;
+  }
+
+  cv::Vec3f CvoPointCloud::avg_pixel_color_pattern(const cv::Mat & raw_buffer, int u, int v, int w){
+    cv::Vec3f result_cv;
+    result_cv[0] = result_cv[1] = result_cv[2] = 0;
+    for (int i = 0; i < 8; i++){
+      cv::Vec3f pattern;
+      int u_pattern = pixel_pattern[i][0]+u;
+      int v_pattern = pixel_pattern[i][1]+v;
+      std::cout<<"at pattern "<<" ("<<pixel_pattern[i][0]+u<<","<<pixel_pattern[i][1]+v<<"): ";
+      pattern = raw_buffer.at<cv::Vec3b>(v_pattern, u_pattern);
+      std::cout<<" is "<<pattern;
+      result_cv = result_cv + pattern;
+      std::cout<<std::endl;
+    }
+    std::cout<<"Result: "<<result_cv <<std::endl;
+    result_cv  = (result_cv / 8);
+
+    return result_cv;
+  }
+
+  CvoPointCloud::CvoPointCloud(const RawImage & left_image,
+                               const cv::Mat & right_image,
+                               const Calibration & calib ) {
     
+    cv::Mat  left_gray, right_gray;
+    cv::cvtColor(right_image, right_gray, cv::COLOR_BGR2GRAY);
+    cv::cvtColor(left_image.color(), left_gray, cv::COLOR_BGR2GRAY);
+
+    std::vector<float> left_disparity;
+    StaticStereo::disparity(left_gray, right_gray, left_disparity);
+
+    int expected_points = 3000;
+    std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> output_uv;
+    select_pixels(left_image,
+                  expected_points,
+                  output_uv);
+
+
+
+
+    std::vector<int> good_point_ind;
+    int h = left_image.color().rows;
+    int w = left_image.color().cols;
+    for (int i = 0; i < output_uv.size(); i++) {
+      auto uv = output_uv[i];
+      Vec3f xyz;
+
+      StaticStereo::TraceStatus trace_status = StaticStereo::pt_depth_from_disparity(left_image,
+                                                                                     left_disparity,
+                                                                                     calib,
+                                                                                     uv,
+                                                                                     xyz );
+      if (trace_status == StaticStereo::TraceStatus::GOOD && is_good_point (xyz, uv, h, w) ) {
+        good_point_ind.push_back(i);
+        //good_point_xyz.push_back(xyz);
+        positions_.push_back(xyz);
+
+      }
+    }
+     
+    // start to fill in class members
+    num_points_ = good_point_ind.size();
+    num_classes_ = 0;
+    features_.resize(num_points_, 5);
+    for (int i = 0; i < num_points_ ; i++) {
+      int u = output_uv[good_point_ind[i]](0);
+      int v = output_uv[good_point_ind[i]](1);
+      cv::Vec3b avg_pixel = left_image.color().at<cv::Vec3b>(v,u);
+      auto & gradient = left_image.gradient()[v * w + u];
+      //std::cout<<"\nopencv before pattern: "<<left_image.color().at<cv::Vec3b>(v,u)<<std::endl;
+      //cv::Vec3f avg_pixel = avg_pixel_color_pattern(left_image.color(), u, v, w);
+      //std::cout<<".  after pattern "<<avg_pixel.transpose()<<std::endl;
+      //features_.block(i, 0, 1, 3) = avg_pixel.transpose() / 255.0;
+      features_(i,0) = ((float)(avg_pixel [0]) )/255.0;
+      features_(i,1) = ((float)(avg_pixel[1]) )/255.0;
+      features_(i,2) = ((float)(avg_pixel[2]) )/255.0;
+      features_(i,3) = gradient(0)/ 500.0 + 0.5;
+      features_(i,4) = gradient(1)/ 500.0 + 0.5;
+    }
+
+
+                  
     
   }
   CvoPointCloud::CvoPointCloud(){}
@@ -60,5 +156,46 @@ namespace cvo{
       return -1;
     
   }
+
+
+  void CvoPointCloud::write_to_color_pcd(const std::string & name) const {
+    pcl::PointCloud<pcl::PointXYZRGB> pc;
+    for (int i = 0; i < num_points_; i++) {
+      pcl::PointXYZRGB p;
+      p.x = positions_[i](0);
+      p.y = positions_[i](1);
+      p.z = positions_[i](2);
+      uint8_t b = static_cast<uint8_t>(std::min(255, (int)(features_(i,0) * 255) ) );
+      uint8_t g = static_cast<uint8_t>(std::min(255, (int)(features_(i,1) * 255) ) );
+      uint8_t r = static_cast<uint8_t>(std::min(255, (int)(features_(i,2) * 255)));
+      uint32_t rgb = ((uint32_t) r << 16 |(uint32_t) g << 8  | (uint32_t) b ) ;
+      p.rgb = *reinterpret_cast<float*>(&rgb);
+      pc.push_back(p);
+    }
+    pcl::io::savePCDFileASCII(name ,pc);  
+  }
+
+
+  void CvoPointCloud::write_to_label_pcd(const std::string & name) const {
+    if (num_classes_ < 1)
+      return;
+    
+    pcl::PointCloud<pcl::PointXYZL> pc;
+    for (int i = 0; i < num_points_; i++) {
+      pcl::PointXYZL p;
+      p.x = positions_[i](0);
+      p.y = positions_[i](1);
+      p.z = positions_[i](2);
+      labels_.row(i).maxCoeff(&(p.label));
+      pc.push_back(p);
+    }
+    pcl::io::savePCDFileASCII(name ,pc);  
+  }
+
+  void CvoPointCloud::write_to_txt(const std::string & name) const {
+    assert(0);
+    
+  }
+
   
 }

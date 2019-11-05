@@ -43,6 +43,8 @@ set(CVO_LIB_SOURCE
   ${PROJECT_SOURCE_DIR}/src/KittiHandler.cpp
   ${PROJECT_SOURCE_DIR}/src/PoseGraph.cpp
   ${PROJECT_SOURCE_DIR}/src/StaticStereo.cpp
+  ${PROJECT_SOURCE_DIR}/src/CvoPixelSelector.cpp
+  ${PROJECT_SOURCE_DIR}/src/RawImage.cpp
   )
 
 # thirdparty elas

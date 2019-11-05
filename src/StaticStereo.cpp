@@ -21,14 +21,14 @@ namespace cvo{
 
     
     void disparity(const cv::Mat & left_gray,
-                      const cv::Mat & right_gray,
-                      std::vector<float> & output_left_disparity)  {
-      assert(left_gray.type() == 0);
+                   const cv::Mat & right_gray,
+                   std::vector<float> & output_left_disparity)  {
+
       int32_t width = left_gray.cols;
       int32_t height = left_gray.rows;
       output_left_disparity.resize(width*height);
       std::vector<float> right_disparity(left_gray.total());
-      int32_t dims[3] = {left_gray.cols, left_gray.rows, left_gray.cols};
+      int32_t dims[3] = {width , height, width};
       elas_.process(left_gray.data, right_gray.data,
                     output_left_disparity.data(), right_disparity.data(),
                     dims);
@@ -52,23 +52,31 @@ namespace cvo{
       }
     }
   
-    TraceStatus pt_depth_from_disparity(//const cv::Mat & left_gray,
+    TraceStatus pt_depth_from_disparity(const RawImage & left,
                                         //const cv::Mat & right_gray,
                                         const std::vector<float> & disparity,
-                                        const Mat33f & intrinsic,
-                                        const float baseline, // left->right < 0, right->left > 0
-                                        const Vec2f & input,
-                                        Eigen::Ref<Vec2f> result
+                                        const Calibration & calib,
+                                        const Vec2i & input,
+                                        Eigen::Ref<Vec3f> result
                                         )  {
       Vec3f bl;
-      bl << baseline, 0, 0;
+      bl << calib.baseline(), 0, 0;
+      int u = input(0);
+      int v = input(1);
+      int h = left.color().rows;
+      int w = left.color().cols;
 
-      float idepth_min = 0.01;
+      if ( u < 1 || u > w-2 || v < 1 || v > h -2 )
+        return TraceStatus::OOB;
 
-      // Kt: intrinsic * baseline extrinsict transform
-      Vec3f Kt = intrinsic * bl;
-      // T between stereo cameras
+      if (disparity[w * v + u] <= 0.05)
+        return TraceStatus::OUTLIER;
+      
+      float depth = std::abs(calib.baseline()) * calib.intrinsic()(0,0) / disparity[w * v + u];
 
+      result << static_cast<float>(u), static_cast<float>(v), 1.0;
+      
+      result = (calib.intrinsic().inverse() * result * depth).eval();
 
       return TraceStatus::GOOD;
     
