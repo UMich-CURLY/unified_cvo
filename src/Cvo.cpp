@@ -208,7 +208,7 @@ namespace cvo{
   */
   
 
-  void cvo::se_kernel(CvoPointCloud* cloud_a, CvoPointCloud* cloud_b, \
+  void cvo::se_kernel(const CvoPointCloud* cloud_a, const CvoPointCloud* cloud_b, \
                            cloud_t* cloud_a_pos, cloud_t* cloud_b_pos,\
                            Eigen::SparseMatrix<float,Eigen::RowMajor>& A_temp,
                            tbb::concurrent_vector<Trip_t> & A_trip_concur_)const {
@@ -643,8 +643,8 @@ namespace cvo{
   }
  
 
-  void cvo::set_pcd(CvoPointCloud& source_points,
-                         CvoPointCloud& target_points,
+  void cvo::set_pcd(const CvoPointCloud& source_points,
+                         const CvoPointCloud& target_points,
                          Eigen::Affine3f & init_guess_transform,
                          bool is_using_init_guess) {
 
@@ -666,10 +666,11 @@ namespace cvo{
     // extract cloud x and y
     cloud_x = new ArrayVec3f (ptr_fixed_pcd->positions());
     cloud_y = new ArrayVec3f (ptr_moving_pcd->positions());
+    std::cout<<"fixed[0] \n"<<ptr_fixed_pcd->positions()[0]<<"\nmoving[0] "<<ptr_moving_pcd->positions()[0]<<"\n";
     std::cout<<"fixed[0] \n"<<(*cloud_x)[0]<<"\nmoving[0] "<<(*cloud_y)[0]<<"\n";
     std::cout<<"fixed[0] features \n "<<ptr_fixed_pcd->features().row(0)<<"\n  moving[0] feature "<<ptr_moving_pcd->features().row(0)<<"\n";
 
-    std::cout<<"init cvo: \n"<<transform.matrix()<<std::endl;
+    // std::cout<<"init cvo: \n"<<transform.matrix()<<std::endl;
     if (is_using_init_guess) {
       transform = init_guess_transform;
       R = transform.linear();
@@ -704,8 +705,8 @@ namespace cvo{
   }
 
 
-  float cvo::inner_product(CvoPointCloud& source_points,
-                                CvoPointCloud& target_points,
+  float cvo::inner_product(const CvoPointCloud& source_points,
+                                const CvoPointCloud& target_points,
                                 const Eigen::Affine3f & s2t_frame_transform) {
     if (source_points.num_points() == 0 || target_points.num_points() == 0) {
       return 0;
