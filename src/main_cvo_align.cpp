@@ -30,8 +30,8 @@ int main(int argc, char *argv[]) {
   
   int mode = stoi(argv[1]); // 0 for online generate 1 for read txt
   string pth (argv[2]);
-  string txt_pth (argv[3]);
-  string calib_name (argv[4]);
+  string txt_pth = pth + "/" + (argv[3]);
+  string calib_name = pth + "/" + (argv[4]);
   std::ofstream output_file(argv[5]);
   int start_frame = stoi(argv[6]);
   float in_product_th = stof(argv[7]);
@@ -105,8 +105,6 @@ int main(int argc, char *argv[]) {
       if(!in_kf_init_process){  // if we are not redoing kf and kf-1, add new frame to the list
         if(kitti.read_next_stereo(left, right) == 0){
           std::shared_ptr<cvo::Frame> new_frame(new cvo::Frame(i, left, right, calib));
-          std::cout<<"point 0 in frame: \n"<<new_frame->points().positions()[0]<<std::endl;
-          std::cout<<"feature 0 in frame: \n"<<new_frame->points().features().row(0)<<std::endl;
           all_frames_since_last_keyframe.push_back(new_frame);
           auto& source_fr = all_frames_since_last_keyframe.front()->points(); // keyframe
           auto& target_fr = new_frame->points();
@@ -170,7 +168,7 @@ int main(int argc, char *argv[]) {
     // record accum_tf for future initialization
     accum_tf = cvo_align.get_transform().matrix()*accum_tf_list[cur_kf];
     accum_tf_list.push_back(accum_tf);
-    std::cout<<"adding "<<accum_tf_list.size()-1<<" to accum_tf"<<std::endl;
+    // std::cout<<"adding "<<accum_tf_list.size()-1<<" to accum_tf"<<std::endl;
 
     output_file << result(0,0)<<" "<<result(0,1)<<" "<<result(0,2)<<" "<<result(0,3)<<" "
                 <<result(1,0)<<" " <<result(1,1)<<" "<<result(1,2)<<" "<<result(1,3)<<" "

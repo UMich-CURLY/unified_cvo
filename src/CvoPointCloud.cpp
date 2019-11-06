@@ -81,7 +81,6 @@ namespace cvo{
         good_point_ind.push_back(i);
         //good_point_xyz.push_back(xyz);
         positions_.push_back(xyz);
-
       }
     }
      
