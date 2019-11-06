@@ -19,10 +19,11 @@ namespace cvo {
       raw_image_(left_image),
       calib(calib),
       points_(raw_image_, right_image, calib),
-      local_map_(nullptr) {
+      local_map_(nullptr),
+      tracking_relative_transform_(ind){
       //is_map_centroids_latest_(false),
       //map_centroids_(nullptr){
-    pose_in_world_.setIdentity();
+    pose_in_graph_.setIdentity();
   }
 
 
@@ -38,10 +39,11 @@ namespace cvo {
       calib(calib),
       raw_image_(left_image, num_classes, semantics), 
       points_(raw_image_, right_image, calib),
+      tracking_relative_transform_(ind),
       local_map_(nullptr) {
       //is_map_centroids_latest_(false),
       //map_centroids_(nullptr){
-    pose_in_world_.setIdentity();
+    pose_in_graph_.setIdentity();
   }
   
   Frame::~Frame() {
@@ -64,9 +66,14 @@ namespace cvo {
   }
 
   void Frame::add_points_to_map_from(const Frame & nonkeyframe) {
+    if (nonkeyframe.tracking_relative_transform().ref_frame_id() != this->id) {
+      printf("[add_points_to_map_from] input frame %d is not tracked relative to the current frame %d.Do nothing\n", nonkeyframe.id, this->id);
+      return;
+    }
+    
     auto points_from_nonkeyframe = nonkeyframe.points();
     CvoPointCloud transformed_pc;
-    Mat44f tf_curr2input = pose_in_world_.inverse() * nonkeyframe.pose_in_world().matrix();
+    auto tf_curr2input = nonkeyframe.tracking_relative_transform().ref_frame_to_curr_frame().matrix();
     CvoPointCloud::transform( tf_curr2input,
                               points_from_nonkeyframe,
                               transformed_pc);

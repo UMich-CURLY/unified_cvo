@@ -249,15 +249,55 @@ namespace semantic_bki {
                     continue;
             }
             
-            std::vector<float> properties(5, 0);
+            std::vector<float> properties(6, 0);
             int pix_label;
             cloud.labels().row(i).maxCoeff(&pix_label);
             properties[0] = pix_label + 1;
             for (int j = 0; j < 5; ++j)
               properties[j + 1] = cloud.features()(i, j);
             xy.emplace_back(p, properties);
+
+            PointCloud frees_n;
+            beam_sample(p, origin, frees_n, free_resolution);
+            for (auto p = frees_n.begin(); p != frees_n.end(); ++p) {
+              std::vector<float> properties(6, 0);
+              xy.emplace_back(*p, properties);
+            }
         }
+
+        point3f p(origin.x(), origin.y(), origin.z());
+        std::vector<float> properties(6, 0);
+        xy.emplace_back(p, properties);
     }
+
+
+    void SemanticBKIOctoMap::beam_sample(const point3f &hit, const point3f &origin, PointCloud &frees,
+                                float free_resolution) const {
+        frees.clear();
+
+        float x0 = origin.x();
+        float y0 = origin.y();
+        float z0 = origin.z();
+
+        float x = hit.x();
+        float y = hit.y();
+        float z = hit.z();
+
+        float l = (float) sqrt((x - x0) * (x - x0) + (y - y0) * (y - y0) + (z - z0) * (z - z0));
+
+        float nx = (x - x0) / l;
+        float ny = (y - y0) / l;
+        float nz = (z - z0) / l;
+
+        float d = free_resolution;
+        while (d < l) {
+            frees.emplace_back(x0 + nx * d, y0 + ny * d, z0 + nz * d);
+            d += free_resolution;
+        }
+        if (l > free_resolution)
+            frees.emplace_back(x0 + nx * (l - free_resolution), y0 + ny * (l - free_resolution), z0 + nz * (l - free_resolution));
+    }
+
 
     /*
      * Compute bounding box of pointcloud

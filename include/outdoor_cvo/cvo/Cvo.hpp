@@ -192,7 +192,7 @@ namespace cvo{
     */
     void set_pcd(const CvoPointCloud& source_points,
                 const CvoPointCloud& target_points,
-                Eigen::Affine3f & init_guess_transform,
+                const Eigen::Affine3f & init_guess_transform,
                 bool is_using_init_guess);
     
     /**
