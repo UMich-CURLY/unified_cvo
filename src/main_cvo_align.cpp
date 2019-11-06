@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
   string calib_name = pth + "/" + (argv[4]);
   std::ofstream output_file(argv[5]);
   int start_frame = stoi(argv[6]);
-  float in_product_th = stof(argv[7]);
+  double in_product_th = stof(argv[7]);
   int total_num = 0;
   
   vector<string> files;
@@ -74,6 +74,8 @@ int main(int argc, char *argv[]) {
   kf_id_list.push_back(0);
   std::vector<std::shared_ptr<cvo::Frame>> all_frames_since_last_keyframe;
   cv::Mat left, right;
+  double in_product_base = 1.0;
+  double in_product_ratio = 0.0;
 
   // create first frame for kf
   if(kitti.read_next_stereo(left, right) == 0){
@@ -100,7 +102,8 @@ int main(int argc, char *argv[]) {
     init_guess = (tf_im1_im2*tf_kf_im1).inverse();
     
     
-
+    std::cout<<"\n============================================="<<std::endl;
+    std::cout<<"Aligning "<<cur_kf<<" and "<<i<<std::endl;
     if(mode==0){
       if(!in_kf_init_process){  // if we are not redoing kf and kf-1, add new frame to the list
         if(kitti.read_next_stereo(left, right) == 0){
@@ -127,9 +130,7 @@ int main(int argc, char *argv[]) {
       target_fr.read_cvo_pointcloud_from_file(files[i]);
       const cvo::CvoPointCloud &const_source_fr = source_fr;
       const cvo::CvoPointCloud &const_target_fr = target_fr;
-      std::cout<<"\n============================================="<<std::endl;
-      std::cout<<"Aligning "<<cur_kf<<" and "<<i<<std::endl;
-
+      
       cvo_align.set_pcd(const_source_fr, const_target_fr, init_guess, true);
       cvo_align.align();
     }
@@ -152,9 +153,16 @@ int main(int argc, char *argv[]) {
       all_frames_since_last_keyframe.clear();
       all_frames_since_last_keyframe.push_back(temp_frame);
     }
+    
+    in_product_ratio = in_product/in_product_base;
+    std::cout<<"The inner product ratio for "<<i<<" is "<<in_product_ratio<<std::endl;
 
+    // if it's kf and kf+1, record inner product for calculating ratios
+    if(all_frames_since_last_keyframe.size()==2){
+      in_product_base = cvo_align.inner_product();
+    }
     // start the kf init process :)
-    if(in_product < in_product_th){
+    else if(in_product_ratio < in_product_th){
       in_kf_init_process = true;
       // add new kf to the list
       kf_id_list.push_back(i);

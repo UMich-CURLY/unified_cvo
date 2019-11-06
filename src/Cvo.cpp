@@ -701,7 +701,7 @@ namespace cvo{
 
   
   float cvo::inner_product() const {
-    return A.sum() / A.nonZeros();
+    return A.sum();
   }
 
 
@@ -728,7 +728,7 @@ namespace cvo{
     A_mat.resize(source_points.num_points(), target_points.num_points());
     A_mat.setZero();
     se_kernel(&source_points, &target_points, &fixed_positions, &moving_positions, A_mat, A_trip_concur_  );
-    return A_mat.sum()/A_mat.nonZeros();
+    return A_mat.sum();
   }
 
 }
