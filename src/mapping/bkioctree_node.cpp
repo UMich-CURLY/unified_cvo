@@ -45,8 +45,8 @@ namespace semantic_bki {
 
     void Semantics::get_features(std::vector<float>& features) const {
       float sum = 0;
-      for (auto m : ms)
-        sum += m;
+      for (int i = 1; i < ms.size(); ++i)  // exclude free points
+        sum += ms[i];
       for (int i = 0; i < 5; ++i)
         features[i] = this->fs[i] / sum;
     }
