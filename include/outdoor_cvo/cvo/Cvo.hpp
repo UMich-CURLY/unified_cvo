@@ -60,8 +60,8 @@ namespace cvo{
 
   private:
     // private variables
-    CvoPointCloud* ptr_fixed_pcd;
-    CvoPointCloud* ptr_moving_pcd;
+    const CvoPointCloud* ptr_fixed_pcd;
+    const CvoPointCloud* ptr_moving_pcd;
 
     int num_fixed;              // target point cloud counts
     int num_moving;             // source point cloud counts
@@ -150,7 +150,7 @@ namespace cvo{
      * @return k: n-by-m kernel matrix 
      */
     //void se_kernel(const float l, const float s2);
-    void se_kernel(CvoPointCloud* cloud_a, CvoPointCloud* cloud_b, \
+    void se_kernel(const CvoPointCloud* cloud_a, const CvoPointCloud* cloud_b, \
                    cloud_t* cloud_a_pos, cloud_t* cloud_b_pos,          \
                    Eigen::SparseMatrix<float,Eigen::RowMajor>& A_temp,
                    tbb::concurrent_vector<Trip_t> & A_trip_concur_) const;
@@ -190,9 +190,9 @@ namespace cvo{
         @brief: set pcd from vector of xyz and rgb image directly
 
     */
-    void set_pcd(CvoPointCloud& source_points,
-                CvoPointCloud& target_points,
-                Eigen::Affine3f & init_guess_transform,
+    void set_pcd(const CvoPointCloud& source_points,
+                const CvoPointCloud& target_points,
+                const Eigen::Affine3f & init_guess_transform,
                 bool is_using_init_guess);
     
     /**

@@ -208,7 +208,7 @@ namespace cvo{
   */
   
 
-  void cvo::se_kernel(CvoPointCloud* cloud_a, CvoPointCloud* cloud_b, \
+  void cvo::se_kernel(const CvoPointCloud* cloud_a, const CvoPointCloud* cloud_b, \
                            cloud_t* cloud_a_pos, cloud_t* cloud_b_pos,\
                            Eigen::SparseMatrix<float,Eigen::RowMajor>& A_temp,
                            tbb::concurrent_vector<Trip_t> & A_trip_concur_)const {
@@ -643,10 +643,10 @@ namespace cvo{
   }
  
 
-  void cvo::set_pcd(CvoPointCloud& source_points,
-                         CvoPointCloud& target_points,
-                         Eigen::Affine3f & init_guess_transform,
-                         bool is_using_init_guess) {
+  void cvo::set_pcd(const CvoPointCloud& source_points,
+                    const CvoPointCloud& target_points,
+                    const Eigen::Affine3f & init_guess_transform,
+                    bool is_using_init_guess) {
 
     if (source_points.num_points() == 0 || target_points.num_points() == 0) {
       return;
