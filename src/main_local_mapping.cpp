@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
   double free_thresh = 0.3;
   double occupied_thresh = 0.7;
   double resolution = 0.1;
-  double free_resolution = 100;
+  double free_resolution = 1;
   double ds_resolution = -1;
   double max_range = -1;
 
@@ -116,7 +116,7 @@ int main(int argc, char *argv[]) {
   for ( auto &f: files) {
     std::cout << "Reading " << f << std::endl;
     pc_vec[i].read_cvo_pointcloud_from_file(f);
-
+    
     // transform point cloud
     Eigen::Matrix4f transform = get_current_pose(camera_poses, i);
     pc_vec[i].transform(transform);
@@ -133,6 +133,8 @@ int main(int argc, char *argv[]) {
   
   // Map to CVOPointCloud
   cvo::CvoPointCloud cloud_out(map_csm, num_class);
+  pc_vec[0].write_to_color_pcd(output_file + "/" + "input_color.pcd");
+  pc_vec[0].write_to_label_pcd(output_file + "/" + "input_semantics.pcd");
   cloud_out.write_to_color_pcd(output_file + "/" + "test_color.pcd");
   cloud_out.write_to_label_pcd(output_file + "/" + "test_semantics.pcd");
 
