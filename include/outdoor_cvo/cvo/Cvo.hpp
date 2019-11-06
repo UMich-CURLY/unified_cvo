@@ -204,8 +204,8 @@ namespace cvo{
     // callable after each align
     float inner_product() const ;
     // just compute the inner product
-    float inner_product(CvoPointCloud& source_points,
-                        CvoPointCloud& target_points,
+    float inner_product(const CvoPointCloud& source_points,
+                        const CvoPointCloud& target_points,
                         const Eigen::Affine3f & source_frame_to_target_frame);
 
 
