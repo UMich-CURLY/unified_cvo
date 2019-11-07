@@ -154,15 +154,15 @@ int main(int argc, char *argv[]) {
       all_frames_since_last_keyframe.push_back(temp_frame);
     }
     
-    in_product_ratio = in_product/in_product_base;
-    std::cout<<"The inner product ratio for "<<i<<" is "<<in_product_ratio<<std::endl;
+    // in_product_ratio = in_product/in_product_base;
+    // std::cout<<"The inner product ratio for "<<i<<" is "<<in_product_ratio<<std::endl;
 
     // if it's kf and kf+1, record inner product for calculating ratios
-    if(all_frames_since_last_keyframe.size()==2){
-      in_product_base = cvo_align.inner_product();
-    }
+    // if(all_frames_since_last_keyframe.size()==2){
+    //   in_product_base = cvo_align.inner_product();
+    // }
     // start the kf init process :)
-    else if(in_product_ratio < in_product_th){
+    else if(in_product < in_product_th){
       in_kf_init_process = true;
       // add new kf to the list
       kf_id_list.push_back(i);
@@ -173,9 +173,12 @@ int main(int argc, char *argv[]) {
       continue;
     }
 
+    
     // record accum_tf for future initialization
     accum_tf = cvo_align.get_transform().matrix()*accum_tf_list[cur_kf];
     accum_tf_list.push_back(accum_tf);
+    
+    
     // std::cout<<"adding "<<accum_tf_list.size()-1<<" to accum_tf"<<std::endl;
 
     output_file << result(0,0)<<" "<<result(0,1)<<" "<<result(0,2)<<" "<<result(0,3)<<" "
