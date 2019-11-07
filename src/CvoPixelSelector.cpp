@@ -183,6 +183,7 @@ namespace cvo
       // sub-select!
       numHave = n[0]+n[1]+n[2];
       quotia = numWant / numHave;
+      printf("PixelSelector: quotia %f, numHave %d / numWant %d\n", quotia, numHave, numWant);
 
       // by default we want to over-sample by 40% just to be sure.
       float K = numHave * (currentPotential+1) * (currentPotential+1);

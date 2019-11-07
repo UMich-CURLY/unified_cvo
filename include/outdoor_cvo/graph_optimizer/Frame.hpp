@@ -67,16 +67,19 @@ namespace cvo {
     const int w;
     const Calibration calib;
 
+
     // getters
     const CvoPointCloud & points() const  {return points_;}
+    const bool is_keyframe() const { return is_keyframe_; }
     const RawImage & raw_image() const { return raw_image_;}
-    const Eigen::Affine3f & pose_in_graph() const {return pose_in_graph_;}
+    const Eigen::Affine3f pose_in_graph() const;
     const RelativePose & tracking_relative_transform() const { return tracking_relative_transform_; }
 
     // set tracking result here
     void set_relative_transform(int ref_frame_id, const Eigen::Affine3f & ref_to_curr, float inner_prod) {
       tracking_relative_transform_.set_relative_transform(ref_frame_id, ref_to_curr, inner_prod);
     }
+    void set_keyframe(bool is_kf) {is_keyframe_ = is_kf;}
 
     // set graph optimization results
     void set_pose_in_graph(const Eigen::Affine3f & optimized_pose) {
@@ -90,9 +93,12 @@ namespace cvo {
     
     
   private:
-
-    // the pose obtained from pose graph
+    
+    // for keyframes. 
     Eigen::Affine3f pose_in_graph_;
+    bool is_keyframe_;
+
+    // for all frames
     RelativePose tracking_relative_transform_;
 
     RawImage raw_image_;

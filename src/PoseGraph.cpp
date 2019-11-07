@@ -55,28 +55,37 @@ namespace cvo {
     return init_guess;
   }
 
-  void PoseGraph::add_new_frame(std::shared_ptr<Frame> new_frame) {
-    std::cout<<"add_new_frame: id "<<new_frame->id<<std::endl;
-    std::cout<<"---- number of points is "<<new_frame->points().num_points()<<std::endl;
-    //new_frame->points().write_to_color_pcd(std::to_string(new_frame->id)+".pcd"  );
-    bool is_keyframe = false;
-    Eigen::Affine3f tracking_pose;
+  Eigen::Affine3f PoseGraph::compute_frame_pose_in_graph(std::shared_ptr<Frame> frame) {
+    Eigen::Affine3f output;
+    if (frame->is_keyframe()) {
+      output = frame->pose_in_graph();
+    } else {
+      int ref_id = frame->tracking_relative_transform().ref_frame_id();
+      Eigen::Affine3f ref_frame_pose = id2keyframe_[ref_id]->pose_in_graph();
+      output = ref_frame_pose * frame->tracking_relative_transform().ref_frame_to_curr_frame();
+    }
+    return output;
+  }
 
-    static int counter = 0;
-    
+  float PoseGraph::track_new_frame(std::shared_ptr<Frame> new_frame,
+                                   bool & is_keyframe) {
+    Eigen::Affine3f tracking_pose;
     if (tracking_relative_transforms_.size() == 0) {
       is_keyframe = true;
       all_frames_since_last_keyframe_ = {};
       tracking_pose.setIdentity();
       new_frame->set_relative_transform(new_frame->id, tracking_pose, 1);
+
     } else {
 
       auto  last_keyframe = all_frames_since_last_keyframe_[0];
       auto  last_frame = last_two_frames_.back();
       auto  slast_frame = last_two_frames_.front();
+      Eigen::Affine3f slast_frame_pose_in_graph = compute_frame_pose_in_graph(slast_frame);
+      Eigen::Affine3f last_frame_pose_in_graph = compute_frame_pose_in_graph(last_frame);
 
-      Eigen::Affine3f slast_frame_to_last_frame = slast_frame->pose_in_graph().inverse() * last_frame->pose_in_graph();
-      Eigen::Affine3f last_keyframe_to_last_frame = last_keyframe->pose_in_graph().inverse() * last_frame->pose_in_graph();
+      Eigen::Affine3f slast_frame_to_last_frame = slast_frame_pose_in_graph.inverse() * last_frame_pose_in_graph;
+      Eigen::Affine3f last_keyframe_to_last_frame = last_keyframe->pose_in_graph().inverse() * last_frame_pose_in_graph;
       Eigen::Affine3f cvo_init = (slast_frame_to_last_frame * last_keyframe_to_last_frame).inverse();
 
       auto & last_kf_points = last_keyframe->points();
@@ -90,13 +99,31 @@ namespace cvo {
       new_frame->set_relative_transform(last_keyframe->id, result, inner_prod);
 
       // decide keyframe
-      if (counter % 4 == 0)
+      if (inner_prod < 0.15) {
         is_keyframe = true;
+        if (&last_keyframe != & last_frame) {
+          auto last_frame_points = last_frame->points();
+          Eigen::Affine3f eye = Eigen::Affine3f::Identity();
+          cvo_align_.set_pcd(last_frame_points, curr_points, eye, true );
+          cvo_align_.align();
+          new_frame->set_relative_transform(last_frame->id, cvo_align_.get_transform(),
+                                            cvo_align_.inner_product());
+        }
+      } else
+        is_keyframe = false;
     }
-    counter++;
-    //all_frames_since_last_keyframe_.push(new_frame);
     tracking_relative_transforms_.push_back(new_frame->tracking_relative_transform());
-
+    
+    return new_frame->tracking_relative_transform().cvo_inner_product();
+  }
+  
+  void PoseGraph::add_new_frame(std::shared_ptr<Frame> new_frame) {
+    std::cout<<"add_new_frame: id "<<new_frame->id<<std::endl;
+    std::cout<<"---- number of points is "<<new_frame->points().num_points()<<std::endl;
+    //new_frame->points().write_to_color_pcd(std::to_string(new_frame->id)+".pcd"  );
+    bool is_keyframe = false;
+    track_new_frame(new_frame, is_keyframe);
+    
     if(is_keyframe) {
       if (keyframes_.size() == 0) {
         init_pose_graph(new_frame);
@@ -107,12 +134,13 @@ namespace cvo {
       id2keyframe_[new_frame->id] = new_frame;
       all_frames_since_last_keyframe_.clear();
       
-    }
+    } 
     all_frames_since_last_keyframe_.push_back(new_frame);
     last_two_frames_.push(new_frame);
     if (last_two_frames_.size() > 2)
       last_two_frames_.pop();
-
+    
+    new_frame->set_keyframe(is_keyframe);
   }
 
   void PoseGraph::init_pose_graph(std::shared_ptr<Frame> new_frame) {
@@ -198,6 +226,7 @@ namespace cvo {
       pose.linear() = pose_mat.block(0,0,3,3).cast<float>();
       pose.translation() = pose_mat.block(0,3,3,1).cast<float>();
       id2keyframe_[key]->set_pose_in_graph(pose);
+      
     }
     
   }

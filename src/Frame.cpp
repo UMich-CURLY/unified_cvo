@@ -2,6 +2,7 @@
 #include <vector>
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc.hpp>
+#include <cassert>
 #include "graph_optimizer/Frame.hpp"
 #include "utils/StaticStereo.hpp"
 #include "utils/Calibration.hpp"
@@ -20,6 +21,7 @@ namespace cvo {
       calib(calib),
       points_(raw_image_, right_image, calib),
       local_map_(nullptr),
+      is_keyframe_(false),
       tracking_relative_transform_(ind){
       //is_map_centroids_latest_(false),
       //map_centroids_(nullptr){
@@ -42,6 +44,7 @@ namespace cvo {
       calib(calib),
       raw_image_(left_image, num_classes, semantics), 
       points_(raw_image_, right_image, calib),
+      is_keyframe_(false),
       tracking_relative_transform_(ind),
       local_map_(nullptr) {
       //is_map_centroids_latest_(false),
@@ -87,6 +90,18 @@ namespace cvo {
                                       semantic_bki::point3f(tf_curr2input(0,3),tf_curr2input(1,3),tf_curr2input(2,3)),
                                       -1, 100, -1);
   }
-  
+
+  const Eigen::Affine3f Frame::pose_in_graph() const {
+    if (is_keyframe_)
+      return pose_in_graph_;
+    else {
+      std::cerr<<"ERR: pose_in_graph() only available for keyframes!\n";
+      assert(0);
+      
+    }
+      
+
+    
+  }
   
 }

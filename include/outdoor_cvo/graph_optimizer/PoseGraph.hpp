@@ -13,6 +13,7 @@
 #include <gtsam/nonlinear/ISAM2.h>
 #include <gtsam/slam/PriorFactor.h>
 
+#include <Eigen/Dense>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <opencv2/opencv.hpp>
@@ -31,12 +32,21 @@ namespace cvo {
 
     // cvo_align and keyframe 
     void add_new_frame(std::shared_ptr<Frame> new_frame);
-
+    
+    Eigen::Affine3f compute_frame_pose_in_graph(std::shared_ptr<Frame> frame);
 
     //void write_trajectory(std::string filename);
 
     
   private:
+
+
+    float track_new_frame(std::shared_ptr<Frame> new_frame,
+                           // output
+                           bool & is_keyframe);
+
+
+    
     // gtsam pose graph optimization. called by add_new_frame
     void pose_graph_optimize(std::shared_ptr<Frame> new_frame);
     void init_pose_graph(std::shared_ptr<Frame> new_frame);
