@@ -615,6 +615,12 @@ namespace cvo{
       ell = (ell<ell_min)? ell_min:ell;
 
       // std::cout<<"iter: "<<k<<std::endl;
+      // if(debug_print){
+        // std::cout<<"num non zeros in A: "<<A.nonZeros()<<std::endl;
+        // std::cout<<"inner product before normalized: "<<A.sum()<<std::endl;
+        // std::cout<<"inner product after normalized: "<<A.sum()/num_fixed/num_moving*1e6<<std::endl; 
+        // std::cout<<transform.matrix()<<std::endl;
+      // }
     }
 
     std::cout<<"cvo # of iterations is "<<iter<<std::endl;
@@ -701,7 +707,7 @@ namespace cvo{
 
   
   float cvo::inner_product() const {
-    return A.sum();
+    return A.sum()/num_fixed*1e6/num_moving;
   }
 
 
@@ -728,7 +734,7 @@ namespace cvo{
     A_mat.resize(source_points.num_points(), target_points.num_points());
     A_mat.setZero();
     se_kernel(&source_points, &target_points, &fixed_positions, &moving_positions, A_mat, A_trip_concur_  );
-    return A_mat.sum();
+    return A_mat.sum()/num_fixed*1e6/num_moving;
   }
 
 }
