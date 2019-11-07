@@ -23,7 +23,8 @@
 
 
 
-
+#include <iostream>
+#include <cstring>
 
 #include "utils/CvoPixelSelector.hpp"
 
@@ -181,15 +182,16 @@ namespace cvo
       Eigen::Vector3i n = this->select(raw_image,  currentPotential, thFactor, map_out, output_uv);
 
       // sub-select!
-      numHave = n[0]+n[1]+n[2];
+      numHave = static_cast<float>(n[0]+n[1]+n[2]);
+      std::cout<<"numHave n is "<<n.transpose()<<std::endl;
       quotia = numWant / numHave;
-      printf("PixelSelector: quotia %f, numHave %d / numWant %d\n", quotia, numHave, numWant);
+
 
       // by default we want to over-sample by 40% just to be sure.
       float K = numHave * (currentPotential+1) * (currentPotential+1);
       idealPotential = sqrtf(K/numWant)-1;	// round down.
       if(idealPotential<1) idealPotential=1;
-
+      printf("PixelSelector: recursionsLeft %d, quotia %f, numHave %d / numWant %d, idealPotential is %f\n",recursionsLeft,  quotia, numHave, numWant, idealPotential);
       if( recursionsLeft>0 && quotia > 1.25 && currentPotential>1)
       {
         //re-sample to get more points!
@@ -258,6 +260,7 @@ namespace cvo
                                         )
   {
 
+
     auto map0 = raw_image.intensity().data(); //ptr_fr->dI;
     auto grad0 = raw_image.gradient();
     auto mapmax0 = raw_image.gradient_square().data();
@@ -269,7 +272,9 @@ namespace cvo
     int w1 = w/2;
     int w2 = w/4;
     int h = raw_image.color().rows;
-
+    memset(map_out, 0, h * w * sizeof(float));
+    output_uv.clear();
+      
     const Vec2f directions[16] = {
                                   Vec2f(0,    1.0000),
                                   Vec2f(0.3827,    0.9239),
@@ -400,7 +405,7 @@ namespace cvo
         // }
       }
 
-
+    printf("[select] n2 is %d\n", n2);
     return Eigen::Vector3i(n2,n3,n4);
   }
 
@@ -412,11 +417,11 @@ namespace cvo
                      std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv ) {
     PixelSelector selector(raw_image.color().cols, raw_image.color().rows);
     std::vector<float> heat_map(raw_image.color().total(), 0);
-    selector.makeHeatMaps(raw_image,(float) num_want, heat_map.data(), output_uv );
+    selector.makeHeatMaps(raw_image,static_cast<float> (num_want), heat_map.data(), output_uv );
     
     bool debug_plot = true;
     if (debug_plot) {
-      //std::cout<<"Selected points is "<<output_uv.size()<<"\n";
+      std::cout<<"Number of selected points is "<<output_uv.size()<<"\n";
       cv::Mat heatmap(raw_image.color().rows, raw_image.color().cols, CV_32FC1, heat_map.data());
       int w = heatmap.cols;
       int h = heatmap.rows;
@@ -426,8 +431,8 @@ namespace cvo
 
         
       }
-      //cv::imshow("heat map", heatmap);
-      //cv::waitKey(0);
+      cv::imshow("heat map", heatmap);
+      cv::waitKey(200);
       cv::imwrite("heatmap.png", heatmap);
       
     }

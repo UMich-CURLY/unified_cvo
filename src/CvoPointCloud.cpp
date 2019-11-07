@@ -56,7 +56,7 @@ namespace cvo{
     std::vector<float> left_disparity;
     StaticStereo::disparity(left_gray, right_gray, left_disparity);
 
-    int expected_points = 1000;
+    int expected_points = 3000;
     std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> output_uv;
     select_pixels(left_image,
                   expected_points,
