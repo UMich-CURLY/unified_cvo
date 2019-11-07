@@ -24,6 +24,9 @@ namespace cvo {
       //is_map_centroids_latest_(false),
       //map_centroids_(nullptr){
     pose_in_graph_.setIdentity();
+
+    Eigen::Affine3f eye = Eigen::Affine3f::Identity();
+    tracking_relative_transform_.set_relative_transform(ind, eye, 1.0 );
   }
 
 
@@ -44,6 +47,8 @@ namespace cvo {
       //is_map_centroids_latest_(false),
       //map_centroids_(nullptr){
     pose_in_graph_.setIdentity();
+    Eigen::Affine3f eye = Eigen::Affine3f::Identity();
+    tracking_relative_transform_.set_relative_transform(ind, eye,1.0 );
   }
   
   Frame::~Frame() {

@@ -61,22 +61,39 @@ namespace cvo {
     //new_frame->points().write_to_color_pcd(std::to_string(new_frame->id)+".pcd"  );
     bool is_keyframe = false;
     Eigen::Affine3f tracking_pose;
+
+    static int counter = 0;
+    
     if (tracking_relative_transforms_.size() == 0) {
       is_keyframe = true;
       all_frames_since_last_keyframe_ = {};
-      
-      //new_frame->set_relative_transform();
+      tracking_pose.setIdentity();
+      new_frame->set_relative_transform(new_frame->id, tracking_pose, 1);
     } else {
 
-      //auto & last_keyframe = *all_frames_since_last_keyframe.front();
-      //auto & last_frame = *all_frames_since_last_keyframe.back();
-    
-    
-    // align with 
-    //cvo.set_pcd(last_keyframe.points(), new_frame.points())
-      //new_frame->set_relative_transform();
-    }
+      auto  last_keyframe = all_frames_since_last_keyframe_[0];
+      auto  last_frame = last_two_frames_.back();
+      auto  slast_frame = last_two_frames_.front();
 
+      Eigen::Affine3f slast_frame_to_last_frame = slast_frame->pose_in_graph().inverse() * last_frame->pose_in_graph();
+      Eigen::Affine3f last_keyframe_to_last_frame = last_keyframe->pose_in_graph().inverse() * last_frame->pose_in_graph();
+      Eigen::Affine3f cvo_init = (slast_frame_to_last_frame * last_keyframe_to_last_frame).inverse();
+
+      auto & last_kf_points = last_keyframe->points();
+      auto & curr_points = new_frame->points();
+
+      cvo_align_.set_pcd(last_kf_points, curr_points, cvo_init, true);
+      cvo_align_.align();
+
+      Eigen::Affine3f result = cvo_align_.get_transform();
+      auto inner_prod = cvo_align_.inner_product();
+      new_frame->set_relative_transform(last_keyframe->id, result, inner_prod);
+
+      // decide keyframe
+      if (counter % 4 == 0)
+        is_keyframe = true;
+    }
+    counter++;
     //all_frames_since_last_keyframe_.push(new_frame);
     tracking_relative_transforms_.push_back(new_frame->tracking_relative_transform());
 

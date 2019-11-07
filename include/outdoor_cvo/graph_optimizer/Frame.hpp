@@ -21,21 +21,25 @@ namespace cvo {
       curr_frame_id_(curr_id) { ref_frame_id_ = -1; }
     
     RelativePose(int curr_id, int ref_id, const Eigen::Affine3f & ref_to_curr) :
-      curr_frame_id_(curr_id), ref_frame_id_(ref_id), ref_frame_to_curr_frame_(ref_to_curr) {}
+      curr_frame_id_(curr_id), ref_frame_id_(ref_id), ref_frame_to_curr_frame_(ref_to_curr),
+      cvo_inner_product_(0){}
 
-    void set_relative_transform( int ref_id, const Eigen::Affine3f & ref_to_curr) {
+    void set_relative_transform( int ref_id, const Eigen::Affine3f & ref_to_curr, float inner_prod) {
       ref_frame_id_ = ref_id;
       ref_frame_to_curr_frame_ = ref_to_curr;
+      cvo_inner_product_ = inner_prod;
     }
 
     int curr_frame_id() const {return curr_frame_id_;}
     int ref_frame_id() const {return ref_frame_id_;}
+    float cvo_inner_product() const {return cvo_inner_product_;}
     const Eigen::Affine3f & ref_frame_to_curr_frame() const {return ref_frame_to_curr_frame_;}
   private:
     
     const int curr_frame_id_;
     int ref_frame_id_;
     Eigen::Affine3f ref_frame_to_curr_frame_;
+    float cvo_inner_product_;
   };
 
   class Frame {
@@ -70,8 +74,8 @@ namespace cvo {
     const RelativePose & tracking_relative_transform() const { return tracking_relative_transform_; }
 
     // set tracking result here
-    void set_relative_transform(int ref_frame_id, const Eigen::Affine3f & ref_to_curr) {
-      tracking_relative_transform_.set_relative_transform(ref_frame_id, ref_to_curr);
+    void set_relative_transform(int ref_frame_id, const Eigen::Affine3f & ref_to_curr, float inner_prod) {
+      tracking_relative_transform_.set_relative_transform(ref_frame_id, ref_to_curr, inner_prod);
     }
 
     // set graph optimization results
