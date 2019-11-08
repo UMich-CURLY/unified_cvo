@@ -37,6 +37,7 @@ int main(int argc, char *argv[]) {
   double in_product_th = stof(argv[7]);
   int total_num = 0;
   
+  std::ofstream accum_tf_output_file("cvo_f2f_tracking.txt");
   std::ofstream in_product_output_file("inner_product_all.txt");
 
   vector<string> files;
@@ -135,7 +136,7 @@ int main(int argc, char *argv[]) {
     in_product_output_file<<std::flush;
 
     // record accum_tf for future initialization
-    accum_tf = cvo_align.get_transform().matrix()*accum_tf_list[i-1];
+    accum_tf = accum_tf_list[i-1]*cvo_align.get_transform().matrix();
     accum_tf_list.push_back(accum_tf);
     std::cout<<"adding "<<accum_tf_list.size()-1<<" to accum_tf"<<std::endl;
     
@@ -149,11 +150,19 @@ int main(int argc, char *argv[]) {
     output_file<<"\n";
     output_file<<std::flush;
 
+    result = accum_tf;
+    accum_tf_output_file << result(0,0)<<" "<<result(0,1)<<" "<<result(0,2)<<" "<<result(0,3)<<" "
+                <<result(1,0)<<" " <<result(1,1)<<" "<<result(1,2)<<" "<<result(1,3)<<" "
+                <<result(2,0)<<" " <<result(2,1)<<" "<<result(2,2)<<" "<<result(2,3);
+    accum_tf_output_file<<"\n";
+    accum_tf_output_file<<std::flush;
+
 
     source_frame = target_frame;
   }
 
   output_file.close();
+  accum_tf_output_file.close();
   in_product_output_file.close();
   return 0;
 }
