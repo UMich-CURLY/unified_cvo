@@ -8,8 +8,8 @@ add_compile_options(-std=c++17)
 # Release Mode
 set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -mkl -msse -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
-#  set(CMAKE_BUILD_TYPE Debug)
-#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -std=c++17 -g  -msse -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
+# set(CMAKE_BUILD_TYPE Debug)
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -std=c++17 -g  -msse -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 
 #set(BUILD_TYPE RelWithDebInfo)
 
@@ -22,13 +22,17 @@ find_package(SuiteParse REQUIRED)
 find_package(Sophus REQUIRED)
 message("Sophus dir: ${Sophus_INCLUDE_DIRS}")
 
-#set(EIGEN_INCLUDE_DIR /usr/include/eigen3)
-find_package(Eigen3 REQUIRED)
+set(EIGEN_INCLUDE_DIR /usr/include/eigen3)
+#find_package(Eigen3 REQUIRED)
 find_package(TBB REQUIRED)
-find_package(Boost REQUIRED COMPONENTS system thread timer chrono) 
+find_package(Boost REQUIRED COMPONENTS system thread timer chrono)
+if (Boost_FOUND)
+message("Find Boost! ${Boost_LIBRARIES}")
+endif()
+
 find_package(PCL REQUIRED)
 find_package(OpenCV REQUIRED)
-find_package(OpenMP)
+#find_package(OpenMP)
 find_package(GTSAM REQUIRED)
 message("gtsam dir: ${GTSAM_INCLUDE_DIR}")
 
@@ -40,8 +44,8 @@ if (OPENMP_FOUND)
 endif()
 
 ## Enable OpenMP
-add_definitions(-DOPENMP)
-add_definitions(-DDEBUG)
+#add_definitions(-DOPENMP)
+#add_definitions(-DDEBUG)
 
 # flags
 add_definitions("-DENABLE_SSE")
@@ -102,10 +106,14 @@ add_library(mapping ${MAPPING_LIB_SOURCE})
 add_library(elas ${ELAS_LIB_SOURCE})
 
 add_library(cvo ${CVO_LIB_SOURCE})
-target_link_libraries(cvo elas mapping ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARY_DIRS}  ${OpenCV_LIBS} gtsam)
+target_link_libraries(cvo elas mapping ${Boost_LIBRARIES} ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARIES}  ${OpenCV_LIBS} ${TBB_LIBRARIES} gtsam )
 
 add_executable(cvo_kitti_color_stereo ${PROJECT_SOURCE_DIR}/src/main_kitti_stereo_color.cpp )
-target_link_libraries(cvo_kitti_color_stereo cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(cvo_kitti_color_stereo cvo  ${OpenCV_LIBS}  )
+
+add_executable(cvo_kitti_stereo_semantic ${PROJECT_SOURCE_DIR}/src/main_kitti_stereo_semantic.cpp )
+target_link_libraries(cvo_kitti_stereo_semantic cvo  ${OpenCV_LIBS} )
+
 
 add_executable(cvo_align ${PROJECT_SOURCE_DIR}/src/main_cvo_align.cpp )
 target_link_libraries(cvo_align cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})

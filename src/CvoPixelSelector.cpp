@@ -431,8 +431,8 @@ namespace cvo
 
         
       }
-      cv::imshow("heat map", heatmap);
-      cv::waitKey(200);
+      //cv::imshow("heat map", heatmap);
+      //cv::waitKey(200);
       cv::imwrite("heatmap.png", heatmap);
       
     }

@@ -52,24 +52,24 @@ namespace cvo {
                                      int num_semantic_class,
                                      vector<float> & semantics) {
 
-    if (! read_next_stereo(left, right))
+    if (read_next_stereo(left, right))
       return -1;
     
-    string semantic_name = folder_name + "/image_semantics/" + names[curr_index-1] + ".bin";
+    string semantic_name = folder_name + "/image_semantic/" + names[curr_index-1] + ".bin";
     int num_bytes = sizeof(float) * num_semantic_class * left.total();
-    
-    infile.open(semantic_name);
+    semantics.resize(left.total() * num_semantic_class);
+    infile.open(semantic_name.c_str(),std::ios::in| std::ifstream::binary);
     if (infile.is_open()) {
       infile.read( reinterpret_cast<char *>(semantics.data()), num_bytes );
       infile.close();
     } else {
-      cerr<<"Semantic Image doesn't read successfully: "<<semantic_name<<"\n";
+      cerr<<"Semantic Image doesn't read successfully: "<<semantic_name<<"\n"<<std::flush;
       return -1;
       
     }
 
     if (debug_plot)
-      visualize_semantic_image(names[curr_index -1]+".bin", semantics.data(), num_semantic_class, left.cols, left.rows );
+      visualize_semantic_image(names[curr_index -1]+".png", semantics.data(), num_semantic_class, left.cols, left.rows );
 
     return 0;
   }

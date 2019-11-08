@@ -86,7 +86,9 @@ namespace cvo{
      
     // start to fill in class members
     num_points_ = good_point_ind.size();
-    num_classes_ = 0;
+    num_classes_ = left_image.num_class();
+    if (num_classes_ )
+      labels_.resize(num_points_, num_classes_);
     features_.resize(num_points_, 5);
     for (int i = 0; i < num_points_ ; i++) {
       int u = output_uv[good_point_ind[i]](0);
@@ -102,7 +104,18 @@ namespace cvo{
       features_(i,2) = ((float)(avg_pixel[2]) )/255.0;
       features_(i,3) = gradient(0)/ 500.0 + 0.5;
       features_(i,4) = gradient(1)/ 500.0 + 0.5;
+
+      if (num_classes_) {
+        memcpy(&labels_.data()[ i*num_classes_],
+               &left_image.semantic_image().data()[(v * w + u)*num_classes_],
+               sizeof(float) * num_classes_ );
+        float sum_row = labels_.row(i).sum();
+        labels_.row(i) = (labels_.row(i) / sum_row).eval();
+      }
+
     }
+    if (num_classes_)
+      std::cout<<"Read labels " << labels_.row(0)<<"\n"<<labels_.row(num_points_-1)<<"\n";
 
 
                   
@@ -242,6 +255,7 @@ namespace cvo{
     output.num_classes_ = input.num_classes();
     output.features_ = input.features();
     output.labels_ = input.labels();
+    output.positions_.resize(output.num_points_);
     tbb::parallel_for(int(0), input.num_points(), [&](int j) {
                                                     output.positions_[j] = (pose.block(0, 0, 3, 3) * input.positions()[j] + pose.block(0, 3, 3, 1)).eval();
                                            });

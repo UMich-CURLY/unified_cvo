@@ -35,7 +35,7 @@ namespace cvo {
     
     Eigen::Affine3f compute_frame_pose_in_graph(std::shared_ptr<Frame> frame);
 
-    //void write_trajectory(std::string filename);
+    void write_trajectory(std::string filename);
 
     
   private:
@@ -63,6 +63,7 @@ namespace cvo {
     gtsam::NonlinearFactorGraph factor_graph_;
     std::unique_ptr<gtsam::ISAM2> isam2_;
     gtsam::Values graph_values_;
+    std::unordered_map<gtsam::Key, int> key2id_;
 
     // tracking
     cvo cvo_align_;

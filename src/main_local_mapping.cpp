@@ -62,6 +62,7 @@ Eigen::Matrix4f get_current_pose(const Eigen::MatrixXf& camera_poses, const int 
 int main(int argc, char *argv[]) {
   // list all files in current directory.
   //You could put any file path in here, e.g. "/home/me/mwah" to list that directory
+  std::cout<<argc<<std::endl;
   int num_class= 0;
   string n_class_str;
   if (argc > 5) {
@@ -76,7 +77,7 @@ int main(int argc, char *argv[]) {
   int num_frames = stoi(argv[4]);
   
   vector<string> files;
-  // cycle through the directory
+  std::cout<<" cycle through the directory\n";
   int total_num = 0;
   for(auto & p : boost::filesystem::directory_iterator( p ) ) {
     // If it's not a directory, list it. If you want to list directories too, just remove this check.
@@ -85,11 +86,11 @@ int main(int argc, char *argv[]) {
       string current_file = p.path().string();
       files.push_back(string(argv[1]) + "/" + to_string(total_num) + ".txt" );
       total_num += 1;
-      //cout <<"reading "<< current_file << endl; 
+      cout <<"reading "<< current_file << endl; 
 
     }
   }
-
+  std::cout<<"Mapping...\n";
   // Mapping
   // Set parameters
   int block_depth = 1;
@@ -106,9 +107,10 @@ int main(int argc, char *argv[]) {
 
   // Read camera poses
   Eigen::MatrixXf camera_poses;
-  std::string camera_pose_file = string(argv[1]) + "/" + "poses.txt";
+  //std::string camera_pose_file = string(argv[1]) + "/" + "poses.txt";
+  std::string camera_pose_file = "poses.txt";
   read_camera_poses(camera_pose_file, camera_poses);
-  
+  std::cout<<"Just read poses\n";
   // Build map
   std::vector<cvo::CvoPointCloud> pc_vec(files.size());
   semantic_bki::SemanticBKIOctoMap map_csm(resolution, block_depth, num_class + 1, sf2, ell, prior, var_thresh, free_thresh, occupied_thresh);

@@ -87,9 +87,9 @@ namespace cvo {
     }
 
     // keyframe map operations
-    void construct_map();
+    void construct_map(); // for keyframe
     std::unique_ptr<CvoPointCloud> export_points_from_map() const ; 
-    void add_points_to_map_from(const Frame & nonkeyframe);
+    void add_points_to_map_from(const Frame & nonkeyframe); // for non-keyframe
     
     
   private:
