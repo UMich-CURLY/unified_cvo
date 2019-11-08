@@ -271,7 +271,7 @@ namespace semantic_bki {
                         end_leaf = block_it->second->end_leaf();
                     }
                 }
-                //return *this;
+                return *this;
             }
 
             SemanticOcTreeNode &operator*() const {

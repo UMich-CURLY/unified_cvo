@@ -54,6 +54,7 @@ namespace cvo
                      float* map_out,
                      std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv,
                      // default inputs
+                     int customized_potential=-1,
                      int recursionsLeft=1, bool plot=false, float thFactor=1
                      );
 

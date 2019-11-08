@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstdio>
 #include <fstream>
+#include <string>
 #include <cassert>
 
 // Graphs
@@ -20,6 +21,7 @@ namespace cvo {
 
   using gtsam::symbol_shorthand::X; // Pose3 (x,y,z,r,p,y)
 
+  static std::string traj_file_name = "full_traj.txt";
   
   PoseGraph::PoseGraph():
     isam2_(nullptr){
@@ -31,6 +33,10 @@ namespace cvo {
     isam_params.enableDetailedResults = true;
     isam_params.print();
     this->isam2_ .reset( new gtsam::ISAM2(isam_params));
+
+    std::ofstream outfile;
+    outfile.open(traj_file_name, std::ofstream::out| std::ofstream::trunc  );
+    outfile.close();
     
   }
 
@@ -107,12 +113,14 @@ namespace cvo {
       new_frame->set_relative_transform(last_keyframe->id, result, inner_prod);
       std::cout<<"Cvo Align Result between "<<last_keyframe->id<<" and "<<new_frame->id<<",inner product "<<inner_prod<<", transformation is \n" <<result.matrix()<<"\n";
       // decide keyframe
-      if (inner_prod < 1.8) {
+      if (inner_prod < 0.2) {
         is_keyframe = true;
         if (last_keyframe != last_frame) {
           auto last_frame_points = last_frame->points();
-          Eigen::Affine3f eye = Eigen::Affine3f::Identity();
-          cvo_align_.set_pcd(last_frame_points, curr_points, eye, true );
+          Eigen::Affine3f slast_frame_pose_in_graph = compute_frame_pose_in_graph(slast_frame);
+          Eigen::Affine3f last_frame_pose_in_graph = compute_frame_pose_in_graph(last_frame);
+          Eigen::Affine3f slast_frame_to_last_frame_inv = (slast_frame_pose_in_graph.inverse() * last_frame_pose_in_graph).inverse();
+          cvo_align_.set_pcd(last_frame_points, curr_points, slast_frame_to_last_frame_inv, true );
           cvo_align_.align();
           new_frame->set_relative_transform(last_frame->id, cvo_align_.get_transform(),
                                             cvo_align_.inner_product());
@@ -164,6 +172,13 @@ namespace cvo {
       last_two_frames_.pop();
     
     new_frame->set_keyframe(is_keyframe);
+
+    static uint32_t counter = 0;
+    if (is_keyframe){
+      if (counter % 3 == 0)
+        write_trajectory(traj_file_name );
+      counter++;
+    }
   }
 
   void PoseGraph::init_pose_graph(std::shared_ptr<Frame> new_frame) {
@@ -231,28 +246,40 @@ namespace cvo {
       printf("doing map2map align between frame %d and %d\n", kf_second_last_id, keyframes_[keyframes_.size()-1]->id );
       std::unique_ptr<CvoPointCloud> map_points_kf_second_last = kf_second_last->export_points_from_map();
       std::unique_ptr<CvoPointCloud> map_points_kf_last = keyframes_[keyframes_.size()-1]->export_points_from_map();
-      std::cout<<"Map points from the two kf exported\n"<<std::flush;
-      Eigen::Affine3f init_guess = kf_second_last->pose_in_graph().inverse() * last_kf->pose_in_graph();
-      cvo_align_.set_pcd(*map_points_kf_second_last, *map_points_kf_last,
-                         init_guess, true);
 
-      Eigen::Affine3f cvo_result = cvo_align_.get_transform();
-      std::cout<<"map2map transform is \n"<<cvo_result.matrix()<<std::endl;
-      // TODO: check cvo align quality
-      gtsam::Pose3 tf_slast_kf_to_last_kf = affine3f_to_pose3(cvo_result);
-      //factor_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>(X(kf_second_last_id ), X(last_kf_id ),
-      //                                                     tf_slast_kf_to_last_kf, pose_noise));
-      factor_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>((kf_second_last_id ), (last_kf_id ),
-                                                           tf_slast_kf_to_last_kf, pose_noise));
-      graph_values_.print("\ngraph init values\n");
-      std::cout<<"Just add the edge between two  maps\n"<<std::flush;
+      map_points_kf_second_last->write_to_color_pcd("map2map_source.pcd");
+      map_points_kf_last->write_to_color_pcd("ma2map_target.pcd");
+
+      int diff_num = std::abs(map_points_kf_last->num_points() - map_points_kf_second_last->num_points());
+      if (diff_num * 1.0 / map_points_kf_last->num_points() < 0.25 &&
+          diff_num * 1.0 / map_points_kf_second_last->num_points() < 0.25 ) {
+      
+        std::cout<<"Map points from the two kf exported\n"<<std::flush;
+        Eigen::Affine3f init_guess = (kf_second_last->pose_in_graph().inverse() * last_kf->pose_in_graph()).inverse();
+        cvo_align_.set_pcd(*map_points_kf_second_last, *map_points_kf_last,
+                           init_guess, true);
+        cvo_align_.align();
+        Eigen::Affine3f cvo_result = cvo_align_.get_transform();
+        std::cout<<"map2map transform is \n"<<cvo_result.matrix()<<std::endl;
+        // TODO: check cvo align quality
+        gtsam::Pose3 tf_slast_kf_to_last_kf = affine3f_to_pose3(cvo_result);
+        //factor_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>(X(kf_second_last_id ), X(last_kf_id ),
+        //                                                     tf_slast_kf_to_last_kf, pose_noise));
+        factor_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>((kf_second_last_id ), (last_kf_id ),
+                                                             tf_slast_kf_to_last_kf, pose_noise));
+        graph_values_.print("\ngraph init values\n");
+        std::cout<<"Just add the edge between two  maps\n"<<std::flush;
+      } else {
+        std::cout<<"the number of points in kf "<<kf_second_last_id<<" and kf "<<keyframes_[keyframes_.size()-1]->id<<" differ too much: "<< map_points_kf_second_last->num_points()<<" vs "<<map_points_kf_last->num_points()<< ". Ignore this constrains\n";
+      }
     }
     try {
-      factor_graph_.print("factor graph\n");
+
       gtsam::ISAM2Result result = isam2_->update(factor_graph_, graph_values_ ); // difference from optimize()?
       graph_values_ = isam2_->calculateEstimate();
 
       std::cout<<"Optimization finish\n";
+      graph_values_.print("factor graph after optimization\n");
       update_optimized_poses_to_frames();
       factor_graph_.resize(0);
       graph_values_.clear();
@@ -266,30 +293,46 @@ namespace cvo {
   }
 
   void PoseGraph::update_optimized_poses_to_frames() {
-    std::cout<<"graph key size: "<<graph_values_.size()<<std::endl;
+    //std::cout<<"graph key size: "<<graph_values_.size()<<std::endl;
     for (auto key : graph_values_.keys()) {
-      std::cout<<"key: "<<key<<". "<<std::flush;
+      //std::cout<<"key: "<<key<<". "<<std::flush;
       gtsam::Pose3 pose_gtsam= graph_values_.at<gtsam::Pose3>( key ) ;
-      std::cout<<"pose_gtsam "<<pose_gtsam<<std::endl<<std::flush;
+      //std::cout<<"pose_gtsam "<<pose_gtsam<<std::endl<<std::flush;
       Mat44 pose_mat = pose_gtsam.matrix();
       Eigen::Affine3f pose;
       pose.linear() = pose_mat.block(0,0,3,3).cast<float>();
       pose.translation() = pose_mat.block(0,3,3,1).cast<float>();
       id2keyframe_[key]->set_pose_in_graph(pose);
-      std::cout<<"frame "<<key<< " new pose_in_graph is \n"<<id2keyframe_[key]->pose_in_graph().matrix()<<std::endl;
+      //std::cout<<"frame "<<key<< " new pose_in_graph is \n"<<id2keyframe_[key]->pose_in_graph().matrix()<<std::endl;
     }
     
   }
 
   void PoseGraph::write_trajectory(std::string filename) {
-    std::ofstream outfile (filename);
+    std::ofstream outfile;;
+    outfile.open(filename, std::ofstream::out );
     if (outfile.is_open()) {
-      
-      //outfile.write()
+      for (int i = 0; i < tracking_relative_transforms_.size(); i++) {
+        Eigen::Matrix4f pose;
+        if (id2keyframe_.find(i) != id2keyframe_.end()) {
+          // keyframe
+          auto kf = id2keyframe_[i];
+          pose = kf->pose_in_graph().matrix();
+        } else {
+          auto ref_id = tracking_relative_transforms_[i].ref_frame_id();
+          auto kf_pose = id2keyframe_[ref_id]->pose_in_graph();
+          auto pose_aff = kf_pose * tracking_relative_transforms_[i].ref_frame_to_curr_frame();
+          pose = pose_aff.matrix();
+        }
+
+        outfile << pose(0,0) << " "<<pose(0,1)<<" "<<pose(0,2)<<" "<<pose(0,3)<<" "
+                << pose(1,0) << " "<<pose(1,1)<<" "<<pose(1,2)<<" "<<pose(1,3)<<" "
+                << pose(2,0) << " "<<pose(2,1)<<" "<<pose(2,2)<<" "<<pose(2,3)
+                <<"\n"<<std::flush;
         
+      }
       outfile.close();
     }
-    
   }
   
 }

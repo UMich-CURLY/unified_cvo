@@ -56,7 +56,7 @@ namespace cvo{
     std::vector<float> left_disparity;
     StaticStereo::disparity(left_gray, right_gray, left_disparity);
 
-    int expected_points = 3000;
+    int expected_points = 5000;
     std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> output_uv;
     select_pixels(left_image,
                   expected_points,
@@ -114,12 +114,10 @@ namespace cvo{
       }
 
     }
-    if (num_classes_)
+    if (num_classes_) {
       std::cout<<"Read labels " << labels_.row(0)<<"\n"<<labels_.row(num_points_-1)<<"\n";
-
-
-                  
-    
+      write_to_label_pcd("labeled_input.pcd");
+    }
   }
   
   CvoPointCloud::CvoPointCloud(const semantic_bki::SemanticBKIOctoMap& map,

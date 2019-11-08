@@ -44,7 +44,7 @@ if (OPENMP_FOUND)
 endif()
 
 ## Enable OpenMP
-#add_definitions(-DOPENMP)
+add_definitions(-DOPENMP)
 #add_definitions(-DDEBUG)
 
 # flags

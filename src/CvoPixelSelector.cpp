@@ -141,12 +141,15 @@ namespace cvo
                                   float * map_out,
                                   std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv,
                                   // default inputs
+                                  int customized_potential,
                                   int recursionsLeft, bool plot, float thFactor)
   {
     float numHave=0;
     float numWant=density;
     float quotia;
+    if (customized_potential!=-1) currentPotential = customized_potential;
     int idealPotential = currentPotential;
+
     //	if(setting_pixelSelectionUseFast>0 && allowFastCornerS)
     //	{
     //		memset(map_out, 0, sizeof(float)*wG[0]*hG[0]);
@@ -179,6 +182,7 @@ namespace cvo
         makeHists(raw_image);
 
       // select!
+      std::cout<<"makeHeatMaps: currentPotential is "<<currentPotential<<", thFactor is "<<thFactor<<std::endl;
       Eigen::Vector3i n = this->select(raw_image,  currentPotential, thFactor, map_out, output_uv);
 
       // sub-select!
@@ -417,7 +421,7 @@ namespace cvo
                      std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv ) {
     PixelSelector selector(raw_image.color().cols, raw_image.color().rows);
     std::vector<float> heat_map(raw_image.color().total(), 0);
-    selector.makeHeatMaps(raw_image,static_cast<float> (num_want), heat_map.data(), output_uv );
+    selector.makeHeatMaps(raw_image,static_cast<float> (num_want), heat_map.data(), output_uv, 5);
     
     bool debug_plot = true;
     if (debug_plot) {

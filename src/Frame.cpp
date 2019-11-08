@@ -56,8 +56,8 @@ namespace cvo {
     pose_in_graph_.setIdentity();
     Eigen::Affine3f eye = Eigen::Affine3f::Identity();
     tracking_relative_transform_.set_relative_transform(ind, eye,1.0 );
-    points_.write_to_color_pcd(std::to_string(id)+".pcd");
-    points_.write_to_color_pcd(std::to_string(id)+"_label.pcd");
+    //points_.write_to_color_pcd(std::to_string(id)+".pcd");
+    //points_.write_to_color_pcd(std::to_string(id)+"_label.pcd");
   }
   
   Frame::~Frame() {
