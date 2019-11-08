@@ -203,6 +203,8 @@ namespace cvo{
 
     // callable after each align
     float inner_product() const ;
+    float inner_product_normalized() const ;
+    int number_of_non_zeros_in_A() const;
     // just compute the inner product
     float inner_product(const CvoPointCloud& source_points,
                         const CvoPointCloud& target_points,

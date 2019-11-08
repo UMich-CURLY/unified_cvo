@@ -710,6 +710,15 @@ namespace cvo{
     return A.sum()/num_fixed*1e6/num_moving;
   }
 
+  float cvo::inner_product_normalized() const {
+    return A.sum()/A.nonZeros();
+    // return A.sum()/num_fixed*1e6/num_moving;
+  }
+
+  int cvo::number_of_non_zeros_in_A() const{
+    std::cout<<"num of non-zeros in A: "<<A.nonZeros()<<std::endl;
+    return A.nonZeros();
+  }
 
   float cvo::inner_product(const CvoPointCloud& source_points,
                                 const CvoPointCloud& target_points,
@@ -734,6 +743,8 @@ namespace cvo{
     A_mat.resize(source_points.num_points(), target_points.num_points());
     A_mat.setZero();
     se_kernel(&source_points, &target_points, &fixed_positions, &moving_positions, A_mat, A_trip_concur_  );
+    std::cout<<"num of non-zeros in A: "<<A_mat.nonZeros()<<std::endl;
+    // return A_mat.sum()/A_mat.nonZeros();
     return A_mat.sum()/num_fixed*1e6/num_moving;
   }
 

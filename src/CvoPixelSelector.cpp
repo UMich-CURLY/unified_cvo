@@ -183,7 +183,7 @@ namespace cvo
 
       // sub-select!
       numHave = static_cast<float>(n[0]+n[1]+n[2]);
-      std::cout<<"numHave n is "<<n.transpose()<<std::endl;
+      // std::cout<<"numHave n is "<<n.transpose()<<std::endl;
       quotia = numWant / numHave;
 
 
@@ -191,7 +191,7 @@ namespace cvo
       float K = numHave * (currentPotential+1) * (currentPotential+1);
       idealPotential = sqrtf(K/numWant)-1;	// round down.
       if(idealPotential<1) idealPotential=1;
-      printf("PixelSelector: recursionsLeft %d, quotia %f, numHave %d / numWant %d, idealPotential is %f\n",recursionsLeft,  quotia, numHave, numWant, idealPotential);
+      // printf("PixelSelector: recursionsLeft %d, quotia %f, numHave %d / numWant %d, idealPotential is %f\n",recursionsLeft,  quotia, numHave, numWant, idealPotential);
       if( recursionsLeft>0 && quotia > 1.25 && currentPotential>1)
       {
         //re-sample to get more points!
@@ -405,7 +405,7 @@ namespace cvo
         // }
       }
 
-    printf("[select] n2 is %d\n", n2);
+    // printf("[select] n2 is %d\n", n2);
     return Eigen::Vector3i(n2,n3,n4);
   }
 

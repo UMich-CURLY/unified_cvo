@@ -28,6 +28,9 @@ namespace cvo {
       //map_centroids_(nullptr){
     pose_in_graph_.setIdentity();
 
+    // points_.write_to_color_pcd("cvo_points_pcd/" + std::to_string(ind)+".pcd");
+    // points_.write_to_color_pcd("cvo_points/" +std::to_string(ind)+"_label.pcd");
+
     Eigen::Affine3f eye = Eigen::Affine3f::Identity();
     tracking_relative_transform_.set_relative_transform(ind, eye, 1.0 );
   }
