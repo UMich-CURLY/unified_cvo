@@ -110,5 +110,8 @@ target_link_libraries(cvo_kitti_color_stereo cvo boost_system boost_thread cxspa
 add_executable(cvo_align ${PROJECT_SOURCE_DIR}/src/main_cvo_align.cpp )
 target_link_libraries(cvo_align cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
 
+add_executable(cvo_f2f ${PROJECT_SOURCE_DIR}/src/main_cvo_align_f2f.cpp )
+target_link_libraries(cvo_f2f cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
+
 add_executable(cvo_local_mapping ${PROJECT_SOURCE_DIR}/src/main_local_mapping.cpp )
 target_link_libraries(cvo_local_mapping cvo mapping boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES}  )
