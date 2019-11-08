@@ -1,7 +1,9 @@
+#!/bin/sh
+
 mode=0  # 0 for online generated points 1 for reading txt
-path="/media/justin/LaCie/data/kitti/sequences/05"
+path="/home/rayzhang/seagate_2t/kitti/05"
 pcd_path="cvo_points/"
-calib_name="camera.txt"
+calib_name="cvo_calib.txt"
 output_file="cvo_kf_tracking.txt"
 start_frame=1
 inner_product_threshold=0.15
