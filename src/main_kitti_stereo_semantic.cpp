@@ -20,7 +20,8 @@ int main(int argc, char ** argv) {
   cvo::Calibration calib(calib_name);
 
   int num_class = std::stoi(argv[3]);
-  
+
+  int starting_frame = std::stoi(argv[4]);
   for (int i = 0; i < total_iters; i++) {
     cv::Mat left, right;
     std::vector<float> semantics;

@@ -113,7 +113,7 @@ namespace cvo {
       new_frame->set_relative_transform(last_keyframe->id, result, inner_prod);
       std::cout<<"Cvo Align Result between "<<last_keyframe->id<<" and "<<new_frame->id<<",inner product "<<inner_prod<<", transformation is \n" <<result.matrix()<<"\n";
       // decide keyframe
-      if (inner_prod < 0.2) {
+      if (inner_prod < 0.25) {
         is_keyframe = true;
         if (last_keyframe != last_frame) {
           auto last_frame_points = last_frame->points();
@@ -211,12 +211,15 @@ namespace cvo {
 
     assert(tracking_relative_transforms_.size() > 1);
     
-
     int new_id = new_frame->id;
     int last_kf_id = all_frames_since_last_keyframe_[0]->id;
     auto last_kf = id2keyframe_[last_kf_id];
-    
-    auto tf_last_keyframe_to_last_frame = tracking_relative_transforms_[new_id - 1].ref_frame_to_curr_frame();
+    auto last_frame = last_two_frames_.back();
+    Eigen::Affine3f tf_last_keyframe_to_last_frame;
+    if (last_kf->id == last_frame->id ) 
+      tf_last_keyframe_to_last_frame = Eigen::Affine3f::Identity();
+    else
+      tf_last_keyframe_to_last_frame = tracking_relative_transforms_[last_frame->id].ref_frame_to_curr_frame();
     auto tf_last_keyframe_to_newframe = tf_last_keyframe_to_last_frame * tracking_relative_transforms_[new_id].ref_frame_to_curr_frame();
 
     Eigen::Affine3f tf_WtoNew_eigen = last_kf->pose_in_graph() * tf_last_keyframe_to_newframe;
@@ -227,8 +230,8 @@ namespace cvo {
     prior_pose_noise << gtsam::Vector3::Constant(0.1), gtsam::Vector3::Constant(0.1);
     auto pose_noise = gtsam::noiseModel::Diagonal::Sigmas( prior_pose_noise);
     std::cout<<"optimize the pose graph with gtsam...\n";
-    std::cout<<" new frames's tf_WtoNew \n"<<tf_WtoNew<<"\n";
-    std::cout<<" new frames' odom_last_kf_to_new \n"<<odom_last_kf_to_new<<"\n";
+    std::cout<<" new frames's tf_WtoNew "<<tf_WtoNew;
+    std::cout<<" new frames' odom_last_kf_to_new"<<odom_last_kf_to_new<<"";
     // factor_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>(X(last_kf_id), X(new_id),
     //                                                    odom_last_kf_to_new, pose_noise));
     factor_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>((last_kf_id), (new_id),
@@ -251,8 +254,7 @@ namespace cvo {
       map_points_kf_last->write_to_color_pcd("ma2map_target.pcd");
 
       int diff_num = std::abs(map_points_kf_last->num_points() - map_points_kf_second_last->num_points());
-      if (diff_num * 1.0 / map_points_kf_last->num_points() < 0.25 &&
-          diff_num * 1.0 / map_points_kf_second_last->num_points() < 0.25 ) {
+      if (diff_num * 1.0 / std::max(map_points_kf_last->num_points(), map_points_kf_second_last->num_points() )< 0.5 ) {
       
         std::cout<<"Map points from the two kf exported\n"<<std::flush;
         Eigen::Affine3f init_guess = (kf_second_last->pose_in_graph().inverse() * last_kf->pose_in_graph()).inverse();
