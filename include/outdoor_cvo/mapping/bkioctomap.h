@@ -7,7 +7,7 @@
 #include "rtree.h"
 #include "bkiblock.h"
 #include "bkioctree_node.h"
-#include "utils/CvoPointCloud.hpp"
+//#include "utils/CvoPointCloud.hpp"
 
 namespace cvo {
     class CvoPointCloud;
@@ -86,7 +86,7 @@ namespace semantic_bki {
          * @param free_res resolution for sampling free training points along sensor beams (default 2.0)
          * @param max_range maximum range for beams to be considered as valid measurements (-1 if no limitation)
          */
-        void insert_pointcloud_csm(const CVOPointCloud &cloud, const point3f &origin, float ds_resolution,
+        void insert_pointcloud_csm(const CVOPointCloud * cloud, const point3f &origin, float ds_resolution,
                                float free_res = 2.0f,
                                float max_range = -1);
 
@@ -380,7 +380,7 @@ namespace semantic_bki {
                          float free_resolution) const;
 
         /// Get training data from one sensor scan.
-        void get_training_data(const CVOPointCloud &cloud, const point3f &origin, float ds_resolution,
+        void get_training_data(const CVOPointCloud * cloud, const point3f &origin, float ds_resolution,
                                float free_resolution, float max_range, GPPointCloud &xy) const;
 
         float resolution;

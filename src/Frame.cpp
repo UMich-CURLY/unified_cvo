@@ -67,14 +67,14 @@ namespace cvo {
     local_map_.reset(new semantic_bki::SemanticBKIOctoMap(0.1, 1, raw_image_.num_class()+1  ));
 
     semantic_bki::point3f origin;
-    local_map_->insert_pointcloud_csm(points_, origin, -1, 100, -1);
+    local_map_->insert_pointcloud_csm(&points_, origin, -1, 100, -1);
     //is_map_centroids_latest = false;
   }
 
   std::unique_ptr<CvoPointCloud> Frame::export_points_from_map() const {
     if (!local_map_ )
       return nullptr;
-    std::unique_ptr<CvoPointCloud> ret(new CvoPointCloud(*local_map_, raw_image_.num_class()));
+    std::unique_ptr<CvoPointCloud> ret(new CvoPointCloud(local_map_.get(), raw_image_.num_class()));
     std::cout<<"export "<<ret->num_points()<<" points in "<<ret->num_classes()<<" from the map's centroids\n"<<std::flush;
     return std::move(ret);
   }
@@ -96,7 +96,7 @@ namespace cvo {
                               points_from_nonkeyframe,
                               transformed_pc);
     
-    local_map_->insert_pointcloud_csm(transformed_pc,
+    local_map_->insert_pointcloud_csm(&transformed_pc,
                                       semantic_bki::point3f(tf_curr2input(0,3),tf_curr2input(1,3),tf_curr2input(2,3)),
                                       -1, 100, -1);
     auto end = std::chrono::system_clock::now();
