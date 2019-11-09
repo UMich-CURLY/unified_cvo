@@ -421,7 +421,7 @@ namespace cvo
                      std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv ) {
     PixelSelector selector(raw_image.color().cols, raw_image.color().rows);
     std::vector<float> heat_map(raw_image.color().total(), 0);
-    selector.makeHeatMaps(raw_image,static_cast<float> (num_want), heat_map.data(), output_uv, 5);
+    selector.makeHeatMaps(raw_image,static_cast<float> (num_want), heat_map.data(), output_uv, 5, 0);
     
     bool debug_plot = true;
     if (debug_plot) {

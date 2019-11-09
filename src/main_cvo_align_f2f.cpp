@@ -136,9 +136,12 @@ int main(int argc, char *argv[]) {
     in_product_output_file<<std::flush;
 
     // record accum_tf for future initialization
-    accum_tf = accum_tf_list[i-1]*cvo_align.get_transform().matrix();
+    accum_tf = accum_tf_list[i-1-start_frame]*cvo_align.get_transform().matrix();
     accum_tf_list.push_back(accum_tf);
     std::cout<<"adding "<<accum_tf_list.size()-1<<" to accum_tf"<<std::endl;
+    // std::cout<<"accum_tf-1: \n"<<accum_tf_list[i-1-start_frame]<<std::endl;
+    // std::cout<<"relative: \n"<<cvo_align.get_transform().matrix()<<std::endl;
+    std::cout<<"accum tf: \n"<<accum_tf<<std::endl;
     
     // result = accum_tf;
     result = cvo_align.get_transform().matrix();
