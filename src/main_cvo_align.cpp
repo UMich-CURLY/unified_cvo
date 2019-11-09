@@ -201,7 +201,7 @@ int main(int argc, char *argv[]) {
 
     // record accum_tf for future initialization
     std::cout<<"multiplying tf with "<<cur_kf<<std::endl;
-    accum_tf = cvo_align.get_transform().matrix()*accum_tf_list[cur_kf-start_frame];
+    accum_tf = accum_tf_list[cur_kf-start_frame]*cvo_align.get_transform().matrix();
     accum_tf_list.push_back(accum_tf);
     std::cout<<"adding "<<accum_tf_list.size()-1<<" to accum_tf"<<std::endl;
     result = accum_tf;
