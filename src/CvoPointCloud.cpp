@@ -12,6 +12,7 @@
 #include "utils/CvoPointCloud.hpp"
 #include "utils/StaticStereo.hpp"
 #include "utils/CvoPixelSelector.hpp"
+#include "mapping/bkioctomap.h"
 namespace cvo{
 
   static bool is_good_point(const Vec3f & xyz, const Vec2i uv, int h, int w ) {
@@ -131,18 +132,24 @@ namespace cvo{
     }
   }
   
-  CvoPointCloud::CvoPointCloud(const semantic_bki::SemanticBKIOctoMap& map,
+  CvoPointCloud::CvoPointCloud(const semantic_bki::SemanticBKIOctoMap * map,
                                const int num_classes) {
     num_classes_ = num_classes;
-    std::vector<std::vector<float>> features;
-    std::vector<std::vector<float>> labels;
-    for (auto it = map.begin_leaf(); it != map.end_leaf(); ++it) {
+    int num_point_counter = 0;
+    std::vector<std::vector<float> > features;
+    std::vector<std::vector<float> > labels;
+    positions_.reserve(65536);
+    features.reserve(65536);
+    labels.reserve(65536);
+    
+    for (auto it = map->begin_leaf(); it != map->end_leaf(); ++it) {
       if (it.get_node().get_state() == semantic_bki::State::OCCUPIED) {
         // position
-        semantic_bki::point3f p = it.get_loc();
+        semantic_bki::point3f  p = it.get_loc();
         Vec3f xyz;
         xyz << p.x(), p.y(), p.z();
         positions_.push_back(xyz);
+               
         // features
         std::vector<float> feature(5, 0);
         it.get_node().get_features(feature);
@@ -151,19 +158,22 @@ namespace cvo{
         std::vector<float> label(num_classes_, 0);
         it.get_node().get_occupied_probs(label);
         labels.push_back(label);
+        num_point_counter++;
       }
     }
-    num_points_ = positions_.size();
+      
+    num_points_ = num_point_counter ;
     features_.resize(num_points_, 5);
-    labels_.resize(num_points_, num_classes_);
-    for (int i = 0; i < num_points_; ++i) {
-      for (int j = 0; j < 5; ++j) {
-        features_(i, j) = features[i][j];
-      }
-      for (int j = 0; j < num_classes_; ++j) {
-        labels_(i, j) = labels[i][j];
-      }
+    labels_.resize(num_points_, num_classes);
+
+    for (int i = 0; i < num_points_; i++) {
+      memcpy(labels_.data()+ num_classes * sizeof(float) * i, labels[i].data(), num_classes * sizeof(float));
+      float sum_row = labels_.row(i).sum();
+      labels_.row(i) = (labels_.row(i) / sum_row).eval();
+      memcpy(features_.data()+5 * sizeof(float) * i, features[i].data(), 5 * sizeof(float));
     }
+    std::cout<<"Read labels from map:\nlabel" << labels_.row(0)<<"\n"<<labels_.row(num_points_-1)<<", color: ";
+    std::cout<< features_.row(0)<<"\n"<<features_.row(num_points_-1)<<"\n";
   }
 
   CvoPointCloud::CvoPointCloud(){}
@@ -268,8 +278,8 @@ namespace cvo{
     output.labels_ = input.labels();
     output.positions_.resize(output.num_points_);
     tbb::parallel_for(int(0), input.num_points(), [&](int j) {
-                                                    output.positions_[j] = (pose.block(0, 0, 3, 3) * input.positions()[j] + pose.block(0, 3, 3, 1)).eval();
-                                           });
+        output.positions_[j] = (pose.block(0, 0, 3, 3) * input.positions()[j] + pose.block(0, 3, 3, 1)).eval();
+      });
   }
 
 

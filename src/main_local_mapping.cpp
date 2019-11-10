@@ -131,13 +131,13 @@ int main(int argc, char *argv[]) {
     origin.z() = transform(2, 3);
 
     // insert point cloud
-    map_csm.insert_pointcloud_csm(transformed_pc, origin, ds_resolution, free_resolution, max_range);
+    map_csm.insert_pointcloud_csm(&transformed_pc, origin, ds_resolution, free_resolution, max_range);
     ++i;
     if (i == num_frames) break;
   }
   
   // Map to CVOPointCloud
-  cvo::CvoPointCloud cloud_out(map_csm, num_class);
+  cvo::CvoPointCloud cloud_out(&map_csm, num_class);
   pc_vec[0].write_to_color_pcd(output_file + "/" + "input_color.pcd");
   pc_vec[0].write_to_label_pcd(output_file + "/" + "input_semantics.pcd");
   cloud_out.write_to_color_pcd(output_file + "/" + "test_color.pcd");

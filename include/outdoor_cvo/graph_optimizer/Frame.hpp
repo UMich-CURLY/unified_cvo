@@ -70,7 +70,7 @@ namespace cvo {
 
     // getters
     const CvoPointCloud & points() const  {return points_;}
-    const bool is_keyframe() const { return is_keyframe_; }
+    bool is_keyframe() const { return is_keyframe_; }
     const RawImage & raw_image() const { return raw_image_;}
     const Eigen::Affine3f pose_in_graph() const;
     const RelativePose & tracking_relative_transform() const { return tracking_relative_transform_; }

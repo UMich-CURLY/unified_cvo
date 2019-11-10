@@ -63,6 +63,12 @@ set(CVO_LIB_SOURCE
   ${PROJECT_SOURCE_DIR}/src/StaticStereo.cpp
   ${PROJECT_SOURCE_DIR}/src/CvoPixelSelector.cpp
   ${PROJECT_SOURCE_DIR}/src/RawImage.cpp
+  ${PROJECT_SOURCE_DIR}/src/mapping/bkiblock.cpp
+  ${PROJECT_SOURCE_DIR}/src/mapping/bkioctomap.cpp
+  ${PROJECT_SOURCE_DIR}/src/mapping/bkioctree_node.cpp
+  ${PROJECT_SOURCE_DIR}/src/mapping/bkioctree.cpp
+  ${PROJECT_SOURCE_DIR}/src/mapping/point3f.cpp
+  ${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
   ${PROJECT_SOURCE_DIR}/include/outdoor_cvo/cvo/LieGroup.cpp
   )
 
@@ -74,15 +80,6 @@ set(ELAS_LIB_SOURCE
   ${PROJECT_SOURCE_DIR}/thirdparty/libelas/matrix.cpp
   ${PROJECT_SOURCE_DIR}/thirdparty/libelas/triangle.cpp
   )
-
-set(MAPPING_LIB_SOURCE
-  ${PROJECT_SOURCE_DIR}/src/mapping/bkiblock.cpp
-  ${PROJECT_SOURCE_DIR}/src/mapping/bkioctomap.cpp
-  ${PROJECT_SOURCE_DIR}/src/mapping/bkioctree_node.cpp
-  ${PROJECT_SOURCE_DIR}/src/mapping/bkioctree.cpp
-  ${PROJECT_SOURCE_DIR}/src/mapping/point3f.cpp
-  ${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
-)
 
 include_directories(
   ${PROJECT_SOURCE_DIR}/include/outdoor_cvo/
@@ -100,13 +97,10 @@ include_directories(
 
 
 # compile main library.
-add_library(mapping ${MAPPING_LIB_SOURCE})
-
-# compile main library.
 add_library(elas ${ELAS_LIB_SOURCE})
 
 add_library(cvo ${CVO_LIB_SOURCE})
-target_link_libraries(cvo elas mapping ${Boost_LIBRARIES} ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARIES}  ${OpenCV_LIBS} ${TBB_LIBRARIES} gtsam )
+target_link_libraries(cvo elas ${Boost_LIBRARIES} ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARIES}  ${OpenCV_LIBS} ${TBB_LIBRARIES} gtsam )
 
 add_executable(cvo_kitti_color_stereo ${PROJECT_SOURCE_DIR}/src/main_kitti_stereo_color.cpp )
 target_link_libraries(cvo_kitti_color_stereo cvo  ${OpenCV_LIBS}  )
@@ -122,4 +116,4 @@ add_executable(cvo_f2f ${PROJECT_SOURCE_DIR}/src/main_cvo_align_f2f.cpp )
 target_link_libraries(cvo_f2f cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(cvo_local_mapping ${PROJECT_SOURCE_DIR}/src/main_local_mapping.cpp )
-target_link_libraries(cvo_local_mapping cvo mapping boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES}  )
+target_link_libraries(cvo_local_mapping cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES}  )

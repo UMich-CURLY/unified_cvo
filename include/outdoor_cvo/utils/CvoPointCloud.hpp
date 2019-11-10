@@ -10,7 +10,7 @@
 #include "utils/StaticStereo.hpp"
 #include "utils/Calibration.hpp"
 #include "utils/data_type.hpp"
-#include "mapping/bkioctomap.h"
+//#include "mapping/bkioctomap.h"
 
 namespace semantic_bki {
   class SemanticBKIOctoMap;
@@ -30,7 +30,7 @@ namespace cvo {
                   const cv::Mat & right_image,
                   const Calibration &calib);
 
-    CvoPointCloud(const semantic_bki::SemanticBKIOctoMap& map,
+    CvoPointCloud(const semantic_bki::SemanticBKIOctoMap * map,
                   int num_semantic_class);
 
     CvoPointCloud();

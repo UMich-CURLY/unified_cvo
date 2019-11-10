@@ -3,7 +3,7 @@
 
 #include "mapping/bkioctomap.h"
 #include "mapping/bki.h"
-
+#include "utils/CvoPointCloud.hpp"
 using std::vector;
 
 // #define DEBUG true;
@@ -86,7 +86,7 @@ namespace semantic_bki {
         Block::key_loc_map = init_key_loc_map(resolution, block_depth);
     }
 
-    void SemanticBKIOctoMap::insert_pointcloud_csm(const CVOPointCloud &cloud, const point3f &origin, float ds_resolution,
+    void SemanticBKIOctoMap::insert_pointcloud_csm(const CVOPointCloud *cloud, const point3f &origin, float ds_resolution,
                                       float free_res, float max_range) {
 
 #ifdef DEBUG
@@ -238,11 +238,11 @@ namespace semantic_bki {
         }
     }
 
-    void SemanticBKIOctoMap::get_training_data(const CVOPointCloud &cloud, const point3f &origin, float ds_resolution,
+    void SemanticBKIOctoMap::get_training_data(const CVOPointCloud *cloud, const point3f &origin, float ds_resolution,
                                       float free_resolution, float max_range, GPPointCloud &xy) const {
         xy.clear();
-        for (int i = 0; i < cloud.num_points(); ++i) {
-            point3f p(cloud.positions()[i][0], cloud.positions()[i][1], cloud.positions()[i][2]);
+        for (int i = 0; i < cloud->num_points(); ++i) {
+            point3f p(cloud->positions()[i][0], cloud->positions()[i][1], cloud->positions()[i][2]);
             if (max_range > 0) {
                 double l = (p - origin).norm();
                 if (l > max_range)
@@ -251,10 +251,10 @@ namespace semantic_bki {
             
             std::vector<float> properties(6, 0);
             int pix_label;
-            cloud.labels().row(i).maxCoeff(&pix_label);
+            cloud->labels().row(i).maxCoeff(&pix_label);
             properties[0] = pix_label + 1;
             for (int j = 0; j < 5; ++j)
-              properties[j + 1] = cloud.features()(i, j);
+              properties[j + 1] = cloud->features()(i, j);
             xy.emplace_back(p, properties);
 
             PointCloud frees_n;
