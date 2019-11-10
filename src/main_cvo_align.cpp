@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
   std::ofstream output_file(argv[5]);
   int start_frame = stoi(argv[6]);
   double in_product_th = stof(argv[7]);
-  int kf_step = 7;
+  int kf_step = 5;
   int total_num = 0;
   
   std::ofstream in_product_output_file("inner_product_kf_all.txt");
@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
     tf_kf_im1 = accum_tf_list[cur_kf-start_frame].inverse()*accum_tf_list[i-1-start_frame];
     if(i-start_frame>1)
       tf_im1_im2 = accum_tf_list[i-2-start_frame].inverse()*accum_tf_list[i-1-start_frame];
-    init_guess = (tf_im1_im2*tf_kf_im1).inverse();
+    init_guess = (tf_kf_im1*tf_im1_im2).inverse();
     // }
     
     std::cout<<"\n============================================="<<std::endl;
@@ -182,8 +182,8 @@ int main(int argc, char *argv[]) {
     //   in_product_base = cvo_align.inner_product();
     // }
     // start the kf init process :)
-    // else if(in_product < in_product_th){
-    else if(i-kf_id_list.back()==kf_step){
+    else if(in_product < in_product_th){
+    // else if(i-kf_id_list.back()==kf_step){
       in_kf_init_process = true;
       // add new kf to the list
       kf_id_list.push_back(i);
