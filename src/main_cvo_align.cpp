@@ -35,9 +35,10 @@ int main(int argc, char *argv[]) {
   std::ofstream output_file(argv[5]);
   int start_frame = stoi(argv[6]);
   double in_product_th = stof(argv[7]);
+  int kf_step = 7;
   int total_num = 0;
   
-  std::ofstream in_product_output_file("inner_product.txt");
+  std::ofstream in_product_output_file("inner_product_kf_all.txt");
 
   vector<string> files;
   std::cout<<"pth: "<<pth<<std::endl;
@@ -82,11 +83,13 @@ int main(int argc, char *argv[]) {
   cv::Mat left, right;
   double in_product_base = 1.0;
   double in_product_ratio = 0.0;
+  std::shared_ptr<cvo::Frame> source_frame;
+  std::shared_ptr<cvo::Frame> target_frame;
 
   // create first frame for kf
   if(kitti.read_next_stereo(left, right) == 0){
-    std::shared_ptr<cvo::Frame> first_frame(new cvo::Frame(start_frame, left, right, calib ));
-    all_frames_since_last_keyframe.push_back(first_frame);
+    source_frame = make_shared<cvo::Frame>(start_frame, left, right, calib);
+    all_frames_since_last_keyframe.push_back(source_frame);
   }
   bool in_kf_init_process = false;
   for (int i = start_frame+1; i<total_num ; i++) {
@@ -101,6 +104,7 @@ int main(int argc, char *argv[]) {
       cur_kf -= 1;
       // init_guess.setIdentity();
       // init_guess.matrix()(2,3)=-0.75;
+
       // if(cur_kf-prev_kf>1)
       //   init_guess = (accum_tf_list[prev_kf-start_frame].inverse()*accum_tf_list[prev_kf+1-start_frame]).inverse();
       // else
@@ -119,10 +123,10 @@ int main(int argc, char *argv[]) {
     if(mode==0){
       if(!in_kf_init_process){  // if we are not redoing kf and kf-1, add new frame to the list
         if(kitti.read_next_stereo(left, right) == 0){
-          std::shared_ptr<cvo::Frame> new_frame(new cvo::Frame(i, left, right, calib));
-          all_frames_since_last_keyframe.push_back(new_frame);
+          target_frame = make_shared<cvo::Frame>(start_frame, left, right, calib);
+          all_frames_since_last_keyframe.push_back(target_frame);
           auto& source_fr = all_frames_since_last_keyframe.front()->points(); // keyframe
-          auto& target_fr = new_frame->points();
+          auto& target_fr = target_frame->points();
           cvo_align.set_pcd(source_fr, target_fr, init_guess, true);
           cvo_align.align();
         }
@@ -151,8 +155,10 @@ int main(int argc, char *argv[]) {
     
 
     init_guess= cvo_align.get_transform();
-    Eigen::Matrix4f result = init_guess.matrix();
     double in_product = cvo_align.inner_product();
+    double in_product_normalized = cvo_align.inner_product_normalized();
+    int non_zeros_in_A = cvo_align.number_of_non_zeros_in_A();
+    Eigen::Matrix4f result = init_guess.matrix();
     std::cout<<"The inner product between "<<cur_kf <<" and "<< i <<" is "<<in_product<<"\n";
     std::cout<<"Transform is \n";
     std::cout<<cvo_align.get_transform().matrix() <<"\n\n";
@@ -167,8 +173,6 @@ int main(int argc, char *argv[]) {
       std::shared_ptr<cvo::Frame> temp_frame = all_frames_since_last_keyframe.back();
       all_frames_since_last_keyframe.clear();
       all_frames_since_last_keyframe.push_back(temp_frame);
-      in_product_output_file<<"=======kf-1|==========="<<"\n";
-      in_product_output_file<<"===========v==========="<<"\n";
     }
     // in_product_ratio = in_product/in_product_base;
     // std::cout<<"The inner product ratio for "<<i<<" is "<<in_product_ratio<<std::endl;
@@ -178,7 +182,8 @@ int main(int argc, char *argv[]) {
     //   in_product_base = cvo_align.inner_product();
     // }
     // start the kf init process :)
-    else if(in_product < in_product_th){
+    // else if(in_product < in_product_th){
+    else if(i-kf_id_list.back()==kf_step){
       in_kf_init_process = true;
       // add new kf to the list
       kf_id_list.push_back(i);
@@ -187,15 +192,10 @@ int main(int argc, char *argv[]) {
       std::cout<<"will redo "<<i-1<<" and "<< i << std::endl;
       std::cout<<"~~~~~~~~~~~~~~~~~~~~~~~~~"<<std::endl;
 
-      
-      in_product_output_file<<in_product<<"\n";
-      in_product_output_file<<"===========^==========="<<"\n";
-      in_product_output_file<<"======wrong|==========="<<"\n";
-      in_product_output_file<<std::flush;
       continue;
     }
 
-    in_product_output_file<<in_product<<"\n";
+    in_product_output_file<<non_zeros_in_A<<" "<<in_product<<" "<<in_product_normalized<<"\n";
     in_product_output_file<<std::flush;
 
 
