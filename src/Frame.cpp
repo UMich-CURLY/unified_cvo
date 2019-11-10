@@ -98,7 +98,7 @@ namespace cvo {
     
     local_map_->insert_pointcloud_csm(transformed_pc,
                                       semantic_bki::point3f(tf_curr2input(0,3),tf_curr2input(1,3),tf_curr2input(2,3)),
-                                      -1, 100, -1);
+                                      -1, 200, -1);
     auto end = std::chrono::system_clock::now();
     t_add_points_to_map = end - start;
     std::cout<<"[add_points_to_map_from] takes time "<<t_add_points_to_map.count()<<std::endl;

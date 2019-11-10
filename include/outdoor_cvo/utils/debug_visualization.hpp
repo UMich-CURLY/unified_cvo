@@ -78,7 +78,15 @@ namespace cvo {
 
   
   inline void visualize_semantic_image(std::string name, float * image_semantics, int num_class, int w, int h) {
-    cv::Mat img(h, w, CV_8U);
+    cv::Mat img(h, w, CV_8UC1);
+
+
+    std::cout<<"visualize_semantic_image : first point labels are ";
+    for (int i = 0; i < num_class; i++) {
+      std::cout<<image_semantics[i]<<", ";
+    }
+    std::cout<<"\n";
+    
     for (int r = 0; r < h; r++ ) {
       for (int c = 0; c < w; c++){
         int label;
@@ -91,7 +99,7 @@ namespace cvo {
             
           }
         }
-        img.at<uint8_t>(r, c) = (uint8_t) label * 10;
+        img.at<uint8_t>(r, c) = (uint8_t) label;
       }
       
     }

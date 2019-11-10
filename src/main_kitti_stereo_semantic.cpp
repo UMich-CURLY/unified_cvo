@@ -10,7 +10,7 @@
 #include "graph_optimizer/PoseGraph.hpp"
 #include "utils/Calibration.hpp"
 int main(int argc, char ** argv) {
-  assert(argc == 4);
+  assert(argc > 3);
   cvo::KittiHandler kitti(argv[1]);
   int total_iters = kitti.get_total_number();
 

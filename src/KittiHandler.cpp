@@ -69,7 +69,7 @@ namespace cvo {
     }
 
     if (debug_plot)
-      visualize_semantic_image(names[curr_index -1]+".png", semantics.data(), num_semantic_class, left.cols, left.rows );
+      visualize_semantic_image("last_semantic.png", semantics.data(), num_semantic_class, left.cols, left.rows );
 
     return 0;
   }

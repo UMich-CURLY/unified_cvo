@@ -106,16 +106,27 @@ namespace cvo{
       features_(i,4) = gradient(1)/ 500.0 + 0.5;
 
       if (num_classes_) {
-        memcpy(&labels_.data()[ i*num_classes_],
-               &left_image.semantic_image().data()[(v * w + u)*num_classes_],
-               sizeof(float) * num_classes_ );
-        float sum_row = labels_.row(i).sum();
-        labels_.row(i) = (labels_.row(i) / sum_row).eval();
+        labels_.row(i) = Eigen::Map<const VecXf_row>((left_image.semantic_image().data()+ (v * w + u)*num_classes_), num_classes_);
+        int max_class = 0;
+        labels_.row(i).maxCoeff(&max_class);
+        //float sum_row = labels_.row(i).sum();
+        //labels_.row(i) = (labels_.row(i) / sum_row).eval();
+        /*
+        if (i == 0 || i == 1) {
+          std::cout<<"Raw: ";
+          for (int k = 0; k < num_classes_; k++)
+            std::cout<<left_image.semantic_image()[k+ num_classes_ * (v * w + u)]<<", ";
+          std::cout<<"\n";
+          std::cout<<"labels_() after copy: ";
+          std::cout<<labels_.row(i)<<"\n";
+        }
+        */
       }
 
     }
+    std::cout<<"\n";
     if (num_classes_) {
-      std::cout<<"Read labels " << labels_.row(0)<<"\n"<<labels_.row(num_points_-1)<<"\n";
+      std::cout<<"Read labels: last sum is  " << labels_.row(0).sum()<<"\ndetailed distribution is "<<labels_.row(num_points_-1)<<"\n";
       write_to_label_pcd("labeled_input.pcd");
     }
   }
@@ -234,7 +245,9 @@ namespace cvo{
       p.x = positions_[i](0);
       p.y = positions_[i](1);
       p.z = positions_[i](2);
-      labels_.row(i).maxCoeff(&(p.label));
+      int l;
+      labels_.row(i).maxCoeff(&l);
+      p.label = (uint32_t) l;
       pc.push_back(p);
     }
     pcl::io::savePCDFileASCII(name ,pc);  
