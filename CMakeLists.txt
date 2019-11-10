@@ -22,7 +22,7 @@ find_package(SuiteParse REQUIRED)
 find_package(Sophus REQUIRED)
 message("Sophus dir: ${Sophus_INCLUDE_DIRS}")
 
-# set(EIGEN_INCLUDE_DIR /usr/include/eigen3)
+#set(EIGEN_INCLUDE_DIR /usr/include/eigen3)
 find_package(Eigen3 REQUIRED)
 find_package(TBB REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread timer chrono)

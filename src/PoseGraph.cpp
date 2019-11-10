@@ -250,8 +250,8 @@ namespace cvo {
       std::unique_ptr<CvoPointCloud> map_points_kf_second_last = kf_second_last->export_points_from_map();
       std::unique_ptr<CvoPointCloud> map_points_kf_last = keyframes_[keyframes_.size()-1]->export_points_from_map();
 
-      map_points_kf_second_last->write_to_color_pcd("map2map_source.pcd");
-      map_points_kf_last->write_to_color_pcd("ma2map_target.pcd");
+      map_points_kf_second_last->write_to_label_pcd("map2map_source.pcd");
+      map_points_kf_last->write_to_label_pcd("ma2map_target.pcd");
 
       int diff_num = std::abs(map_points_kf_last->num_points() - map_points_kf_second_last->num_points());
       if (diff_num * 1.0 / std::max(map_points_kf_last->num_points(), map_points_kf_second_last->num_points() )< 0.5 ) {

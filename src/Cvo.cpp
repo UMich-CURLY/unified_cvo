@@ -626,16 +626,17 @@ namespace cvo{
     std::cout<<"cvo # of iterations is "<<iter<<std::endl;
     std::cout<<"t_transform_pcd is "<<t_transform_pcd.count()<<"\n";
     std::cout<<"t_compute_flow is "<<t_compute_flow.count()<<"\n";
-    std::cout<<"t_compute_step is "<<t_compute_step.count()<<"\n";
+    std::cout<<"t_compute_step is "<<t_compute_step.count()<<"\n"<<std::flush;
     prev_transform = transform.matrix();
     // accum_tf.matrix() = transform.matrix().inverse() * accum_tf.matrix();
     accum_tf = accum_tf * transform.matrix();
     accum_tf_vis = accum_tf_vis * transform.matrix();   // accumilate tf for visualization
     update_tf();
 
+    std::cout<<"delete cvo cloud\n"<<std::flush;
     delete cloud_x;
     delete cloud_y;
-
+    std::cout<<"delete fin\n"<<std::endl<<std::flush;
     if (is_logging) {
       auto & Tmat = transform.matrix();
       fprintf(relative_transform_file , "%.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f\n",

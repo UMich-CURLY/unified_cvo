@@ -49,6 +49,7 @@ namespace cvo{
 
   typedef Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> MatrixXf_row;
   typedef Eigen::Matrix<float, 1, Eigen::Dynamic, Eigen::RowMajor> VecXf_row;
+  typedef Eigen::Matrix<float, 1, 5, Eigen::RowMajor> Vec5f_row;
   typedef Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> MatXX;
   typedef Eigen::Matrix<double,CPARS,CPARS> MatCC;
 #define MatToDynamic(x) MatXX(x)

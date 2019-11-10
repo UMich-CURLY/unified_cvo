@@ -167,10 +167,10 @@ namespace cvo{
     labels_.resize(num_points_, num_classes);
 
     for (int i = 0; i < num_points_; i++) {
-      memcpy(labels_.data()+ num_classes * sizeof(float) * i, labels[i].data(), num_classes * sizeof(float));
-      float sum_row = labels_.row(i).sum();
-      labels_.row(i) = (labels_.row(i) / sum_row).eval();
-      memcpy(features_.data()+5 * sizeof(float) * i, features[i].data(), 5 * sizeof(float));
+      //memcpy(labels_.data()+ num_classes * sizeof(float) * i, labels[i].data(), num_classes * sizeof(float));
+      labels_.row(i) = Eigen::Map<VecXf_row>(labels[i].data(), num_classes);
+      features_.row(i) = Eigen::Map<Vec5f_row>(features[i].data());
+
     }
     std::cout<<"Read labels from map:\nlabel" << labels_.row(0)<<"\n"<<labels_.row(num_points_-1)<<", color: ";
     std::cout<< features_.row(0)<<"\n"<<features_.row(num_points_-1)<<"\n";
