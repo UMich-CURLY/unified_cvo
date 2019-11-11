@@ -94,7 +94,7 @@ namespace cvo {
   }
 
   bool PoseGraph::is_tracking_bad(float inner_product) const {
-    return inner_product < 0.25;
+    return inner_product < 0.21;
     
   }
   
@@ -219,6 +219,7 @@ namespace cvo {
 
       float inner_product_from_last_kf;
       is_keyframe = decide_new_keyframe(new_frame, pose_from_last_kf, inner_product_from_last_kf);
+      printf("the new frame %d 's is_keframe inner product from last kf %d is %f\n", new_frame->id, all_frames_since_last_keyframe_[0]->id, inner_product_from_last_kf);
 
       if (is_f2f_) {
         if (is_keyframe)
@@ -358,7 +359,11 @@ namespace cvo {
       map_points_kf_last->write_to_label_pcd("ma2map_target.pcd");
 
       int diff_num = std::abs(map_points_kf_last->num_points() - map_points_kf_second_last->num_points());
-      if (diff_num * 1.0 / std::max(map_points_kf_last->num_points(), map_points_kf_second_last->num_points() )< 0.5 ) {
+      
+      if (diff_num * 1.0 / std::max(map_points_kf_last->num_points(), map_points_kf_second_last->num_points() ) > 0.5 || 
+          ( is_f2f_ && kf_second_last_id == last_kf_id -1  )) {
+        std::cout<<"the number of points in kf "<<kf_second_last_id<<" and kf "<<last_kf->id<<" differ too much: "<< map_points_kf_second_last->num_points()<<" vs "<<map_points_kf_last->num_points()<< ", or perhaps they are adjacent.  Ignore this constrains\n";
+      } else {
       
         std::cout<<"Map points from the two kf exported\n"<<std::flush;
         Eigen::Affine3f init_guess = (kf_second_last->pose_in_graph().inverse() * last_kf->pose_in_graph()).inverse();
@@ -375,9 +380,8 @@ namespace cvo {
                                                              tf_slast_kf_to_last_kf, pose_noise));
         graph_values_.print("\ngraph init values\n");
         std::cout<<"Just add the edge between two  maps\n"<<std::flush;
-      } else {
-        std::cout<<"the number of points in kf "<<kf_second_last_id<<" and kf "<<last_kf->id<<" differ too much: "<< map_points_kf_second_last->num_points()<<" vs "<<map_points_kf_last->num_points()<< ". Ignore this constrains\n";
-      }
+      } 
+
     }
     try {
       gtsam::ISAM2Result result = isam2_->update(factor_graph_, graph_values_ ); // difference from optimize()?

@@ -125,11 +125,11 @@ namespace cvo{
       }
 
     }
-    std::cout<<"\n";
-    if (num_classes_) {
-      std::cout<<"Read labels: last sum is  " << labels_.row(0).sum()<<"\ndetailed distribution is "<<labels_.row(num_points_-1)<<"\n";
-      write_to_label_pcd("labeled_input.pcd");
-    }
+    //std::cout<<"\n";
+    //if (num_classes_) {
+    //  std::cout<<"Read labels: last sum is  " << labels_.row(0).sum()<<"\ndetailed distribution is "<<labels_.row(num_points_-1)<<"\n";
+    //  write_to_label_pcd("labeled_input.pcd");
+    //}
   }
   
   CvoPointCloud::CvoPointCloud(const semantic_bki::SemanticBKIOctoMap * map,
@@ -211,7 +211,7 @@ namespace cvo{
           infile >> labels_(i, j);
       }
       infile.close();
-
+      /*
       std::cout<<"Read pointcloud with "<<num_points_<<" points in "<<num_classes_<<" classes. \n The first point is ";
       std::cout<<" xyz: "<<positions_[0].transpose()<<", rgb_dxdy is "<<features_.row(0) <<"\n";
       if (num_classes_)
@@ -220,6 +220,7 @@ namespace cvo{
       std::cout<<" xyz: "<<positions_[num_points_-1].transpose()<<", rgb_dxdy is "<<features_.row(num_points_-1)<<"\n";
       if (num_classes_)
         std::cout<<" semantics is "<<labels_.row(num_points_-1)<<std::endl;
+      */
       return 0;
     } else
       return -1;
