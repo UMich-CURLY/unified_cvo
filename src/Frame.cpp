@@ -23,7 +23,7 @@ namespace cvo {
       points_(raw_image_, right_image, calib),
       local_map_(nullptr),
       is_keyframe_(false),
-      tracking_relative_transform_(ind){
+      tracking_pose_from_last_keyframe_(ind){
       //is_map_centroids_latest_(false),
       //map_centroids_(nullptr){
     pose_in_graph_.setIdentity();
@@ -32,7 +32,7 @@ namespace cvo {
     // points_.write_to_color_pcd("cvo_points/" +std::to_string(ind)+"_label.pcd");
 
     Eigen::Affine3f eye = Eigen::Affine3f::Identity();
-    tracking_relative_transform_.set_relative_transform(ind, eye, 1.0 );
+    tracking_pose_from_last_keyframe_.set_relative_transform(ind, eye, 1.0 );
   }
 
 
@@ -49,13 +49,13 @@ namespace cvo {
       raw_image_(left_image, num_classes, semantics), 
       points_(raw_image_, right_image, calib),
       is_keyframe_(false),
-      tracking_relative_transform_(ind),
+      tracking_pose_from_last_keyframe_(ind),
       local_map_(nullptr) {
       //is_map_centroids_latest_(false),
       //map_centroids_(nullptr){
     pose_in_graph_.setIdentity();
     Eigen::Affine3f eye = Eigen::Affine3f::Identity();
-    tracking_relative_transform_.set_relative_transform(ind, eye,1.0 );
+    tracking_pose_from_last_keyframe_.set_relative_transform(ind, eye,1.0 );
     //points_.write_to_color_pcd(std::to_string(id)+".pcd");
     //points_.write_to_color_pcd(std::to_string(id)+"_label.pcd");
   }
@@ -80,7 +80,7 @@ namespace cvo {
   }
 
   void Frame::add_points_to_map_from(const Frame & nonkeyframe) {
-    if (nonkeyframe.tracking_relative_transform().ref_frame_id() != this->id) {
+    if (nonkeyframe.tracking_pose_from_last_keyframe().ref_frame_id() != this->id) {
       printf("[add_points_to_map_from] input frame %d is not tracked relative to the current frame %d.Do nothing\n", nonkeyframe.id, this->id);
       return;
     }
@@ -90,7 +90,7 @@ namespace cvo {
     CvoPointCloud transformed_pc;
     printf("[add_points_to_map_from] add frame %d to %d, transform %d points, the transformation is\n", id, nonkeyframe.id, points_from_nonkeyframe.num_points());
     std::cout<<std::flush;
-    auto tf_curr2input = nonkeyframe.tracking_relative_transform().ref_frame_to_curr_frame().matrix();
+    auto tf_curr2input = nonkeyframe.tracking_pose_from_last_keyframe().ref_frame_to_curr_frame().matrix();
     std::cout<< tf_curr2input<<"\n";
     CvoPointCloud::transform( tf_curr2input,
                               points_from_nonkeyframe,
@@ -108,8 +108,9 @@ namespace cvo {
     if (is_keyframe_)
       return pose_in_graph_;
     else {
-      std::cerr<<"ERR: pose_in_graph() only available for keyframes!\n";
-      assert(0);
+      //std::cerr<<"ERR: pose_in_graph() only available for keyframes!\n";
+      // assert(0);
+      return Eigen::Affine3f::Identity();
       
     }
       

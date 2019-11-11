@@ -10,37 +10,9 @@
 #include "utils/CvoPointCloud.hpp"
 #include "utils/RawImage.hpp"
 #include "utils/Calibration.hpp"
+#include "graph_optimizer/RelativePose.hpp"
 #include "mapping/bkioctomap.h"
 namespace cvo {
-
-  // the relative pose computed when running cvo
-  class RelativePose {
-  public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    RelativePose(int curr_id):
-      curr_frame_id_(curr_id) { ref_frame_id_ = -1; }
-    
-    RelativePose(int curr_id, int ref_id, const Eigen::Affine3f & ref_to_curr) :
-      curr_frame_id_(curr_id), ref_frame_id_(ref_id), ref_frame_to_curr_frame_(ref_to_curr),
-      cvo_inner_product_(0){}
-
-    void set_relative_transform( int ref_id, const Eigen::Affine3f & ref_to_curr, float inner_prod) {
-      ref_frame_id_ = ref_id;
-      ref_frame_to_curr_frame_ = ref_to_curr;
-      cvo_inner_product_ = inner_prod;
-    }
-
-    int curr_frame_id() const {return curr_frame_id_;}
-    int ref_frame_id() const {return ref_frame_id_;}
-    float cvo_inner_product() const {return cvo_inner_product_;}
-    const Eigen::Affine3f & ref_frame_to_curr_frame() const {return ref_frame_to_curr_frame_;}
-  private:
-    
-    const int curr_frame_id_;
-    int ref_frame_id_;
-    Eigen::Affine3f ref_frame_to_curr_frame_;
-    float cvo_inner_product_;
-  };
 
   class Frame {
   public:
@@ -72,19 +44,25 @@ namespace cvo {
     const CvoPointCloud & points() const  {return points_;}
     bool is_keyframe() const { return is_keyframe_; }
     const RawImage & raw_image() const { return raw_image_;}
+    
+    // set graph optimization results
+    void set_pose_in_graph(const Eigen::Affine3f & optimized_pose) { pose_in_graph_ = optimized_pose; }
     const Eigen::Affine3f pose_in_graph() const;
-    const RelativePose & tracking_relative_transform() const { return tracking_relative_transform_; }
 
+
+    // tracking pose
+    const RelativePose & tracking_pose_from_last_keyframe() const { return tracking_pose_from_last_keyframe_; }
     // set tracking result here
-    void set_relative_transform(int ref_frame_id, const Eigen::Affine3f & ref_to_curr, float inner_prod) {
-      tracking_relative_transform_.set_relative_transform(ref_frame_id, ref_to_curr, inner_prod);
+    void set_relative_transform_from_ref(int ref_frame_id, const Eigen::Affine3f & ref_to_curr, float inner_prod) {
+      tracking_pose_from_last_keyframe_.set_relative_transform(ref_frame_id, ref_to_curr, inner_prod);
     }
+    void set_relative_transform_from_ref(const RelativePose & input) {
+      tracking_pose_from_last_keyframe_.set_relative_transform(input);
+    }
+
+    
     void set_keyframe(bool is_kf) {is_keyframe_ = is_kf;}
 
-    // set graph optimization results
-    void set_pose_in_graph(const Eigen::Affine3f & optimized_pose) {
-      pose_in_graph_ = optimized_pose;
-    }
 
     // keyframe map operations
     void construct_map(); // for keyframe
@@ -99,7 +77,7 @@ namespace cvo {
     bool is_keyframe_;
 
     // for all frames
-    RelativePose tracking_relative_transform_;
+    RelativePose tracking_pose_from_last_keyframe_;
 
     RawImage raw_image_;
 

@@ -46,7 +46,8 @@ namespace cvo{
 
 
 #define CPARS 4
-
+  typedef Eigen::Affine3f Aff3f;
+  typedef Eigen::Affine3d Aff3d;
   typedef Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> MatrixXf_row;
   typedef Eigen::Matrix<float, 1, Eigen::Dynamic, Eigen::RowMajor> VecXf_row;
   typedef Eigen::Matrix<float, 1, 5, Eigen::RowMajor> Vec5f_row;

@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <chrono>
 #include <pcl/filters/voxel_grid.h>
 
 #include "mapping/bkioctomap.h"
@@ -89,17 +90,22 @@ namespace semantic_bki {
     void SemanticBKIOctoMap::insert_pointcloud_csm(const CVOPointCloud *cloud, const point3f &origin, float ds_resolution,
                                       float free_res, float max_range) {
 
-#ifdef DEBUG
-        Debug_Msg("Insert pointcloud: " << "cloud size: " << cloud.num_points() << " origin: " << origin);
-#endif
+      //#ifdef DEBUG
+        auto start = std::chrono::system_clock::now();
+        std::cout<<"Insert pointcloud: " << "cloud size: " << cloud->num_points() << " origin: " << origin<<"\n";
+        //#endif
 
         ////////// Preparation //////////////////////////
         /////////////////////////////////////////////////
         GPPointCloud xy;
         get_training_data(cloud, origin, ds_resolution, free_res, max_range, xy);
-#ifdef DEBUG
-        Debug_Msg("Training data size: " << xy.size());
-#endif
+        //#ifdef DEBUG
+        auto end = std::chrono::system_clock::now();
+        std::chrono::duration<double> elapsed_seconds = end-start;
+        //Debug_Msg("Got training data, size: " << xy.size()<<", takes "<<elapsed_seconds.count()<<" seconds" );
+        std::cout<<"Got training data, size: " << xy.size()<<", takes "<<elapsed_seconds.count()<<" seconds\n" ;
+        start = std::chrono::system_clock::now();
+        //#endif
         // If pointcloud after max_range filtering is empty
         //  no need to do anything
         if (xy.size() == 0) {
@@ -111,11 +117,25 @@ namespace semantic_bki {
 
         vector<BlockHashKey> blocks;
         get_blocks_in_bbox(lim_min, lim_max, blocks);
+        end = std::chrono::system_clock::now();
+        elapsed_seconds = end-start;
+        start = std::chrono::system_clock::now();
+        //Debug_Msg("Training done, takes "<<elapsed_seconds.count()<<" seconds");
+        std::cout<<"after get_blocks_in_bbox, takes "<<elapsed_seconds.count()<<" seconds\n";
 
         for (auto it = xy.cbegin(); it != xy.cend(); ++it) {
             float p[] = {it->first.x(), it->first.y(), it->first.z()};
             rtree.Insert(p, p, const_cast<GPPointType *>(&*it));
         }
+        end = std::chrono::system_clock::now();
+        elapsed_seconds = end-start;
+        start = std::chrono::system_clock::now();
+        //Debug_Msg("Training done, takes "<<elapsed_seconds.count()<<" seconds");
+        std::cout<<"after insert, takes "<<elapsed_seconds.count()<<" seconds\n";
+	
+	#ifdef OPENMP
+	std::cout<<"openmp enalbed\n";
+#endif
         /////////////////////////////////////////////////
 
         ////////// Training /////////////////////////////
@@ -164,10 +184,14 @@ namespace semantic_bki {
                 bgk_arr.emplace(key, bgk);
             };
         }
-#ifdef DEBUG
-        Debug_Msg("Training done");
-        Debug_Msg("Prediction: block number: " << test_blocks.size());
-#endif
+        //#ifdef DEBUG
+        end = std::chrono::system_clock::now();
+        elapsed_seconds = end-start;
+        //Debug_Msg("Training done, takes "<<elapsed_seconds.count()<<" seconds");
+        std::cout<<"Training done, takes "<<elapsed_seconds.count()<<" seconds\n";
+        start = std::chrono::system_clock::now();
+        std::cout<<"Prediction: block number: " << test_blocks.size()<<"\n";
+        //#endif
         /////////////////////////////////////////////////
 
         ////////// Prediction ///////////////////////////
@@ -211,9 +235,12 @@ namespace semantic_bki {
             }
 
         }
-#ifdef DEBUG
-        Debug_Msg("Prediction done");
-#endif
+        //#ifdef DEBUG
+        end = std::chrono::system_clock::now();
+        elapsed_seconds = end-start;
+        //Debug_Msg("Prediction done, predition takes "<<elapsed_seconds.count()<<" seconds");
+        std::cout<<"Prediction done, predition takes "<<elapsed_seconds.count()<<" seconds\n";
+        //#endif
 
         ////////// Cleaning /////////////////////////////
         /////////////////////////////////////////////////

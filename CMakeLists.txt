@@ -7,7 +7,8 @@ cmake_minimum_required(VERSION 3.5.1)
 add_compile_options(-std=c++17)
 # Release Mode
 set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -mkl -msse -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -lmkl_intel_lp64 -lmkl_core -lmkl -liomp -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 #set(CMAKE_BUILD_TYPE Debug)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -std=c++17 -g  -msse -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 
@@ -32,15 +33,16 @@ endif()
 
 find_package(PCL REQUIRED)
 find_package(OpenCV REQUIRED)
-#find_package(OpenMP)
 find_package(GTSAM REQUIRED)
 message("gtsam dir: ${GTSAM_INCLUDE_DIR}")
 
 find_package(OpenMP)
 if (OPENMP_FOUND)
         set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-        set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
         message("OpenMP enabled")
+else()
+	message("OpenMP not found")
 endif()
 
 ## Enable OpenMP
@@ -50,7 +52,7 @@ add_definitions(-DOPENMP)
 # flags
 add_definitions("-DENABLE_SSE")
 set(CMAKE_CXX_FLAGS
-  " ${SSE_FLAGS}  -fPIC -march=native"
+	"${CMAKE_CXX_FLAGS} ${SSE_FLAGS}  -fPIC -march=native"
 )
 
 # Sources files
@@ -95,12 +97,13 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/thirdparty/
 ) 
 
+message("CXX_FLAGS are ${CMAKE_CXX_FLAGS}")
 
 # compile main library.
 add_library(elas ${ELAS_LIB_SOURCE})
 
 add_library(cvo ${CVO_LIB_SOURCE})
-target_link_libraries(cvo elas ${Boost_LIBRARIES} ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARIES}  ${OpenCV_LIBS} ${TBB_LIBRARIES} gtsam )
+target_link_libraries(cvo elas ${Boost_LIBRARIES} ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARIES}  ${OpenCV_LIBS} ${TBB_LIBRARIES} gtsam  )
 
 add_executable(cvo_kitti_color_stereo ${PROJECT_SOURCE_DIR}/src/main_kitti_stereo_color.cpp )
 target_link_libraries(cvo_kitti_color_stereo cvo  ${OpenCV_LIBS}  )

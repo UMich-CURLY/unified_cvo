@@ -23,8 +23,10 @@ namespace cvo {
 
   static std::string traj_file_name = "full_traj.txt";
   
-  PoseGraph::PoseGraph():
-    isam2_(nullptr){
+  PoseGraph::PoseGraph(bool is_f2f, bool use_sliding_window):
+    isam2_(nullptr),
+    is_f2f_(is_f2f),
+    using_sliding_window_(use_sliding_window){
     // ISAM2 solver
     gtsam::ISAM2Params isam_params;
     isam_params.relinearizeThreshold = 0.01;
@@ -37,6 +39,8 @@ namespace cvo {
     std::ofstream outfile;
     outfile.open(traj_file_name, std::ofstream::out| std::ofstream::trunc  );
     outfile.close();
+
+    all_frames_since_last_keyframe_ = {};
     
   }
 
@@ -65,75 +69,173 @@ namespace cvo {
     return init_guess;
   }
 
-  Eigen::Affine3f PoseGraph::compute_frame_pose_in_graph(std::shared_ptr<Frame> frame) {
+  Eigen::Affine3f PoseGraph::compute_frame_pose_in_graph(std::shared_ptr<Frame> frame)  {
     Eigen::Affine3f output;
     if (frame->is_keyframe()) {
       output = frame->pose_in_graph();
     } else {
-      int ref_id = frame->tracking_relative_transform().ref_frame_id();
+      int ref_id = frame->tracking_pose_from_last_keyframe().ref_frame_id();
       Eigen::Affine3f ref_frame_pose = id2keyframe_[ref_id]->pose_in_graph();
-      output = ref_frame_pose * frame->tracking_relative_transform().ref_frame_to_curr_frame();
+      output = ref_frame_pose * frame->tracking_pose_from_last_keyframe().ref_frame_to_curr_frame();
     }
     return output;
   }
 
+  bool PoseGraph::decide_new_keyframe(std::shared_ptr<Frame> new_frame,
+                                      const Aff3f & pose_from_last_keyframe,
+                                      float & inner_product_from_last_keyframe) {
+    if (tracking_relative_transforms_.size() == 0)
+      return true;
+    
+    bool is_keyframe = true;
+    auto last_kf = all_frames_since_last_keyframe_[0];
+    inner_product_from_last_keyframe = cvo_align_.inner_product(last_kf->points(), new_frame->points(), pose_from_last_keyframe);
+    return is_tracking_bad(inner_product_from_last_keyframe);
+  }
+
+  bool PoseGraph::is_tracking_bad(float inner_product) const {
+    return inner_product < 0.25;
+    
+  }
+  
+  Eigen::Affine3f PoseGraph::compute_tracking_pose_from_last_keyframe(const Eigen::Affine3f & tracking_pose_from_last_frame,
+                                                                      std::shared_ptr<Frame> tracking_ref )  {
+    Eigen::Affine3f keyframe_to_new_pose;
+    if (is_f2f_) {
+
+      if (!tracking_ref->is_keyframe()) {
+        auto last_kf_id = tracking_ref->tracking_pose_from_last_keyframe().ref_frame_id(); 
+        auto last_kf_to_tracking_ref = tracking_ref->tracking_pose_from_last_keyframe().ref_frame_to_curr_frame();
+        // tracking_ref is not a keyframe
+        keyframe_to_new_pose = last_kf_to_tracking_ref * tracking_pose_from_last_frame;
+      } else
+        // tracking_ref itself is the keyframes
+        keyframe_to_new_pose = tracking_pose_from_last_frame;
+      return keyframe_to_new_pose;
+    } else {
+      return tracking_pose_from_last_frame;
+    }
+  }
+
+  RelativePose PoseGraph::track_from_last_frame(std::shared_ptr<Frame> new_frame) {
+
+    RelativePose tracking_pose(new_frame->id);
+    Eigen::Affine3f cvo_init = Aff3f::Identity();
+    
+    auto  last_frame = last_two_frames_.back();
+    auto  slast_frame = last_two_frames_.front();
+
+    Eigen::Affine3f slast_frame_pose_in_graph = compute_frame_pose_in_graph(slast_frame);
+    Eigen::Affine3f last_frame_pose_in_graph = compute_frame_pose_in_graph(last_frame);
+    Eigen::Affine3f slast_frame_to_last_frame = slast_frame_pose_in_graph.inverse() * last_frame_pose_in_graph;
+    
+
+    auto & curr_points = new_frame->points();
+    int ref_frame_id = last_frame->id;
+    auto & last_frame_points = last_frame->points();
+
+    if (keyframes_.size())
+      cvo_init = slast_frame_to_last_frame.inverse();
+    else
+      cvo_init = read_tracking_init_guess();
+
+    printf("Call cvo.align from frame %d to frame %d\n", ref_frame_id, new_frame->id);
+    cvo_align_.set_pcd(last_frame_points, curr_points, cvo_init, true);
+
+    int align_ret = cvo_align_.align();
+    Aff3f track_result = cvo_align_.get_transform();
+    float inner_prod = cvo_align_.inner_product();
+    std::cout<<"Cvo Align Result between "<<ref_frame_id<<" and "<<new_frame->id
+             <<",inner product "<<cvo_align_.inner_product() <<", transformation is \n" <<track_result.matrix()<<"\n";
+      
+    if (align_ret == 0)
+      tracking_pose.set_relative_transform(last_frame->id, track_result, inner_prod);
+    else {
+      tracking_pose.set_relative_transform(last_frame->id, track_result, 0.0);
+    }
+    return tracking_pose;
+  }
+
+  RelativePose PoseGraph::track_from_last_keyframe(std::shared_ptr<Frame> new_frame) {
+    auto  last_keyframe = all_frames_since_last_keyframe_[0];
+    auto  last_frame = last_two_frames_.back();
+    auto slast_frame = last_two_frames_.front();
+    Aff3f cvo_init = Aff3f::Identity();
+    Eigen::Affine3f last_frame_pose_in_graph = compute_frame_pose_in_graph(last_frame);
+    Eigen::Affine3f last_keyframe_to_last_frame = last_keyframe->pose_in_graph().inverse() * last_frame_pose_in_graph;
+    Eigen::Affine3f slast_frame_pose_in_graph = compute_frame_pose_in_graph(slast_frame);
+    Eigen::Affine3f slast_frame_to_last_frame = slast_frame_pose_in_graph.inverse() * last_frame_pose_in_graph;
+
+    auto & curr_points = new_frame->points();
+    int ref_frame_id = last_keyframe->id;
+    auto & last_kf_points = last_keyframe->points();
+    if (keyframes_.size()) 
+      cvo_init = (last_keyframe_to_last_frame * slast_frame_to_last_frame).inverse();
+    else
+      cvo_init = read_tracking_init_guess();
+    printf("Call cvo.align from frame %d to frame %d\n", ref_frame_id, new_frame->id);
+    cvo_align_.set_pcd(last_kf_points, curr_points, cvo_init, true);
+    
+    int align_ret = cvo_align_.align();
+    Aff3f track_result = cvo_align_.get_transform();
+    float inner_prod = cvo_align_.inner_product();
+    std::cout<<"Cvo Align Result between "<<ref_frame_id<<" and "<<new_frame->id
+             <<",inner product "<<cvo_align_.inner_product() <<", transformation is \n" <<track_result.matrix()<<"\n";
+
+    RelativePose tracking_pose(new_frame->id);
+    if (align_ret == 0)
+      tracking_pose.set_relative_transform(last_keyframe->id, track_result, inner_prod);
+    else {
+      tracking_pose.set_relative_transform(last_keyframe->id, track_result, 0.0);
+    }
+    return tracking_pose;
+
+  }
+
+  RelativePose tracking_from_last_keyframe_map(std::shared_ptr<Frame> new_frame)  {
+    std::cerr<<"Not implement Error"<<std::endl;
+    assert(0);
+  }
+  
+
   float PoseGraph::track_new_frame(std::shared_ptr<Frame> new_frame,
                                    bool & is_keyframe) {
-    Eigen::Affine3f tracking_pose;
+
     if (tracking_relative_transforms_.size() == 0) {
       is_keyframe = true;
-      all_frames_since_last_keyframe_ = {};
-      tracking_pose.setIdentity();
-      new_frame->set_relative_transform(new_frame->id, tracking_pose, 1);
+      new_frame->set_relative_transform_from_ref(new_frame->id, Aff3f::Identity() , 1); // set to the frame itself
 
     } else {
-
-      Eigen::Affine3f cvo_init;
-      auto  last_keyframe = all_frames_since_last_keyframe_[0];
-      auto  last_frame = last_two_frames_.back();
-      auto  slast_frame = last_two_frames_.front();
-      if (tracking_relative_transforms_.size() == 1)
-        cvo_init = read_tracking_init_guess();
-      else {
-        Eigen::Affine3f slast_frame_pose_in_graph = compute_frame_pose_in_graph(slast_frame);
-        Eigen::Affine3f last_frame_pose_in_graph = compute_frame_pose_in_graph(last_frame);
-
-        Eigen::Affine3f slast_frame_to_last_frame = slast_frame_pose_in_graph.inverse() * last_frame_pose_in_graph;
-        Eigen::Affine3f last_keyframe_to_last_frame = last_keyframe->pose_in_graph().inverse() * last_frame_pose_in_graph;
-        cvo_init = (last_keyframe_to_last_frame * slast_frame_to_last_frame).inverse();
-      }
-      auto & last_kf_points = last_keyframe->points();
-      auto & curr_points = new_frame->points();
-      printf("Call Set pcd from frame %d to frame %d\n", last_keyframe->id, new_frame->id);
-      cvo_align_.set_pcd(last_kf_points, curr_points, cvo_init, true);
-      cvo_align_.align();
-
-      Eigen::Affine3f result = cvo_align_.get_transform();
-      auto inner_prod = cvo_align_.inner_product();
-      new_frame->set_relative_transform(last_keyframe->id, result, inner_prod);
-      std::cout<<"Cvo Align Result between "<<last_keyframe->id<<" and "<<new_frame->id<<",inner product "<<inner_prod<<", transformation is \n" <<result.matrix()<<"\n";
-      // decide keyframe
-      if (inner_prod < 0.25) {
-        is_keyframe = true;
-        if (last_keyframe != last_frame) {
-          auto last_frame_points = last_frame->points();
-          Eigen::Affine3f slast_frame_pose_in_graph = compute_frame_pose_in_graph(slast_frame);
-          Eigen::Affine3f last_frame_pose_in_graph = compute_frame_pose_in_graph(last_frame);
-          Eigen::Affine3f slast_frame_to_last_frame_inv = (slast_frame_pose_in_graph.inverse() * last_frame_pose_in_graph).inverse();
-          cvo_align_.set_pcd(last_frame_points, curr_points, slast_frame_to_last_frame_inv, true );
-          cvo_align_.align();
-          new_frame->set_relative_transform(last_frame->id, cvo_align_.get_transform(),
-                                            cvo_align_.inner_product());
-          std::cout<<"Due to keyframe, retrack: Cvo Align Result between "<<last_frame->id<<" and "<<new_frame->id<<",inner product "<<cvo_align_.inner_product()<<", transformation is \n" <<cvo_align_.get_transform().matrix() <<"\n";
-        }
+      // at least one frame
+      RelativePose tracking_result(new_frame->id);
+      Eigen::Affine3f pose_from_last_kf;
+      if (is_f2f_) {
+        tracking_result = track_from_last_frame(new_frame);
+        pose_from_last_kf = compute_tracking_pose_from_last_keyframe(tracking_result.ref_frame_to_curr_frame(), last_two_frames_.back()  );      
       } else {
-        is_keyframe = false;
-
+        tracking_result = track_from_last_keyframe(new_frame);
+        pose_from_last_kf = tracking_result.ref_frame_to_curr_frame();
       }
+
+      float inner_product_from_last_kf;
+      is_keyframe = decide_new_keyframe(new_frame, pose_from_last_kf, inner_product_from_last_kf);
+
+      if (is_f2f_) {
+        if (is_keyframe)
+          new_frame->set_relative_transform_from_ref(tracking_result);
+        else
+          new_frame->set_relative_transform_from_ref(all_frames_since_last_keyframe_[0]->id, pose_from_last_kf, inner_product_from_last_kf );
+      } else  {
+        if (is_keyframe) {
+          RelativePose last_frame_to_new_frame_pose = track_from_last_frame(new_frame);
+          new_frame->set_relative_transform_from_ref(last_frame_to_new_frame_pose );
+        } else
+          new_frame->set_relative_transform_from_ref(tracking_result);
+      } 
     }
-    tracking_relative_transforms_.push_back(new_frame->tracking_relative_transform());
+    tracking_relative_transforms_.push_back(new_frame->tracking_pose_from_last_keyframe());
     new_frame->set_keyframe(is_keyframe);
-    return new_frame->tracking_relative_transform().cvo_inner_product();
+    return new_frame->tracking_pose_from_last_keyframe().cvo_inner_product();
   }
   
   void PoseGraph::add_new_frame(std::shared_ptr<Frame> new_frame) {
@@ -244,11 +346,13 @@ namespace cvo {
     //TODO align two functions to get another between factor
 
     if (keyframes_.size()>1) {
-      auto kf_second_last = keyframes_[keyframes_.size()-2];
+      std::list<std::shared_ptr<Frame>>::reverse_iterator rit=keyframes_.rbegin();
+      rit++;
+      auto kf_second_last = *rit;
       auto kf_second_last_id = kf_second_last->id;
-      printf("doing map2map align between frame %d and %d\n", kf_second_last_id, keyframes_[keyframes_.size()-1]->id );
+      printf("doing map2map align between frame %d and %d\n", kf_second_last_id, last_kf->id );
       std::unique_ptr<CvoPointCloud> map_points_kf_second_last = kf_second_last->export_points_from_map();
-      std::unique_ptr<CvoPointCloud> map_points_kf_last = keyframes_[keyframes_.size()-1]->export_points_from_map();
+      std::unique_ptr<CvoPointCloud> map_points_kf_last = last_kf->export_points_from_map();
 
       map_points_kf_second_last->write_to_label_pcd("map2map_source.pcd");
       map_points_kf_last->write_to_label_pcd("ma2map_target.pcd");
@@ -272,11 +376,10 @@ namespace cvo {
         graph_values_.print("\ngraph init values\n");
         std::cout<<"Just add the edge between two  maps\n"<<std::flush;
       } else {
-        std::cout<<"the number of points in kf "<<kf_second_last_id<<" and kf "<<keyframes_[keyframes_.size()-1]->id<<" differ too much: "<< map_points_kf_second_last->num_points()<<" vs "<<map_points_kf_last->num_points()<< ". Ignore this constrains\n";
+        std::cout<<"the number of points in kf "<<kf_second_last_id<<" and kf "<<last_kf->id<<" differ too much: "<< map_points_kf_second_last->num_points()<<" vs "<<map_points_kf_last->num_points()<< ". Ignore this constrains\n";
       }
     }
     try {
-
       gtsam::ISAM2Result result = isam2_->update(factor_graph_, graph_values_ ); // difference from optimize()?
       graph_values_ = isam2_->calculateEstimate();
 

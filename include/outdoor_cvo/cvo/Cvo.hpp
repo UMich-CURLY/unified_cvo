@@ -198,8 +198,9 @@ namespace cvo{
     /**
      * @brief align two rgbd pointcloud
      *        the function will iterate MAX_ITER times unless break conditions are met
+     *        return 0 if sucess. return -1 if fails
      */
-    void align();
+    int align();
 
     // callable after each align
     float inner_product() const ;

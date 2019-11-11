@@ -541,7 +541,9 @@ namespace cvo{
     
   }
 
-  void cvo::align(){
+  int cvo::align(){
+    int ret = 0;
+    
     int n = tbb::task_scheduler_init::default_num_threads();
     std::cout<<"num_thread: "<<n<<std::endl;
 
@@ -580,6 +582,8 @@ namespace cvo{
       if(omega.cast<double>().norm()<eps && v.cast<double>().norm()<eps){
         iter = k;
         std::cout<<"norm, omega: "<<omega.norm()<<", v: "<<v.norm()<<std::endl;
+        if (omega.norm() < 1e-8 && v.norm() < 1e-8)
+          ret = -1;
         break;
       }
 
@@ -646,6 +650,8 @@ namespace cvo{
               );
       fflush(relative_transform_file);
     }
+
+    return ret;
 
   }
  
