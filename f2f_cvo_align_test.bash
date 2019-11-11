@@ -1,9 +1,14 @@
 mode=0  # 0 for online generated points 1 for reading txt
-path="/media/justin/LaCie/data/kitti/sequences/05"
-pcd_path="cvo_points/"
-calib_name="camera.txt"
-output_file="cvo_f2f_tracking_relative.txt"
-start_frame=0
-inner_product_threshold=0.5
+# dataset="05"
 
-./build/bin/cvo_f2f $mode $path $pcd_path $calib_name $output_file $start_frame $inner_product_threshold
+for dataset in 04
+do
+    path="/media/justin/LaCie/data/kitti/sequences/"$dataset
+    pcd_path="cvo_points/"
+    calib_name="cvo_calib.txt"
+    output_file="results/cvo_f2f_tracking_relative_"$dataset"_semantic.txt"
+    start_frame=0
+    num_classes=19
+
+    ./build/bin/cvo_f2f $mode $path $pcd_path $calib_name $output_file $start_frame $dataset $num_classes
+done

@@ -276,8 +276,8 @@ namespace cvo
     int w1 = w/2;
     int w2 = w/4;
     int h = raw_image.color().rows;
-    memset(map_out, 0, h * w * sizeof(float));
-    output_uv.clear();
+    // memset(map_out, 0, h * w * sizeof(float));
+    // output_uv.clear();
       
     const Vec2f directions[16] = {
                                   Vec2f(0,    1.0000),

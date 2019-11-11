@@ -22,7 +22,7 @@ using namespace std;
 
 namespace cvo{
 
-  static bool is_logging = true;
+  static bool is_logging = false;
 
   cvo::cvo():
     // initialize parameters
