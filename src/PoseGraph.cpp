@@ -87,7 +87,6 @@ namespace cvo {
     if (tracking_relative_transforms_.size() == 0)
       return true;
     
-    bool is_keyframe = true;
     auto last_kf = all_frames_since_last_keyframe_[0];
     inner_product_from_last_keyframe = cvo_align_.inner_product(last_kf->points(), new_frame->points(), pose_from_last_keyframe);
     return is_tracking_bad(inner_product_from_last_keyframe);
@@ -134,10 +133,10 @@ namespace cvo {
     int ref_frame_id = last_frame->id;
     auto & last_frame_points = last_frame->points();
 
-    if (keyframes_.size())
-      cvo_init = slast_frame_to_last_frame.inverse();
-    else
+    if (new_frame->id == 1)
       cvo_init = read_tracking_init_guess();
+    else
+      cvo_init = slast_frame_to_last_frame.inverse();
 
     printf("Call cvo.align from frame %d to frame %d\n", ref_frame_id, new_frame->id);
     cvo_align_.set_pcd(last_frame_points, curr_points, cvo_init, true);
@@ -169,10 +168,11 @@ namespace cvo {
     auto & curr_points = new_frame->points();
     int ref_frame_id = last_keyframe->id;
     auto & last_kf_points = last_keyframe->points();
-    if (keyframes_.size()) 
-      cvo_init = (last_keyframe_to_last_frame * slast_frame_to_last_frame).inverse();
-    else
+    if (new_frame->id == 1 )
       cvo_init = read_tracking_init_guess();
+    else
+      cvo_init = (last_keyframe_to_last_frame * slast_frame_to_last_frame).inverse();
+
     printf("Call cvo.align from frame %d to frame %d\n", ref_frame_id, new_frame->id);
     cvo_align_.set_pcd(last_kf_points, curr_points, cvo_init, true);
     
