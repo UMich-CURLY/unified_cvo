@@ -67,7 +67,7 @@ namespace cvo {
     local_map_.reset(new semantic_bki::SemanticBKIOctoMap(0.1, 1, raw_image_.num_class()+1  ));
 
     semantic_bki::point3f origin;
-    local_map_->insert_pointcloud_csm(&points_, origin, -1, 100, -1);
+    local_map_->insert_pointcloud_csm(&points_, origin, -1, 200, -1);
     //is_map_centroids_latest = false;
   }
 

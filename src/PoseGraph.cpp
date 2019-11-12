@@ -5,11 +5,8 @@
 #include <cassert>
 
 // Graphs
-#include <gtsam/nonlinear/NonlinearFactorGraph.h>
-#include <gtsam/inference/Symbol.h>
-#include <gtsam/nonlinear/Values.h>
-#include <gtsam/nonlinear/ISAM2.h>
 #include <gtsam/geometry/Pose3.h>
+#include <gtsam/base/FastList.h>
 // Factors
 #include <gtsam/slam/PriorFactor.h>
 #include <gtsam/slam/BetweenFactor.h>
@@ -23,10 +20,13 @@ namespace cvo {
 
   static std::string traj_file_name = "full_traj.txt";
   
-  PoseGraph::PoseGraph(bool is_f2f, bool use_sliding_window):
+  PoseGraph::PoseGraph(bool is_f2f,
+                       GraphOptimizer optimizer,
+                       int sliding_window_size):
     isam2_(nullptr),
     is_f2f_(is_f2f),
-    using_sliding_window_(use_sliding_window){
+    optimizer_(optimizer),
+    window_size_(sliding_window_size){
     // ISAM2 solver
     gtsam::ISAM2Params isam_params;
     isam_params.relinearizeThreshold = 0.01;
@@ -35,6 +35,7 @@ namespace cvo {
     isam_params.enableDetailedResults = true;
     isam_params.print();
     this->isam2_ .reset( new gtsam::ISAM2(isam_params));
+    this->smoother_.reset(new gtsam::BatchFixedLagSmoother(sliding_window_size));
 
     std::ofstream outfile;
     outfile.open(traj_file_name, std::ofstream::out| std::ofstream::trunc  );
@@ -282,6 +283,10 @@ namespace cvo {
         write_trajectory(traj_file_name );
       counter++;
     }
+
+    if (window_size_ > 1) {
+      window_marginalize();
+    }
   }
 
   void PoseGraph::init_pose_graph(std::shared_ptr<Frame> new_frame) {
@@ -303,7 +308,8 @@ namespace cvo {
     factor_graph_.add(gtsam::PriorFactor<gtsam::Pose3>((new_frame->id),
                                                        prior_state, pose_noise));
     //graph_values_.insert(X(new_frame->id), prior_state);
-    graph_values_.insert((new_frame->id), prior_state);
+    graph_values_new_.insert((new_frame->id), prior_state);
+    timesteps_new_[new_frame->id] = (double)new_frame->id;
     //key2id_[X(new_frame->id)] = id;
 
     factor_graph_.print("gtsam Initial Graph\n");
@@ -341,7 +347,8 @@ namespace cvo {
                                                          odom_last_kf_to_new, pose_noise));
     // TOOD: add init value for this state
     //graph_values_.insert(X(new_id), tf_WtoNew);
-    graph_values_.insert((new_id), tf_WtoNew);
+    graph_values_new_.insert((new_id), tf_WtoNew);
+    timesteps_new_[new_id] = (double)new_id;
     //key2id_
     std::cout<<"Just add new keyframe to the graph, the size of keyframe_ (without the new frame) is "<<keyframes_.size()<<"\n";
     //TODO align two functions to get another between factor
@@ -357,7 +364,6 @@ namespace cvo {
 
       map_points_kf_second_last->write_to_label_pcd("map2map_source.pcd");
       map_points_kf_last->write_to_label_pcd("ma2map_target.pcd");
-
       int diff_num = std::abs(map_points_kf_last->num_points() - map_points_kf_second_last->num_points());
       
       if (diff_num * 1.0 / std::max(map_points_kf_last->num_points(), map_points_kf_second_last->num_points() ) > 0.5 || 
@@ -365,7 +371,6 @@ namespace cvo {
         std::cout<<"the number of points in kf "<<kf_second_last_id<<" and kf "<<last_kf->id<<" differ too much: "<< map_points_kf_second_last->num_points()<<" vs "<<map_points_kf_last->num_points()<< ", or perhaps they are adjacent.  Ignore this constrains\n";
       } else {
       
-        std::cout<<"Map points from the two kf exported\n"<<std::flush;
         Eigen::Affine3f init_guess = (kf_second_last->pose_in_graph().inverse() * last_kf->pose_in_graph()).inverse();
         cvo_align_.set_pcd(*map_points_kf_second_last, *map_points_kf_last,
                            init_guess, true);
@@ -378,20 +383,31 @@ namespace cvo {
         //                                                     tf_slast_kf_to_last_kf, pose_noise));
         factor_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>((kf_second_last_id ), (last_kf_id ),
                                                              tf_slast_kf_to_last_kf, pose_noise));
-        graph_values_.print("\ngraph init values\n");
+        graph_values_new_.print("\ngraph init values\n");
         std::cout<<"Just add the edge between two  maps\n"<<std::flush;
       } 
 
     }
-    try {
-      gtsam::ISAM2Result result = isam2_->update(factor_graph_, graph_values_ ); // difference from optimize()?
-      graph_values_ = isam2_->calculateEstimate();
 
-      std::cout<<"Optimization finish\n";
-      graph_values_.print("factor graph after optimization\n");
+    try {
+      if (optimizer_ == ISAM2) {
+        std::cout<<"using isam2...\n"<<std::flush;
+        gtsam::ISAM2Result result_isam2 = isam2_->update(factor_graph_, graph_values_new_ ); // difference from optimize()?
+        isam2_->update();
+        graph_values_results_ = isam2_->calculateEstimate();
+        std::cout<<"Optimization finish. error changes from "<<*result_isam2.errorBefore<<" to "<<*result_isam2.errorAfter<<"\n";
+      } else if (optimizer_ == FIXED_LAG_SMOOTHER) {
+        std::cout<<"using isam2...\n"<<std::flush;
+        gtsam::FixedLagSmoother::Result  result_smoother = smoother_->update(factor_graph_, graph_values_new_, timesteps_new_);
+        graph_values_results_ = smoother_->calculateEstimate();
+        std::cout<<"Optimization finish. Smoother result is  \n";
+        result_smoother.print();
+      }
+      graph_values_results_.print("factor graph after optimization\n");
       update_optimized_poses_to_frames();
       factor_graph_.resize(0);
-      graph_values_.clear();
+      graph_values_new_.clear();
+      timesteps_new_.clear();
     } catch(gtsam::IndeterminantLinearSystemException &e) {
       std::cerr<<("FORSTER2 gtsam indeterminate linear system exception!\n");
       std::cerr << e.what() << std::endl;
@@ -402,16 +418,18 @@ namespace cvo {
   }
 
   void PoseGraph::update_optimized_poses_to_frames() {
-    //std::cout<<"graph key size: "<<graph_values_.size()<<std::endl;
-    for (auto key : graph_values_.keys()) {
-      //std::cout<<"key: "<<key<<". "<<std::flush;
-      gtsam::Pose3 pose_gtsam= graph_values_.at<gtsam::Pose3>( key ) ;
+    std::cout<<"update graph key size: "<<graph_values_results_.size()<<std::endl;
+    for (auto key : graph_values_results_.keys()) {
+      std::cout<<"key: "<<key<<". "<<std::flush;
+      gtsam::Pose3 pose_gtsam= graph_values_results_.at<gtsam::Pose3>( key ) ;
       //std::cout<<"pose_gtsam "<<pose_gtsam<<std::endl<<std::flush;
       Mat44 pose_mat = pose_gtsam.matrix();
       Eigen::Affine3f pose;
       pose.linear() = pose_mat.block(0,0,3,3).cast<float>();
       pose.translation() = pose_mat.block(0,3,3,1).cast<float>();
-      id2keyframe_[key]->set_pose_in_graph(pose);
+      if (id2keyframe_.find(key) != id2keyframe_.end())
+        id2keyframe_[key]->set_pose_in_graph(pose);
+      tracking_relative_transforms_[key].set_relative_transform(0, pose, 1);
       //std::cout<<"frame "<<key<< " new pose_in_graph is \n"<<id2keyframe_[key]->pose_in_graph().matrix()<<std::endl;
     }
     
@@ -423,13 +441,18 @@ namespace cvo {
     if (outfile.is_open()) {
       for (int i = 0; i < tracking_relative_transforms_.size(); i++) {
         Eigen::Matrix4f pose;
-        if (id2keyframe_.find(i) != id2keyframe_.end()) {
-          // keyframe
-          auto kf = id2keyframe_[i];
-          pose = kf->pose_in_graph().matrix();
+        
+        auto ref_id = tracking_relative_transforms_[i].ref_frame_id();
+        Aff3f kf_pose;
+        if (id2keyframe_.find(ref_id) != id2keyframe_.end()) {
+          kf_pose = id2keyframe_[ref_id]->pose_in_graph();
+          pose = kf_pose.matrix();
+        } else if (ref_id == 0) {
+          
+          kf_pose = tracking_relative_transforms_[i].ref_frame_to_curr_frame();
+          pose = kf_pose.matrix();
         } else {
-          auto ref_id = tracking_relative_transforms_[i].ref_frame_id();
-          auto kf_pose = id2keyframe_[ref_id]->pose_in_graph();
+          kf_pose = tracking_relative_transforms_[ref_id].ref_frame_to_curr_frame();
           auto pose_aff = kf_pose * tracking_relative_transforms_[i].ref_frame_to_curr_frame();
           pose = pose_aff.matrix();
         }
@@ -443,5 +466,34 @@ namespace cvo {
       outfile.close();
     }
   }
+
+  void PoseGraph::window_marginalize() {
+    if (keyframes_.size() < window_size_) return;
+
+    int to_rm = keyframes_.size() - window_size_;
+    std::cout<<"Marginalization: going to remove "<<to_rm<<" nodes, including ";
+    int counter = 0;
+    gtsam::FastList<gtsam::Key> inds_to_rm;
+    for (auto it = keyframes_.begin(); it != keyframes_.end(); it++) {
+      if (counter == to_rm) break;
+      inds_to_rm.push_back( (gtsam::Key)((*it)->id) );
+      std::cout<< (*it)->id<<", ";
+      counter++;
+    }
+    for (int i = 0; i < to_rm; i++)
+      keyframes_.pop_front();
+    std::cout<<"\n";
+    //isam2_->marginalizeLeaves(inds_to_rm);
+    //std::cout<<"Just marginalize from isam2\n";
+    for (auto key: inds_to_rm) {
+      int ind = (int)key;
+
+      if (id2keyframe_.find(ind) != id2keyframe_.end()) {
+        id2keyframe_.erase(ind);
+      }
+    std::cout<<"finish poppting frames from teh window\n";
+    }
+  }
   
+
 }

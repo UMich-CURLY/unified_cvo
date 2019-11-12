@@ -103,7 +103,7 @@ message("CXX_FLAGS are ${CMAKE_CXX_FLAGS}")
 add_library(elas ${ELAS_LIB_SOURCE})
 
 add_library(cvo ${CVO_LIB_SOURCE})
-target_link_libraries(cvo elas ${Boost_LIBRARIES} ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARIES}  ${OpenCV_LIBS} ${TBB_LIBRARIES} gtsam  )
+target_link_libraries(cvo elas ${Boost_LIBRARIES} ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARIES}  ${OpenCV_LIBS} ${TBB_LIBRARIES} gtsam  gtsam_unstable )
 
 add_executable(cvo_kitti_color_stereo ${PROJECT_SOURCE_DIR}/src/main_kitti_stereo_color.cpp )
 target_link_libraries(cvo_kitti_color_stereo cvo  ${OpenCV_LIBS}  )

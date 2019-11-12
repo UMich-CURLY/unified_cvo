@@ -14,7 +14,7 @@ int main(int argc, char ** argv) {
   cvo::KittiHandler kitti(argv[1]);
   int total_iters = kitti.get_total_number();
 
-  cvo::PoseGraph pose_graph;
+  cvo::PoseGraph pose_graph(true, cvo::PoseGraph::FIXED_LAG_SMOOTHER,  3);
 
   std::string calib_name(argv[2]);
   cvo::Calibration calib(calib_name);
@@ -22,7 +22,8 @@ int main(int argc, char ** argv) {
   int num_class = std::stoi(argv[3]);
 
   int starting_frame = std::stoi(argv[4]);
-  for (int i = 0; i < total_iters; i++) {
+  kitti.set_start_index(starting_frame);
+  for (int i = starting_frame; i < total_iters; i++) {
     cv::Mat left, right;
     std::vector<float> semantics;
     if (kitti.read_next_stereo(left, right, num_class, semantics ) == 0) {

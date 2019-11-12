@@ -8,6 +8,8 @@
 #include <unordered_map>
 
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
+#include <gtsam_unstable/nonlinear/BatchFixedLagSmoother.h>
+//#include <gtsam/gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/nonlinear/ISAM2.h>
@@ -24,11 +26,17 @@
 #include "graph_optimizer/RelativePose.hpp"
 namespace cvo {
   class PoseGraph {
+
+    
   public:
+
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+
+    enum GraphOptimizer  { ISAM2=0, FIXED_LAG_SMOOTHER };
     
     PoseGraph(bool is_f2f = true,
-              bool use_sliding_window = false);
+              GraphOptimizer optimizer=FIXED_LAG_SMOOTHER,
+              int num_frames_in_window = -1);
     ~PoseGraph();
 
     // cvo_align and keyframe 
@@ -63,6 +71,7 @@ namespace cvo {
     void pose_graph_optimize(std::shared_ptr<Frame> new_frame);
     void init_pose_graph(std::shared_ptr<Frame> new_frame);
     void update_optimized_poses_to_frames();
+    void window_marginalize();
 
     // tracking data
     std::vector<std::shared_ptr<Frame>> all_frames_since_last_keyframe_;
@@ -81,11 +90,16 @@ namespace cvo {
     
 
     // factor graph
-    gtsam::NonlinearFactorGraph factor_graph_;
+    GraphOptimizer optimizer_;
     std::unique_ptr<gtsam::ISAM2> isam2_;
-    gtsam::Values graph_values_;
+    std::unique_ptr<gtsam::BatchFixedLagSmoother> smoother_;
+    gtsam::NonlinearFactorGraph factor_graph_;
+    gtsam::BatchFixedLagSmoother::KeyTimestampMap timesteps_new_;
+    gtsam::Values graph_values_new_;
+    gtsam::Values graph_values_results_;
     std::unordered_map<gtsam::Key, int> key2id_;
-    bool using_sliding_window_;
+    int window_size_;
+    
 
     // tracking
     cvo cvo_align_;
