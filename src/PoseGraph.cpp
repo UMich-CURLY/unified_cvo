@@ -365,7 +365,7 @@ namespace cvo {
       //factor_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>(X(kf_second_last_id ), X(last_kf_id ),
       //                                                     tf_slast_kf_to_last_kf, pose_noise));
         gtsam::Vector6 prior_pose_noise;
-        prior_pose_noise << gtsam::Vector3::Constant(0.1), gtsam::Vector3::Constant(0.1);
+        prior_pose_noise << gtsam::Vector3::Constant(0.1), gtsam::Vector3::Constant(0.2);
         auto pose_noise = gtsam::noiseModel::Diagonal::Sigmas( prior_pose_noise);
         factor_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>((kf1->id ), (kf2->id),
                                                              tf_slast_kf_to_last_kf, pose_noise));
@@ -418,7 +418,7 @@ namespace cvo {
       for (auto it = keyframes_.begin(); it != keyframes_.end(); it++) {
         auto kf = *it;
         if (  std::abs(kf->id-last_kf_id) <= 1 ) continue;
-        if (  (check_relative_pose_quality(kf, last_kf)) > 0.06  ) {
+        if (  (check_relative_pose_quality(kf, last_kf)) > 0.05  ) {
           if (add_pose_factor_between_two_keyframes(kf, last_kf) == 0)
             std::cout<<"add  map2map edge between "<<kf->id<<" and "<<last_kf->id<<"\n";
         }
