@@ -26,7 +26,8 @@ namespace cvo {
     isam2_(nullptr),
     is_f2f_(is_f2f),
     optimizer_(optimizer),
-    window_size_(sliding_window_size){
+    window_size_(sliding_window_size),
+    total_num_keyframes_(0){
     // ISAM2 solver
     gtsam::ISAM2Params isam_params;
     isam_params.relinearizeThreshold = 0.01;
@@ -94,7 +95,7 @@ namespace cvo {
   }
 
   bool PoseGraph::is_tracking_bad(float inner_product) const {
-    return inner_product < 0.21;
+    return inner_product < 0.15;
     
   }
   
@@ -117,6 +118,7 @@ namespace cvo {
     }
   }
 
+  
   RelativePose PoseGraph::track_from_last_frame(std::shared_ptr<Frame> new_frame) {
 
     RelativePose tracking_pose(new_frame->id);
@@ -134,7 +136,8 @@ namespace cvo {
     int ref_frame_id = last_frame->id;
     auto & last_frame_points = last_frame->points();
 
-    if (new_frame->id == 1)
+
+    if (tracking_relative_transforms_.size() == 1)
       cvo_init = read_tracking_init_guess();
     else
       cvo_init = slast_frame_to_last_frame.inverse();
@@ -169,7 +172,7 @@ namespace cvo {
     auto & curr_points = new_frame->points();
     int ref_frame_id = last_keyframe->id;
     auto & last_kf_points = last_keyframe->points();
-    if (new_frame->id == 1 )
+    if (tracking_relative_transforms_.size() == 1  )
       cvo_init = read_tracking_init_guess();
     else
       cvo_init = (last_keyframe_to_last_frame * slast_frame_to_last_frame).inverse();
@@ -262,7 +265,7 @@ namespace cvo {
       keyframes_.push_back (new_frame);
       all_frames_since_last_keyframe_.clear();
       new_frame->construct_map();
-      
+      total_num_keyframes_++;
     } else {
       int ref_frame_id = tracking_relative_transforms_[new_frame->id].ref_frame_id();
       auto ref_frame = id2keyframe_[ref_frame_id];
@@ -309,7 +312,7 @@ namespace cvo {
                                                        prior_state, pose_noise));
     //graph_values_.insert(X(new_frame->id), prior_state);
     graph_values_new_.insert((new_frame->id), prior_state);
-    timesteps_new_[new_frame->id] = (double)new_frame->id;
+    timesteps_new_[new_frame->id] = 0.0;//new_frame->id;
     //key2id_[X(new_frame->id)] = id;
 
     factor_graph_.print("gtsam Initial Graph\n");
@@ -338,8 +341,8 @@ namespace cvo {
     std::unique_ptr<CvoPointCloud> map_points_kf1 = kf1->export_points_from_map();
     std::unique_ptr<CvoPointCloud> map_points_kf2 = kf2->export_points_from_map();
 
-    //map_points_kf_second_last->write_to_label_pcd("map2map_source.pcd");
-    map_points_kf2->write_to_label_pcd("map2map_target.pcd");
+    map_points_kf1->write_to_color_pcd("map2map_source.pcd");
+    map_points_kf2->write_to_color_pcd("map2map_target.pcd");
     int diff_num = std::abs(map_points_kf1->num_points() - map_points_kf2->num_points());
 
     if (diff_num * 1.0 / std::max(map_points_kf1->num_points(), map_points_kf2->num_points() ) > 0.6 || 
@@ -351,7 +354,7 @@ namespace cvo {
       cvo_align_.set_pcd(*map_points_kf1, *map_points_kf2,
                          init_guess, true);
       float tracking_eps_2 = cvo_align_.get_stop_criteria();
-      cvo_align_.set_stop_criteria(tracking_eps_2*3);
+      cvo_align_.set_stop_criteria(tracking_eps_2*2);
       cvo_align_.align();
       cvo_align_.set_stop_criteria(tracking_eps_2);
       Eigen::Affine3f cvo_result = cvo_align_.get_transform();
@@ -405,7 +408,7 @@ namespace cvo {
     // TOOD: add init value for this state
     //graph_values_.insert(X(new_id), tf_WtoNew);
     graph_values_new_.insert((new_id), tf_WtoNew);
-    timesteps_new_[new_id] = (double)new_id;
+    timesteps_new_[new_id] = (double)total_num_keyframes_;//new_id;
     //key2id_
     std::cout<<"Just add new keyframe to the graph, the size of keyframe_ (without the new frame) is "<<keyframes_.size()<<"\n";
     //TODO align two functions to get another between factor
@@ -502,9 +505,9 @@ namespace cvo {
   }
 
   void PoseGraph::window_marginalize() {
-    if (keyframes_.size() < window_size_) return;
+    if ( (int)keyframes_.size() + 1 <=  window_size_  ) return;
 
-    int to_rm = keyframes_.size() - window_size_;
+    int to_rm = keyframes_.size() - window_size_ + 1;
     std::cout<<"Marginalization: going to remove "<<to_rm<<" nodes, including ";
     int counter = 0;
     gtsam::FastList<gtsam::Key> inds_to_rm;

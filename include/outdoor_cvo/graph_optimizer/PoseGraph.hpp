@@ -82,6 +82,7 @@ namespace cvo {
     // sliding window
     std::unordered_map<int, std::shared_ptr<Frame>> id2keyframe_;
     std::list<std::shared_ptr<Frame>> keyframes_; // sliding window
+    int total_num_keyframes_;
 
     // for keyframes:  after marginalization, the pose wrt  the first frame
     // for non-keyframe:  relative to the latest keyframe

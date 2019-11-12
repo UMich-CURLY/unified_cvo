@@ -9,7 +9,7 @@ namespace cvo{
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     RelativePose(int curr_id):
       curr_frame_id_(curr_id) {
-      ref_frame_id_ = -1;
+      ref_frame_id_ = curr_id;
       ref_frame_to_curr_frame_.setIdentity();
       cvo_inner_product_ = 0;
     }
