@@ -53,6 +53,8 @@ namespace cvo {
     RelativePose track_from_last_keyframe(std::shared_ptr<Frame> new_frame) ;
     RelativePose tracking_from_last_keyframe_map(std::shared_ptr<Frame> new_frame) ;
     bool is_tracking_bad(float inner_product) const;
+    float check_relative_pose_quality(std::shared_ptr<Frame> kf1, std::shared_ptr<Frame> kf2);
+    int add_pose_factor_between_two_keyframes(std::shared_ptr<Frame> kf1, std::shared_ptr<Frame> kf2);
     float track_new_frame(std::shared_ptr<Frame> new_frame,
                            // output
                            bool & is_keyframe);

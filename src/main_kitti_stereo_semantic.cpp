@@ -14,7 +14,7 @@ int main(int argc, char ** argv) {
   cvo::KittiHandler kitti(argv[1]);
   int total_iters = kitti.get_total_number();
 
-  cvo::PoseGraph pose_graph(true, cvo::PoseGraph::FIXED_LAG_SMOOTHER,  3);
+  cvo::PoseGraph pose_graph(true, cvo::PoseGraph::FIXED_LAG_SMOOTHER,  7);
 
   std::string calib_name(argv[2]);
   cvo::Calibration calib(calib_name);

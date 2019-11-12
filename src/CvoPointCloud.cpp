@@ -172,8 +172,8 @@ namespace cvo{
       features_.row(i) = Eigen::Map<Vec5f_row>(features[i].data());
 
     }
-    std::cout<<"Read labels from map:\nlabel" << labels_.row(0)<<"\n"<<labels_.row(num_points_-1)<<", color: ";
-    std::cout<< features_.row(0)<<"\n"<<features_.row(num_points_-1)<<"\n";
+    //std::cout<<"Read labels from map:\nlabel" << labels_.row(0)<<"\n"<<labels_.row(num_points_-1)<<", color: ";
+    //std::cout<< features_.row(0)<<"\n"<<features_.row(num_points_-1)<<"\n";
   }
 
   CvoPointCloud::CvoPointCloud(){}

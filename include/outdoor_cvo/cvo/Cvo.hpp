@@ -119,7 +119,11 @@ namespace cvo{
     bool debug_print;
     FILE * relative_transform_file;
     FILE * init_guess_file;
-        
+
+    float get_stop_criteria() {return eps_2;}
+    void set_stop_criteria(float eps_2_new) {eps_2 = eps_2_new;}
+    
+
   private:
     // private functions
         
@@ -141,6 +145,7 @@ namespace cvo{
      * @brief update transformation matrix
      */
     inline void update_tf();
+
 
 
     /**

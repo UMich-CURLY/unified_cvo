@@ -296,7 +296,7 @@ namespace cvo {
     gtsam::Vector3 t_WtoC;
     t_WtoC << 0,0,0;
     gtsam::Vector6 prior_pose_noise;
-    prior_pose_noise << gtsam::Vector3::Constant(0.05), gtsam::Vector3::Constant(0.1);
+    prior_pose_noise << gtsam::Vector3::Constant(0.1), gtsam::Vector3::Constant(0.1);
 
     // prior state and noise
     gtsam::Pose3 prior_state(gtsam::Quaternion(q_WtoC(3), q_WtoC(0), q_WtoC(1), q_WtoC(2)),
@@ -316,8 +316,65 @@ namespace cvo {
     
   }
 
-  void PoseGraph::pose_graph_optimize(std::shared_ptr<Frame> new_frame) {
+  float PoseGraph::check_relative_pose_quality(std::shared_ptr<Frame> kf1, std::shared_ptr<Frame> kf2) {
+    printf("    assert(kf1->id < kf2->id);\n");
+    assert(kf1->id < kf2->id);
+    Aff3f kf1_to_kf2;
+    if (id2keyframe_.find(kf2->id) != id2keyframe_.end()) {
+      kf1_to_kf2 = kf1->pose_in_graph().inverse() * kf2->pose_in_graph();
+      float align_result = cvo_align_.inner_product(kf1->points(), kf2->points(), kf1_to_kf2);
+      printf("relative pose inner product between frame %d and %d is %f\n", kf1->id, kf2->id, align_result);
+      return align_result;
+    } else {
+      printf("assert id2keyframe_.find(kf2->id) != id2keyframe_.end( \n");
+      assert(0);
+      return 0;
+      
+    }
 
+  }
+
+  int PoseGraph::add_pose_factor_between_two_keyframes(std::shared_ptr<Frame> kf1, std::shared_ptr<Frame> kf2) {
+    std::unique_ptr<CvoPointCloud> map_points_kf1 = kf1->export_points_from_map();
+    std::unique_ptr<CvoPointCloud> map_points_kf2 = kf2->export_points_from_map();
+
+    //map_points_kf_second_last->write_to_label_pcd("map2map_source.pcd");
+    map_points_kf2->write_to_label_pcd("map2map_target.pcd");
+    int diff_num = std::abs(map_points_kf1->num_points() - map_points_kf2->num_points());
+
+    if (diff_num * 1.0 / std::max(map_points_kf1->num_points(), map_points_kf2->num_points() ) > 0.6 || 
+        ( is_f2f_ && std::abs(kf2->id - kf1->id) == 1  ) ) {
+      std::cout<<"the number of points in kf "<<kf1->id<<" and kf "<<kf2->id<<" differ too much: "<< map_points_kf1->num_points()<<" vs "<<map_points_kf2->num_points()<< ", or perhaps they are adjacent.  Ignore this constrains\n";
+    } else {
+      
+      Eigen::Affine3f init_guess = (kf1->pose_in_graph().inverse() * kf2->pose_in_graph()).inverse();
+      cvo_align_.set_pcd(*map_points_kf1, *map_points_kf2,
+                         init_guess, true);
+      float tracking_eps_2 = cvo_align_.get_stop_criteria();
+      cvo_align_.set_stop_criteria(tracking_eps_2*3);
+      cvo_align_.align();
+      cvo_align_.set_stop_criteria(tracking_eps_2);
+      Eigen::Affine3f cvo_result = cvo_align_.get_transform();
+      std::cout<<"map2map transform is \n"<<cvo_result.matrix()<<", inner prod is "<<cvo_align_.inner_product()<<std::endl;
+      if (is_tracking_bad(cvo_align_.inner_product() ) == false ) {
+      // TODO: check cvo align quality
+        gtsam::Pose3 tf_slast_kf_to_last_kf = affine3f_to_pose3(cvo_result);
+      //factor_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>(X(kf_second_last_id ), X(last_kf_id ),
+      //                                                     tf_slast_kf_to_last_kf, pose_noise));
+        gtsam::Vector6 prior_pose_noise;
+        prior_pose_noise << gtsam::Vector3::Constant(0.1), gtsam::Vector3::Constant(0.1);
+        auto pose_noise = gtsam::noiseModel::Diagonal::Sigmas( prior_pose_noise);
+        factor_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>((kf1->id ), (kf2->id),
+                                                             tf_slast_kf_to_last_kf, pose_noise));
+        return 0;
+
+      }
+    }
+    return -1;
+  }
+  
+  void PoseGraph::pose_graph_optimize(std::shared_ptr<Frame> new_frame) {
+    printf("assert(tracking_relative_transforms_.size() > 1)\n");
     assert(tracking_relative_transforms_.size() > 1);
     
     int new_id = new_frame->id;
@@ -336,7 +393,7 @@ namespace cvo {
     gtsam::Pose3 odom_last_kf_to_new = affine3f_to_pose3(tf_last_keyframe_to_newframe);
     // TODO? use the noise from inner product??
     gtsam::Vector6 prior_pose_noise;
-    prior_pose_noise << gtsam::Vector3::Constant(0.05), gtsam::Vector3::Constant(0.1);
+    prior_pose_noise << gtsam::Vector3::Constant(0.1), gtsam::Vector3::Constant(0.1);
     auto pose_noise = gtsam::noiseModel::Diagonal::Sigmas( prior_pose_noise);
     std::cout<<"optimize the pose graph with gtsam...\n";
     std::cout<<" new frames's tf_WtoNew "<<tf_WtoNew;
@@ -354,38 +411,15 @@ namespace cvo {
     //TODO align two functions to get another between factor
 
     if (keyframes_.size()>1) {
-      std::list<std::shared_ptr<Frame>>::reverse_iterator rit=keyframes_.rbegin();
-      rit++;
-      auto kf_second_last = *rit;
-      auto kf_second_last_id = kf_second_last->id;
-      printf("doing map2map align between frame %d and %d\n", kf_second_last_id, last_kf->id );
-      std::unique_ptr<CvoPointCloud> map_points_kf_second_last = kf_second_last->export_points_from_map();
-      std::unique_ptr<CvoPointCloud> map_points_kf_last = last_kf->export_points_from_map();
-
-      map_points_kf_second_last->write_to_label_pcd("map2map_source.pcd");
-      map_points_kf_last->write_to_label_pcd("ma2map_target.pcd");
-      int diff_num = std::abs(map_points_kf_last->num_points() - map_points_kf_second_last->num_points());
-      
-      if (diff_num * 1.0 / std::max(map_points_kf_last->num_points(), map_points_kf_second_last->num_points() ) > 0.5 || 
-          ( is_f2f_ && kf_second_last_id == last_kf_id -1  )) {
-        std::cout<<"the number of points in kf "<<kf_second_last_id<<" and kf "<<last_kf->id<<" differ too much: "<< map_points_kf_second_last->num_points()<<" vs "<<map_points_kf_last->num_points()<< ", or perhaps they are adjacent.  Ignore this constrains\n";
-      } else {
-      
-        Eigen::Affine3f init_guess = (kf_second_last->pose_in_graph().inverse() * last_kf->pose_in_graph()).inverse();
-        cvo_align_.set_pcd(*map_points_kf_second_last, *map_points_kf_last,
-                           init_guess, true);
-        cvo_align_.align();
-        Eigen::Affine3f cvo_result = cvo_align_.get_transform();
-        std::cout<<"map2map transform is \n"<<cvo_result.matrix()<<std::endl;
-        // TODO: check cvo align quality
-        gtsam::Pose3 tf_slast_kf_to_last_kf = affine3f_to_pose3(cvo_result);
-        //factor_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>(X(kf_second_last_id ), X(last_kf_id ),
-        //                                                     tf_slast_kf_to_last_kf, pose_noise));
-        factor_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>((kf_second_last_id ), (last_kf_id ),
-                                                             tf_slast_kf_to_last_kf, pose_noise));
-        graph_values_new_.print("\ngraph init values\n");
-        std::cout<<"Just add the edge between two  maps\n"<<std::flush;
-      } 
+      std::cout<<"\n\ncheck potential map2map edges...\n"<<std::endl;
+      for (auto it = keyframes_.begin(); it != keyframes_.end(); it++) {
+        auto kf = *it;
+        if (  std::abs(kf->id-last_kf_id) <= 1 ) continue;
+        if (  (check_relative_pose_quality(kf, last_kf)) > 0.06  ) {
+          if (add_pose_factor_between_two_keyframes(kf, last_kf) == 0)
+            std::cout<<"add  map2map edge between "<<kf->id<<" and "<<last_kf->id<<"\n";
+        }
+      }
 
     }
 
