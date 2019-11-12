@@ -1,0 +1,948 @@
+reading cvo params from file
+init_guess = tf_minus_1.inverse()
+
+=============================================
+Aligning 0 and 1
+num fixed: 13542
+num moving: 13665
+[Cvo ] the init guess for the transformation is 
+ 1 -0  0 -0
+-0  1 -0  0
+ 0 -0  1 -0
+-0  0 -0  1
+num_thread: 12
+dist: 9.82131e-06
+cvo # of iterations is 715
+t_transform_pcd is 0.0128755
+t_compute_flow is 23.7618
+t_compute_step is 1.45045
+The inner product between 0 and 1 is 0.00189597
+Transform is 
+    0.999999  -0.00156952   -0.0012558  -0.00743958
+  0.00156785            1 -0.000886073   -0.0124169
+  0.00125673  0.000883858            1     0.558281
+          -0            0           -0            1
+
+init_guess = tf_minus_1.inverse()
+
+=============================================
+Aligning 0 and 2
+num fixed: 13542
+num moving: 13299
+[Cvo ] the init guess for the transformation is 
+    0.999997    0.0015684   0.00125718   0.00675717
+ -0.00156896     0.999997    0.0008841    0.0119116
+ -0.00125533 -0.000885826     0.999997      -0.5583
+          -0            0           -0            1
+num_thread: 12
+dist: 9.96898e-06
+cvo # of iterations is 761
+t_transform_pcd is 0.0157839
+t_compute_flow is 35.8252
+t_compute_step is 1.83151
+The inner product between 0 and 2 is 0.00187617
+Transform is 
+   0.999995 -0.00215652 -0.00199623  -0.0260376
+ 0.00215237    0.999995 -0.00203958  -0.0266613
+ 0.00200087  0.00203535    0.999995     1.13341
+         -0           0          -0           1
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 0 and 3
+num fixed: 13542
+num moving: 13210
+[Cvo ] the init guess for the transformation is 
+   0.999994  0.00273565  0.00274473   0.0404775
+-0.00274478    0.999994  0.00318602   0.0360124
+-0.00273694 -0.00319392    0.999994    -1.70875
+         -0           0          -0           1
+num_thread: 12
+dist: 9.66721e-06
+cvo # of iterations is 1028
+t_transform_pcd is 0.0210154
+t_compute_flow is 48.5609
+t_compute_step is 2.43713
+The inner product between 0 and 3 is 0.00186886
+Transform is 
+    0.99999 -0.00257401 -0.00394069  -0.0268201
+ 0.00256113    0.999994 -0.00317513  -0.0471991
+ 0.00394779  0.00316459    0.999991     1.70419
+         -0           0          -0           1
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 0 and 4
+num fixed: 13542
+num moving: 13195
+[Cvo ] the init guess for the transformation is 
+   0.999975  0.00296833  0.00589744   0.0154904
+-0.00299299    0.999981  0.00429387   0.0585295
+ -0.0058823 -0.00431052    0.999966    -2.27532
+         -0           0          -0           1
+num_thread: 12
+dist: 9.47615e-06
+cvo # of iterations is 14
+t_transform_pcd is 0.000301452
+t_compute_flow is 1.14898
+t_compute_step is 0.0323603
+The inner product between 0 and 4 is 0.00183302
+Transform is 
+   0.999965 -0.00548894 -0.00593641   -0.028642
+ 0.00546385     0.99997 -0.00434888  -0.0685225
+ 0.00596249  0.00431724    0.999965     2.27486
+         -0           0          -0           1
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 0 and 5
+num fixed: 13542
+num moving: 13148
+[Cvo ] the init guess for the transformation is 
+    0.99994  0.00836253  0.00797492  0.00960847
+-0.00840801    0.999963  0.00546187   0.0747039
+-0.00793457 -0.00553087    0.999972    -2.84616
+         -0           0          -0           1
+num_thread: 12
+dist: 9.834e-06
+cvo # of iterations is 283
+t_transform_pcd is 0.00535304
+t_compute_flow is 20.92
+t_compute_step is 0.675643
+The inner product between 0 and 5 is 0.001818
+Transform is 
+   0.999946 -0.00769234   -0.007942  -0.0216706
+  0.0076393    0.999963 -0.00646221  -0.0832571
+ 0.00798562  0.00639883    0.999967     2.81543
+         -0           0          -0           1
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 0 and 6
+num fixed: 13542
+num moving: 13484
+[Cvo ] the init guess for the transformation is 
+   0.999885  0.00981434   0.0100264  -0.0169216
+-0.00989507    0.999883  0.00848092   0.0704825
+-0.00992868 -0.00857365    0.999868    -3.35657
+         -0           0          -0           1
+num_thread: 12
+dist: 9.98592e-06
+cvo # of iterations is 714
+t_transform_pcd is 0.0168885
+t_compute_flow is 62.8794
+t_compute_step is 1.96243
+The inner product between 0 and 6 is 0.00180713
+Transform is 
+   0.999904 -0.00742904  -0.0101952 -0.00467454
+ 0.00734092    0.999901 -0.00906482  -0.0652389
+  0.0102756  0.00899473    0.999862     3.44253
+         -0           0          -0           1
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 0 and 7
+num fixed: 13542
+num moving: 13971
+[Cvo ] the init guess for the transformation is 
+   0.999936  0.00702706   0.0125332  -0.0615762
+-0.00718301    0.999984   0.0115797  0.00181176
+ -0.0124837   -0.011682    0.999963    -4.06996
+         -0           0          -0           1
+num_thread: 12
+dist: 9.97221e-06
+cvo # of iterations is 647
+t_transform_pcd is 0.0139055
+t_compute_flow is 57.141
+t_compute_step is 1.62314
+The inner product between 0 and 7 is 0.00180619
+Transform is 
+    0.999944  -0.00738645   -0.0117388 -0.000879087
+  0.00728299      1.00002  -0.00795755   -0.0860887
+   0.0117638   0.00785812      1.00001      4.01842
+          -0            0           -0            1
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 0 and 8
+num fixed: 13542
+num moving: 13651
+[Cvo ] the init guess for the transformation is 
+    0.99979  0.00724996   0.0133275  -0.0624878
+-0.00731454    0.999759  0.00675002   0.0752799
+ -0.0131983 -0.00681466    0.999622    -4.59338
+         -0           0          -0    0.999999
+num_thread: 12
+dist: 7.92699e-06
+cvo # of iterations is 419
+t_transform_pcd is 0.00957358
+t_compute_flow is 40.6692
+t_compute_step is 1.12035
+The inner product between 0 and 8 is 0.00178194
+Transform is 
+   0.999793  -0.0079336  -0.0125901  -0.0221973
+  0.0078615    0.999748 -0.00773675   -0.113586
+  0.0127306  0.00766883    0.999624     4.59667
+         -0           0          -0    0.999999
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 0 and 9
+num fixed: 13542
+num moving: 13754
+[Cvo ] the init guess for the transformation is 
+     1.0001  0.00838458   0.0135158  -0.0247604
+-0.00854793      1.0004  0.00741037    0.102292
+ -0.0136448 -0.00760276     1.00052    -5.17909
+         -0           0          -0           1
+num_thread: 12
+dist: 9.86272e-06
+cvo # of iterations is 479
+t_transform_pcd is 0.0109602
+t_compute_flow is 46.7825
+t_compute_step is 1.22301
+The inner product between 0 and 9 is 0.00178094
+Transform is 
+    1.00009 -0.00799602  -0.0148358  -0.0174817
+ 0.00778673     1.00038  -0.0101295   -0.140617
+  0.0147217  0.00993498     1.00049     5.24015
+         -0           0          -0           1
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 0 and 10
+num fixed: 13542
+num moving: 13272
+[Cvo ] the init guess for the transformation is 
+   0.999263  0.00784045   0.0171466  -0.0853704
+-0.00790122    0.998777   0.0123589   0.0961611
+ -0.0165841  -0.0123042    0.998226      -5.876
+         -0           0          -0    0.999992
+num_thread: 12
+dist: 9.9752e-06
+cvo # of iterations is 596
+t_transform_pcd is 0.0150986
+t_compute_flow is 61.3168
+t_compute_step is 1.57911
+The inner product between 0 and 10 is 0.00177612
+Transform is 
+   0.999294 -0.00478018  -0.0159896   -0.041943
+ 0.00467864    0.998758  -0.0150941   -0.148177
+  0.0165266   0.0152052    0.998198      5.8743
+         -0           0          -0    0.999992
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 0 and 11
+num fixed: 13542
+num moving: 13501
+[Cvo ] the init guess for the transformation is 
+     1.0012  0.00123018   0.0172722  -0.0449871
+-0.00194439     1.00249   0.0201352   0.0280849
+ -0.0183672  -0.0206193      1.0034    -6.53371
+         -0           0          -0     1.00002
+num_thread: 12
+dist: 9.87349e-06
+cvo # of iterations is 883
+t_transform_pcd is 0.0194433
+t_compute_flow is 97.9884
+t_compute_step is 2.14812
+The inner product between 0 and 11 is 0.00176616
+Transform is 
+    1.00123 -0.00334856  -0.0163513  -0.0841618
+ 0.00270492     1.00253  -0.0184935   -0.174365
+  0.0152843   0.0179915     1.00347     6.42108
+         -0           0          -0     1.00002
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 0 and 12
+num fixed: 13542
+num moving: 13218
+[Cvo ] the init guess for the transformation is 
+  0.996606 0.00154903  0.0165522  0.0111722
+-0.0010186   0.993288  0.0215697  0.0505715
+-0.0138374 -0.0205032    0.99063   -6.91101
+        -0          0         -0   0.999951
+num_thread: 12
+dist: 9.9295e-06
+cvo # of iterations is 774
+t_transform_pcd is 0.0164666
+t_compute_flow is 84.646
+t_compute_step is 1.8904
+The inner product between 0 and 12 is 0.0017426
+Transform is 
+   0.996547  0.00307256  -0.0170407   -0.114817
+-0.00257648    0.993335  -0.0180045    -0.22839
+  0.0196948   0.0191319    0.990632     7.40336
+         -0           0          -0    0.999951
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 0 and 13
+num fixed: 13542
+num moving: 12971
+[Cvo ] the init guess for the transformation is 
+     1.0077   -0.010001   0.0180753 -0.00672508
+ 0.00752629     1.01561   0.0183303    0.133559
+ -0.0249072  -0.0208098     1.02172    -8.56529
+          0           0          -0     1.00012
+num_thread: 12
+cvo # of iterations is 5000
+t_transform_pcd is 0.081955
+t_compute_flow is 156.439
+t_compute_step is 8.07836
+The inner product between 0 and 13 is 0.00168383
+Transform is 
+    1.00784 -0.00399945  -0.0192821    -0.12208
+ 0.00164501     1.01575  -0.0119529    -0.17583
+  0.0127494  0.00926653     1.02199     7.67015
+          0           0          -0     1.00012
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 12 and 13
+~~~~~~~~~~~~~~~~~~~~~~~~~
+tf_minus_2: 
+    1.00123 -0.00334856  -0.0163513  -0.0841618
+ 0.00270492     1.00253  -0.0184935   -0.174365
+  0.0152843   0.0179915     1.00347     6.42108
+         -0           0          -0     1.00002
+tf_minus_1: 
+   0.996547  0.00307256  -0.0170407   -0.114817
+-0.00257648    0.993335  -0.0180045    -0.22839
+  0.0196948   0.0191319    0.990632     7.40336
+         -0           0          -0    0.999951
+init guess for 12 and 13 is: 
+     1.00461  -0.00649232  0.000914057    0.0136758
+   0.0052446      1.00922 -0.000255212    0.0364389
+ -0.00464497  -0.00120012      1.01295    -0.993065
+          -0            0           -0      1.00007
+
+=============================================
+Aligning 12 and 13
+num fixed: 13218
+num moving: 12971
+[Cvo ] the init guess for the transformation is 
+     1.00461  -0.00649232  0.000914057    0.0136758
+   0.0052446      1.00922 -0.000255212    0.0364389
+ -0.00464497  -0.00120012      1.01295    -0.993065
+          -0            0           -0      1.00007
+num_thread: 12
+dist: 9.55962e-06
+cvo # of iterations is 1566
+t_transform_pcd is 0.0281889
+t_compute_flow is 40.4117
+t_compute_step is 2.72751
+The inner product between 12 and 13 is 0.00179889
+Transform is 
+    1.00463  0.00101444 -0.00217115  0.00193848
+-0.00229377      1.0092  0.00732289  -0.0151959
+-0.00151568 -0.00876858     1.01294    0.499819
+         -0           0          -0     1.00007
+
+init_guess = tf_minus_1.inverse()
+
+=============================================
+Aligning 13 and 14
+num fixed: 12971
+num moving: 13202
+[Cvo ] the init guess for the transformation is 
+    0.995397 -0.000981975   0.00214065  -0.00301421
+  0.00225145     0.990823  -0.00715818    0.0186286
+  0.00150892   0.00857566     0.987167    -0.493244
+           0            0            0     0.999931
+num_thread: 12
+dist: 9.97763e-06
+cvo # of iterations is 1003
+t_transform_pcd is 0.0230582
+t_compute_flow is 31.4774
+t_compute_step is 2.2676
+The inner product between 13 and 14 is 0.00182219
+Transform is 
+    0.995395   0.00213268   0.00033579   -0.0224588
+-0.000848239     0.990811    0.0103469  -0.00031349
+  0.00332353  -0.00893314     0.987155     0.789863
+           0            0            0     0.999931
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 13 and 15
+num fixed: 12971
+num moving: 13023
+[Cvo ] the init guess for the transformation is 
+     1.01395  -0.00338236  -0.00286247    0.0496736
+-0.000482676      1.02787   -0.0141435 -0.000445068
+ -0.00843096   0.00973056      1.03935     -1.11533
+          -0            0           -0      1.00021
+num_thread: 12
+dist: 9.90442e-06
+cvo # of iterations is 2025
+t_transform_pcd is 0.0331816
+t_compute_flow is 48.2608
+t_compute_step is 3.26505
+The inner product between 13 and 15 is 0.00175222
+Transform is 
+    1.01395 -0.00215616 -0.00684022   0.0815474
+-0.00179925     1.02766   0.0206151  -0.0949739
+-0.00441165  -0.0249174     1.03921    0.864591
+         -0           0          -0     1.00021
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 13 and 16
+num fixed: 12971
+num moving: 13597
+[Cvo ] the init guess for the transformation is 
+  0.968314 0.00647642  0.0127106  -0.192124
+0.00227985   0.937256 -0.0272107   0.205621
+ 0.0113201  0.0363083   0.913244  -0.856757
+        -0         -0         -0   0.999516
+num_thread: 12
+cvo # of iterations is 5000
+t_transform_pcd is 0.0948246
+t_compute_flow is 132.451
+t_compute_step is 8.00881
+The inner product between 13 and 16 is 0.0016931
+Transform is 
+   0.967378    0.037583 -0.00743304  -0.0932106
+ -0.0294505     0.93657   0.0343371   -0.181819
+  0.0339465  -0.0248245    0.913366    0.909597
+         -0          -0          -0    0.999516
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 15 and 16
+~~~~~~~~~~~~~~~~~~~~~~~~~
+tf_minus_2: 
+    0.995395   0.00213268   0.00033579   -0.0224588
+-0.000848239     0.990811    0.0103469  -0.00031349
+  0.00332353  -0.00893314     0.987155     0.789863
+           0            0            0     0.999931
+tf_minus_1: 
+    1.01395 -0.00215616 -0.00684022   0.0815474
+-0.00179925     1.02766   0.0206151  -0.0949739
+-0.00441165  -0.0249174     1.03921    0.864591
+         -0           0          -0     1.00021
+init guess for 15 and 16 is: 
+   0.981753  0.00425102  0.00671904   -0.102826
+0.000745341    0.963856 -0.00897151   0.0933084
+ 0.00738374   0.0145326    0.949723  -0.0698774
+         -0          -0          -0    0.999723
+
+=============================================
+Aligning 15 and 16
+num fixed: 13023
+num moving: 13597
+[Cvo ] the init guess for the transformation is 
+   0.981753  0.00425102  0.00671904   -0.102826
+0.000745341    0.963856 -0.00897151   0.0933084
+ 0.00738374   0.0145326    0.949723  -0.0698774
+         -0          -0          -0    0.999723
+num_thread: 12
+dist: 9.92763e-06
+cvo # of iterations is 3340
+t_transform_pcd is 0.0756679
+t_compute_flow is 100.213
+t_compute_step is 5.80725
+The inner product between 15 and 16 is 0.00169712
+Transform is 
+     0.98171   0.00736492     0.002174   -0.0924983
+ -0.00263243     0.963853 -0.000492631    0.0468222
+   0.0121659   0.00626552     0.949865     0.239077
+          -0           -0           -0     0.999723
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 15 and 16
+~~~~~~~~~~~~~~~~~~~~~~~~~
+tf_minus_2: 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+tf_minus_1: 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+init guess for 15 and 16 is: 
+ 1 -0  0 -0
+-0  1 -0  0
+ 0 -0  1 -0
+-0  0 -0  1
+
+=============================================
+Aligning 15 and 16
+num fixed: 13023
+num moving: 13597
+[Cvo ] the init guess for the transformation is 
+ 1 -0  0 -0
+-0  1 -0  0
+ 0 -0  1 -0
+-0  0 -0  1
+num_thread: 12
+dist: 9.32862e-06
+cvo # of iterations is 3230
+t_transform_pcd is 0.064897
+t_compute_flow is 93.384
+t_compute_step is 5.95956
+The inner product between 15 and 16 is 0.00180571
+Transform is 
+    0.999998   0.00243555  -0.00109501   -0.0123398
+ -0.00243609            1 -0.000487774   -0.0272108
+  0.00109187  0.000490353      1.00001     0.694101
+          -0            0           -0            1
+
+init_guess = tf_minus_1.inverse()
+
+=============================================
+Aligning 16 and 17
+num fixed: 13597
+num moving: 13617
+[Cvo ] the init guess for the transformation is 
+    0.999995  -0.00243607   0.00109381    0.0115142
+  0.00243554     0.999993  0.000490434    0.0269003
+ -0.00109305 -0.000487686     0.999992    -0.694122
+          -0            0           -0            1
+num_thread: 12
+dist: 9.85784e-06
+cvo # of iterations is 263
+t_transform_pcd is 0.00797463
+t_compute_flow is 11.9699
+t_compute_step is 0.883016
+The inner product between 16 and 17 is 0.00182584
+Transform is 
+    0.999996    0.0023129 -0.000822935  -0.00840987
+ -0.00231816     0.999973  -0.00644005   -0.0240977
+ 0.000809995   0.00644203     0.999972      0.70475
+          -0            0           -0            1
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 16 and 18
+num fixed: 13597
+num moving: 13666
+[Cvo ] the init guess for the transformation is 
+           1  -0.00219856  0.000522952   0.00405707
+  0.00219186     0.999932    0.0123935    0.0121895
+-0.000556049   -0.0123926     0.999945    -0.715641
+          -0            0           -0            1
+num_thread: 12
+dist: 9.78689e-06
+cvo # of iterations is 2459
+t_transform_pcd is 0.0791717
+t_compute_flow is 76.1074
+t_compute_step is 5.22889
+The inner product between 16 and 18 is 0.00182409
+Transform is 
+          1  0.00227799 -0.00148233  -0.0257929
+-0.00229614     0.99993  -0.0128407  -0.0218192
+ 0.00144522   0.0128442    0.999944     1.40488
+         -0           0          -0           1
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 16 and 19
+num fixed: 13597
+num moving: 14657
+[Cvo ] the init guess for the transformation is 
+   0.999978 -0.00227954  0.00209787   0.0391661
+ 0.00223762    0.999778   0.0192442  -0.0163947
+-0.00212388  -0.0192395    0.999749    -2.10506
+         -0           0          -0           1
+num_thread: 12
+dist: 9.76787e-06
+cvo # of iterations is 381
+t_transform_pcd is 0.0126922
+t_compute_flow is 19.1425
+t_compute_step is 1.05057
+The inner product between 16 and 19 is 0.00177391
+Transform is 
+     0.99998  1.80777e-05  -0.00253656   -0.0346459
+-4.96698e-05     0.999893   -0.0119491   -0.0183237
+  0.00255355    0.0119488     0.999862      2.15538
+          -0            0           -0            1
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 16 and 20
+num fixed: 13597
+num moving: 14481
+[Cvo ] the init guess for the transformation is 
+    1.00003  0.00220114  0.00361794   0.0338391
+-0.00223824     1.00002   0.0110545  -0.0180442
+-0.00363593  -0.0110618     1.00009    -2.90637
+         -0           0          -0           1
+num_thread: 12
+dist: 9.44903e-06
+cvo # of iterations is 729
+t_transform_pcd is 0.017582
+t_compute_flow is 26.1376
+t_compute_step is 1.4228
+The inner product between 16 and 20 is 0.00176405
+Transform is 
+    1.00003 -0.00145722 -0.00374643  -0.0204225
+ 0.00145068     1.00008 -0.00251766  -0.0366361
+ 0.00370755  0.00251367     1.00015      2.9327
+         -0           0          -0           1
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 16 and 21
+num fixed: 13597
+num moving: 14693
+[Cvo ] the init guess for the transformation is 
+   0.999886  0.00295469  0.00494783  -0.0110927
+ -0.0029276    0.999765 -0.00692592   0.0732587
+-0.00486573  0.00690827     0.99959    -3.70854
+         -0           0          -0           1
+num_thread: 12
+dist: 9.77318e-06
+cvo # of iterations is 638
+t_transform_pcd is 0.0232078
+t_compute_flow is 33.211
+t_compute_step is 1.47952
+The inner product between 16 and 21 is 0.00174446
+Transform is 
+   0.999887   -0.002384 -0.00503035  -0.0121431
+  0.0024043    0.999776  0.00536732  -0.0536415
+ 0.00511997 -0.00538245    0.999599     3.73971
+         -0           0          -0           1
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 16 and 22
+num fixed: 13597
+num moving: 14487
+[Cvo ] the init guess for the transformation is 
+    1.00021  0.00338631   0.0062835  -0.0234614
+-0.00328418     1.00041  -0.0132838    0.124673
+-0.00657547   0.0132698     1.00079    -4.54921
+         -0           0          -0           1
+num_thread: 12
+dist: 9.7439e-06
+cvo # of iterations is 624
+t_transform_pcd is 0.0155313
+t_compute_flow is 23.2585
+t_compute_step is 1.12045
+The inner product between 16 and 22 is 0.00174968
+Transform is 
+    1.00021 -0.00321508 -0.00634675 -0.00294229
+ 0.00328436     1.00046  0.00834332  -0.0668977
+ 0.00607211 -0.00835806     1.00085     4.52217
+         -0           0          -0           1
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 16 and 23
+num fixed: 13597
+num moving: 14399
+[Cvo ] the init guess for the transformation is 
+   0.999393  0.00412218  0.00760049  -0.0452488
+-0.00408115     0.99872  -0.0113171    0.137792
+-0.00705044   0.0112732    0.997731    -5.29272
+         -0           0          -0           1
+num_thread: 12
+dist: 9.92898e-06
+cvo # of iterations is 728
+t_transform_pcd is 0.0194093
+t_compute_flow is 30.3073
+t_compute_step is 1.58996
+The inner product between 16 and 23 is 0.00174013
+Transform is 
+     0.99939  -0.00520126  -0.00678506 -0.000225912
+  0.00521226     0.998751   0.00749561   -0.0732586
+  0.00734175  -0.00754225     0.997769      5.35523
+          -0            0           -0            1
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 16 and 24
+num fixed: 13597
+num moving: 13896
+[Cvo ] the init guess for the transformation is 
+    1.00132  0.00726236  0.00721956  -0.0462235
+-0.00710674     1.00287 -0.00675728    0.122331
+ -0.0087134  0.00672535     1.00522    -6.21746
+         -0           0          -0    0.999998
+num_thread: 12
+dist: 9.94106e-06
+cvo # of iterations is 1108
+t_transform_pcd is 0.0212705
+t_compute_flow is 32.5776
+t_compute_step is 1.79637
+The inner product between 16 and 24 is 0.00173188
+Transform is 
+    1.00135 -0.00553259 -0.00634411 -0.00697452
+ 0.00566415     1.00289  0.00450444  -0.0705221
+ 0.00488255 -0.00451481     1.00526     6.09077
+         -0           0          -0    0.999998
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 23 and 24
+~~~~~~~~~~~~~~~~~~~~~~~~~
+tf_minus_2: 
+    1.00021 -0.00321508 -0.00634675 -0.00294229
+ 0.00328436     1.00046  0.00834332  -0.0668977
+ 0.00607211 -0.00835806     1.00085     4.52217
+         -0           0          -0           1
+tf_minus_1: 
+     0.99939  -0.00520126  -0.00678506 -0.000225912
+  0.00521226     0.998751   0.00749561   -0.0732586
+  0.00734175  -0.00754225     0.997769      5.35523
+          -0            0           -0            1
+init guess for 23 and 24 is: 
+      1.0008    0.0019907  0.000463848  -0.00831938
+  -0.0019248      1.00171  0.000823151     0.012677
+ -0.00129293 -0.000819382      1.00309    -0.834756
+          -0            0           -0     0.999999
+
+=============================================
+Aligning 23 and 24
+num fixed: 14399
+num moving: 13896
+[Cvo ] the init guess for the transformation is 
+      1.0008    0.0019907  0.000463848  -0.00831938
+  -0.0019248      1.00171  0.000823151     0.012677
+ -0.00129293 -0.000819382      1.00309    -0.834756
+          -0            0           -0     0.999999
+num_thread: 12
+dist: 9.99518e-06
+cvo # of iterations is 310
+t_transform_pcd is 0.00845127
+t_compute_flow is 16.4513
+t_compute_step is 1.00303
+The inner product between 23 and 24 is 0.00179523
+Transform is 
+     1.00081 -0.000371235 -0.000225298    0.0169278
+ 0.000440391      1.00171  -0.00225068   -0.0135301
+-0.000602005   0.00225489      1.00309     0.774531
+          -0            0           -0     0.999999
+
+init_guess = tf_minus_1.inverse()
+
+=============================================
+Aligning 24 and 25
+num fixed: 13896
+num moving: 13326
+[Cvo ] the init guess for the transformation is 
+    0.999195  0.000369797  0.000225253   -0.0170837
+-0.000437937     0.998291   0.00223982    0.0117796
+ 0.000600652  -0.00224388     0.996915    -0.772182
+           0            0           -0            1
+num_thread: 12
+dist: 9.82796e-06
+cvo # of iterations is 451
+t_transform_pcd is 0.00789273
+t_compute_flow is 13.7429
+t_compute_step is 0.880241
+The inner product between 24 and 25 is 0.0018151
+Transform is 
+    0.999192   0.00243568  0.000912162   -0.0102064
+ -0.00250555     0.998286  -0.00323138   -0.0114052
+-9.61098e-05   0.00322617     0.996912     0.886002
+           0            0           -0            1
+
+init_guess = (tf_minus_1 * tf_minus_1_2).inverse()
+
+=============================================
+Aligning 24 and 26
+num fixed: 13896
+num moving: 13372
+[Cvo ] the init guess for the transformation is 
+      1.0024  -0.00526043  -0.00208426    0.0392817
+  0.00547654      1.00511   0.00425559   0.00532694
+-0.000430852    -0.004248       1.0093     -1.00609
+          -0            0           -0     0.999997
+num_thread: 12
+dist: 9.97836e-06
+cvo # of iterations is 35
+t_transform_pcd is 0.000715322
+t_compute_flow is 1.14343
+t_compute_step is 0.0628627
+The inner product between 24 and 26 is 0.0017176
+Transform is 
+     1.00241 -0.000480239   0.00277959   -0.0363429
+ 0.000716612       1.0051  -0.00865345   -0.0143632
+ -0.00524466    0.0086419      1.00926      1.01615
+          -0            0           -0     0.999997
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 25 and 26
+~~~~~~~~~~~~~~~~~~~~~~~~~
+tf_minus_2: 
+     1.00081 -0.000371235 -0.000225298    0.0169278
+ 0.000440391      1.00171  -0.00225068   -0.0135301
+-0.000602005   0.00225489      1.00309     0.774531
+          -0            0           -0     0.999999
+tf_minus_1: 
+    0.999192   0.00243568  0.000912162   -0.0102064
+ -0.00250555     0.998286  -0.00323138   -0.0114052
+-9.61098e-05   0.00322617     0.996912     0.886002
+           0            0           -0            1
+init guess for 25 and 26 is: 
+     1.00161  -0.00281661  -0.00114647    0.0272641
+  0.00295336      1.00342  0.000999547  -0.00242202
+-0.000516864 -0.000985612      1.00619    -0.111805
+          -0            0           -0     0.999998
+
+=============================================
+Aligning 25 and 26
+num fixed: 13326
+num moving: 13372
+[Cvo ] the init guess for the transformation is 
+     1.00161  -0.00281661  -0.00114647    0.0272641
+  0.00295336      1.00342  0.000999547  -0.00242202
+-0.000516864 -0.000985612      1.00619    -0.111805
+          -0            0           -0     0.999998
+num_thread: 12
+dist: 9.96005e-06
+cvo # of iterations is 1002
+t_transform_pcd is 0.0214415
+t_compute_flow is 36.3747
+t_compute_step is 1.89557
+The inner product between 25 and 26 is 0.00173079
+Transform is 
+    1.00158 -0.00324674  0.00580894  -0.0811948
+ 0.00341436      1.0034 -0.00582231  0.00906818
+-0.00742116   0.0058402     1.00616      0.2092
+         -0           0          -0    0.999998
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 25 and 26
+~~~~~~~~~~~~~~~~~~~~~~~~~
+tf_minus_2: 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+tf_minus_1: 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+init guess for 25 and 26 is: 
+ 1 -0  0 -0
+-0  1 -0  0
+ 0 -0  1 -0
+-0  0 -0  1
+
+=============================================
+Aligning 25 and 26
+num fixed: 13326
+num moving: 13372
+[Cvo ] the init guess for the transformation is 
+ 1 -0  0 -0
+-0  1 -0  0
+ 0 -0  1 -0
+-0  0 -0  1
+num_thread: 12
+dist: 9.98308e-06
+cvo # of iterations is 1282
+t_transform_pcd is 0.027051
+t_compute_flow is 43.6874
+t_compute_step is 2.4722
+The inner product between 25 and 26 is 0.00171816
+Transform is 
+   0.999966 -0.00295261  0.00797803   -0.117738
+ 0.00299105    0.999985 -0.00476991  0.00778828
+-0.00796413  0.00479383    0.999958   0.0466897
+         -0           0          -0           1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 25 and 26
+~~~~~~~~~~~~~~~~~~~~~~~~~
+tf_minus_2: 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+tf_minus_1: 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+init guess for 25 and 26 is: 
+ 1 -0  0 -0
+-0  1 -0  0
+ 0 -0  1 -0
+-0  0 -0  1
+
+=============================================
+Aligning 25 and 26
+num fixed: 13326
+num moving: 13372
+[Cvo ] the init guess for the transformation is 
+ 1 -0  0 -0
+-0  1 -0  0
+ 0 -0  1 -0
+-0  0 -0  1
+num_thread: 12
+dist: 9.98308e-06
+cvo # of iterations is 1282
+t_transform_pcd is 0.0235228
+t_compute_flow is 37.8685
+t_compute_step is 2.09977
+The inner product between 25 and 26 is 0.00171816
+Transform is 
+   0.999966 -0.00295261  0.00797803   -0.117738
+ 0.00299105    0.999985 -0.00476991  0.00778828
+-0.00796413  0.00479383    0.999958   0.0466897
+         -0           0          -0           1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 25 and 26
+~~~~~~~~~~~~~~~~~~~~~~~~~
+tf_minus_2: 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+tf_minus_1: 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+init guess for 25 and 26 is: 
+ 1 -0  0 -0
+-0  1 -0  0
+ 0 -0  1 -0
+-0  0 -0  1
+
+=============================================
+Aligning 25 and 26
+num fixed: 13326
+num moving: 13372
+[Cvo ] the init guess for the transformation is 
+ 1 -0  0 -0
+-0  1 -0  0
+ 0 -0  1 -0
+-0  0 -0  1
+num_thread: 12
+
