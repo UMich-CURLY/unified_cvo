@@ -296,7 +296,7 @@ namespace cvo {
     gtsam::Vector3 t_WtoC;
     t_WtoC << 0,0,0;
     gtsam::Vector6 prior_pose_noise;
-    prior_pose_noise << gtsam::Vector3::Constant(0.1), gtsam::Vector3::Constant(0.1);
+    prior_pose_noise << gtsam::Vector3::Constant(0.05), gtsam::Vector3::Constant(0.1);
 
     // prior state and noise
     gtsam::Pose3 prior_state(gtsam::Quaternion(q_WtoC(3), q_WtoC(0), q_WtoC(1), q_WtoC(2)),
@@ -336,7 +336,7 @@ namespace cvo {
     gtsam::Pose3 odom_last_kf_to_new = affine3f_to_pose3(tf_last_keyframe_to_newframe);
     // TODO? use the noise from inner product??
     gtsam::Vector6 prior_pose_noise;
-    prior_pose_noise << gtsam::Vector3::Constant(0.1), gtsam::Vector3::Constant(0.1);
+    prior_pose_noise << gtsam::Vector3::Constant(0.05), gtsam::Vector3::Constant(0.1);
     auto pose_noise = gtsam::noiseModel::Diagonal::Sigmas( prior_pose_noise);
     std::cout<<"optimize the pose graph with gtsam...\n";
     std::cout<<" new frames's tf_WtoNew "<<tf_WtoNew;
@@ -397,7 +397,7 @@ namespace cvo {
         graph_values_results_ = isam2_->calculateEstimate();
         std::cout<<"Optimization finish. error changes from "<<*result_isam2.errorBefore<<" to "<<*result_isam2.errorAfter<<"\n";
       } else if (optimizer_ == FIXED_LAG_SMOOTHER) {
-        std::cout<<"using isam2...\n"<<std::flush;
+        std::cout<<"using Smoother...\n"<<std::flush;
         gtsam::FixedLagSmoother::Result  result_smoother = smoother_->update(factor_graph_, graph_values_new_, timesteps_new_);
         graph_values_results_ = smoother_->calculateEstimate();
         std::cout<<"Optimization finish. Smoother result is  \n";

@@ -141,7 +141,7 @@ namespace semantic_bki {
         ////////// Training /////////////////////////////
         /////////////////////////////////////////////////
         vector<BlockHashKey> test_blocks;
-        std::unordered_map<BlockHashKey, SemanticBKI3f *> bgk_arr;
+        std::unordered_map<BlockHashKey, SemanticBKI3f *> bgk_arr;        
 #ifdef OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
