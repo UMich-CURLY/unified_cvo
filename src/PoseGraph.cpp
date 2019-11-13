@@ -18,7 +18,8 @@ namespace cvo {
 
   using gtsam::symbol_shorthand::X; // Pose3 (x,y,z,r,p,y)
 
-  static std::string traj_file_name = "full_traj.txt";
+  static std::string traj_file_name = "log/full_traj.txt";
+  static std::string odom_factor_file = "log/odom_factor.txt";
   
   PoseGraph::PoseGraph(bool is_f2f,
                        GraphOptimizer optimizer,
@@ -41,6 +42,9 @@ namespace cvo {
     std::ofstream outfile;
     outfile.open(traj_file_name, std::ofstream::out| std::ofstream::trunc  );
     outfile.close();
+    outfile.open(odom_factor_file, std::ofstream::out| std::ofstream::trunc  );
+    outfile.close();
+    
 
     all_frames_since_last_keyframe_ = {};
     
@@ -200,6 +204,22 @@ namespace cvo {
     std::cerr<<"Not implement Error"<<std::endl;
     assert(0);
   }
+
+  void PoseGraph::log_odom_factor(int from, int to, const Aff3f & from_to, float inner_prod) {
+    std::ofstream outfile(odom_factor_file, std::fstream::app);
+    if (outfile.is_open()) {
+
+      Mat44f pose = from_to.matrix();
+      outfile << total_num_keyframes_ <<" "<<from<<" "<<to<<" "<<inner_prod<<" ";
+      outfile << pose(0,0) << " "<<pose(0,1)<<" "<<pose(0,2)<<" "<<pose(0,3)<<" "
+              << pose(1,0) << " "<<pose(1,1)<<" "<<pose(1,2)<<" "<<pose(1,3)<<" "
+              << pose(2,0) << " "<<pose(2,1)<<" "<<pose(2,2)<<" "<<pose(2,3)
+              <<"\n"<<std::flush;
+      outfile.close();
+      
+    }
+    
+  }
   
 
   float PoseGraph::track_new_frame(std::shared_ptr<Frame> new_frame,
@@ -239,11 +259,16 @@ namespace cvo {
       } 
     }
     tracking_relative_transforms_.push_back(new_frame->tracking_pose_from_last_keyframe());
+    log_odom_factor(new_frame->tracking_pose_from_last_keyframe().ref_frame_id(),
+                    new_frame->id,
+                    new_frame->tracking_pose_from_last_keyframe().ref_frame_to_curr_frame(),
+                    new_frame->tracking_pose_from_last_keyframe().cvo_inner_product()
+                    );
     new_frame->set_keyframe(is_keyframe);
     return new_frame->tracking_pose_from_last_keyframe().cvo_inner_product();
   }
   
-  void PoseGraph::add_new_frame(std::shared_ptr<Frame> new_frame) {
+  void PoseGraph::add_new_frame(std::shared_ptr<Frame> new_frame, bool is_from_log) {
     std::cout<<"add_new_frame: id "<<new_frame->id<<std::endl;
     std::cout<<"---- number of points is "<<new_frame->points().num_points()<<std::endl;
     //new_frame->points().write_to_color_pcd(std::to_string(new_frame->id)+".pcd"  );
@@ -312,6 +337,7 @@ namespace cvo {
                                                        prior_state, pose_noise));
     //graph_values_.insert(X(new_frame->id), prior_state);
     graph_values_new_.insert((new_frame->id), prior_state);
+    log_odom_factor(0, 0, Aff3f::Identity(), 1);
     timesteps_new_[new_frame->id] = 0.0;//new_frame->id;
     //key2id_[X(new_frame->id)] = id;
 
@@ -337,12 +363,13 @@ namespace cvo {
 
   }
 
-  int PoseGraph::add_pose_factor_between_two_keyframes(std::shared_ptr<Frame> kf1, std::shared_ptr<Frame> kf2) {
+  int PoseGraph::add_pose_factor_between_two_keyframes(std::shared_ptr<Frame> kf1, std::shared_ptr<Frame> kf2,
+                                                       float prev_inner_prod) {
     std::unique_ptr<CvoPointCloud> map_points_kf1 = kf1->export_points_from_map();
     std::unique_ptr<CvoPointCloud> map_points_kf2 = kf2->export_points_from_map();
 
-    map_points_kf1->write_to_color_pcd("map2map_source.pcd");
-    map_points_kf2->write_to_color_pcd("map2map_target.pcd");
+    //map_points_kf1->write_to_color_pcd("map2map_source.pcd");
+    //map_points_kf2->write_to_color_pcd("map2map_target.pcd");
     int diff_num = std::abs(map_points_kf1->num_points() - map_points_kf2->num_points());
 
     if (diff_num * 1.0 / std::max(map_points_kf1->num_points(), map_points_kf2->num_points() ) > 0.6 || 
@@ -359,7 +386,7 @@ namespace cvo {
       cvo_align_.set_stop_criteria(tracking_eps_2);
       Eigen::Affine3f cvo_result = cvo_align_.get_transform();
       std::cout<<"map2map transform is \n"<<cvo_result.matrix()<<", inner prod is "<<cvo_align_.inner_product()<<std::endl;
-      if (is_tracking_bad(cvo_align_.inner_product() ) == false ) {
+      if ((cvo_align_.inner_product() ) > prev_inner_prod ) {
       // TODO: check cvo align quality
         gtsam::Pose3 tf_slast_kf_to_last_kf = affine3f_to_pose3(cvo_result);
       //factor_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>(X(kf_second_last_id ), X(last_kf_id ),
@@ -369,14 +396,21 @@ namespace cvo {
         auto pose_noise = gtsam::noiseModel::Diagonal::Sigmas( prior_pose_noise);
         factor_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>((kf1->id ), (kf2->id),
                                                              tf_slast_kf_to_last_kf, pose_noise));
+        log_odom_factor(kf1->id, kf2->id, cvo_result, cvo_align_.inner_product());
+        
         return 0;
 
+      } else {
+        static int counter_map2map = 0;
+        map_points_kf1->write_to_txt("map"+std::to_string(kf1->id) +"_source_"+std::to_string(counter_map2map)+".txt");
+        map_points_kf2->write_to_txt("map"+std::to_string(kf2->id) +"_target_"+std::to_string(counter_map2map)+".txt");
+        counter_map2map++;
       }
     }
     return -1;
   }
   
-  void PoseGraph::pose_graph_optimize(std::shared_ptr<Frame> new_frame) {
+  void PoseGraph::pose_graph_optimize(std::shared_ptr<Frame> new_frame, bool is_from_log) {
     printf("assert(tracking_relative_transforms_.size() > 1)\n");
     assert(tracking_relative_transforms_.size() > 1);
     
@@ -418,8 +452,10 @@ namespace cvo {
       for (auto it = keyframes_.begin(); it != keyframes_.end(); it++) {
         auto kf = *it;
         if (  std::abs(kf->id-last_kf_id) <= 1 ) continue;
-        if (  (check_relative_pose_quality(kf, last_kf)) > 0.05  ) {
-          if (add_pose_factor_between_two_keyframes(kf, last_kf) == 0)
+        float prev_inner_prod = 0;
+        if (  (prev_inner_prod = check_relative_pose_quality(kf, last_kf)) > 0.05  ) {
+
+          if (  add_pose_factor_between_two_keyframes(kf, last_kf, prev_inner_prod) == 0)
             std::cout<<"add  map2map edge between "<<kf->id<<" and "<<last_kf->id<<"\n";
         }
       }
@@ -481,10 +517,10 @@ namespace cvo {
         
         auto ref_id = tracking_relative_transforms_[i].ref_frame_id();
         Aff3f kf_pose;
-        if (id2keyframe_.find(ref_id) != id2keyframe_.end()) {
-          kf_pose = id2keyframe_[ref_id]->pose_in_graph();
-          pose = kf_pose.matrix();
-        } else if (ref_id == 0) {
+        //if (id2keyframe_.find(ref_id) != id2keyframe_.end()) {
+        //  kf_pose = id2keyframe_[ref_id]->pose_in_graph();
+        //  pose = kf_pose.matrix();
+        if (ref_id == 0) {
           
           kf_pose = tracking_relative_transforms_[i].ref_frame_to_curr_frame();
           pose = kf_pose.matrix();

@@ -21,7 +21,7 @@ namespace cvo{
     if ( u < 2 || u > w -3 || v < 2 || v > h-50 )
       return false;
 
-    if (xyz.norm() > 150)
+    if (xyz.norm() > 100)
       return false;
 
     return true;
@@ -265,7 +265,24 @@ namespace cvo{
   }
 
   void CvoPointCloud::write_to_txt(const std::string & name) const {
-    assert(0);
+    std::ofstream outfile(name);
+    if (outfile.is_open()) {
+      outfile << num_points_<<" "<<num_classes_<<"\n";
+      for (int i = 0; i < num_points_; i++) {
+        outfile << positions_[i](0)<<" "<<positions_[i](1) <<" "<<positions_[i](2)<<std::endl;
+        for (int j = 0; j < 5; j++) {
+          outfile << features_(i, j)<<" ";
+        }
+        if (num_classes_)
+          for (int j = 0; j < num_classes_; j++) {
+            outfile << labels_(i, j)<<" ";
+          }
+        outfile << "\n";
+        
+      }
+      outfile.close();
+
+    }
     
   }
 

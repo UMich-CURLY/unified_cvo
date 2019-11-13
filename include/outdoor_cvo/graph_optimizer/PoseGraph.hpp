@@ -40,7 +40,7 @@ namespace cvo {
     ~PoseGraph();
 
     // cvo_align and keyframe 
-    void add_new_frame(std::shared_ptr<Frame> new_frame);
+    void add_new_frame(std::shared_ptr<Frame> new_frame, bool is_from_log=false);
     
     Eigen::Affine3f compute_frame_pose_in_graph(std::shared_ptr<Frame> frame);
 
@@ -49,15 +49,17 @@ namespace cvo {
     
   private:
 
+    // trackers
     RelativePose track_from_last_frame(std::shared_ptr<Frame> new_frame) ;
     RelativePose track_from_last_keyframe(std::shared_ptr<Frame> new_frame) ;
     RelativePose tracking_from_last_keyframe_map(std::shared_ptr<Frame> new_frame) ;
     bool is_tracking_bad(float inner_product) const;
     float check_relative_pose_quality(std::shared_ptr<Frame> kf1, std::shared_ptr<Frame> kf2);
-    int add_pose_factor_between_two_keyframes(std::shared_ptr<Frame> kf1, std::shared_ptr<Frame> kf2);
+    int add_pose_factor_between_two_keyframes(std::shared_ptr<Frame> kf1, std::shared_ptr<Frame> kf2, float prev_inner_prod=0);
     float track_new_frame(std::shared_ptr<Frame> new_frame,
                            // output
                            bool & is_keyframe);
+    float track_new_frame_from_log();
     bool decide_new_keyframe(std::shared_ptr<Frame> new_frame,
                              const Aff3f & pose_from_last_keyframe,
                              float & inner_product_from_kf);
@@ -70,11 +72,17 @@ namespace cvo {
                                                              ) ;
     
     // gtsam pose graph optimization. called by add_new_frame
-    void pose_graph_optimize(std::shared_ptr<Frame> new_frame);
+    void pose_graph_optimize(std::shared_ptr<Frame> new_frame, bool is_from_log=false);
     void init_pose_graph(std::shared_ptr<Frame> new_frame);
     void update_optimized_poses_to_frames();
     void window_marginalize();
 
+
+    // logger
+    // format: total_kf_num from  to innn  timestep  pose(0:12)
+    void log_odom_factor(int from, int to, const Aff3f & from_to, float inner_prod);
+    
+    
     // tracking data
     std::vector<std::shared_ptr<Frame>> all_frames_since_last_keyframe_;
     std::queue<std::shared_ptr<Frame>> last_two_frames_;
@@ -89,8 +97,6 @@ namespace cvo {
     std::vector<RelativePose> tracking_relative_transforms_;
     // recording keyframes ids, and their poses
 
-
-    
 
     // factor graph
     GraphOptimizer optimizer_;
