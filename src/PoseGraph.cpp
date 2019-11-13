@@ -403,8 +403,8 @@ namespace cvo {
 
       } else {
         static int counter_map2map = 0;
-        map_points_kf1->write_to_txt("map"+std::to_string(kf1->id) +"_source_"+std::to_string(counter_map2map)+".txt");
-        map_points_kf2->write_to_txt("map"+std::to_string(kf2->id) +"_target_"+std::to_string(counter_map2map)+".txt");
+        map_points_kf1->write_to_txt("log/cvo_pointcloud/" + std::to_string(counter_map2map) + "_"+std::to_string(kf1->id) +".txt");
+        map_points_kf2->write_to_txt("log/cvo_pointcloud/" + std::to_string(counter_map2map) + "_"+std::to_string(kf2->id) +".txt");
         counter_map2map++;
       }
     }

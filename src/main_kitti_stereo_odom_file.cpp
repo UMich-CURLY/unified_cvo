@@ -91,7 +91,7 @@ int main(int argc, char ** argv) {
     while (!infile.eof()) {
       int from_id, to_id;
       //      int this_kf_id ;
-      Aff3f relative_pose;
+      Aff3f relative_pose = Aff3f::Identity();
       float ip; 
       auto & m = relative_pose.matrix();
       infile >> latest_num_keyframes_ >> from_id >> to_id >> ip;

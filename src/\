@@ -1,0 +1,43 @@
+#include <map>
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <boost/filesystem.hpp>
+
+//#include "utils/data_type.hpp"
+
+using namespace boost::filesystem;
+
+int main (int argc, char ** argv) {
+  
+  std::cout<<"folder: "<<argv[1]<<std::endl<<std::flush;
+  std::vector<std::string> files;
+  path folder(argv[1]);
+  for (auto &p : directory_iterator(folder)) {
+    if (is_regular_file(p.path())) {
+      std::string curr_file = p.path().string();
+      files.push_back(std::string(argv[1]) + "/" + curr_file);
+    }
+  }
+  std::cout<<"Read "<<files.size()<<" files \n"<<std::flush;
+  std::sort(files.begin(), files.end());
+
+  for (int i =0; i < files.size() ; i+=2) {
+    std::string f1 = files[i].substr(0, files[i].size()-4);
+    std::string f2 = files[i+1].substr(0, files[i+1].size()-4);
+
+    size_t id1_pos = 1 + f1.find("_");
+    size_t id2_pos = 1 + f2.find("_");
+
+    int id1 = std::stoi(f1.substr(id1_pos, f1.size() - id1_pos ));
+    int id2 = std::stoi(f2.substr(id2_pos, f2.size() - id1_pos ));
+
+    std::cout<<" processing frame "<<id1<<" to "<<id2<<std::endl;
+  }
+  
+  return 0;
+  
+}
