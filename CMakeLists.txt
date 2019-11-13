@@ -110,7 +110,8 @@ target_link_libraries(cvo_kitti_color_stereo cvo  ${OpenCV_LIBS}  )
 
 add_executable(cvo_kitti_stereo_semantic ${PROJECT_SOURCE_DIR}/src/main_kitti_stereo_semantic.cpp )
 target_link_libraries(cvo_kitti_stereo_semantic cvo  ${OpenCV_LIBS} )
-
+add_executable(cvo_kitti_stereo_odom_file ${PROJECT_SOURCE_DIR}/src/main_kitti_stereo_odom_file.cpp )
+target_link_libraries(cvo_kitti_stereo_odom_file cvo  ${OpenCV_LIBS} gtsam gtsam_unstable)
 
 add_executable(cvo_align ${PROJECT_SOURCE_DIR}/src/main_cvo_align.cpp )
 target_link_libraries(cvo_align cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})

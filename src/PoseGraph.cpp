@@ -267,8 +267,9 @@ namespace cvo {
     new_frame->set_keyframe(is_keyframe);
     return new_frame->tracking_pose_from_last_keyframe().cvo_inner_product();
   }
+
   
-  void PoseGraph::add_new_frame(std::shared_ptr<Frame> new_frame, bool is_from_log) {
+  void PoseGraph::add_new_frame(std::shared_ptr<Frame> new_frame) {
     std::cout<<"add_new_frame: id "<<new_frame->id<<std::endl;
     std::cout<<"---- number of points is "<<new_frame->points().num_points()<<std::endl;
     //new_frame->points().write_to_color_pcd(std::to_string(new_frame->id)+".pcd"  );

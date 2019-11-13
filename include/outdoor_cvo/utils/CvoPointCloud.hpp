@@ -34,11 +34,9 @@ namespace cvo {
                   int num_semantic_class);
 
     CvoPointCloud();
-    CvoPointCloud(const RawImage & left_image,
-                  const cv::Mat & right_image,
-                  const Calibration &calib,
-                  int num_semantic_class,
-                  const cv::Mat & semantic_left_img) {assert(0);}
+
+    CvoPointCloud(const std::string & filename);
+    
     ~CvoPointCloud();
 
     int read_cvo_pointcloud_from_file(const std::string & filename);

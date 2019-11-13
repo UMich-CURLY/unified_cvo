@@ -40,7 +40,7 @@ namespace cvo {
     ~PoseGraph();
 
     // cvo_align and keyframe 
-    void add_new_frame(std::shared_ptr<Frame> new_frame, bool is_from_log=false);
+    void add_new_frame(std::shared_ptr<Frame> new_frame);
     
     Eigen::Affine3f compute_frame_pose_in_graph(std::shared_ptr<Frame> frame);
 

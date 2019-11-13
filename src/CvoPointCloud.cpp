@@ -46,6 +46,37 @@ namespace cvo{
     return result_cv;
   }
 
+  CvoPointCloud::CvoPointCloud(const std::string & filename) {
+    std::ifstream infile(filename);
+    if (infile.is_open()) {
+      infile >> num_points_ >> num_classes_;
+      positions_.resize(num_points_);
+      features_.resize(num_points_, 5);
+      labels_.resize(num_points_, num_classes_);
+
+      for (int i =0; i < num_points_; i++) {
+        Vec3f pos;
+        Vec5f feature;
+        VecXf label(num_classes_);
+        infile >> pos(0) >> pos(1) >> pos(2);
+        for (int j = 0 ; j < 5; j++)
+          infile >> feature(j);
+        for (int j = 0; j < num_classes_; j++)
+          infile >> label(j);
+        positions_[i] = pos.transpose();
+        features_.row(i) = feature.transpose();
+        labels_.row(i) = label.transpose();
+      }
+      
+      infile.close();
+    } else {
+      printf("empty CvoPointCloud file!\n");
+      assert(0);
+      
+    }
+    
+  }
+  
   CvoPointCloud::CvoPointCloud(const RawImage & left_image,
                                const cv::Mat & right_image,
                                const Calibration & calib ) {
@@ -285,6 +316,7 @@ namespace cvo{
     }
     
   }
+  
 
   
   void CvoPointCloud::transform(const Eigen::Matrix4f& pose,
