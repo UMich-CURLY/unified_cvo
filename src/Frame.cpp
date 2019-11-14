@@ -33,6 +33,7 @@ namespace cvo {
 
     Eigen::Affine3f eye = Eigen::Affine3f::Identity();
     tracking_pose_from_last_keyframe_.set_relative_transform(ind, eye, 1.0 );
+
   }
 
 
@@ -41,7 +42,8 @@ namespace cvo {
                const cv::Mat & right_image,
                int num_classes,
                const std::vector<float> & semantics,
-               const Calibration & calib)
+               const Calibration & calib,
+               float local_map_res)
     : id(ind) ,
       h(left_image.rows),
       w(left_image.cols),
@@ -50,7 +52,8 @@ namespace cvo {
       points_(raw_image_, right_image, calib),
       is_keyframe_(false),
       tracking_pose_from_last_keyframe_(ind),
-      local_map_(nullptr) {
+      local_map_(nullptr),
+      map_resolution_(local_map_res){
       //is_map_centroids_latest_(false),
       //map_centroids_(nullptr){
     pose_in_graph_.setIdentity();
@@ -64,7 +67,9 @@ namespace cvo {
   }
 
   void Frame::construct_map() {
-    local_map_.reset(new semantic_bki::SemanticBKIOctoMap(0.1, 1, raw_image_.num_class()+1  ));
+    local_map_.reset(new semantic_bki::SemanticBKIOctoMap(map_resolution_, 1, raw_image_.num_class()+1,
+                                                          1.0, 1.0, 0.0f, 1.0f,
+                                                          0.5, 0.8));
 
     semantic_bki::point3f origin;
     local_map_->insert_pointcloud_csm(&points_, origin, -1, 100, -1);

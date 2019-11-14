@@ -21,12 +21,20 @@ namespace cvo{
     if ( u < 2 || u > w -3 || v < 2 || v > h-50 )
       return false;
 
-    if (xyz.norm() > 100)
+    if (xyz.norm() > 40)
       return false;
 
     return true;
   }
 
+  static bool is_good_point(const Vec3f & xyz ) {
+    if (xyz.norm() > 40)
+      return false;
+
+    return true;
+  }
+
+  
   cv::Vec3f CvoPointCloud::avg_pixel_color_pattern(const cv::Mat & raw_buffer, int u, int v, int w){
     cv::Vec3f result_cv;
     result_cv[0] = result_cv[1] = result_cv[2] = 0;
@@ -47,14 +55,14 @@ namespace cvo{
   }
 
   CvoPointCloud::CvoPointCloud(const std::string & filename) {
-    std::ifstream infile(filename);
+ 
+    std::ifstream infile;
+    int total_num_points = 0;
+    num_points_ = 0;
+    infile.open(filename);
     if (infile.is_open()) {
-      infile >> num_points_ >> num_classes_;
-      positions_.resize(num_points_);
-      features_.resize(num_points_, 5);
-      labels_.resize(num_points_, num_classes_);
-
-      for (int i =0; i < num_points_; i++) {
+      infile >> total_num_points >> num_classes_;
+      for (int i =0; i < total_num_points ; i++) {
         Vec3f pos;
         Vec5f feature;
         VecXf label(num_classes_);
@@ -63,9 +71,36 @@ namespace cvo{
           infile >> feature(j);
         for (int j = 0; j < num_classes_; j++)
           infile >> label(j);
-        positions_[i] = pos.transpose();
-        features_.row(i) = feature.transpose();
-        labels_.row(i) = label.transpose();
+        if (is_good_point(pos))
+          num_points_++;
+      }
+      
+      infile.close();
+    } 
+   
+    infile.open(filename);
+    int good_point_ind = 0;
+    if (infile.is_open()) {
+      infile >> total_num_points >> num_classes_;
+      positions_.resize(num_points_);
+      features_.resize(num_points_, 5);
+      labels_.resize(num_points_, num_classes_);
+
+      for (int i =0; i < total_num_points ; i++) {
+        Vec3f pos;
+        Vec5f feature;
+        VecXf label(num_classes_);
+        infile >> pos(0) >> pos(1) >> pos(2);
+        for (int j = 0 ; j < 5; j++)
+          infile >> feature(j);
+        for (int j = 0; j < num_classes_; j++)
+          infile >> label(j);
+        if (is_good_point(pos)) {
+          positions_[ good_point_ind] = pos.transpose();
+          features_.row(good_point_ind ) = feature.transpose();
+          labels_.row(good_point_ind ) = label.transpose();
+          good_point_ind ++;
+        }
       }
       
       infile.close();

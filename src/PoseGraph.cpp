@@ -99,7 +99,7 @@ namespace cvo {
   }
 
   bool PoseGraph::is_tracking_bad(float inner_product) const {
-    return inner_product < 0.15;
+    return inner_product < 3.60;
     
   }
   
@@ -151,9 +151,9 @@ namespace cvo {
 
     int align_ret = cvo_align_.align();
     Aff3f track_result = cvo_align_.get_transform();
-    float inner_prod = cvo_align_.inner_product();
+    float inner_prod = cvo_align_.inner_product(last_frame_points, curr_points, track_result);
     std::cout<<"Cvo Align Result between "<<ref_frame_id<<" and "<<new_frame->id
-             <<",inner product "<<cvo_align_.inner_product() <<", transformation is \n" <<track_result.matrix()<<"\n";
+             <<",inner product "<<inner_prod <<", transformation is \n" <<track_result.matrix()<<"\n";
       
     if (align_ret == 0)
       tracking_pose.set_relative_transform(last_frame->id, track_result, inner_prod);
@@ -186,9 +186,9 @@ namespace cvo {
     
     int align_ret = cvo_align_.align();
     Aff3f track_result = cvo_align_.get_transform();
-    float inner_prod = cvo_align_.inner_product();
+    float inner_prod = cvo_align_.inner_product(last_kf_points, curr_points, track_result);
     std::cout<<"Cvo Align Result between "<<ref_frame_id<<" and "<<new_frame->id
-             <<",inner product "<<cvo_align_.inner_product() <<", transformation is \n" <<track_result.matrix()<<"\n";
+             <<",inner product "<< inner_prod <<", transformation is \n" <<track_result.matrix()<<"\n";
 
     RelativePose tracking_pose(new_frame->id);
     if (align_ret == 0)
@@ -369,7 +369,8 @@ namespace cvo {
     std::unique_ptr<CvoPointCloud> map_points_kf1 = kf1->export_points_from_map();
     std::unique_ptr<CvoPointCloud> map_points_kf2 = kf2->export_points_from_map();
 
-    //map_points_kf1->write_to_color_pcd("map2map_source.pcd");
+
+    map_points_kf1->write_to_color_pcd("map2map_source.pcd");
     //map_points_kf2->write_to_color_pcd("map2map_target.pcd");
     int diff_num = std::abs(map_points_kf1->num_points() - map_points_kf2->num_points());
 
@@ -377,27 +378,33 @@ namespace cvo {
         ( is_f2f_ && std::abs(kf2->id - kf1->id) == 1  ) ) {
       std::cout<<"the number of points in kf "<<kf1->id<<" and kf "<<kf2->id<<" differ too much: "<< map_points_kf1->num_points()<<" vs "<<map_points_kf2->num_points()<< ", or perhaps they are adjacent.  Ignore this constrains\n";
     } else {
+      cvo cvo_align_m2m("cvo_param_map2map.txt");
+      Aff3f init_guess_inv = kf1->pose_in_graph().inverse() * kf2->pose_in_graph();
+      init_guess_inv(2,3) -= 0.2; // add a disturbance to the init guess
       
-      Eigen::Affine3f init_guess = (kf1->pose_in_graph().inverse() * kf2->pose_in_graph()).inverse();
-      cvo_align_.set_pcd(*map_points_kf1, *map_points_kf2,
-                         init_guess, true);
-      float tracking_eps_2 = cvo_align_.get_stop_criteria();
-      cvo_align_.set_stop_criteria(tracking_eps_2*2);
-      cvo_align_.align();
-      cvo_align_.set_stop_criteria(tracking_eps_2);
-      Eigen::Affine3f cvo_result = cvo_align_.get_transform();
-      std::cout<<"map2map transform is \n"<<cvo_result.matrix()<<", inner prod is "<<cvo_align_.inner_product()<<std::endl;
-      if ((cvo_align_.inner_product() ) > prev_inner_prod ) {
+      Eigen::Affine3f init_guess = init_guess_inv.inverse();
+
+      
+      cvo_align_m2m.set_pcd(*map_points_kf1, *map_points_kf2,
+                            init_guess, true);
+      //float tracking_eps_2 = cvo_align_.get_stop_criteria();
+      //cvo_align_m2m.set_stop_criteria(tracking_eps_2*2);
+      cvo_align_m2m.align();
+      //cvo_align_m2m.set_stop_criteria(tracking_eps_2);
+      Eigen::Affine3f cvo_result = cvo_align_m2m.get_transform();
+      float inner_prod = cvo_align_m2m.inner_product(*map_points_kf1, *map_points_kf2, cvo_result);
+      std::cout<<"map2map transform is \n"<<cvo_result.matrix()<<", inner prod is "<<inner_prod <<std::endl;
+      if (inner_prod > prev_inner_prod || inner_prod > 1.5 ) {
       // TODO: check cvo align quality
         gtsam::Pose3 tf_slast_kf_to_last_kf = affine3f_to_pose3(cvo_result);
       //factor_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>(X(kf_second_last_id ), X(last_kf_id ),
       //                                                     tf_slast_kf_to_last_kf, pose_noise));
         gtsam::Vector6 prior_pose_noise;
-        prior_pose_noise << gtsam::Vector3::Constant(0.1), gtsam::Vector3::Constant(0.2);
+        prior_pose_noise << gtsam::Vector3::Constant(0.25), gtsam::Vector3::Constant(0.1);
         auto pose_noise = gtsam::noiseModel::Diagonal::Sigmas( prior_pose_noise);
         factor_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>((kf1->id ), (kf2->id),
                                                              tf_slast_kf_to_last_kf, pose_noise));
-        log_odom_factor(kf1->id, kf2->id, cvo_result, cvo_align_.inner_product());
+        log_odom_factor(kf1->id, kf2->id, cvo_result, inner_prod);
         
         return 0;
 
@@ -431,7 +438,7 @@ namespace cvo {
     gtsam::Pose3 odom_last_kf_to_new = affine3f_to_pose3(tf_last_keyframe_to_newframe);
     // TODO? use the noise from inner product??
     gtsam::Vector6 prior_pose_noise;
-    prior_pose_noise << gtsam::Vector3::Constant(0.1), gtsam::Vector3::Constant(0.1);
+    prior_pose_noise << gtsam::Vector3::Constant(0.25), gtsam::Vector3::Constant(0.1);
     auto pose_noise = gtsam::noiseModel::Diagonal::Sigmas( prior_pose_noise);
     std::cout<<"optimize the pose graph with gtsam...\n";
     std::cout<<" new frames's tf_WtoNew "<<tf_WtoNew;
@@ -454,7 +461,7 @@ namespace cvo {
         auto kf = *it;
         if (  std::abs(kf->id-last_kf_id) <= 1 ) continue;
         float prev_inner_prod = 0;
-        if (  (prev_inner_prod = check_relative_pose_quality(kf, last_kf)) > 0.05  ) {
+        if (  (prev_inner_prod = check_relative_pose_quality(kf, last_kf)) > 0.9 ) {
 
           if (  add_pose_factor_between_two_keyframes(kf, last_kf, prev_inner_prod) == 0)
             std::cout<<"add  map2map edge between "<<kf->id<<" and "<<last_kf->id<<"\n";

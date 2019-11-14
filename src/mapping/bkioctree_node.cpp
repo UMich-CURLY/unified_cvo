@@ -69,7 +69,12 @@ namespace semantic_bki {
 
       if (semantics == 0)
         state = State::FREE;
-      else
+      else {
         state = State::OCCUPIED;
+        float p = 1 - probs[0];
+        state = p > Semantics::occupied_thresh ? State::OCCUPIED : (p < Semantics::free_thresh ? State::FREE : State::UNKNOWN);
+      }
+      //else
+      //  state = State::OCCUPIED;
     }
 }

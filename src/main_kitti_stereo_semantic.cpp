@@ -21,15 +21,16 @@ int main(int argc, char ** argv) {
 
   int num_class = std::stoi(argv[3]);
 
-  int starting_frame = std::stoi(argv[4]);
-  kitti.set_start_index(starting_frame);
-  for (int i = starting_frame; i < total_iters; i++) {
+  float map_res = std::stof(argv[4]);
+  
+  
+  for (int i = 0; i < total_iters; i++) {
     cv::Mat left, right;
     std::vector<float> semantics;
     if (kitti.read_next_stereo(left, right, num_class, semantics ) == 0) {
       std::cout<<"\n====================================================\n";
       std::cout<<"[main] construct new frame "<<i<<"\n"<<std::flush;
-      std::shared_ptr<cvo::Frame> new_frame(new cvo::Frame(i, left, right, num_class, semantics, calib ));
+      std::shared_ptr<cvo::Frame> new_frame(new cvo::Frame(i, left, right, num_class, semantics, calib, map_res ));
       pose_graph.add_new_frame(new_frame);
     } else {
       std::cout<<" read image fails\n";

@@ -10,6 +10,7 @@ namespace cvo {
 
   class RawImage {
   public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     RawImage(const cv::Mat & left_image);
     RawImage(const cv::Mat & left_image, int num_classes, const std::vector<float> & semantic);
 

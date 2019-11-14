@@ -28,7 +28,8 @@ namespace cvo {
           const cv::Mat & right_image,
           int num_classes,
           const std::vector<float> & left_semantics,
-          const Calibration & calib);
+          const Calibration & calib,
+          float local_map_res=0.1);
     
     
     ~Frame();
@@ -85,6 +86,7 @@ namespace cvo {
 
     // nullptr for non-keyframes.
     std::unique_ptr<semantic_bki::SemanticBKIOctoMap> local_map_;
+    float map_resolution_;
     //    bool is_map_centroids_latest_;
     //std::unique_ptr<CvoPointCloud> map_centroids_;
   };
