@@ -33,7 +33,7 @@ void read_odom_file(const std::string& fname,
 
 int main (int argc, char ** argv) {
 
-  cvo::cvo cvo_align; 
+
 
   std::string odom_file(argv[2]);
   std::vector<Aff3f, Eigen::aligned_allocator<Aff3f>>  poses;
@@ -63,18 +63,32 @@ int main (int argc, char ** argv) {
     int id1 = std::stoi(f1.substr(id1_pos, f1.size() - id1_pos ));
     int id2 = std::stoi(f2.substr(id2_pos, f2.size() - id1_pos ));
 
+    Aff3f id1_to_id2_true = poses[id1].inverse() * poses[id2];
+    id1_to_id2_true.matrix()(2,3) -= 0.2;
     Aff3f id1_to_id2 = (poses[id1].inverse() * poses[id2]).inverse();
 
     CvoPointCloud p1(files[i]);
     CvoPointCloud p2 (files[i+1]);
-
-    std::cout<<" processing frame "<<id1<<" to "<<id2<<",init guess's inner product is \n"<<cvo_align.inner_product(p1, p2, id1_to_id2.inverse())<<std::endl;
-
-    cvo_align.set_pcd(p1, p2, id1_to_id2, true);
+    if (p1.num_points() < 7000 && p2.num_points() < 7000)
+      continue;
+    std::cout<<"====================================================\n";
+    cvo::cvo cvo_align("cvo_param_map2map.txt");
+    std::cout<<" processing frame "<<id1<<" to "<<id2<<",init guess's inner product is \n"<<cvo_align.inner_product(p1, p2, id1_to_id2 .inverse())<<std::endl;
+    std::cout<<"Init guess is \n"<<(poses[id1].inverse() * poses[id2]).matrix()<<std::endl;
+    cvo_align.set_pcd(p1, p2, id1_to_id2_true.inverse(), true);
     cvo_align.align();
     
-    std::cout<<" processing frame "<<id1<<" to "<<id2<<", inner product is "<<cvo_align.inner_product()<<std::endl;
+    std::cout<<" processing frame "<<id1<<" to "<<id2<<", inner product is "<<cvo_align.inner_product(p1, p2, cvo_align.get_transform())<<std::endl;
     std::cout<<cvo_align.get_transform().matrix()<<std::endl;
+
+    CvoPointCloud target_transformed, target_old;
+    CvoPointCloud::transform(cvo_align.get_transform().matrix(), p2, target_transformed);
+    CvoPointCloud::transform(id1_to_id2.inverse().matrix(), p2, target_old);
+    p1.write_to_color_pcd(std::to_string(i)+"_source.pcd");
+    target_transformed.write_to_color_pcd(std::to_string(i)+"_target_new.pcd");
+    target_transformed.write_to_color_pcd(std::to_string(i)+"_target_old.pcd");
+    
+    //    break;
   }
   
   return 0;

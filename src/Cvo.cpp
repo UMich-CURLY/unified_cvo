@@ -24,7 +24,7 @@ namespace cvo{
 
   static bool is_logging = false;
 
-  cvo::cvo():
+  cvo::cvo(const std::string & param_file):
     // initialize parameters
     init(false),           // initialization indicator
     ell_init(0.15*7),             // kernel characteristic length-scale
@@ -58,6 +58,75 @@ namespace cvo{
     accum_tf(Eigen::Affine3f::Identity()),
     accum_tf_vis(Eigen::Affine3f::Identity()),
     debug_print(false)
+  {
+    FILE* ptr = fopen(param_file.c_str(), "r" ); 
+    if (ptr!=NULL) 
+    {
+      std::cout<<"reading cvo params from file\n";
+      fscanf(ptr, "%f\n%f\n%f\n%f\n%lf\n%lf\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n",
+             &ell_init
+             ,& ell
+             ,& ell_min
+             ,& ell_max
+             ,& dl
+             ,& dl_step
+             ,& min_dl_step
+             ,& max_dl_step
+             ,& sigma
+             ,& sp_thres
+             , &c
+             ,& d
+             ,& c_ell
+             ,& c_sigma
+             , &s_ell
+             ,& s_sigma
+             ,& MAX_ITER
+             ,& min_step
+             ,& eps
+             ,& eps_2);
+      fclose(ptr);
+    }
+    if (is_logging) {
+      relative_transform_file = fopen("cvo_relative_transforms.txt", "w");
+      init_guess_file = fopen("cvo_init_guess.txt", "w");
+      assert (relative_transform_file && init_guess_file);
+    }
+  }
+
+  cvo::cvo():
+    // initialize parameters
+    init(false),           // initialization indicator
+    ell_init(0.15*7),             // kernel characteristic length-scale
+    ell(0.1*7),
+    ell_min(0.0391*7),
+    ell_max(0.15*7),
+    dl(0),
+    dl_step(0.3),
+    min_dl_step(0.05),
+    max_dl_step(1),
+
+    //ell(0.15*7),             // kernel characteristic length-scale
+    sigma(0.1),            // kernel signal variance (set as std)      
+    sp_thres(1e-3),        // kernel sparsification threshold      8.315e-3    
+    c(7.0),                // so(3) inner product scale     
+    d(7.0),                // R^3 inner product scale
+    //    color_scale(1.0e-5),   // color space inner product scale
+    //c_ell(200),             // kernel characteristic length-scale for color kernel
+    c_ell(0.5),
+    c_sigma(1),
+    s_ell(0.1),
+    s_sigma(1),
+    MAX_ITER(2000),        // maximum number of iteration
+    min_step(2*1.0e-1),    // minimum integration step
+    eps(5*1.0e-5),         // threshold for stopping the function
+    eps_2(1.0e-5),         // threshold for se3 distance
+    R(Eigen::Matrix3f::Identity(3,3)), // initialize rotation matrix to I
+    T(Eigen::Vector3f::Zero()),        // initialize translation matrix to zeros
+    transform(Eigen::Affine3f::Identity()),    // initialize transformation to I
+    prev_transform(Eigen::Affine3f::Identity()),
+    accum_tf(Eigen::Affine3f::Identity()),
+    accum_tf_vis(Eigen::Affine3f::Identity()),
+    debug_print(true)
   {
     FILE* ptr = fopen("cvo_params.txt", "r" ); 
     if (ptr!=NULL) 
@@ -215,6 +284,92 @@ namespace cvo{
     A_trip_concur_.clear();
     const float s2= sigma*sigma;
     const float l = ell;
+
+    // convert k threshold to d2 threshold (so that we only need to calculate k when needed)
+    const float d2_thres = -2.0*l*l*log(sp_thres/s2);
+    if (debug_print ) std::cout<<"l is "<<l<<",d2_thres is "<<d2_thres<<std::endl;
+    const float d2_c_thres = -2.0*c_ell*c_ell*log(sp_thres/c_sigma/c_sigma);
+    if (debug_print) std::cout<<"d2_c_thres is "<<d2_c_thres<<std::endl;
+    
+    /** 
+     * kdtreeeeeeeeeeeeeeeeeeeee
+     **/
+    typedef KDTreeVectorOfVectorsAdaptor<cloud_t, float>  kd_tree_t;
+
+    kd_tree_t mat_index(3 /*dim*/, (*cloud_b_pos), 10 /* max leaf */ );
+    mat_index.index->buildIndex();
+
+    // loop through points
+    tbb::parallel_for(int(0),cloud_a->num_points(),[&](int i){
+    //for(int i=0; i<num_fixed; ++i){
+
+        const float search_radius = d2_thres;
+        std::vector<std::pair<size_t,float>>  ret_matches;
+
+        nanoflann::SearchParams params;
+        //params.sorted = false;
+
+        const size_t nMatches = mat_index.index->radiusSearch(&(*cloud_a_pos)[i](0), search_radius, ret_matches, params);
+
+        Eigen::Matrix<float,Eigen::Dynamic,1> feature_a = cloud_a->features().row(i).transpose();
+
+#ifdef IS_USING_SEMANTICS        
+        Eigen::VectorXf label_a = cloud_a->labels().row(i);
+#endif
+        // for(int j=0; j<num_moving; j++){
+        for(size_t j=0; j<nMatches; ++j){
+          int idx = ret_matches[j].first;
+          float d2 = ret_matches[j].second;
+          // d2 = (x-y)^2
+          float k = 0;
+          float ck = 0;
+          float sk = 1;
+          float d2_color = 0;
+          float d2_semantic = 0;
+          float a = 0;
+          if(d2<d2_thres){
+            Eigen::Matrix<float,Eigen::Dynamic,1> feature_b = cloud_b->features().row(idx).transpose();
+            d2_color = ((feature_a-feature_b).squaredNorm());
+#ifdef IS_USING_SEMANTICS            
+            Eigen::VectorXf label_b = cloud_b->labels().row(idx);
+            d2_semantic = ((label_a-label_b).squaredNorm());
+#endif
+            
+            if(d2_color<d2_c_thres){
+              k = s2*exp(-d2/(2.0*l*l));
+              ck = c_sigma*c_sigma*exp(-d2_color/(2.0*c_ell*c_ell));
+#ifdef IS_USING_SEMANTICS              
+              sk = s_sigma*s_sigma*exp(-d2_semantic/(2.0*s_ell*s_ell));
+#else
+              sk = 1;
+#endif              
+              a = ck*k*sk;
+
+              if (a > sp_thres){
+                A_trip_concur_.push_back(Trip_t(i,idx,a));
+              }
+             
+            
+            }
+          }
+        }
+      });
+
+        //}
+    // form A
+    A_temp.setFromTriplets(A_trip_concur_.begin(), A_trip_concur_.end());
+    A_temp.makeCompressed();
+  }
+
+  
+
+  void cvo::se_kernel_init_ell(const CvoPointCloud* cloud_a, const CvoPointCloud* cloud_b, \
+                               cloud_t* cloud_a_pos, cloud_t* cloud_b_pos, \
+                               Eigen::SparseMatrix<float,Eigen::RowMajor>& A_temp,
+                               tbb::concurrent_vector<Trip_t> & A_trip_concur_)const {
+    A_trip_concur_.clear();
+    const float s2= sigma*sigma;
+    const float l = ell_init;
 
     // convert k threshold to d2 threshold (so that we only need to calculate k when needed)
     const float d2_thres = -2.0*l*l*log(sp_thres/s2);
@@ -631,16 +786,15 @@ namespace cvo{
     std::cout<<"t_transform_pcd is "<<t_transform_pcd.count()<<"\n";
     std::cout<<"t_compute_flow is "<<t_compute_flow.count()<<"\n";
     std::cout<<"t_compute_step is "<<t_compute_step.count()<<"\n"<<std::flush;
+    std::cout<<" final ell is "<<ell<<std::endl;
     prev_transform = transform.matrix();
     // accum_tf.matrix() = transform.matrix().inverse() * accum_tf.matrix();
     accum_tf = accum_tf * transform.matrix();
     accum_tf_vis = accum_tf_vis * transform.matrix();   // accumilate tf for visualization
     update_tf();
 
-    std::cout<<"delete cvo cloud\n"<<std::flush;
     delete cloud_x;
     delete cloud_y;
-    std::cout<<"delete fin\n"<<std::endl<<std::flush;
     if (is_logging) {
       auto & Tmat = transform.matrix();
       fprintf(relative_transform_file , "%.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f\n",
@@ -729,7 +883,7 @@ namespace cvo{
 
   float cvo::inner_product(const CvoPointCloud& source_points,
                                 const CvoPointCloud& target_points,
-                                const Eigen::Affine3f & s2t_frame_transform) {
+                                const Eigen::Affine3f & s2t_frame_transform) const {
     if (source_points.num_points() == 0 || target_points.num_points() == 0) {
       return 0;
       }
@@ -749,10 +903,10 @@ namespace cvo{
     A_trip_concur_.reserve(target_points.num_points() * 20);
     A_mat.resize(source_points.num_points(), target_points.num_points());
     A_mat.setZero();
-    se_kernel(&source_points, &target_points, &fixed_positions, &moving_positions, A_mat, A_trip_concur_  );
-    std::cout<<"num of non-zeros in A: "<<A_mat.nonZeros()<<std::endl;
+    se_kernel_init_ell(&source_points, &target_points, &fixed_positions, &moving_positions, A_mat, A_trip_concur_  );
+    //std::cout<<"num of non-zeros in A: "<<A_mat.nonZeros()<<std::endl;
     // return A_mat.sum()/A_mat.nonZeros();
-    return A_mat.sum()/num_fixed*1e6/num_moving;
+    return A_mat.sum()/fixed_positions.size()*1e6/moving_positions.size() ;
   }
 
 }

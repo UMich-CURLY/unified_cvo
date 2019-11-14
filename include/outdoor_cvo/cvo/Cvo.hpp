@@ -159,6 +159,10 @@ namespace cvo{
                    cloud_t* cloud_a_pos, cloud_t* cloud_b_pos,          \
                    Eigen::SparseMatrix<float,Eigen::RowMajor>& A_temp,
                    tbb::concurrent_vector<Trip_t> & A_trip_concur_) const;
+    void se_kernel_init_ell(const CvoPointCloud* cloud_a, const CvoPointCloud* cloud_b, \
+                   cloud_t* cloud_a_pos, cloud_t* cloud_b_pos,          \
+                   Eigen::SparseMatrix<float,Eigen::RowMajor>& A_temp,
+                   tbb::concurrent_vector<Trip_t> & A_trip_concur_) const;
 
     /**
      * @brief computes the Lie algebra transformation elements
@@ -183,6 +187,7 @@ namespace cvo{
 
     // constructor and destructor
     cvo();
+    cvo(const std::string & name);
     ~cvo();
 
     /**
@@ -214,7 +219,7 @@ namespace cvo{
     // just compute the inner product
     float inner_product(const CvoPointCloud& source_points,
                         const CvoPointCloud& target_points,
-                        const Eigen::Affine3f & source_frame_to_target_frame);
+                        const Eigen::Affine3f & source_frame_to_target_frame) const;
 
 
 
