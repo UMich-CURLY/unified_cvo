@@ -57,7 +57,7 @@ namespace cvo{
     prev_transform(Eigen::Affine3f::Identity()),
     accum_tf(Eigen::Affine3f::Identity()),
     accum_tf_vis(Eigen::Affine3f::Identity()),
-    debug_print(false)
+    debug_print(true)
   {
     FILE* ptr = fopen(param_file.c_str(), "r" ); 
     if (ptr!=NULL) 

@@ -33,7 +33,7 @@ void read_odom_file(const std::string& fname,
 
 int main (int argc, char ** argv) {
 
-
+  float init_shift = std::stof(argv[3]);
 
   std::string odom_file(argv[2]);
   std::vector<Aff3f, Eigen::aligned_allocator<Aff3f>>  poses;
@@ -53,7 +53,7 @@ int main (int argc, char ** argv) {
   std::cout<<"Read "<<files.size()<<" files \n"<<std::flush;
   std::sort(files.begin(), files.end());
   std::sort(fnames.begin(), fnames.end());
-  for (int i =0; i < files.size() ; i+=2) {
+  for (int i = std::stoi(argv[4]); i < files.size() ; i+=2) {
     std::string f1 = fnames[i].substr(0, fnames[i].size()-4);
     std::string f2 = fnames[i+1].substr(0, fnames[i+1].size()-4);
 
@@ -64,7 +64,7 @@ int main (int argc, char ** argv) {
     int id2 = std::stoi(f2.substr(id2_pos, f2.size() - id1_pos ));
 
     Aff3f id1_to_id2_true = poses[id1].inverse() * poses[id2];
-    id1_to_id2_true.matrix()(2,3) -= 0.2;
+    id1_to_id2_true.matrix()(2,3) += init_shift;
     Aff3f id1_to_id2 = (poses[id1].inverse() * poses[id2]).inverse();
 
     CvoPointCloud p1(files[i]);
@@ -72,7 +72,7 @@ int main (int argc, char ** argv) {
     if (p1.num_points() < 7000 && p2.num_points() < 7000)
       continue;
     std::cout<<"====================================================\n";
-    cvo::cvo cvo_align("cvo_param_map2map.txt");
+    cvo::cvo cvo_align("cvo_param_map2map_tune.txt");
     std::cout<<" processing frame "<<id1<<" to "<<id2<<",init guess's inner product is \n"<<cvo_align.inner_product(p1, p2, id1_to_id2 .inverse())<<std::endl;
     std::cout<<"Init guess is \n"<<(poses[id1].inverse() * poses[id2]).matrix()<<std::endl;
     cvo_align.set_pcd(p1, p2, id1_to_id2_true.inverse(), true);
@@ -87,8 +87,7 @@ int main (int argc, char ** argv) {
     p1.write_to_color_pcd(std::to_string(i)+"_source.pcd");
     target_transformed.write_to_color_pcd(std::to_string(i)+"_target_new.pcd");
     target_transformed.write_to_color_pcd(std::to_string(i)+"_target_old.pcd");
-    
-    //    break;
+    break;
   }
   
   return 0;

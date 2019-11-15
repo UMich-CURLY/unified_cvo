@@ -99,7 +99,7 @@ namespace cvo {
   }
 
   bool PoseGraph::is_tracking_bad(float inner_product) const {
-    return inner_product < 3.60;
+    return inner_product < 4.0;
     
   }
   
