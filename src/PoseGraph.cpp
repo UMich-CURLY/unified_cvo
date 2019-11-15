@@ -99,7 +99,7 @@ namespace cvo {
   }
 
   bool PoseGraph::is_tracking_bad(float inner_product) const {
-    return inner_product < 4.0;
+    return inner_product < 3.90;
     
   }
   
@@ -394,13 +394,13 @@ namespace cvo {
       Eigen::Affine3f cvo_result = cvo_align_m2m.get_transform();
       float inner_prod = cvo_align_m2m.inner_product(*map_points_kf1, *map_points_kf2, cvo_result);
       std::cout<<"map2map transform is \n"<<cvo_result.matrix()<<", inner prod is "<<inner_prod <<std::endl;
-      if (inner_prod > prev_inner_prod || inner_prod > 1.5 ) {
+      if (inner_prod > prev_inner_prod && inner_prod > 2.0 ) {
       // TODO: check cvo align quality
         gtsam::Pose3 tf_slast_kf_to_last_kf = affine3f_to_pose3(cvo_result);
       //factor_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>(X(kf_second_last_id ), X(last_kf_id ),
       //                                                     tf_slast_kf_to_last_kf, pose_noise));
         gtsam::Vector6 prior_pose_noise;
-        prior_pose_noise << gtsam::Vector3::Constant(0.25), gtsam::Vector3::Constant(0.1);
+        prior_pose_noise << gtsam::Vector3::Constant(0.3), gtsam::Vector3::Constant(0.1);
         auto pose_noise = gtsam::noiseModel::Diagonal::Sigmas( prior_pose_noise);
         factor_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>((kf1->id ), (kf2->id),
                                                              tf_slast_kf_to_last_kf, pose_noise));
@@ -438,7 +438,7 @@ namespace cvo {
     gtsam::Pose3 odom_last_kf_to_new = affine3f_to_pose3(tf_last_keyframe_to_newframe);
     // TODO? use the noise from inner product??
     gtsam::Vector6 prior_pose_noise;
-    prior_pose_noise << gtsam::Vector3::Constant(0.25), gtsam::Vector3::Constant(0.1);
+    prior_pose_noise << gtsam::Vector3::Constant(0.3), gtsam::Vector3::Constant(0.1);
     auto pose_noise = gtsam::noiseModel::Diagonal::Sigmas( prior_pose_noise);
     std::cout<<"optimize the pose graph with gtsam...\n";
     std::cout<<" new frames's tf_WtoNew "<<tf_WtoNew;
@@ -461,7 +461,7 @@ namespace cvo {
         auto kf = *it;
         if (  std::abs(kf->id-last_kf_id) <= 1 ) continue;
         float prev_inner_prod = 0;
-        if (  (prev_inner_prod = check_relative_pose_quality(kf, last_kf)) > 0.9 ) {
+        if (  (prev_inner_prod = check_relative_pose_quality(kf, last_kf)) > 0.90 ) {
 
           if (  add_pose_factor_between_two_keyframes(kf, last_kf, prev_inner_prod) == 0)
             std::cout<<"add  map2map edge between "<<kf->id<<" and "<<last_kf->id<<"\n";
