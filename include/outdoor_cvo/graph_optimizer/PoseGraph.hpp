@@ -94,7 +94,7 @@ namespace cvo {
 
     // for keyframes:  after marginalization, the pose wrt  the first frame
     // for non-keyframe:  relative to the latest keyframe
-    std::vector<RelativePose> tracking_relative_transforms_;
+    std::vector<RelativePose, Eigen::aligned_allocator<RelativePose>> tracking_relative_transforms_;
     // recording keyframes ids, and their poses
 
 

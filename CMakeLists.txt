@@ -53,6 +53,7 @@ add_definitions(-DOPENMP)
 add_definitions("-DENABLE_SSE")
 set(CMAKE_CXX_FLAGS
 	"${CMAKE_CXX_FLAGS} ${SSE_FLAGS}  -fPIC -march=native"
+	#"${CMAKE_CXX_FLAGS} ${SSE_FLAGS}  -fPIC "
 )
 
 # Sources files

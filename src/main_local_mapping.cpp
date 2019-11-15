@@ -98,9 +98,9 @@ int main(int argc, char *argv[]) {
   double ell = 1.0;
   float prior = 0.0f;
   float var_thresh = 1.0f;
-  double free_thresh = 0.3;
-  double occupied_thresh = 0.7;
-  double resolution = 0.1;
+  double free_thresh = 0.65;
+  double occupied_thresh = 0.9;
+  double resolution = 0.05;
   double free_resolution = 1;
   double ds_resolution = -1;
   double max_range = -1;

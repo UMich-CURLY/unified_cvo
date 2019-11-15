@@ -81,6 +81,12 @@ int main(int argc, char ** argv) {
   relative_poses.push_back(Aff3f::Identity());
   poses.push_back(Aff3f::Identity());
   keyframes.push_back(0);
+
+
+  bool initialized = false;
+  int file_keyframe_id_start = 0;
+  int file_from_id_start = 0;
+  
   std::ifstream infile(odom_file_name);
   if (infile.is_open()) {
     std::string line;
@@ -98,6 +104,14 @@ int main(int argc, char ** argv) {
       infile >> m(0,0) >> m(0,1) >>m(0,2) >> m(0,3)
              >> m(1,0) >> m(1,1) >>m(1,2) >> m(1,3)
              >> m(2,0) >> m(2,1) >>m(2,2) >> m(2,3);
+
+      if (initialized == false) {
+        file_keyframe_id_start = latest_num_keyframes_;
+        file_from_id_start = from_id;
+        total_num_keyframes_ = latest_num_keyframes_;
+        initialized = true;
+      }
+      
       if (from_id == to_id) continue;
       std::cout<<"\n=============================================\n";
       printf("Read num_kf %d, from %d to %d\n", latest_num_keyframes_, from_id, to_id  );
@@ -107,9 +121,9 @@ int main(int argc, char ** argv) {
       if (to_id > newest_id) {
         newest_id = to_id;
         if ( keyframe_ids.find(from_id) != keyframe_ids.end()  ) {
-          poses.push_back(poses[from_id] * relative_pose ); // init pose
+          poses.push_back(poses[from_id - file_from_id_start] * relative_pose ); // init pose
         } else {
-          poses.push_back(poses[ref_ids[from_id]] * relative_poses[from_id] * relative_pose);
+          poses.push_back(poses[ref_ids[from_id - file_from_id_start] - file_from_id_start] * relative_poses[from_id - file_from_id_start ] * relative_pose);
         }
         newest_id = to_id;
         ref_ids.push_back ( from_id);
@@ -141,7 +155,7 @@ int main(int argc, char ** argv) {
           Eigen::Affine3f pose;
           pose.linear() = pose_mat.block(0,0,3,3).cast<float>();
           pose.translation() = pose_mat.block(0,3,3,1).cast<float>();
-          poses[key] = pose;
+          poses[key-file_from_id_start] = pose;
         }
 
         std::cout<<"Add new keyframe "<<new_kf_id<<std::endl;
@@ -150,17 +164,17 @@ int main(int argc, char ** argv) {
         // compute initial pose 
         Aff3f init_pose_new_kf, last_kf_to_new_kf;
         if (last_kf_id == new_kf_id - 1) {
-          init_pose_new_kf = poses[last_kf_id] * relative_poses[new_kf_id];
-          last_kf_to_new_kf = relative_poses[new_kf_id];
+          init_pose_new_kf = poses[last_kf_id-file_from_id_start] * relative_poses[new_kf_id-file_from_id_start];
+          last_kf_to_new_kf = relative_poses[new_kf_id-file_from_id_start];
         } else {
-          init_pose_new_kf = poses[last_kf_id] * relative_poses[new_kf_id-1] * relative_poses[new_kf_id];
-          last_kf_to_new_kf = relative_poses[new_kf_id-1] * relative_poses[new_kf_id];
+          init_pose_new_kf = poses[last_kf_id - file_from_id_start] * relative_poses[new_kf_id-1 - file_from_id_start] * relative_poses[new_kf_id - file_from_id_start];
+          last_kf_to_new_kf = relative_poses[new_kf_id-1-file_from_id_start] * relative_poses[new_kf_id-file_from_id_start];
         }
         std::cout<<"init pose is\n "<<init_pose_new_kf.matrix()<<std::endl;
         factor_graph_.add(build_poes_factor(last_kf_to_new_kf, last_kf_id, new_kf_id, rot_noise, trans_noise ));
         std::cout<<"add between factor from "<<last_kf_id<<" to "<<new_kf_id;
         std::cout<<last_kf_to_new_kf.matrix()<<std::endl;
-        timesteps_new_[new_kf_id] = (double) (total_num_keyframes_ + 1);
+        timesteps_new_[new_kf_id - file_from_id_start] = (double) (total_num_keyframes_ + 1);
         std::cout<<" with new timestep "<<total_num_keyframes_+1<<"\n";
         graph_values_new_.insert(new_kf_id, affine3f_to_pose3( init_pose_new_kf ) );
         keyframe_ids.insert(new_kf_id);
@@ -185,11 +199,11 @@ int main(int argc, char ** argv) {
       // write traj
       for (int i = 0; i < poses.size(); i++) {
         Mat44f m;
-        if (keyframe_ids.find(i) != keyframe_ids.end()) {
+        if (keyframe_ids.find(i+file_from_id_start) != keyframe_ids.end()) {
           m = poses[i].matrix();
         } else {
-          if (keyframe_ids.find(ref_ids[i])!= keyframe_ids.end() ) {
-            m = (poses[ref_ids[i]] * relative_poses[i]).matrix();
+          if (keyframe_ids.find(ref_ids[i+file_from_id_start])!= keyframe_ids.end() ) {
+            m = (poses[ref_ids[i]-file_from_id_start] * relative_poses[i]).matrix();
           }
         }
         outfile << m(0,0) <<" "<< m(0,1) <<" "<< m(0,2)  <<" "<< m(0,3) <<" "
