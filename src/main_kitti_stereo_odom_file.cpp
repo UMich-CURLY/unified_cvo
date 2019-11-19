@@ -50,6 +50,7 @@ int main(int argc, char ** argv) {
   float window_size = std::stof(argv[3]);
   float rot_noise = std::stof(argv[4]);
   float trans_noise = std::stof(argv[5]);
+  float ip_thres = std::stof(argv[6]);
   gtsam::BatchFixedLagSmoother  smoother_( window_size );
   gtsam::NonlinearFactorGraph factor_graph_;
   gtsam::BatchFixedLagSmoother::KeyTimestampMap timesteps_new_;
@@ -129,7 +130,7 @@ int main(int argc, char ** argv) {
         ref_ids.push_back ( from_id);
         relative_poses.push_back( relative_pose);
         std::cout<<"add new frame "<<newest_id<<", total frame size is "<<poses.size()<<std::endl;
-      }
+      tracking github }
 
       // deal with pose graph
       if (latest_num_keyframes_-1  > total_num_keyframes_)  {
@@ -171,7 +172,7 @@ int main(int argc, char ** argv) {
           last_kf_to_new_kf = relative_poses[new_kf_id-1-file_from_id_start] * relative_poses[new_kf_id-file_from_id_start];
         }
         std::cout<<"init pose is\n "<<init_pose_new_kf.matrix()<<std::endl;
-        factor_graph_.add(build_poes_factor(last_kf_to_new_kf, last_kf_id, new_kf_id, rot_noise, trans_noise ));
+        factor_graph_.add(build_poes_factor(last_kf_to_new_kf, last_kf_id, new_kf_id, 0.2, 0.1 ));
         std::cout<<"add between factor from "<<last_kf_id<<" to "<<new_kf_id;
         std::cout<<last_kf_to_new_kf.matrix()<<std::endl;
         timesteps_new_[new_kf_id - file_from_id_start] = (double) (total_num_keyframes_ + 1);
@@ -184,10 +185,12 @@ int main(int argc, char ** argv) {
       } else{
         if (keyframe_ids.find(from_id) != keyframe_ids.end() &&
             keyframe_ids.find(to_id) != keyframe_ids.end()) {
-          factor_graph_.add(build_poes_factor(relative_pose, from_id, to_id, rot_noise, trans_noise ));
+          if (ip > ip_thres ) {
+		factor_graph_.add(build_poes_factor(relative_pose, from_id, to_id, rot_noise, trans_noise));
           std::cout<<"add between factor from "<<from_id<<" to "<<to_id<<std::endl;
           std::cout<<relative_pose.matrix()<<std::endl;
-        }
+	  }
+	  }
       }
     }
 
@@ -199,13 +202,17 @@ int main(int argc, char ** argv) {
       // write traj
       for (int i = 0; i < poses.size(); i++) {
         Mat44f m;
+	bool w = false;
         if (keyframe_ids.find(i+file_from_id_start) != keyframe_ids.end()) {
           m = poses[i].matrix();
+	  w = true;
         } else {
           if (keyframe_ids.find(ref_ids[i+file_from_id_start])!= keyframe_ids.end() ) {
             m = (poses[ref_ids[i]-file_from_id_start] * relative_poses[i]).matrix();
-          }
+            w = true;
+	  }
         }
+	if(w)
         outfile << m(0,0) <<" "<< m(0,1) <<" "<< m(0,2)  <<" "<< m(0,3) <<" "
                 << m(1,0) << " "<< m(1,1) <<" "<< m(1,2) <<" "<< m(1,3) <<" "
                 << m (2,0) << " "<< m(2,1) << " "<< m(2,2) << " "<< m(2,3)<<std::endl;

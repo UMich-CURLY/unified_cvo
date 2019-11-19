@@ -57,7 +57,7 @@ namespace cvo{
     prev_transform(Eigen::Affine3f::Identity()),
     accum_tf(Eigen::Affine3f::Identity()),
     accum_tf_vis(Eigen::Affine3f::Identity()),
-    debug_print(true)
+    debug_print(false)
   {
     FILE* ptr = fopen(param_file.c_str(), "r" ); 
     if (ptr!=NULL) 
@@ -345,6 +345,7 @@ namespace cvo{
 #endif              
               a = ck*k*sk;
 
+              // concrrent access !
               if (a > sp_thres){
                 A_trip_concur_.push_back(Trip_t(i,idx,a));
               }
@@ -541,6 +542,7 @@ namespace cvo{
                                          partial_dl += double((1/ell_3*Axxi*sum_diff_xx_2)(0,0));
 
                                          // sum them up
+                                         // concurrent access
                                          omegav_lock.lock();
                                          double_omega += partial_omega.transpose();
                                          double_v += partial_v.transpose();
@@ -572,6 +574,7 @@ namespace cvo{
                                                     partial_dl += double((1/ell_3*Ayyi*sum_diff_yy_2)(0,0));
 
                                                     omegav_lock.lock();
+                                                    // concurrent access
                                                     dl += partial_dl;
                                                     omegav_lock.unlock();
                                                   });
@@ -657,6 +660,7 @@ namespace cvo{
                                          }
         
                                          // sum them up
+                                         // concurrent access
                                          BCDE_lock.lock();
                                          B+=Bi;
                                          C+=Ci;
