@@ -159,6 +159,7 @@ namespace cvo{
   typedef Eigen::Matrix<double,14,1> Vec14;
 
   typedef std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> ArrayVec3f;
+  typedef std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> ArrayVec3d;
   typedef ArrayVec3f cloud_t;
   typedef Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> MatrixXf_row;
   /*  

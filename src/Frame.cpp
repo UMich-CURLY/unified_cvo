@@ -100,7 +100,7 @@ namespace cvo {
     CvoPointCloud::transform( tf_curr2input,
                               points_from_nonkeyframe,
                               transformed_pc);
-    
+
     local_map_->insert_pointcloud_csm(&transformed_pc,
                                       semantic_bki::point3f(tf_curr2input(0,3),tf_curr2input(1,3),tf_curr2input(2,3)),
                                       -1, 200, -1);

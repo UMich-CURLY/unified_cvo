@@ -1,10 +1,15 @@
 SET(PROJECT_NAME OUTDOOR_CVO)
 
-PROJECT(${PROJECT_NAME})
+PROJECT(${PROJECT_NAME}  LANGUAGES CUDA CXX)
 cmake_minimum_required(VERSION 3.5.1)
 #set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CUDACXX nvcc)
+include(CheckLanguage)
+check_language(CUDA)
 
-add_compile_options(-std=c++17)
+
+add_compile_options(-std=c++14)
 # Release Mode
 set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
@@ -22,6 +27,14 @@ LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(SuiteParse REQUIRED)
 find_package(Sophus REQUIRED)
 message("Sophus dir: ${Sophus_INCLUDE_DIRS}")
+
+# CUDA PACKAGE
+find_package(CUDA REQUIRED)
+set(CUDA_SEPARABLE_COMPILATION ON)
+set(CUDA_PROPAGATE_HOST_FLAGS OFF)
+#set(CUDA_HOST_COMPILER g++)
+#list( APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_61,code=sm_61;")
+
 
 #set(EIGEN_INCLUDE_DIR /usr/include/eigen3)
 find_package(Eigen3 REQUIRED)
@@ -52,13 +65,25 @@ add_definitions(-DOPENMP)
 # flags
 add_definitions("-DENABLE_SSE")
 set(CMAKE_CXX_FLAGS
-	"${CMAKE_CXX_FLAGS} ${SSE_FLAGS}  -fPIC -march=native"
+  #"${CMAKE_CXX_FLAGS} ${SSE_FLAGS} -fPIC -march=native"
+  "${CMAKE_CXX_FLAGS} ${SSE_FLAGS} -march=native"
 	#"${CMAKE_CXX_FLAGS} ${SSE_FLAGS}  -fPIC "
 )
 
+find_package(CUDA)
+SET(CUDA_SEPARABLE_COMPILATION ON)
+#set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++14; -Xcompiler -fPIC; -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -O2; -use_fast_math; --extended-lambda; -gencode arch=compute_61,code=sm_61;)
+#list(APPEND CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS}  "-Xcompiler -std=c++14  -O3 -rdc=true -Wno-deprecated-gpu-targets -lgsl -lgslcblas -lm -use_fast_math"  )
+#list(APPEND CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-ccbin g++-8 --extended-lambda -gencode arch=compute_61,code=sm_61" )
+set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  -ccbin g++-8 --extended-lambda -gencode arch=compute_61,code=sm_61"  )
+foreach(flag IN LISTS "-std=c++14;  -O3; -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -use_fast_math; -fPIC" )
+  add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${flag}>")
+endforeach()
+message("CMAKE_CUDA_FLAGS is ${CMAKE_CUDA_FLAGS}")
+
 # Sources files
 set(CVO_LIB_SOURCE
-  ${PROJECT_SOURCE_DIR}/src/Cvo.cpp
+
   ${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
   ${PROJECT_SOURCE_DIR}/src/Frame.cpp
   ${PROJECT_SOURCE_DIR}/src/KittiHandler.cpp
@@ -72,17 +97,27 @@ set(CVO_LIB_SOURCE
   ${PROJECT_SOURCE_DIR}/src/mapping/bkioctree.cpp
   ${PROJECT_SOURCE_DIR}/src/mapping/point3f.cpp
   ${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
-  ${PROJECT_SOURCE_DIR}/include/outdoor_cvo/cvo/LieGroup.cpp
+
   )
 
 # thirdparty elas
 set(ELAS_LIB_SOURCE
-  ${PROJECT_SOURCE_DIR}/thirdparty/libelas/descriptor.cpp
-  ${PROJECT_SOURCE_DIR}/thirdparty/libelas/elas.cpp
-  ${PROJECT_SOURCE_DIR}/thirdparty/libelas/filter.cpp
-  ${PROJECT_SOURCE_DIR}/thirdparty/libelas/matrix.cpp
-  ${PROJECT_SOURCE_DIR}/thirdparty/libelas/triangle.cpp
+  ${PROJECT_SOURCE_DIR}/thirdparty/libelas/libelas/descriptor.cpp
+  ${PROJECT_SOURCE_DIR}/thirdparty/libelas/libelas/elas.cpp
+  ${PROJECT_SOURCE_DIR}/thirdparty/libelas/libelas/filter.cpp
+  ${PROJECT_SOURCE_DIR}/thirdparty/libelas/libelas/matrix.cpp
+  ${PROJECT_SOURCE_DIR}/thirdparty/libelas/libelas/triangle.cpp
   )
+
+set (CVO_GPU_SOURCE
+  ${PROJECT_SOURCE_DIR}/src/cvo/Cvo.cu
+  )
+
+set (CVO_CPU_SOURCE
+  ${PROJECT_SOURCE_DIR}/src/Cvo.cpp
+  ${PROJECT_SOURCE_DIR}/include/outdoor_cvo/cvo/LieGroup.cpp
+  )
+
 
 include_directories(
   ${PROJECT_SOURCE_DIR}/include/outdoor_cvo/
@@ -95,33 +130,45 @@ include_directories(
   ${Sophus_INCLUDE_DIRS}
   ${GTSAM_INCLUDE_DIR}
   # thirdparty
-  ${PROJECT_SOURCE_DIR}/thirdparty/
+  ${PROJECT_SOURCE_DIR}/thirdparty/libelas/
+  ${PROJECT_SOURCE_DIR}/thirdparty/cugicp/
 ) 
 
 message("CXX_FLAGS are ${CMAKE_CXX_FLAGS}")
-
+message("CUDA_NVCC_FLAGS are ${CUDA_NVCC_FLAGS}")
 # compile main library.
 add_library(elas ${ELAS_LIB_SOURCE})
 
-add_library(cvo ${CVO_LIB_SOURCE})
-target_link_libraries(cvo elas ${Boost_LIBRARIES} ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARIES}  ${OpenCV_LIBS} ${TBB_LIBRARIES} gtsam  gtsam_unstable )
+add_library(cvo_gpu_lib ${CVO_GPU_SOURCE})
+add_library(cvo_cpu_lib ${CVO_CPU_SOURCE})
+
+add_library(cvo_cpu_exec ${CVO_LIB_SOURCE})
+target_link_libraries(cvo_cpu_exec  elas cvo_cpu_lib ${Boost_LIBRARIES} ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARIES}  ${OpenCV_LIBS} ${TBB_LIBRARIES} gtsam  gtsam_unstable )
+
+add_library(cvo_gpu_exec ${CVO_LIB_SOURCE})
+target_link_libraries(cvo_cpu_exec  elas cvo_gpu_lib ${Boost_LIBRARIES} ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARIES}  ${OpenCV_LIBS} ${TBB_LIBRARIES} gtsam  gtsam_unstable )
+
 
 add_executable(cvo_kitti_color_stereo ${PROJECT_SOURCE_DIR}/src/main_kitti_stereo_color.cpp )
-target_link_libraries(cvo_kitti_color_stereo cvo  ${OpenCV_LIBS}  )
+target_link_libraries(cvo_kitti_color_stereo cvo_cpu_exec  ${OpenCV_LIBS}  )
 
 add_executable(cvo_kitti_stereo_semantic ${PROJECT_SOURCE_DIR}/src/main_kitti_stereo_semantic.cpp )
-target_link_libraries(cvo_kitti_stereo_semantic cvo  ${OpenCV_LIBS} )
+target_link_libraries(cvo_kitti_stereo_semantic cvo_cpu_exec  ${OpenCV_LIBS} )
+
 add_executable(cvo_kitti_stereo_odom_file ${PROJECT_SOURCE_DIR}/src/main_kitti_stereo_odom_file.cpp )
-target_link_libraries(cvo_kitti_stereo_odom_file cvo  ${OpenCV_LIBS} gtsam gtsam_unstable)
+target_link_libraries(cvo_kitti_stereo_odom_file cvo_cpu_exec  ${OpenCV_LIBS} gtsam gtsam_unstable)
 
 add_executable(cvo_align ${PROJECT_SOURCE_DIR}/src/main_cvo_align.cpp )
-target_link_libraries(cvo_align cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(cvo_align cvo_cpu_exec boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(cvo_align_gpu ${PROJECT_SOURCE_DIR}/src/main_cvo_gpu_align.cu)
+target_link_libraries(cvo_align_gpu cvo_gpu_exec boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(cvo_f2f ${PROJECT_SOURCE_DIR}/src/main_cvo_align_f2f.cpp )
-target_link_libraries(cvo_f2f cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(cvo_f2f cvo_cpu_exec boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(cvo_map2map ${PROJECT_SOURCE_DIR}/src/main_map2map_batch.cpp)
-target_link_libraries(cvo_map2map cvo boost_system)
+target_link_libraries(cvo_map2map cvo_cpu_exec boost_system)
 
 add_executable(cvo_local_mapping ${PROJECT_SOURCE_DIR}/src/main_local_mapping.cpp )
-target_link_libraries(cvo_local_mapping cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES}  )
+target_link_libraries(cvo_local_mapping cvo_cpu_exec boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES}  )
