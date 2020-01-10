@@ -3,7 +3,7 @@
 ### Dependencies
 *  `SuiteParse`
 * `Sophus 1.0.0`
-* `Eigen3`
+* `Eigen 3.3.90` (The `default` branch)
 * `TBB`
 * `Boost`
 * `pcl`
