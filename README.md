@@ -8,7 +8,7 @@
 * `Eigen 3.3.90` (The `default` branch)
 * `TBB`
 * `Boost`
-* `pcl`
+* `pcl1.9.1`
 * `OpenCV3` or `OpenCV4`
 * `GTSAM`
 
