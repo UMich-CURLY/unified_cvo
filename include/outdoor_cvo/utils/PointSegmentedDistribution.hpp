@@ -28,8 +28,11 @@ namespace pcl {
     //float label_distribution[14];
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW   // make sure our new allocators are aligned
 
-    
+#ifdef __CUDACC__ 
     inline __host__ __device__ PointSegmentedDistribution() {
+#else
+    inline PointSegmentedDistribution() {
+#endif
       this->x = 0;
       this->y = 0;
       this->z = 0;
@@ -52,7 +55,10 @@ namespace pcl {
       memcpy(features, p_init.features, FEATURE_DIMENSIONS * sizeof(float) );
       memcpy(label_distribution, p_init.label_distribution, NUM_CLASSES * sizeof(float) );      
     }*/
-    __host__ __device__ PointSegmentedDistribution(float a, float b, float c) {
+#ifdef __CUDACC__
+    __host__ __device__ 
+#endif
+    PointSegmentedDistribution(float a, float b, float c) {
       this->x = a;
       this->y = b;
       this->z = c;

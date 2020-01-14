@@ -36,7 +36,7 @@ set(CUDA_PROPAGATE_HOST_FLAGS OFF)
 #list( APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_61,code=sm_61;")
 
 
-#set(EIGEN_INCLUDE_DIR /usr/include/eigen3)
+#set(EIGEN_INCLUDE_DIR /usr/local/include/eigen3)
 find_package(Eigen3 REQUIRED)
 find_package(TBB REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread timer chrono)
@@ -75,8 +75,8 @@ SET(CUDA_SEPARABLE_COMPILATION ON)
 #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++14; -Xcompiler -fPIC; -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -O2; -use_fast_math; --extended-lambda; -gencode arch=compute_61,code=sm_61;)
 #list(APPEND CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS}  "-Xcompiler -std=c++14  -O3 -rdc=true -Wno-deprecated-gpu-targets -lgsl -lgslcblas -lm -use_fast_math"  )
 #list(APPEND CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-ccbin g++-8 --extended-lambda -gencode arch=compute_61,code=sm_61" )
-set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  -ccbin g++-8 --extended-lambda -gencode arch=compute_61,code=sm_61"  )
-foreach(flag IN LISTS "-std=c++14;  -O3; -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -use_fast_math; -fPIC" )
+set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --extended-lambda -gencode arch=compute_61,code=sm_61"  )
+foreach(flag IN LISTS "-std=c++14;  -O3; -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -use_fast_math" )
   add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${flag}>")
 endforeach()
 message("CMAKE_CUDA_FLAGS is ${CMAKE_CUDA_FLAGS}")
@@ -84,7 +84,6 @@ message("CMAKE_CUDA_FLAGS is ${CMAKE_CUDA_FLAGS}")
 # Sources files
 set(CVO_LIB_SOURCE
 
-  ${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
   ${PROJECT_SOURCE_DIR}/src/Frame.cpp
   ${PROJECT_SOURCE_DIR}/src/KittiHandler.cpp
   ${PROJECT_SOURCE_DIR}/src/PoseGraph.cpp
@@ -111,11 +110,13 @@ set(ELAS_LIB_SOURCE
 
 set (CVO_GPU_SOURCE
   ${PROJECT_SOURCE_DIR}/src/cvo/Cvo.cu
+  ${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
   )
 
 set (CVO_CPU_SOURCE
   ${PROJECT_SOURCE_DIR}/src/Cvo.cpp
   ${PROJECT_SOURCE_DIR}/include/outdoor_cvo/cvo/LieGroup.cpp
+  ${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
   )
 
 

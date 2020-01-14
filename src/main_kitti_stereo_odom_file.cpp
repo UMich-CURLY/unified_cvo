@@ -130,7 +130,7 @@ int main(int argc, char ** argv) {
         ref_ids.push_back ( from_id);
         relative_poses.push_back( relative_pose);
         std::cout<<"add new frame "<<newest_id<<", total frame size is "<<poses.size()<<std::endl;
-      tracking github }
+      }
 
       // deal with pose graph
       if (latest_num_keyframes_-1  > total_num_keyframes_)  {
