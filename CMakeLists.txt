@@ -108,6 +108,10 @@ set(ELAS_LIB_SOURCE
   ${PROJECT_SOURCE_DIR}/thirdparty/libelas/libelas/triangle.cpp
   )
 
+set(LIE_GROUP_SOURCE
+  ${PROJECT_SOURCE_DIR}/include/outdoor_cvo/cvo/LieGroup.cpp
+  )
+
 set (CVO_GPU_SOURCE
   ${PROJECT_SOURCE_DIR}/src/cvo/Cvo.cu
   ${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
@@ -115,7 +119,6 @@ set (CVO_GPU_SOURCE
 
 set (CVO_CPU_SOURCE
   ${PROJECT_SOURCE_DIR}/src/Cvo.cpp
-  ${PROJECT_SOURCE_DIR}/include/outdoor_cvo/cvo/LieGroup.cpp
   ${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
   )
 
@@ -139,15 +142,16 @@ message("CXX_FLAGS are ${CMAKE_CXX_FLAGS}")
 message("CUDA_NVCC_FLAGS are ${CUDA_NVCC_FLAGS}")
 # compile main library.
 add_library(elas ${ELAS_LIB_SOURCE})
-
+add_library(lie_group_utils ${LIE_GROUP_SOURCE})
 add_library(cvo_gpu_lib ${CVO_GPU_SOURCE})
-add_library(cvo_cpu_lib ${CVO_CPU_SOURCE})
-
+target_link_libraries(cvo_gpu_lib lie_group_utils)
+add_library(cvo_cpu_lib ${CVO_CPU_SOURCE} )
+target_link_libraries(cvo_cpu_lib lie_group_utils)
 add_library(cvo_cpu_exec ${CVO_LIB_SOURCE})
 target_link_libraries(cvo_cpu_exec  elas cvo_cpu_lib ${Boost_LIBRARIES} ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARIES}  ${OpenCV_LIBS} ${TBB_LIBRARIES} gtsam  gtsam_unstable )
 
 add_library(cvo_gpu_exec ${CVO_LIB_SOURCE})
-target_link_libraries(cvo_cpu_exec  elas cvo_gpu_lib ${Boost_LIBRARIES} ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARIES}  ${OpenCV_LIBS} ${TBB_LIBRARIES} gtsam  gtsam_unstable )
+target_link_libraries(cvo_gpu_exec  elas cvo_gpu_lib ${Boost_LIBRARIES} ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARIES}  ${OpenCV_LIBS} ${TBB_LIBRARIES} gtsam  gtsam_unstable )
 
 
 add_executable(cvo_kitti_color_stereo ${PROJECT_SOURCE_DIR}/src/main_kitti_stereo_color.cpp )
@@ -162,8 +166,8 @@ target_link_libraries(cvo_kitti_stereo_odom_file cvo_cpu_exec  ${OpenCV_LIBS} gt
 add_executable(cvo_align ${PROJECT_SOURCE_DIR}/src/main_cvo_align.cpp )
 target_link_libraries(cvo_align cvo_cpu_exec boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable(cvo_align_gpu ${PROJECT_SOURCE_DIR}/src/main_cvo_gpu_align.cu)
-target_link_libraries(cvo_align_gpu cvo_gpu_exec boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
+add_executable(cvo_align_gpu ${PROJECT_SOURCE_DIR}/src/main_cvo_gpu_align.cpp)
+target_link_libraries(cvo_align_gpu cvo_gpu_exec elas boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(cvo_f2f ${PROJECT_SOURCE_DIR}/src/main_cvo_align_f2f.cpp )
 target_link_libraries(cvo_f2f cvo_cpu_exec boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})

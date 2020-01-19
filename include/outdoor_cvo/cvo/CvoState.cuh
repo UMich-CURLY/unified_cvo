@@ -1,6 +1,6 @@
 #pragma once
 #include "SparseKernelMat.cuh"
-#include "CvoParams.cuh"
+#include "CvoParams.hpp"
 #include "utils/PointSegmentedDistribution.hpp"
 #include "utils/CvoPointCloud.hpp"
 #include "cukdtree/cukdtree.h"

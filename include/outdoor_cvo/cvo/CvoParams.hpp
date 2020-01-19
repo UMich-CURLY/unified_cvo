@@ -35,7 +35,7 @@ namespace cvo {
     
   };
 
-  void read_CvoParams(const char * filename, CvoParams * params) {
+  inline void read_CvoParams(const char * filename, CvoParams * params) {
     FILE * ptr = fopen(filename, "r");
         if (ptr!=NULL) 
     {

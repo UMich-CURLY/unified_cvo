@@ -11,16 +11,31 @@
  *  @date   November 03, 2019
  **/
 
-#include "cvo/Cvo.cuh"
+#include "cvo/CvoGPU.hpp"
 #include "cvo/SparseKernelMat.cuh"
+#include "cvo/CvoGPU_impl.cuh"
 #include "cvo/CvoState.cuh"
+#include "cvo/KDTreeVectorOfVectorsAdaptor.h"
+#include "cvo/LieGroup.h"
+#include "cvo/nanoflann.hpp"
+#include "cvo/CvoParams.hpp"
 #include "cvo/gpu_utils.cuh"
 #include "utils/PointSegmentedDistribution.hpp"
 #include "cupointcloud/point_types.h"
 #include "cupointcloud/cupointcloud.h"
 #include "cukdtree/cukdtree.cuh"
+
+#include <pcl/point_types.h>
+#include <pcl/point_cloud.h>
+
 #include <thrust/functional.h>
 #include <thrust/transform.h>
+#include <thrust/device_vector.h>
+#include <thrust/functional.h>
+#include <thrust/transform.h>
+#include <thrust/sequence.h>
+#include <thrust/copy.h>
+
 #include <chrono>
 #include <cstdio>
 #include <fstream>
@@ -29,11 +44,15 @@
 #include <cassert>
 
 using namespace std;
+using namespace nanoflann;
 
 namespace cvo{
 
-  static bool is_logging = false;
+  namespace cukdtree = perl_registration;
 
+  static bool is_logging = false;
+  static bool debug_print = false;
+  
   void CvoPointCloud_to_gpu(const CvoPointCloud & cvo_cloud, CvoPointCloudGPU::SharedPtr gpu_cloud ) {
     int num_points = cvo_cloud.num_points();
     const ArrayVec3f & positions = cvo_cloud.positions();
@@ -125,7 +144,7 @@ namespace cvo{
     return roots;
   }
 
-  float CvoGPU::dist_se3(const Eigen::Matrix3f& R, const Eigen::Vector3f& T) const {
+  float dist_se3(const Eigen::Matrix3f& R, const Eigen::Vector3f& T)  {
     // create transformation matrix
     Eigen::Matrix4f temp_transform = Eigen::Matrix4f::Identity();
     temp_transform.block<3,3>(0,0)=R;
@@ -165,21 +184,21 @@ namespace cvo{
   };
 
 
-  void  CvoGPU::transform_pointcloud_thrust(std::shared_ptr<CvoPointCloudGPU> init_cloud,
+  void  transform_pointcloud_thrust(std::shared_ptr<CvoPointCloudGPU> init_cloud,
                                             std::shared_ptr<CvoPointCloudGPU> transformed_cloud,
                                             Mat33f * R_gpu, Vec3f * T_gpu
-                                            ) const  {
+                                            ) {
     thrust::transform( init_cloud->begin(), init_cloud->end(),  transformed_cloud->begin(), 
                        transform_point(R_gpu, T_gpu));
     
   }
   
 
-  void CvoGPU::update_tf(const Mat33f & R, const Vec3f & T,
-                         // outputs
-                         CvoState * cvo_state,
-                         Eigen::Ref<Mat44f> transform
-                         ) const {
+  void update_tf(const Mat33f & R, const Vec3f & T,
+                 // outputs
+                 CvoState * cvo_state,
+                 Eigen::Ref<Mat44f> transform
+                 )  {
     // transform = [R', -R'*T; 0,0,0,1]
     transform.block<3,3>(0,0) = R.transpose();
     transform.block<3,1>(0,3) = -R.transpose()*T;
@@ -193,7 +212,7 @@ namespace cvo{
 
   typedef KDTreeVectorOfVectorsAdaptor<cloud_t, float>  kd_tree_t;
 
-  __global__ void fill_in_A_mat_gpu(CvoParams * cvo_params,
+  __global__ void fill_in_A_mat_gpu(const CvoParams * cvo_params,
                                     //SquareExpParams * se_params,
                                     CvoPoint * points_a,
                                     int a_size,
@@ -274,14 +293,15 @@ namespace cvo{
     
   }
 
-  void CvoGPU::se_kernel(//SquareExpParams * se_params_gpu,
-                         std::shared_ptr<CvoPointCloudGPU> points_fixed,
-                         std::shared_ptr<CvoPointCloudGPU> points_moving,
-                         float ell,
-                         perl_registration::cuKdTree<CvoPoint>::SharedPtr kdtree,
-                         // output
-                         SparseKernelMat * A_mat
-                         ) const {
+  void se_kernel(//SquareExpParams * se_params_gpu,
+                 const CvoParams * params_gpu,
+                 std::shared_ptr<CvoPointCloudGPU> points_fixed,
+                 std::shared_ptr<CvoPointCloudGPU> points_moving,
+                 float ell,
+                 perl_registration::cuKdTree<CvoPoint>::SharedPtr kdtree,
+                 // output
+                 SparseKernelMat * A_mat
+                 )  {
     if (!kdtree && !kdtree->IsInputCloudSet()) {
       kdtree->SetInputCloud(points_moving );
     }
@@ -310,7 +330,7 @@ namespace cvo{
                                                                                          );
   }
 
-  __global__ void compute_flow_gpu(CvoParams * cvo_params,
+  __global__ void compute_flow_gpu(const CvoParams * cvo_params,
                                    float ell,
                                    CvoPoint * cloud_x, CvoPoint * cloud_y,
                                    SparseKernelMat * A, SparseKernelMat * Axx, SparseKernelMat * Ayy,
@@ -398,7 +418,7 @@ namespace cvo{
   }
 
   
-  __global__ void compute_flow_gpu_ell_Ayy(CvoParams * cvo_params,
+  __global__ void compute_flow_gpu_ell_Ayy(const CvoParams * cvo_params,
                                            float  ell,
                                            CvoPoint * cloud_y,
                                            SparseKernelMat * Ayy,
@@ -429,23 +449,23 @@ namespace cvo{
     
   }  
 
-  void CvoGPU::compute_flow(CvoState * cvo_state ) const {
+  void compute_flow(CvoState * cvo_state, const CvoParams * params_gpu )  {
 
     auto start = chrono::system_clock::now();
     //auto end = chrono::system_clock::now();
                             
     // compute SE kernel for Axy
     cukdtree::cuKdTree<CvoPoint>::SharedPtr kdtree_moving_new(new cukdtree::cuKdTree<CvoPoint>);
-    se_kernel(cvo_state->cloud_x_gpu, cvo_state->cloud_y_gpu ,
+    se_kernel(params_gpu, cvo_state->cloud_x_gpu, cvo_state->cloud_y_gpu ,
               cvo_state->ell, 
               kdtree_moving_new,
               cvo_state->A);
     if (debug_print ) std::cout<<"nonzeros in A "<<nonzeros(cvo_state->A)<<std::endl;
     // compute SE kernel for Axx and Ayy
-    se_kernel(cvo_state->cloud_x_gpu  ,cvo_state->cloud_x_gpu,
+    se_kernel(params_gpu, cvo_state->cloud_x_gpu  ,cvo_state->cloud_x_gpu,
               cvo_state->ell, 
               cvo_state->kdtree_fixed_points, cvo_state->Axx);
-    se_kernel(cvo_state->cloud_y_gpu  ,cvo_state->cloud_y_gpu,
+    se_kernel(params_gpu, cvo_state->cloud_y_gpu  ,cvo_state->cloud_y_gpu,
               cvo_state->ell,
               kdtree_moving_new, cvo_state->Ayy);
 
@@ -581,7 +601,7 @@ namespace cvo{
     
   }
 
-  void CvoGPU::compute_step_size(CvoState * cvo_state) const {
+  void compute_step_size(CvoState * cvo_state, const CvoParams * params) {
     compute_step_size_xi<<<cvo_state->num_moving / CUDA_BLOCK_SIZE + 1, CUDA_BLOCK_SIZE>>>
       (cvo_state->omega, cvo_state->v,
        thrust::raw_pointer_cast( &(cvo_state->cloud_y_gpu->points[0] )), cvo_state->num_moving,
@@ -630,7 +650,7 @@ namespace cvo{
         temp_step = rc(i,0).real();
     
     // if none of the roots are suitable, use min_step
-    cvo_state->step = temp_step==numeric_limits<float>::max()? params.min_step:temp_step;
+    cvo_state->step = temp_step==numeric_limits<float>::max()? params->min_step:temp_step;
 
 
     // if step>0.8, just use 0.8 as step
@@ -690,14 +710,14 @@ namespace cvo{
         
       // compute omega and v
       start = chrono::system_clock::now();
-      compute_flow(&cvo_state);
+      compute_flow(&cvo_state, params_gpu);
       if (debug_print)std::cout<<"iter "<<k<< "omega: \n"<<omega<<"\nv: \n"<<v<<std::endl;
       end = std::chrono::system_clock::now();
       t_compute_flow += (end - start);
 
       // compute step size for integrating the flow
       start = chrono::system_clock::now();
-      compute_step_size(&cvo_state);
+      compute_step_size(&cvo_state, &params);
       end = std::chrono::system_clock::now();
       t_compute_step += (end -start);
       

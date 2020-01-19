@@ -2,14 +2,10 @@
 
 #pragma once
 #include "utils/data_type.hpp"
-#include "cvo/LieGroup.h"
-#include "cvo/nanoflann.hpp"
-#include "cvo/CvoParams.cuh"
-#include "cvo/gpu_utils.cuh"
-#include "cvo/CvoState.cuh"
-#include "cvo/KDTreeVectorOfVectorsAdaptor.h"
-#include "cupointcloud/cupointcloud.h"
-#include "cukdtree/cukdtree.h"
+#include "cvo/CvoParams.hpp"
+
+//#include "cupointcloud/cupointcloud.h"
+//#include "cukdtree/cukdtree.h"
 #include "utils/CvoPointCloud.hpp"
 #include "utils/PointSegmentedDistribution.hpp"
 // #include "pcd_generator.hpp"
@@ -24,8 +20,6 @@
 #include <thread>
 
 // #include <pcl/filters/filter.h>
-#include <pcl/point_types.h>
-#include <pcl/point_cloud.h>
 // #include <pcl/io/pcd_io.h>
 //#include <pcl/common/transforms.h>
 //#include <pcl/visualization/cloud_viewer.h>
@@ -37,27 +31,21 @@
 #include <Eigen/Cholesky> 
 #include <unsupported/Eigen/MatrixFunctions>
 #include <Eigen/StdVector>
-#include <opencv2/core/mat.hpp>
-#include <boost/timer/timer.hpp>
+//#include <opencv2/core/mat.hpp>
+
 // #include <omp.h>
-#include <tbb/tbb.h>
 
 
-#include <thrust/device_vector.h>
-#include <thrust/functional.h>
-#include <thrust/transform.h>
-#include <thrust/sequence.h>
-#include <thrust/copy.h>
 
 //#define IS_USING_SEMANTICS
 #define EIGEN_DEFAULT_DENSE_INDEX_TYPE
 //using namespacstd move unique_ptr returne std;
-using namespace nanoflann;
+//using namespace nanoflann;
 
 namespace cvo{
   const int CUDA_BLOCK_SIZE = 512;
   
-  namespace cukdtree = perl_registration;
+  //namespace cukdtree = perl_registration;
 
   
   typedef Eigen::Triplet<float> Trip_t;
@@ -69,8 +57,8 @@ namespace cvo{
   typedef Eigen::Vector3f Vector3f;
 
   typedef Eigen::Vector3d Vector3d;
-  struct pcl::PointXYZ PointXYZ;
-  void CvoPointCloud_to_gpu(const CvoPointCloud& cvo_cloud, CvoPointCloudGPU::SharedPtr * cloud);
+
+
    
   
   class CvoGPU{
@@ -102,7 +90,7 @@ namespace cvo{
     //Eigen::Affine3f accum_tf;       // accumulated transformation matrix for trajectory
     //Eigen::Affine3f accum_tf_vis;
 
-    bool debug_print;
+    //bool debug_print;
     FILE * relative_transform_file;
     FILE * init_guess_file;
 
@@ -125,17 +113,17 @@ namespace cvo{
      * @brief calculate the se3 distance for giving R and T
      * @return d: se3 distance of given R and T
      */
-    float dist_se3(const Eigen::Matrix3f& R, const Eigen::Vector3f& T) const;
+    //float dist_se3(const Eigen::Matrix3f& R, const Eigen::Vector3f& T) const;
 
     /**
      * @brief update transformation matrix
-     */
+     *
     void update_tf(const Mat33f & R, const Vec3f & T,
                    // outputs
                    CvoState * cvo_state,
                    Eigen::Ref<Mat44f > transform
                    ) const;
-
+    */
 
     /**
      * @brief isotropic (same length-scale for all dimensions) squared-exponential kernel
@@ -143,6 +131,7 @@ namespace cvo{
      * @param s2: signal variance, square of cvo.sigma
      * @return k: n-by-m kernel matrix 
      */
+    /*
     void se_kernel(//SquareExpParams * se_params_gpu,
                    std::shared_ptr<CvoPointCloudGPU> points_fixed,
                    std::shared_ptr<CvoPointCloudGPU> points_moving,
@@ -151,24 +140,24 @@ namespace cvo{
                    // output
                    SparseKernelMat * A_mat
                    ) const;
-
+    */
 
     /**
      * @brief computes the Lie algebra transformation elements
      *        twist = [omega; v] will be updated in this function
      */
-    void compute_flow(CvoState * cvo_state ) const;
+    //void compute_flow(CvoState * cvo_state ) const;
 
-    void compute_step_size(CvoState * cvo_state) const;
+    //void compute_step_size(CvoState * cvo_state) const;
 
 
     /**
      * @brief transform cloud_y for current update
      */
-    void transform_pointcloud_thrust(std::shared_ptr<CvoPointCloudGPU> init_cloud,
-                                     std::shared_ptr<CvoPointCloudGPU> transformed_cloud,
-                                     Mat33f * R_gpu, Vec3f * T_gpu
-                                     ) const ;
+    //void transform_pointcloud_thrust(std::shared_ptr<CvoPointCloudGPU> init_cloud,
+    //                                 std::shared_ptr<CvoPointCloudGPU> transformed_cloud,
+    //                                 Mat33f * R_gpu, Vec3f * T_gpu
+    //                                 ) const ;
 
   public:
     // public funcitons
