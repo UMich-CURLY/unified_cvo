@@ -48,10 +48,17 @@ namespace cvo {
     auto diff_z = (a.z-b.z);
     return  diff_x * diff_x + diff_y * diff_y + diff_z * diff_z ;
   }
-  
+
+  template <typename T>
+  __device__ void subtract(T*a, T*b, T*result, int num_elem) {
+    for (int i = 0; i < num_elem; i++) {
+      result[i] = a[i] - b[i];
+      
+    }
+  }
 
   template<typename T>
-  __device__ T cross3(T *a, T *b, T *result) {
+  __device__ void cross3(T *a, T *b, T *result) {
     result[0] = a[2] * b[3] - a[3] * b[2];
     result[1] = a[3] * b[1] - a[1] * b[3];
     result[2] = a[1] * b[2] - a[2] * b[1];

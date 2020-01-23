@@ -1,7 +1,8 @@
 #pragma once
 #include <cstdio>
+#include <iostream>
+#include <fstream>
 
-#define KDTREE_K_SIZE 100
 
 namespace cvo {
 
@@ -36,32 +37,38 @@ namespace cvo {
   };
 
   inline void read_CvoParams(const char * filename, CvoParams * params) {
-    FILE * ptr = fopen(filename, "r");
-        if (ptr!=NULL) 
-    {
-      printf( "reading cvo params from file\n");
-      fscanf(ptr, "%f\n%f\n%f\n%lf\n%lf\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n",
-             & params->ell_init
-             ,& params->ell_min
-             ,& params->ell_max
-             ,& params->dl
-             ,& params->dl_step
-             //,& params->min_dl_step
-             //,& params->max_dl_step
-             ,& params->sigma
-             ,& params->sp_thres
-             , &params->c
-             ,& params->d
-             ,& params->c_ell
-             ,& params->c_sigma
-             , &params->s_ell
-             ,& params->s_sigma
-             ,& params->MAX_ITER
-             ,& params->min_step
-             ,& params->eps
-             ,& params->eps_2);
-      fclose(ptr);
+    //FILE * ptr = fopen(filename, "r");
+    std::ifstream f;
+    f.open(filename);
+    if (f.is_open() )  {
+      memset(params, 0, sizeof(CvoParams));
+      printf( "reading cvo params from file %s\n", filename);
+      //fscanf(ptr, "%f\n%f\n%f\n%lf\n%lf\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n",
+      f >> params->ell_init
+        >> params->ell_min
+        >> params->ell_max
+        >> params->dl
+        >> params->dl_step
+        >> params->sigma
+        >> params->sp_thres
+        >> params->c
+        >> params->d
+        >> params->c_ell
+        >> params->c_sigma
+        >> params->s_ell
+        >> params->s_sigma
+        >> params->MAX_ITER
+        >> params->min_step
+        >> params->eps
+        >> params->eps_2;
+      f.close();
+    //fclose(ptr);
+
+      std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<std::endl;
+    } else {
+      printf("Error: the CvoParam file is empty\n");
     }
+
   }
 
 

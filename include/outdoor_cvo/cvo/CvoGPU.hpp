@@ -43,17 +43,12 @@
 //using namespace nanoflann;
 
 namespace cvo{
-  const int CUDA_BLOCK_SIZE = 512;
+
   
   //namespace cukdtree = perl_registration;
 
   
   typedef Eigen::Triplet<float> Trip_t;
-  typedef Eigen::Matrix<float, KDTREE_K_SIZE, 1> VecKDf;
-  typedef Eigen::Matrix<float, 1, KDTREE_K_SIZE> VecKDf_row;
-  typedef Eigen::Matrix<double, 1, KDTREE_K_SIZE> VecKDd_row;
-  typedef Eigen::Matrix<float, KDTREE_K_SIZE, 3> MatKD3f;
-  typedef Eigen::Matrix<double, KDTREE_K_SIZE, 3> MatKD3d;
   typedef Eigen::Vector3f Vector3f;
 
   typedef Eigen::Vector3d Vector3d;

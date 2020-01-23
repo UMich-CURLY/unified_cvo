@@ -1,4 +1,4 @@
-
+#pragma once
 
 
 
@@ -27,10 +27,26 @@
 
 
 
+#define GpuErrorCheck(ans) { gpu_assert((ans), __FILE__, __LINE__); }
+inline void gpu_assert(cudaError_t code, const char *file, int line, bool abort=true)
+{
+  if (code != cudaSuccess)
+  {
+    fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+    if (abort) exit(code);
+  }
+  
+}
 
 namespace cvo {
+  const int CUDA_BLOCK_SIZE = 512;
+  typedef Eigen::Matrix<float, KDTREE_K_SIZE, 1> VecKDf;
+  typedef Eigen::Matrix<float, 1, KDTREE_K_SIZE> VecKDf_row;
+  typedef Eigen::Matrix<double, 1, KDTREE_K_SIZE> VecKDd_row;
+  typedef Eigen::Matrix<float, KDTREE_K_SIZE, 3> MatKD3f;
+  typedef Eigen::Matrix<double, KDTREE_K_SIZE, 3> MatKD3d;
 
-  void CvoPointCloud_to_gpu(const CvoPointCloud& cvo_cloud, CvoPointCloudGPU::SharedPtr * cloud);
+  CvoPointCloudGPU::SharedPtr CvoPointCloud_to_gpu(const CvoPointCloud& cvo_cloud );
 
   void update_tf(const Mat33f & R, const Vec3f & T,
                    // outputs
@@ -52,7 +68,7 @@ namespace cvo {
                    float ell,
                    perl_registration::cuKdTree<CvoPoint>::SharedPtr kdtree,
                    // output
-                   SparseKernelMat * A_mat
+                   SparseKernelMat * A_mat, SparseKernelMat * A_mat_gpu
                    );
    
 

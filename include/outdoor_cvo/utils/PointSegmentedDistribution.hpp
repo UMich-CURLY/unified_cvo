@@ -106,7 +106,19 @@ namespace pcl {
     }
     pc.header = pc_seg.header;
   }
-
+    
+    template <unsigned int FEATRURE_DIM, unsigned int NUM_CLASS >
+    void print_point(const pcl::PointSegmentedDistribution<FEATRURE_DIM, NUM_CLASS> & p) {
+      std::cout<<"The point is at ("<<p.x<<", "<<p.y<<", "<<p.z<<")\n";
+      std::cout<<"the features are ";
+      for (int i = 0; i < FEATURE_DIMENSIONS; i++)
+        std::cout<<p.features[i]<<", ";
+      std::cout<<std::endl;
+      for (int i = 0; i < NUM_CLASSES; i++)
+        std::cout<<p.label_distribution[i]<<", ";
+      std::cout<<std::endl;
+                           
+    }
 
 
 

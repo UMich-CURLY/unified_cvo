@@ -24,9 +24,11 @@ namespace cvo {
   };
   
 
-  inline  int nonzeros(SparseKernelMat * A ) {
-     thrust::device_ptr<float> A_ptr = thrust::device_pointer_cast(A->mat);
-     thrust::device_vector<float> v(A_ptr, A_ptr + A->rows * A->cols );
+  inline  int nonzeros(SparseKernelMat * A_host ) {
+    //;SparseKernelMat A;
+    //cudaMemcpy(&A, A_gpu, sizeof(SparseKernelMat), cudaMemcpyDeviceToHost);
+     thrust::device_ptr<float> A_ptr = thrust::device_pointer_cast(A_host->mat);
+     thrust::device_vector<float> v(A_ptr, A_ptr + A_host->rows * A_host->cols );
      //return (int)thrust::reduce(v.begin(),v.end(), 0,
      //                           [=] __host__ __device__ (float x, float y) { return fabs(x) > 1e-7 ? 1.0f : 0.0f; });
      thrust::plus<float> binary_add;
@@ -36,31 +38,38 @@ namespace cvo {
                                           binary_add);  
   }
 
-  inline void clear_SparseKernelMat(SparseKernelMat * A) {
-    cudaMemset(A->mat, 0, A->rows * A->cols * sizeof(float));
-    cudaMemset(A->ind_row2col, 0, A->rows * A->cols * sizeof(int));
-  }
-
-  inline SparseKernelMat * init_SparseKernelMat_gpu(int row, int col) {
-    SparseKernelMat * A;
-    cudaMalloc((void **)&A, sizeof(SparseKernelMat));
-    cudaMemcpy((void*)&A->rows, &row , sizeof(int), cudaMemcpyHostToDevice  );
-    cudaMemcpy((void*)&A->cols, &col , sizeof(int), cudaMemcpyHostToDevice  );
-
-    float * mat;
-    int * ind;
-    cudaMalloc((void**)&mat, sizeof(float) * row *col);
-    cudaMalloc((void**)&mat, sizeof(int)*row*col);
-    cudaMemcpy( &A->mat, &mat, sizeof(float*), cudaMemcpyHostToDevice   );
-    cudaMemcpy( &A->ind_row2col , &ind , sizeof(int *), cudaMemcpyHostToDevice   );
+  inline void clear_SparseKernelMat(SparseKernelMat * A_host) {
+    //SparseKernelMat A;
+    //cudaMemcpy(&A, A_gpu, sizeof(SparseKernelMat), cudaMemcpyDeviceToHost);
     
-    return A;
+    cudaMemset(A_host->mat, 0, A_host->rows * A_host->cols * sizeof(float));
+    cudaMemset(A_host->ind_row2col, 0, A_host->rows * A_host->cols * sizeof(int));
   }
 
-  inline void delete_SparseKernelMat_gpu(SparseKernelMat * A ) {
-    cudaFree(A->mat);
-    cudaFree(A->ind_row2col );
-    cudaFree(A);
+  inline SparseKernelMat * init_SparseKernelMat_gpu(int row, int col, SparseKernelMat & A_host) {
+    SparseKernelMat *A_out; //= new SparseKernelMat;
+    cudaMalloc((void **)&A_out, sizeof(SparseKernelMat));
+
+    A_host.rows = row;
+    A_host.cols = col;
+    //cudaMemcpy((void*)&A->rows, &row , sizeof(int), cudaMemcpyHostToDevice  );
+    //cudaMemcpy((void*)&A->cols, &col , sizeof(int), cudaMemcpyHostToDevice  );
+
+    cudaMalloc((void**)&A_host.mat, sizeof(float) * row *col);
+    cudaMalloc((void**)&A_host.ind_row2col, sizeof(int)*row*col);
+    //cudaMemcpy( &A->mat, &mat, sizeof(float*), cudaMemcpyHostToDevice   );
+    //cudaMemcpy( &A->ind_row2col , &ind , sizeof(int *), cudaMemcpyHostToDevice   );
+
+    cudaMemcpy((void*)A_out, &A_host, sizeof(SparseKernelMat), cudaMemcpyHostToDevice  );
+    
+    return A_out;
+  }
+
+  inline void delete_SparseKernelMat_gpu(SparseKernelMat * A_gpu, SparseKernelMat * A_host  ) {
+    
+    cudaFree(A_host->mat);
+    cudaFree(A_host->ind_row2col );
+    cudaFree(A_gpu);
   }
 
   

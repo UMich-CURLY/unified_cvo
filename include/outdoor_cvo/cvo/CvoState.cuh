@@ -8,6 +8,8 @@
 #include <thrust/device_vector.h>
 #include <Eigen/Dense>
 
+#define KDTREE_K_SIZE 100
+
 namespace Eigen {
                  typedef Matrix<float,1,3> Vector3f_row;                 
 }
@@ -47,6 +49,7 @@ namespace cvo {
     SparseKernelMat * A;
     SparseKernelMat *Axx;
     SparseKernelMat *Ayy;
+    SparseKernelMat A_host, Axx_host, Ayy_host;
     Eigen::Matrix3f * R_gpu;
     Eigen::Vector3f * T_gpu;
 
@@ -59,6 +62,9 @@ namespace cvo {
     thrust::device_vector<double> partial_dl_Ayy;
     thrust::device_vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> omega_gpu;
     thrust::device_vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> v_gpu;
+    thrust::device_vector<float> cross_xy, diff_yx, diff_xx, diff_yy, sum_diff_yx_2, sum_diff_xx_2, sum_diff_yy_2;
+
+    
     thrust::device_vector<Eigen::Vector3f_row, Eigen::aligned_allocator<Eigen::Vector3f_row>> xiz;
     thrust::device_vector<Eigen::Vector3f_row, Eigen::aligned_allocator<Eigen::Vector3f_row>>  xi2z;
     thrust::device_vector<Eigen::Vector3f_row, Eigen::aligned_allocator<Eigen::Vector3f_row>>  xi3z;
@@ -88,6 +94,15 @@ namespace cvo {
     partial_dl_Ayy(num_moving),
     omega_gpu(num_fixed),
     v_gpu(num_fixed),
+    /*
+    cross_xy(3 * num_moving),
+    diff_yx(),
+    diff_xx(),
+    diff_yy(),
+    sum_diff_yx_2(),
+    sum_diff_xx_2(),
+    sum_diff_yy_2(),
+    */
     xiz(num_moving),
     xi2z(num_moving),
     xi3z(num_moving),
@@ -104,10 +119,16 @@ namespace cvo {
     // gpu raw
     int A_rows = source_points->size();
     int Ayy_rows = target_points->size();
+    int Axx_cols = source_points->size();
+        
+#ifdef IS_USING_KDTREE
     int A_cols = KDTREE_K_SIZE;
-    A = init_SparseKernelMat_gpu(A_rows, A_cols);
-    Axx = init_SparseKernelMat_gpu(A_rows, A_cols);
-    Ayy = init_SparseKernelMat_gpu(Ayy_rows, A_cols);
+#else
+    int A_cols = target_points->size();
+#endif
+    A = init_SparseKernelMat_gpu(A_rows, A_cols, A_host);
+    Axx = init_SparseKernelMat_gpu(A_rows, Axx_cols, Axx_host);
+    Ayy = init_SparseKernelMat_gpu(Ayy_rows, A_cols, Ayy_host);
     cudaMalloc((void**)&R_gpu, sizeof(Eigen::Matrix3f));
     cudaMalloc((void**)&T_gpu, sizeof(Eigen::Vector3f));
     cudaMalloc((void**)&omega, sizeof(Eigen::Vector3f));
@@ -130,19 +151,20 @@ namespace cvo {
     cudaFree(omega);
     cudaFree(v);
 
-    delete_SparseKernelMat_gpu(A);
-    delete_SparseKernelMat_gpu(Axx);
-    delete_SparseKernelMat_gpu(Ayy);
+    delete_SparseKernelMat_gpu(A, &A_host);
+    delete_SparseKernelMat_gpu(Axx, &Axx_host);
+    delete_SparseKernelMat_gpu(Ayy, &Ayy_host);
     
   }
 
   inline void CvoState::reset_state_at_new_iter () {
-    cudaMemset( (void*)A->mat, 0, sizeof(float) * num_fixed * KDTREE_K_SIZE );
-    cudaMemset( (void*)A->ind_row2col , 0 , sizeof(int )* num_fixed  * KDTREE_K_SIZE );
-    cudaMemset( (void*)Axx->mat, 0, sizeof(float) * num_fixed * KDTREE_K_SIZE  );
-    cudaMemset( (void*)Axx->ind_row2col , 0 , sizeof(int )* num_fixed * KDTREE_K_SIZE );
-    cudaMemset( (void*)Ayy->mat, 0, sizeof(float) * num_moving* KDTREE_K_SIZE  );
-    cudaMemset( (void*)Ayy->ind_row2col , 0 , sizeof(int )* num_moving * KDTREE_K_SIZE );
+
+    cudaMemset( (void*)A_host.mat, 0, sizeof(float) * A_host.rows * A_host.cols );
+    cudaMemset( (void*)A_host.ind_row2col , 0 , sizeof(int )* A_host.rows * A_host.cols  );
+    cudaMemset( (void*)Axx_host.mat, 0, sizeof(float) * Axx_host.rows * Axx_host.cols  );
+    cudaMemset( (void*)Axx_host.ind_row2col , 0 , sizeof(int )* Axx_host.rows * Axx_host.cols);
+    cudaMemset( (void*)Ayy_host.mat, 0, sizeof(float) * Ayy_host.rows * Ayy_host.cols  );
+    cudaMemset( (void*)Ayy_host.ind_row2col , 0 , sizeof(int )* Ayy_host.rows * Ayy_host.cols );
     
     
   }

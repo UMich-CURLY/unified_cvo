@@ -19,7 +19,6 @@ int main(int argc, char *argv[]) {
   // list all files in current directory.
   //You could put any file path in here, e.g. "/home/me/mwah" to list that directory
   string data_folder (argv[1]);
-  //string cvo_param_file(argv[2]);
   std::ofstream relative_output(argv[2]);
   std::ofstream accum_output(argv[3]);
   int max_num = std::stoi(argv[4]);
@@ -37,12 +36,15 @@ int main(int argc, char *argv[]) {
       total_num += 1;
       if (total_num == max_num )
         break;
-      // cout <<"reading "<< current_file << endl; 
+      cout <<"reading "<< current_file << endl; 
     }
   }
   
-  cvo::CvoGPU cvo_align("/home/rayzhang/outdoor_cvo/cvo_params.txt" );
-  Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
+  cvo::CvoGPU cvo_align("/home/rayzhang/outdoor_cvo/cvo_params.txt");
+  Eigen::Matrix4f init_guess;  // from source frame to the target frame
+  init_guess.setIdentity();
+  printf("Init value is ");
+  std::cout<<init_guess<<std::endl;
   init_guess(2,3)=0.75;
 
   // start the iteration
@@ -52,14 +54,15 @@ int main(int argc, char *argv[]) {
     std::cout<<"\n============================================="<<std::endl;
     std::cout<<"Aligning "<<i<<" and "<<i+1<<std::endl;
 
-    // std::cout<<"reading "<<files[cur_kf]<<std::endl;
-    cvo::CvoPointCloud source_fr;
-    source_fr.read_cvo_pointcloud_from_file(files[i]);
-    cvo::CvoPointCloud target_fr;//(files[i+1]);
-    target_fr.read_cvo_pointcloud_from_file(files[1+i]);
+    std::cout<<"reading "<<files[i]<<" and "<<files[i+1]<<std::endl;
+    cvo::CvoPointCloud source_fr(files[i]);
+    cvo::CvoPointCloud target_fr(files[i+1]);
 
     Eigen::Matrix4f result, init_guess_inv;
     init_guess_inv = init_guess.inverse();
+
+    std::cout<<"Start to align...\n";
+    
     cvo_align.align(source_fr, target_fr, init_guess_inv, result);
     
     // get tf and inner product from cvo getter
