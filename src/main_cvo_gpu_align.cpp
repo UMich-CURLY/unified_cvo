@@ -10,7 +10,7 @@
 
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/CvoGPU.hpp"
-
+#include "cvo/Cvo.hpp"
 using namespace std;
 using namespace boost::filesystem;
 
@@ -42,15 +42,17 @@ int main(int argc, char *argv[]) {
   }
   
   cvo::CvoGPU cvo_align("/home/rayzhang/outdoor_cvo/cvo_params.txt" );
+  cvo::cvo cvo_align_cpu("/home/rayzhang/outdoor_cvo/cvo_params.txt");
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
-  init_guess(2,3)=0.75;
-
+  //init_guess(2,3)=0.75;
+  Eigen::Affine3f init_guess_cpu = Eigen::Affine3f::Identity();
+  //init_guess_cpu.matrix()(2,3)=0.75;
   // start the iteration
   for (int i = 0; i<total_num ; i++) {
     
     // calculate initial guess
-    std::cout<<"\n============================================="<<std::endl;
-    std::cout<<"Aligning "<<i<<" and "<<i+1<<std::endl;
+    std::cout<<"\n\n\n\n============================================="<<std::endl;
+    std::cout<<"Aligning "<<i<<" and "<<i+1<<" with GPU "<<std::endl;
 
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
     cvo::CvoPointCloud source_fr;
@@ -66,7 +68,7 @@ int main(int argc, char *argv[]) {
     double in_product = cvo_align.inner_product(source_fr, target_fr, result);
     //double in_product_normalized = cvo_align.inner_product_normalized();
     //int non_zeros_in_A = cvo_align.number_of_non_zeros_in_A();
-    std::cout<<"The inner product between "<<i-1 <<" and "<< i <<" is "<<in_product<<"\n";
+    std::cout<<"The gpu inner product between "<<i-1 <<" and "<< i <<" is "<<in_product<<"\n";
     //std::cout<<"The normalized inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_normalized<<"\n";
     std::cout<<"Transform is "<<result <<"\n\n";
 
@@ -82,7 +84,7 @@ int main(int argc, char *argv[]) {
                 <<relative_mat(2,0)<<" " <<relative_mat(2,1)<<" "<<relative_mat(2,2)<<" "<<relative_mat(2,3);
     relative_output<<"\n";
     relative_output<<std::flush;
-
+    /*
     // log accumulated pose
     Eigen::Matrix4f accum_mat = init_guess;
     accum_output << accum_mat(0,0)<<" "<<accum_mat(0,1)<<" "<<accum_mat(0,2)<<" "<<accum_mat(0,3)<<" "
@@ -90,6 +92,28 @@ int main(int argc, char *argv[]) {
                 <<accum_mat(2,0)<<" " <<accum_mat(2,1)<<" "<<accum_mat(2,2)<<" "<<accum_mat(2,3);
     accum_output<<"\n";
     accum_output<<std::flush;
+    */
+    std::cout<<"\n---------------------------------------------------"<<std::endl;
+    std::cout<<"Aligning "<<i<<" and "<<i+1<<" with CPU "<<std::endl;
+    Eigen::Affine3f result_cpu,init_guess_inv_cpu;
+    init_guess_inv_cpu = init_guess_cpu.inverse();
+    cvo_align_cpu.set_pcd(source_fr, target_fr, init_guess_inv_cpu, true);
+    cvo_align_cpu.align();
+    result_cpu = cvo_align_cpu.get_transform();
+    // get tf and inner product from cvo getter
+    double in_product_cpu = cvo_align_cpu.inner_product(source_fr, target_fr, result_cpu);
+    //double in_product_normalized = cvo_align.inner_product_normalized();
+    //int non_zeros_in_A = cvo_align.number_of_non_zeros_in_A();
+    std::cout<<"The cpu inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_cpu<<"\n";
+    //std::cout<<"The normalized inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_normalized<<"\n";
+    std::cout<<"Transform is "<<result_cpu.matrix() <<"\n\n";
+
+    // append accum_tf_list for future initialization
+    init_guess_cpu = init_guess_cpu*result_cpu;
+    std::cout<<"accum tf: \n"<<init_guess_cpu.matrix()<<std::endl;
+    
+
+
 
 
   }

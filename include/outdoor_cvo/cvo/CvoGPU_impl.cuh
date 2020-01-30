@@ -25,7 +25,7 @@
 #include <thrust/sequence.h>
 #include <thrust/copy.h>
 
-
+//#define IS_USING_KDTREE
 
 #define GpuErrorCheck(ans) { gpu_assert((ans), __FILE__, __LINE__); }
 inline void gpu_assert(cudaError_t code, const char *file, int line, bool abort=true)
@@ -38,8 +38,9 @@ inline void gpu_assert(cudaError_t code, const char *file, int line, bool abort=
   
 }
 
+
 namespace cvo {
-  const int CUDA_BLOCK_SIZE = 512;
+  const int CUDA_BLOCK_SIZE = 256;
   typedef Eigen::Matrix<float, KDTREE_K_SIZE, 1> VecKDf;
   typedef Eigen::Matrix<float, 1, KDTREE_K_SIZE> VecKDf_row;
   typedef Eigen::Matrix<double, 1, KDTREE_K_SIZE> VecKDd_row;

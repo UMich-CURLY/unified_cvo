@@ -87,6 +87,16 @@ namespace cvo {
 
   }
 
+
+  template <typename T>
+  __device__ void vec_mul_mat(T * v, T* M, int rows, int cols, T* result ) {
+    for (int c = 0; c < cols; c++ ) {
+      result[c] = 0;
+      for (int r = 0; r < rows; r++)
+        result[c] += v[r] * M[r * cols + c];
+    }
+    
+  }
   
 
 }

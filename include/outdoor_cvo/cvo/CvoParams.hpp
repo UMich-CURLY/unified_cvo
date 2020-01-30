@@ -64,7 +64,7 @@ namespace cvo {
       f.close();
     //fclose(ptr);
 
-      std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<std::endl;
+      std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<std::endl;
     } else {
       printf("Error: the CvoParam file is empty\n");
     }

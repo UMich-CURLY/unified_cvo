@@ -60,15 +60,17 @@ namespace cvo {
     perl_registration::cuKdTree<CvoPoint>::SharedPtr kdtree_fixed_points;
     thrust::device_vector<double> partial_dl_gradient;
     thrust::device_vector<double> partial_dl_Ayy;
-    thrust::device_vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> omega_gpu;
-    thrust::device_vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> v_gpu;
-    thrust::device_vector<float> cross_xy, diff_yx, diff_xx, diff_yy, sum_diff_yx_2, sum_diff_xx_2, sum_diff_yy_2;
+    //thrust::device_vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> omega_gpu;
+    thrust::device_vector<Eigen::Vector3d > omega_gpu;
+    //thrust::device_vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> v_gpu;
+    thrust::device_vector<Eigen::Vector3d> v_gpu;
+    //thrust::device_vector<float> cross_xy, diff_yx, diff_xx, diff_yy, sum_diff_yx_2, sum_diff_xx_2, sum_diff_yy_2;
 
     
-    thrust::device_vector<Eigen::Vector3f_row, Eigen::aligned_allocator<Eigen::Vector3f_row>> xiz;
-    thrust::device_vector<Eigen::Vector3f_row, Eigen::aligned_allocator<Eigen::Vector3f_row>>  xi2z;
-    thrust::device_vector<Eigen::Vector3f_row, Eigen::aligned_allocator<Eigen::Vector3f_row>>  xi3z;
-    thrust::device_vector<Eigen::Vector3f_row, Eigen::aligned_allocator<Eigen::Vector3f_row>>  xi4z;
+    thrust::device_vector<Eigen::Vector3f_row> xiz;
+    thrust::device_vector<Eigen::Vector3f_row>  xi2z;
+    thrust::device_vector<Eigen::Vector3f_row>  xi3z;
+    thrust::device_vector<Eigen::Vector3f_row>  xi4z;
     thrust::device_vector<float> normxiz2;
     thrust::device_vector<float> xiz_dot_xi2z;
     thrust::device_vector<float> epsil_const;
@@ -139,6 +141,8 @@ namespace cvo {
     cloud_y_gpu_init = target_points;
     cloud_y_gpu.reset(new CvoPointCloudGPU(num_moving ) );
     kdtree_fixed_points.reset(new perl_registration::cuKdTree<CvoPoint>);
+
+    printf("v_gpu size is %d\n",v_gpu.size() );
     
   }
 

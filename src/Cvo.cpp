@@ -59,7 +59,7 @@ namespace cvo{
     prev_transform(Eigen::Affine3f::Identity()),
     accum_tf(Eigen::Affine3f::Identity()),
     accum_tf_vis(Eigen::Affine3f::Identity()),
-    debug_print(false)
+    debug_print(true)
   {
     FILE* ptr = fopen(param_file.c_str(), "r" ); 
     if (ptr!=NULL) 
@@ -716,7 +716,8 @@ namespace cvo{
     chrono::duration<double> t_transform_pcd = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_flow = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_step = chrono::duration<double>::zero();
-    for(int k=0; k<MAX_ITER; k++){
+    //for(int k=0; k<MAX_ITER; k++){
+    for(int k=0; k<1; k++){
       // update transformation matrix
       update_tf();
 
