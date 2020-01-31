@@ -170,7 +170,6 @@ namespace cvo {
     cudaMemset( (void*)Ayy_host.mat, 0, sizeof(float) * Ayy_host.rows * Ayy_host.cols  );
     cudaMemset( (void*)Ayy_host.ind_row2col , 0 , sizeof(int )* Ayy_host.rows * Ayy_host.cols );
     
-    
   }
   
 }

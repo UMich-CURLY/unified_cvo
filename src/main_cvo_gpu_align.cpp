@@ -1,4 +1,4 @@
-
+#include <algorithm>
 #include <iostream>
 #include <vector>
 #include <string>
@@ -41,27 +41,31 @@ int main(int argc, char *argv[]) {
     }
   }
   
-  cvo::CvoGPU cvo_align("/home/rayzhang/outdoor_cvo/cvo_params.txt" );
+  cvo::CvoGPU cvo_align("/home/rayzhang/outdoor_cvo/cvo_params_gpu.txt" );
   cvo::cvo cvo_align_cpu("/home/rayzhang/outdoor_cvo/cvo_params.txt");
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
-  //init_guess(2,3)=0.75;
+  init_guess(2,3)=0;
   Eigen::Affine3f init_guess_cpu = Eigen::Affine3f::Identity();
-  //init_guess_cpu.matrix()(2,3)=0.75;
+  init_guess_cpu.matrix()(2,3)=0;
   // start the iteration
   for (int i = 0; i<total_num ; i++) {
     
     // calculate initial guess
     std::cout<<"\n\n\n\n============================================="<<std::endl;
-    std::cout<<"Aligning "<<i<<" and "<<i+1<<" with GPU "<<std::endl;
+    std::string f1 = data_folder + "/" + std::to_string(i)+".txt";
+    std::string f2 = data_folder + "/" + std::to_string(i+1)+".txt";
+    std::cout<<"Aligning "<<f1<<" and "<<f2<<" with GPU "<<std::endl;
 
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
     cvo::CvoPointCloud source_fr;
-    source_fr.read_cvo_pointcloud_from_file(files[i]);
+    source_fr.read_cvo_pointcloud_from_file(f1);
     cvo::CvoPointCloud target_fr;//(files[i+1]);
-    target_fr.read_cvo_pointcloud_from_file(files[1+i]);
+    target_fr.read_cvo_pointcloud_from_file(f2);
 
     Eigen::Matrix4f result, init_guess_inv;
     init_guess_inv = init_guess.inverse();
+    printf("Start align...\n");
+    std::cout<<std::flush;
     cvo_align.align(source_fr, target_fr, init_guess_inv, result);
     
     // get tf and inner product from cvo getter
@@ -76,7 +80,7 @@ int main(int argc, char *argv[]) {
     init_guess = init_guess*result;
     std::cout<<"accum tf: \n"<<init_guess<<std::endl;
     
-
+    /*
     // log relative pose
     Eigen::Matrix4f relative_mat = result;
     relative_output << relative_mat(0,0)<<" "<<relative_mat(0,1)<<" "<<relative_mat(0,2)<<" "<<relative_mat(0,3)<<" "
@@ -84,7 +88,7 @@ int main(int argc, char *argv[]) {
                 <<relative_mat(2,0)<<" " <<relative_mat(2,1)<<" "<<relative_mat(2,2)<<" "<<relative_mat(2,3);
     relative_output<<"\n";
     relative_output<<std::flush;
-    /*
+   
     // log accumulated pose
     Eigen::Matrix4f accum_mat = init_guess;
     accum_output << accum_mat(0,0)<<" "<<accum_mat(0,1)<<" "<<accum_mat(0,2)<<" "<<accum_mat(0,3)<<" "
@@ -93,6 +97,9 @@ int main(int argc, char *argv[]) {
     accum_output<<"\n";
     accum_output<<std::flush;
     */
+
+
+    
     std::cout<<"\n---------------------------------------------------"<<std::endl;
     std::cout<<"Aligning "<<i<<" and "<<i+1<<" with CPU "<<std::endl;
     Eigen::Affine3f result_cpu,init_guess_inv_cpu;
@@ -104,7 +111,7 @@ int main(int argc, char *argv[]) {
     double in_product_cpu = cvo_align_cpu.inner_product(source_fr, target_fr, result_cpu);
     //double in_product_normalized = cvo_align.inner_product_normalized();
     //int non_zeros_in_A = cvo_align.number_of_non_zeros_in_A();
-    std::cout<<"The cpu inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_cpu<<"\n";
+    std::cout<<"The cpu inner product between "<<i <<" and "<< i+1 <<" is "<<in_product_cpu<<"\n";
     //std::cout<<"The normalized inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_normalized<<"\n";
     std::cout<<"Transform is "<<result_cpu.matrix() <<"\n\n";
 
@@ -113,7 +120,7 @@ int main(int argc, char *argv[]) {
     std::cout<<"accum tf: \n"<<init_guess_cpu.matrix()<<std::endl;
     
 
-
+    
 
 
   }

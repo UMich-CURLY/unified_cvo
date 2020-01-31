@@ -128,7 +128,7 @@ namespace cvo{
     prev_transform(Eigen::Affine3f::Identity()),
     accum_tf(Eigen::Affine3f::Identity()),
     accum_tf_vis(Eigen::Affine3f::Identity()),
-    debug_print(false)
+    debug_print(true)
   {
     FILE* ptr = fopen("cvo_params.txt", "r" ); 
     if (ptr!=NULL) 
@@ -350,6 +350,12 @@ namespace cvo{
               // concrrent access !
               if (a > sp_thres){
                 A_trip_concur_.push_back(Trip_t(i,idx,a));
+                if (debug_print && i == 1000) {
+                  std::cout<<"Inside se_kernel: i=1000, j="<<idx<<", d2="<<d2<<", k="<<k<<
+                    ", ck="<<ck<<", the point_b is ("<<(*cloud_b_pos)[idx].transpose()<<std::endl;
+                  std::cout<<"feature_a "<<feature_a.transpose()<<", feature_b "<<feature_b.transpose()<<std::endl;
+                  
+                }
               }
              
             
@@ -448,6 +454,16 @@ namespace cvo{
     // form A
     A_temp.setFromTriplets(A_trip_concur_.begin(), A_trip_concur_.end());
     A_temp.makeCompressed();
+
+
+    if (debug_print) {
+      printf("None zeros terms of point 1000 is ");
+      for(Eigen::SparseMatrix<float,Eigen::RowMajor>::InnerIterator it(A,1000); it; ++it){
+        int idx = it.col();
+        auto val = it.value();
+        std::cout<<" id "<<idx <<" with value "<<val<<std::endl;
+      }
+    }
   }
 
   
@@ -673,6 +689,9 @@ namespace cvo{
 
     Eigen::VectorXf p_coef(4);
     p_coef << 4.0*float(E),3.0*float(D),2.0*float(C),float(B);
+
+    if (debug_print)
+      printf("BCDE is %lf %lf %lf %lf\n",B, C, D, E );
     
     // solve polynomial roots
     Eigen::VectorXcf rc = poly_solver(p_coef);
@@ -717,7 +736,7 @@ namespace cvo{
     chrono::duration<double> t_compute_flow = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_step = chrono::duration<double>::zero();
     //for(int k=0; k<MAX_ITER; k++){
-    for(int k=0; k<1; k++){
+    for(int k=0; k<2; k++){
       // update transformation matrix
       update_tf();
 
@@ -841,8 +860,8 @@ namespace cvo{
     cloud_x = new ArrayVec3f (ptr_fixed_pcd->positions());
     cloud_y = new ArrayVec3f (ptr_moving_pcd->positions());
     // std::cout<<"fixed[0] \n"<<ptr_fixed_pcd->positions()[0]<<"\nmoving[0] "<<ptr_moving_pcd->positions()[0]<<"\n";
-    // std::cout<<"fixed[0] \n"<<(*cloud_x)[0]<<"\nmoving[0] "<<(*cloud_y)[0]<<"\n";
-    // std::cout<<"fixed[0] features \n "<<ptr_fixed_pcd->features().row(0)<<"\n  moving[0] feature "<<ptr_moving_pcd->features().row(0)<<"\n";
+    std::cout<<"fixed[0] \n"<<(*cloud_x)[0]<<"\nmoving[0] "<<(*cloud_y)[0]<<"\n";
+    std::cout<<"fixed[0] features \n "<<ptr_fixed_pcd->features().row(0)<<"\n  moving[0] feature "<<ptr_moving_pcd->features().row(0)<<"\n";
 
     // std::cout<<"init cvo: \n"<<transform.matrix()<<std::endl;
     if (is_using_init_guess) {

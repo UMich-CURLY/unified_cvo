@@ -77,23 +77,12 @@ namespace cvo{
       (host_cloud)[i].g = (uint8_t)std::min(255.0, (features(i,1) * 255.0));
       (host_cloud)[i].b = (uint8_t)std::min(255.0, (features(i,2) * 255.0));
 
-      ///memcpy(host_cloud[i].features, features.row(i).data(), FEATURE_DIMENSIONS * sizeof(float));
-      for (int j = 0; j < FEATURE_DIMENSIONS; j++)
-        host_cloud[i].features[j] = features(i,j);
-
-      if (i == 0) {
-        std::cout<<"cvo_pointcloud_to_gpu: before "<<features.row(i)<<", after "<<host_cloud[i].features[0]<<", "<<host_cloud[i].features[1]<<", "<<host_cloud[i].features[2]<<", "<<host_cloud[i].features[3]<<", "<<host_cloud[i].features[4]<<std::endl;
-        
-      }
-      
+      memcpy(host_cloud[i].features, features.row(i).data(), FEATURE_DIMENSIONS * sizeof(float));
 #ifdef IS_USING_SEMANTICS
       //float cur_label_value = -1;
       labels.row(i).maxCoeff(&host_cloud[i].label);
 
-      //memcpy(host_cloud[i].label_distribution, labels.row(i).data(), NUM_CLASSES * sizeof(float));
-      for (int j = 0; j < NUM_CLASSES; j++)
-        host_cloud[i].label_distribution[j] = labels(i,j);
-
+      memcpy(host_cloud[i].label_distribution, labels.row(i).data(), NUM_CLASSES * sizeof(float));
 #endif
 
       //if (i == 1000) {
@@ -128,15 +117,10 @@ namespace cvo{
       pcl_cloud.points[i].g = (uint8_t)std::min(255.0, (features(i,1) * 255.0)) ;
       pcl_cloud.points[i].b = (uint8_t)std::min(255.0, (features(i,2) * 255.0));
 
-      //memcpy(pcl_cloud[i].features, features.row(i).data(), FEATURE_DIMENSIONS * sizeof(float));
-      for (int j = 0; j < FEATURE_DIMENSIONS; j++)
-        pcl_cloud[i].features[j] = features(i,j);
+      memcpy(pcl_cloud[i].features, features.row(i).data(), FEATURE_DIMENSIONS * sizeof(float));
 
       labels.row(i).maxCoeff(&pcl_cloud.points[i].label);
-      ///memcpy(pcl_cloud[i].label_distribution, labels.row(i).data(), NUM_CLASSES * sizeof(float));
-      for (int j = 0; j < NUM_CLASSES; j++)
-        pcl_cloud[i].label_distribution[j] = labels(i,j);
-
+      memcpy(pcl_cloud[i].label_distribution, labels.row(i).data(), NUM_CLASSES * sizeof(float));
     }
   }
 
@@ -225,7 +209,7 @@ namespace cvo{
     cudaMemcpy(cvo_state->R_gpu->data(), R.data(), sizeof(float)*9, cudaMemcpyHostToDevice);
     cudaMemcpy(cvo_state->T_gpu->data(), T.data(), sizeof(float)*3, cudaMemcpyHostToDevice );
 
-    //if (debug_print) std::cout<<"transform mat "<<transform<<"\n";
+    if (debug_print) std::cout<<"transform mat "<<transform<<"\n";
   }
 
 
@@ -268,22 +252,25 @@ namespace cvo{
     //int * mat_inds = new int [kd_tree_max_leafIf they all have the same size, tha];
     int num_inds = 0;
 #ifdef IS_USING_KDTREE
-    for (int j = 0; j < KDTREE_K_SIZE ; j++) {
+    for (size_t j = 0; j < KDTREE_K_SIZE ; j++) {
       int ind_b = kdtree_inds[i * KDTREE_K_SIZE  + j];
 #else      
-    for (int j = 0; j < b_size ; j++) {
+    for (size_t j = 0; j < b_size ; j++) {
       int ind_b = j;
 #endif
       //float d2 = (cloud_y_gpu[ind_b] - cloud_x_gpu[i]).squaredNorm();
       // d2 = (x-y)^2
-      float d2 = (squared_dist( points_b[ind_b] ,*p_a ));
+      float d2 = squared_dist( points_b[ind_b] ,*p_a );
       
-      if ( i == 1000 && j== 1074) {
-        CvoPoint * pb = points_b + j;
-        printf("gpu se_kernel: i==%d,j==%d: d2 is %f, d2_thres is %f, point_a (%f, %f, %f), point_b: (%f, %f, %f)\n", i, j,d2, d2_thres,
-               p_a->x, p_a->y, p_a->z,
-               pb->x, pb->y,  pb->z );
-      }
+      //if ( i == 0 && d2 < d2_thres) {
+        //printf("se_kernel: i==%d: d2 is %f, d2_thres is %f, point_a (%f, %f, %f), point_b: (%f, %f, %f)\n", i, d2, d2_thres,
+        //       p_a->x, p_a->y, p_a->z,
+        //       pb->x, pb->y,  pb->z );
+          //if (i == 1000){
+          //  printf("point_a (%f, %f, %f), point_b: (%f, %f, %f), d2: %f\n  ", p_a->x, p_a->y, p_a->z,
+          //         pb->x, pb->y,  pb->z, d2);
+            
+          //}
       
       if(d2<d2_thres  ){
         //float feature_b[5] = {(float)p_a->r, (float)p_a->g, (float)p_a->b,  p_a->gradient[0], p_a->gradient[1]  };
@@ -295,12 +282,12 @@ namespace cvo{
 #endif
 
 # if __CUDA_ARCH__>=200
-        if (i == 1000 && j==1074) {
+        if (i == 000 && d2_color < d2_c_thres) {
           float * fa = p_a->features;
           float *fb = p_b->features;
-          printf("gpu se_kernel: i=%d,j=%d: d2_color is %f, d2_c_thres is %f,", i,j,d2_color, d2_c_thres );
-          printf("color feature i == 0, a=(%f,%f,%f,%f,%f), b=(%f,%f,%f,%f,%f)\n",
-                  fa[0], fa[1], fa[2], fa[3], fa[4], fb[0], fb[1], fb[2], fb[3], fb[4]);
+          //printf("se_kernel: i==0: d2_color is %f, d2_c_thres is %f\n", d2_color, d2_c_thres );
+          //printf("color feature i == 0, a=(%f,%f,%f,%f,%f), b=(%f,%f,%f,%f,%f)\n",
+          //         fa[0], fa[1], fa[2], fa[3], fa[4], fb[0], fb[1], fb[2], fb[3], fb[4]);
 
         }
 
@@ -318,9 +305,8 @@ namespace cvo{
           float a = ck*k*sk;
           
 # if __CUDA_ARCH__>=200
-          if (i == 1000 && j == 1074)
-            printf("se_kernel: i=%d,j=%d: d2_color is %f, d2_c_thres is %f,k is %f, ck is %f\n", i,j,d2_color, d2_c_thres, k, ck );
-          //printf("se_kernel: i==1000: k is %f, ck is %f\n", k, ck );
+          //if (i == 1000 && j < 100)
+            //printf("se_kernel: i==1000: k is %f, ck is %f\n", k, ck );
 
 #endif  
 
@@ -402,7 +388,7 @@ namespace cvo{
     CvoPoint * points_fixed_raw = thrust::raw_pointer_cast (  points_fixed->points.data() );
     CvoPoint * points_moving_raw = thrust::raw_pointer_cast( points_moving->points.data() );
     
-    cudaDeviceSynchronize();
+
     fill_in_A_mat_gpu<<<(points_fixed->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(params_gpu,
                                                                                          //se_params_gpu,
                                                                                          points_fixed_raw,
@@ -1092,7 +1078,7 @@ namespace cvo{
 
       // find the change of translation matrix dtrans
       if (debug_print) printf("Exp_SEK3...\n");
-      Eigen::Matrix<float,3,4> dtrans = Exp_SEK3(vec_joined, cvo_state.step).cast<float>();
+      Eigen::Matrix4f dtrans = Exp_SEK3(vec_joined, cvo_state.step);
 
       // extract dR and dT from dtrans
       Eigen::Matrix3f dR = dtrans.block<3,3>(0,0);

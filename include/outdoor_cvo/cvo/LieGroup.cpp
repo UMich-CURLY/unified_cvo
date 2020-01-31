@@ -185,6 +185,39 @@ Eigen::MatrixXf Exp_SEK3(const Eigen::VectorXf& v, float dt) {
     return X;
 }
 
+
+__attribute__((force_align_arg_pointer))
+Eigen::Matrix<float, 3, 4> Exp_SEK3(const Eigen::Matrix<float, 6,1>& v, float dt) {
+    // Computes the vectorized exponential map for SE_K(3)
+    Eigen::Matrix3f R;
+    Eigen::Matrix3f Jl;
+    Eigen::Vector3f w = v.head(3);
+    float theta = w.norm();
+    Eigen::Matrix3f I = Eigen::Matrix3f::Identity();
+    if (theta < TOLERANCE) {
+        R = I;
+        Jl = I;
+    } else {
+        Eigen::Matrix3f A = skew(w);
+        float theta2 = theta*theta;
+        float stheta = sin(dt*theta);
+        float ctheta = cos(dt*theta);
+        float oneMinusCosTheta2 = (1-ctheta)/(theta2);
+        Eigen::Matrix3f A2 = A*A;
+        R =  I + (stheta/theta)*A + oneMinusCosTheta2*A2;
+        Jl = dt*I + oneMinusCosTheta2*A + ((dt*theta-stheta)/(theta2*theta))*A2;
+    }
+    Eigen::Matrix<float, 3, 4> X;
+    X(0,0) = 1.0; X(1,1) = 1.0;  X(2,2) = 1.0;
+    X.block<3,3>(0,0) = R;
+    for (int i=0; i<1; ++i) {
+      Eigen::Vector3f v3=  v.segment<3>(3+3*i);
+      X.block<3,1>(0,3+i) = Jl * v3;
+    }
+    return X;
+
+}
+
 Eigen::MatrixXf Adjoint_SEK3(const Eigen::MatrixXf& X) {
     // Compute Adjoint(X) for X in SE_K(3)
     int K = X.cols()-3;
@@ -196,4 +229,59 @@ Eigen::MatrixXf Adjoint_SEK3(const Eigen::MatrixXf& X) {
         Adj.block<3,3>(3+3*i,0) = skew(X.block<3,1>(0,3+i))*R;
     }
     return Adj;
+}
+
+  
+  Eigen::Vector3cf poly_solver_order3(const Eigen::Vector4f& coef){
+    // extract order
+    int order = 3;
+    Eigen::Vector3cf roots;
+    
+    // create M = diag(ones(n-1,1),-1)
+    Eigen::Matrix3f M = Eigen::Matrix3f::Zero();
+    M.bottomLeftCorner(2,2).setIdentity(); //= Eigen::Matrix2f::Identity();
+    
+    // M(1,:) = -p(2:n+1)./p(1)
+    M.row(0) = -(coef/coef(0)).segment(1,order).transpose();
+
+    // eigen(M) and get the answer
+    roots = M.eigenvalues();
+
+    return roots;
+  }
+
+
+
+Eigen::VectorXcf poly_solver(const Eigen::VectorXf& coef){
+  // extract order
+  int order = coef.size()-1;
+  Eigen::VectorXcf roots;
+    
+  // create M = diag(ones(n-1,1),-1)
+  Eigen::MatrixXf M = Eigen::MatrixXf::Zero(order,order);
+  M.bottomLeftCorner(order-1,order-1) = Eigen::MatrixXf::Identity(order-1,order-1);
+    
+  // M(1,:) = -p(2:n+1)./p(1)
+  M.row(0) = -(coef/coef(0)).segment(1,order).transpose();
+
+  // eigen(M) and get the answer
+  roots = M.eigenvalues();
+
+  return roots;
+}
+
+__attribute__((force_align_arg_pointer))
+float dist_se3(const Eigen::Matrix3f& R, const Eigen::Vector3f& T)  {
+  // create transformation matrix
+  printf("Size of matrix4f is %d\n", sizeof(Eigen::Matrix4f));
+  Eigen::Matrix4f temp_transform ;
+  //Eigen::Matrix4f temp_transform;// = Eigen::Matrix4f::Identity();
+  temp_transform.block<3,3>(0,0)=R;
+  temp_transform.block<3,1>(0,3)=T;
+  (temp_transform)(3,3) = 1.0;
+    
+  // distance = frobenius_norm(logm(trans))
+  float d = temp_transform.log().norm();
+
+  return d;
 }

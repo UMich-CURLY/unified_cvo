@@ -33,7 +33,7 @@ namespace cvo {
      //                           [=] __host__ __device__ (float x, float y) { return fabs(x) > 1e-7 ? 1.0f : 0.0f; });
      thrust::plus<float> binary_add;
      return (int)thrust::transform_reduce(v.begin(), v.end(),
-                                          []__host__ __device__(float x) { return fabs(x) > 1e-7 ? 1.0f : 0.0f; },
+                                          []__host__ __device__(float x) { return fabs(x) > 0.0 ? 1.0f : 0.0f; },
                                           0,
                                           binary_add);  
   }
