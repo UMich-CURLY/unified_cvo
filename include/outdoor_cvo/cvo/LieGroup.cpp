@@ -273,7 +273,7 @@ Eigen::VectorXcf poly_solver(const Eigen::VectorXf& coef){
 __attribute__((force_align_arg_pointer))
 float dist_se3(const Eigen::Matrix3f& R, const Eigen::Vector3f& T)  {
   // create transformation matrix
-  printf("Size of matrix4f is %d\n", sizeof(Eigen::Matrix4f));
+  //printf("Size of matrix4f is %d\n", sizeof(Eigen::Matrix4f));
   Eigen::Matrix4f temp_transform ;
   //Eigen::Matrix4f temp_transform;// = Eigen::Matrix4f::Identity();
   temp_transform.block<3,3>(0,0)=R;

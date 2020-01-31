@@ -11,8 +11,8 @@ check_language(CUDA)
 
 add_compile_options(-std=c++14)
 # Release Mode
-set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -g -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
+set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -O3 -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -lmkl_intel_lp64 -lmkl_core -lmkl -liomp -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 #set(CMAKE_BUILD_TYPE Debug)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -std=c++17 -g  -msse -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
@@ -63,19 +63,19 @@ add_definitions(-DOPENMP)
 #add_definitions(-DDEBUG)
 
 # flags
-add_definitions("-DENABLE_SSE")
-set(CMAKE_CXX_FLAGS
-  #"${CMAKE_CXX_FLAGS} ${SSE_FLAGS} -fPIC -march=native"
-  "${CMAKE_CXX_FLAGS} ${SSE_FLAGS} -march=native"
-	#"${CMAKE_CXX_FLAGS} ${SSE_FLAGS}  -fPIC "
-)
+#add_definitions("-DENABLE_SSE")
+#$set(CMAKE_CXX_FLAGS
+#  #"${CMAKE_CXX_FLAGS} ${SSE_FLAGS} -fPIC -march=native"
+#  "${CMAKE_CXX_FLAGS} ${SSE_FLAGS} -march=native"
+#	#"${CMAKE_CXX_FLAGS} ${SSE_FLAGS}  -fPIC "
+#)
 
 find_package(CUDA)
 SET(CUDA_SEPARABLE_COMPILATION ON)
 #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++14; -Xcompiler -fPIC; -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -O2; -use_fast_math; --extended-lambda; -gencode arch=compute_61,code=sm_61;)
 #list(APPEND CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS}  "-Xcompiler -std=c++14  -O3 -rdc=true -Wno-deprecated-gpu-targets -lgsl -lgslcblas -lm -use_fast_math"  )
 #list(APPEND CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-ccbin g++-8 --extended-lambda -gencode arch=compute_61,code=sm_61" )
-set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g  --extended-lambda -gencode arch=compute_61,code=sm_61"  )
+set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --extended-lambda -gencode arch=compute_61,code=sm_61"  )
 foreach(flag IN LISTS "-std=c++14;  -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -use_fast_math" )
   add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${flag}>")
 endforeach()
@@ -144,7 +144,7 @@ message("CUDA_NVCC_FLAGS are ${CUDA_NVCC_FLAGS}")
 add_library(elas ${ELAS_LIB_SOURCE})
 add_library(lie_group_utils ${LIE_GROUP_SOURCE})
 add_library(cvo_gpu_lib ${CVO_GPU_SOURCE})
-target_link_libraries(cvo_gpu_lib lie_group_utils)
+target_link_libraries(cvo_gpu_lib PRIVATE lie_group_utils)
 add_library(cvo_cpu_lib ${CVO_CPU_SOURCE} )
 target_link_libraries(cvo_cpu_lib lie_group_utils)
 add_library(cvo_cpu_exec ${CVO_LIB_SOURCE})
@@ -167,7 +167,7 @@ add_executable(cvo_align ${PROJECT_SOURCE_DIR}/src/main_cvo_align.cpp )
 target_link_libraries(cvo_align cvo_cpu_exec boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(cvo_align_gpu ${PROJECT_SOURCE_DIR}/src/main_cvo_gpu_align.cpp)
-target_link_libraries(cvo_align_gpu cvo_gpu_exec elas boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(cvo_align_gpu cvo_gpu_exec cvo_cpu_lib elas boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(cvo_align_gpu_test ${PROJECT_SOURCE_DIR}/src/tests/main_cvo_gpu_align.cpp)
 target_link_libraries(cvo_align_gpu_test cvo_gpu_exec cvo_cpu_exec elas boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})

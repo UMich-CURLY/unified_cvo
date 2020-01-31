@@ -350,12 +350,12 @@ namespace cvo{
               // concrrent access !
               if (a > sp_thres){
                 A_trip_concur_.push_back(Trip_t(i,idx,a));
-                if (debug_print && i == 1000) {
+                /*if (debug_print && i == 1000) {
                   std::cout<<"Inside se_kernel: i=1000, j="<<idx<<", d2="<<d2<<", k="<<k<<
                     ", ck="<<ck<<", the point_b is ("<<(*cloud_b_pos)[idx].transpose()<<std::endl;
                   std::cout<<"feature_a "<<feature_a.transpose()<<", feature_b "<<feature_b.transpose()<<std::endl;
                   
-                }
+                  }*/
               }
              
             
@@ -539,6 +539,7 @@ namespace cvo{
                                            sum_diff_xx_2(j,0) = diff_xx.row(j).squaredNorm();
                                            ++j;
                                          }
+                                         double dl_ayy = 0, dl_yx =0, dl_xx= 0;
                                          if(i<num_moving){
                                            j = 0; 
                                            for(Eigen::SparseMatrix<float,Eigen::RowMajor>::InnerIterator it(Ayy,i); it; ++it){
@@ -548,6 +549,7 @@ namespace cvo{
                                              ++j;
                                            }
                                            // update dl from Ayy
+                                           dl_ayy = double((1/ell_3*Ayyi*sum_diff_yy_2)(0,0));
                                            partial_dl += double((1/ell_3*Ayyi*sum_diff_yy_2)(0,0));
                                          }
                                          partial_omega = (1/c*Ai*cross_xy).cast<double>();
@@ -555,10 +557,10 @@ namespace cvo{
 
                                          // update dl from Axy
                                          partial_dl -= double(2*(1/ell_3*Ai*sum_diff_yx_2)(0,0));
-        
+                                         dl_yx = -double(2*(1/ell_3*Ai*sum_diff_yx_2)(0,0));
                                          // update dl from Axx
                                          partial_dl += double((1/ell_3*Axxi*sum_diff_xx_2)(0,0));
-
+                                         dl_xx = double((1/ell_3*Axxi*sum_diff_xx_2)(0,0));
                                          // sum them up
                                          // concurrent access
                                          omegav_lock.lock();
@@ -566,13 +568,15 @@ namespace cvo{
                                          double_v += partial_v.transpose();
                                          dl += partial_dl;
                                          omegav_lock.unlock();
+                                         if (i == 1000)
+                                           printf("partial_dl[1000] is %lf, dl_yx is %lf, dl_xx is %lf, dl_ayy is %lf\n", dl_yx+dl_ayy+dl_xx,dl_yx, dl_xx, dl_ayy );
                                        });
     //end = chrono::system_clock::now();
     //std::cout<<"time for this tbb gradient flow is "<<(end- start).count()<<std::endl;
     
     // }
-
-    // if num_moving > num_fixed, update the rest of Ayy to dl 
+    printf("dl before Ayy is %lf\n", dl);
+          // if num_moving > num_fixed, update the rest of Ayy to dl 
     if(num_moving>num_fixed){
       tbb::parallel_for(int(num_fixed),num_moving,[&](int i){
                                                     int num_non_zeros_yy = Ayy.innerVector(i).nonZeros();
@@ -602,8 +606,9 @@ namespace cvo{
     // update them to class-wide variables
     omega = double_omega.cast<float>();
     v = double_v.cast<float>();
+    std::cout<<"dl total is "<<dl<<std::endl;
     dl = dl/(Axx.nonZeros()+Ayy.nonZeros()-2*A.nonZeros());
-
+    std::cout<<"dl after normalization is "<< dl<<std::endl;
   }
 
 
@@ -633,6 +638,19 @@ namespace cvo{
                                              normxiz2(j,0) = xiz.row(j).squaredNorm();
                                              xiz_dot_xi2z(j,0) = (-xiz.row(j).dot(xi2z.row(j)));
                                              epsil_const(j,0) = xi2z.row(j).squaredNorm()+2*xiz.row(j).dot(xi3z.row(j));
+
+                                          
+                                             if (j == 1000) {
+                                               printf("j==1000, xiz=(%f %f %f), xi2z=(%f %f %f), xi3z=(%f %f %f), xi4z=(%f %f %f), normxiz2=%f, xiz_dot_xi2z=%f, epsil_const=%f\n ",
+                                                      xiz.row(j)(0), xiz.row(j)(1), xiz.row(j)(2),
+                                                      xi2z.row(j)(0),xi2z.row(j)(1),xi2z.row(j)(2),
+                                                      xi3z.row(j)(0),xi3z.row(j)(1),xi3z.row(j)(2),
+                                                      xi4z.row(j)(0),xi4z.row(j)(1),xi4z.row(j)(2),
+                                                      normxiz2(j, 0), xiz_dot_xi2z(j, 0), epsil_const(j, 0)
+                                                      );
+      
+                                             }
+
                                            });
 
     // initialize coefficients
@@ -675,6 +693,12 @@ namespace cvo{
                                            Di += double(A_ij * (delta_ij+beta_ij*gamma_ij + beta_ij*beta_ij*beta_ij/6.0));
                                            Ei += double(A_ij * (epsil_ij+beta_ij*delta_ij+1/2.0*beta_ij*beta_ij*gamma_ij\
                                                                 + 1/2.0*gamma_ij*gamma_ij + 1/24.0*beta_ij*beta_ij*beta_ij*beta_ij));
+                                           if (i == 1000 && idx==1074 ) {
+                                             printf("i==1000,j=1074,  Aij=%f, beta_ij=%f, gamma_ij=%f, delta_ij=%f, epsil_ij=%f\n",
+                                                    A_ij, beta_ij, gamma_ij, delta_ij, epsil_ij);
+                                             
+      }
+
                                          }
         
                                          // sum them up
@@ -691,7 +715,8 @@ namespace cvo{
     p_coef << 4.0*float(E),3.0*float(D),2.0*float(C),float(B);
 
     if (debug_print)
-      printf("BCDE is %lf %lf %lf %lf\n",B, C, D, E );
+      //printf("BCDE is %lf %lf %lf %lf\n",B, C, D, E );
+      std::cout<<"BCDE is "<<p_coef.transpose()<<std::endl;
     
     // solve polynomial roots
     Eigen::VectorXcf rc = poly_solver(p_coef);
@@ -711,13 +736,18 @@ namespace cvo{
     //step *= 10;
     //step = step>0.001 ? 0.001:step;
     if (debug_print)
-      std::cout<<"step size "<<step<<"\n\n--------------------------------------------------------------\n";
+      std::cout<<"step size "<<step<<"\n\n";
   }
 
   void cvo::transform_pcd(){
     tbb::parallel_for(int(0), num_moving, [&]( int j ){
                                             (*cloud_y)[j] = transform.linear()*ptr_moving_pcd->positions()[j]+transform.translation();
                                           });
+    if (debug_print) {
+      printf("print 1000th point before and after transformation\n");
+      std::cout<<"from ("<<ptr_moving_pcd->positions()[1000].transpose()<<  ") to ("<<(*cloud_y)[1000].transpose()<<")\n";
+      
+    }
     
   }
 

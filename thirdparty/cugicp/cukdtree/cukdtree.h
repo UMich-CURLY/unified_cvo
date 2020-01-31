@@ -37,7 +37,7 @@ class cuPQueue {
   int _m_size;
   int _m_top;
 
-  float _m_priorities[30];
+  float _m_priorities[100];
   int *_m_values;
 
  public:

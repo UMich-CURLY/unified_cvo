@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
     */
 
 
-    
+    /*    
     std::cout<<"\n---------------------------------------------------"<<std::endl;
     std::cout<<"Aligning "<<i<<" and "<<i+1<<" with CPU "<<std::endl;
     Eigen::Affine3f result_cpu,init_guess_inv_cpu;
@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
     std::cout<<"accum tf: \n"<<init_guess_cpu.matrix()<<std::endl;
     
 
-    
+    */
 
 
   }
