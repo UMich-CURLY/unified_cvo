@@ -31,6 +31,7 @@ namespace cvo{
     ell(0.1*7),
     ell_min(0.0391*7),
     ell_max(0.15*7),
+    ell_max_fixed(1.0),
     dl(0),
     dl_step(0.3),
     min_dl_step(0.05),
@@ -63,22 +64,23 @@ namespace cvo{
     if (ptr!=NULL) 
     {
       std::cout<<"reading cvo params from file\n";
-      fscanf(ptr, "%f\n%f\n%f\n%f\n%lf\n%lf\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n",
-             &ell_init
+      fscanf(ptr, "%f\n%f\n%f\n%f\n%lf\n%lf\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n",
+              & ell_init
              ,& ell
              ,& ell_min
              ,& ell_max
+             ,& ell_max_fixed
              ,& dl
              ,& dl_step
              ,& min_dl_step
              ,& max_dl_step
              ,& sigma
              ,& sp_thres
-             , &c
+             ,& c
              ,& d
              ,& c_ell
              ,& c_sigma
-             , &s_ell
+             ,& s_ell
              ,& s_sigma
              ,& MAX_ITER
              ,& min_step
@@ -100,6 +102,7 @@ namespace cvo{
     ell(0.1*7),
     ell_min(0.0391*7),
     ell_max(0.15*7),
+    ell_max_fixed(1),
     dl(0),
     dl_step(0.3),
     min_dl_step(0.05),
@@ -132,11 +135,12 @@ namespace cvo{
     if (ptr!=NULL) 
     {
       std::cout<<"reading cvo params from file\n";
-      fscanf(ptr, "%f\n%f\n%f\n%f\n%lf\n%lf\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n",
-             &ell_init
+      fscanf(ptr, "%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n",
+             & ell_init
              ,& ell
              ,& ell_min
              ,& ell_max
+             ,& ell_max_fixed
              ,& dl
              ,& dl_step
              ,& min_dl_step
@@ -155,6 +159,7 @@ namespace cvo{
              ,& eps_2);
       fclose(ptr);
     }
+    std::cout<<"ell_max_fixed: "<<ell_max_fixed<<std::endl;
     if (is_logging) {
       relative_transform_file = fopen("cvo_relative_transforms.txt", "w");
       init_guess_file = fopen("cvo_init_guess.txt", "w");
@@ -301,7 +306,7 @@ namespace cvo{
 
     // loop through points
     tbb::parallel_for(int(0),cloud_a->num_points(),[&](int i){
-    //for(int i=0; i<num_fixed; ++i){
+    // for(int i=0; i<num_fixed; ++i){
 
         const float search_radius = d2_thres;
         std::vector<std::pair<size_t,float>>  ret_matches;
@@ -327,6 +332,7 @@ namespace cvo{
           float d2_color = 0;
           float d2_semantic = 0;
           float a = 0;
+          
           if(d2<d2_thres){
             Eigen::Matrix<float,Eigen::Dynamic,1> feature_b = cloud_b->features().row(idx).transpose();
             d2_color = ((feature_a-feature_b).squaredNorm());
@@ -337,13 +343,27 @@ namespace cvo{
             
             if(d2_color<d2_c_thres){
               k = s2*exp(-d2/(2.0*l*l));
+              // std::cout<<"DEBUG-CVO: k=" << k << std::endl;
               ck = c_sigma*c_sigma*exp(-d2_color/(2.0*c_ell*c_ell));
+              // std::cout<<"DEBUG-CVO: ck=" << ck << std::endl;
 #ifdef IS_USING_SEMANTICS              
               sk = s_sigma*s_sigma*exp(-d2_semantic/(2.0*s_ell*s_ell));
 #else
               sk = 1;
-#endif              
+#endif        
+              // std::cout<<"DEBUG-CVO: d2=" << d2 << std::endl;
+              // std::cout<<"DEBUG-CVO: d2_color=" << d2_color << std::endl;
+              // std::cout<<"DEBUG-CVO: ck=" << ck << std::endl;
+              // if (cloud_a->num_points() != cloud_b->num_points()){
+                // std::cout<<"DEBUG-CVO: d2=" << d2 << std::endl;
+                // std::cout<<"DEBUG-CVO: k=" << k << std::endl;
+              // }
+              // std::cout<<"DEBUG-CVO: sk=" << sk << std::endl;
+              // ck = 1;
               a = ck*k*sk;
+              // std::cout<<"DEBUG-CVO: a=" << a << std::endl;
+              // std::cout<<"DEBUG-CVO: sp_thres=" << sp_thres << std::endl;
+
 
               if (a > sp_thres){
                 A_trip_concur_.push_back(Trip_t(i,idx,a));
@@ -355,7 +375,7 @@ namespace cvo{
         }
       });
 
-        //}
+        // }
     // form A
     A_temp.setFromTriplets(A_trip_concur_.begin(), A_trip_concur_.end());
     A_temp.makeCompressed();
@@ -455,6 +475,12 @@ namespace cvo{
     auto end = chrono::system_clock::now();
                             
     // compute SE kernel for Axy
+    // std::cout<<"cloud_x: "<<std::endl;
+    // // for(int i=0; i<num_fixed; ++i)
+    // std::cout <<  (*cloud_x)[i] << std::endl;
+    // std::cout<<"cloud_y: "<<std::endl;
+    // // for(int i=0; i<num_moving; ++i)
+    // std::cout << (*cloud_y)[i] << std::endl;
     se_kernel(ptr_fixed_pcd,ptr_moving_pcd,cloud_x,cloud_y,A, A_trip_concur);
 
     if (debug_print ) {std::cout<<"nonzeros in A "<<A.nonZeros()<<std::endl;
@@ -772,6 +798,7 @@ namespace cvo{
       }
               
       ell = (ell<ell_min)? ell_min:ell;
+      // std::cout<<"ell" << ell <<std::endl;
 
       // std::cout<<"iter: "<<k<<std::endl;
       // if(debug_print){
@@ -857,6 +884,8 @@ namespace cvo{
 
     ell = ell_init;
     dl = 0;
+    ell_max = ell_max_fixed;
+    std::cout<<"ell_max: "<<ell_max<<std::endl;
     A_trip_concur.reserve(num_moving*20);
     A.resize(num_fixed,num_moving);
     Axx.resize(num_fixed,num_fixed);

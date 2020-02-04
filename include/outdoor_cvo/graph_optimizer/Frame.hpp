@@ -31,7 +31,11 @@ namespace cvo {
           const Calibration & calib,
           float local_map_res=0.1);
     
-    
+    Frame(int ind,
+          const cv::Mat & image,
+          pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
+          const Calibration & calib);
+
     ~Frame();
 
     // public attributes

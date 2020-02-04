@@ -21,22 +21,46 @@ using namespace boost::filesystem;
 int main(int argc, char *argv[]) {
   // list all files in current directory.
   //You could put any file path in here, e.g. "/home/me/mwah" to list that directory
-  int num_class= 0;
-  string use_semantic_str = "";
-  bool use_semantic = false;
-  if (argc > 8) {
+  
+  int mode = 0; // 0 for online generate 1 for read txt
+  string pth = "/home/cel/PERL/datasets/kitti_dataset/sequences/05";
+  string txt_pth = pth + "/cvo_points/";
+  string calib_name = pth + "/cvo_calib.txt";
+  std::ofstream output_file("results/cvo_f2f_tracking_relative_05.txt");
+  int start_frame = 0;
+  string dataset_num = "05";
+
+  int num_class = 19;
+  string use_semantic_str = "_semantic";
+  bool use_semantic = true;
+  if (argc == 8) {
+    std::cout<<"No semantic"<<std::endl;
+    mode = stoi(argv[1]); // 0 for online generate 1 for read txt
+    string pth (argv[2]);
+    txt_pth = pth + "/" + (argv[3]);
+    calib_name = pth + "/" + (argv[4]);
+    std::ofstream output_file(argv[5]);
+    start_frame = stoi(argv[6]);
+    dataset_num = argv[7];
+    num_class= 0;
+    use_semantic_str = "";
+    use_semantic = false;
+  }
+  else if(argc == 9) {
+    std::cout<<"Semantic!"<<std::endl;
+    int mode = stoi(argv[1]); // 0 for online generate 1 for read txt
+    string pth (argv[2]);
+    txt_pth = pth + "/" + (argv[3]);
+    calib_name = pth + "/" + (argv[4]);
+    std::ofstream output_file(argv[5]);
+    start_frame = stoi(argv[6]);
+    dataset_num = argv[7];
     num_class = stoi(argv[8]);
     use_semantic_str = "_semantic";
     use_semantic = true;
   }
   
-  int mode = stoi(argv[1]); // 0 for online generate 1 for read txt
-  string pth (argv[2]);
-  string txt_pth = pth + "/" + (argv[3]);
-  string calib_name = pth + "/" + (argv[4]);
-  std::ofstream output_file(argv[5]);
-  int start_frame = stoi(argv[6]);
-  string dataset_num = argv[7];
+  
 
   int total_num = 0;
   
@@ -85,22 +109,34 @@ int main(int argc, char *argv[]) {
   std::vector<float> semantics;
   std::shared_ptr<cvo::Frame> source_frame;
   std::shared_ptr<cvo::Frame> target_frame;
-
+  std::shared_ptr<cvo::Frame> pcl_source_frame;
+  std::shared_ptr<cvo::Frame> pcl_target_frame;
+  pcl::PointCloud<pcl::PointXYZI>::Ptr pc (new pcl::PointCloud<pcl::PointXYZI>);
 
   // load the first image
   if(mode==0){
-      if(use_semantic){
-        // create first frame for kf
-        if (kitti.read_next_stereo(left, right, num_class, semantics ) == 0) {
-          source_frame = make_shared<cvo::Frame>(start_frame, left, right, num_class, semantics, calib );
+      // if(use_semantic){
+      //   // create first frame for kf
+      //   if (kitti.read_next_stereo(left, right, num_class, semantics ) == 0) {
+      //     std::shared_ptr<cvo::Frame> temp_source(new cvo::Frame(start_frame, left, right, num_class, semantics, calib ));
+      //     source_frame = temp_source; 
+      //     // source_frame = make_shared<cvo::Frame>(start_frame, left, right, num_class, semantics, calib );
+      //   }
+      // }
+      // else{
+      //   // create first frame for kf
+      //   if(kitti.read_next_stereo(left, right) == 0){
+      //     std::shared_ptr<cvo::Frame> temp_source(new cvo::Frame(start_frame, left, right, calib ));
+      //     source_frame = temp_source;
+      //     // source_frame = make_shared<cvo::Frame>(start_frame, left, right, calib);
+      //   }
+      // }
+      
+      if(kitti.read_next_stereo(left, right) == 0 && kitti.read_next_lidar(pc) == 0){
+          std::shared_ptr<cvo::Frame> temp_pcl_source(new cvo::Frame(start_frame, left, pc, calib ));
+          pcl_source_frame = temp_pcl_source;
+          // pcl_source_frame = make_shared<cvo::Frame>(start_frame, left, pc, calib);
         }
-      }
-      else{
-        // create first frame for kf
-        if(kitti.read_next_stereo(left, right) == 0){
-          source_frame = make_shared<cvo::Frame>(start_frame, left, right, calib);
-        }
-      }
       
   }
 
@@ -122,21 +158,37 @@ int main(int argc, char *argv[]) {
     // load next image
     // mode 0: online point cloud generation, mode 1: load point cloud from txt
     if(mode==0){
+        // if(use_semantic){
+        //   // load image and semantic and create point cloud into cvo::Frame
+        //   if (kitti.read_next_stereo(left, right, num_class, semantics ) == 0) {
+        //     std::shared_ptr<cvo::Frame> temp_target(new cvo::Frame(i, left, right, num_class, semantics, calib ));
+        //     target_frame = temp_target; 
+        //     // target_frame = make_shared<cvo::Frame>(i, left, right, num_class, semantics, calib );
+        //   }
+        // }
+        // else{
+        //   // load image and create point cloud into cvo::Frame
+        //   if(kitti.read_next_stereo(left, right) == 0){
+        //     std::shared_ptr<cvo::Frame> temp_target(new cvo::Frame(i, left, right, calib ));
+        //     target_frame = temp_target; 
+        //     // target_frame = make_shared<cvo::Frame>(i, left, right, calib);
+        //   }
+        // }
+        pcl::PointCloud<pcl::PointXYZI>::Ptr pc (new pcl::PointCloud<pcl::PointXYZI>);
+        if(kitti.read_next_stereo(left, right) == 0 && kitti.read_next_lidar(pc) == 0){
+          std::shared_ptr<cvo::Frame> temp_pcl_target(new cvo::Frame(i, left, pc, calib));
+          pcl_target_frame = temp_pcl_target; 
+          // pcl_target_frame = make_shared<cvo::Frame>(i, left, pc, calib);
+        }
+        
+        
+        // auto& source_fr = source_frame->points(); // keyframe
+        // auto& target_fr = target_frame->points();
+        // cvo_align.set_pcd(source_fr, target_fr, init_guess, true);
+        // cvo_align.align();
 
-        if(use_semantic){
-          // load image and semantic and create point cloud into cvo::Frame
-          if (kitti.read_next_stereo(left, right, num_class, semantics ) == 0) {
-            target_frame = make_shared<cvo::Frame>(i, left, right, num_class, semantics, calib );
-          }
-        }
-        else{
-          // load image and create point cloud into cvo::Frame
-          if(kitti.read_next_stereo(left, right) == 0){
-            target_frame = make_shared<cvo::Frame>(i, left, right, calib);
-          }
-        }
-        auto& source_fr = source_frame->points(); // keyframe
-        auto& target_fr = target_frame->points();
+        auto& source_fr = pcl_source_frame->points(); // keyframe
+        auto& target_fr = pcl_target_frame->points();
         cvo_align.set_pcd(source_fr, target_fr, init_guess, true);
         cvo_align.align();
     }
@@ -192,7 +244,8 @@ int main(int argc, char *argv[]) {
     accum_tf_output_file<<std::flush;
 
     // move source frame to target frame
-    source_frame = target_frame;
+    // source_frame = target_frame;
+    pcl_source_frame = pcl_target_frame;
   }
 
   output_file.close();

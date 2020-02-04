@@ -17,6 +17,7 @@ namespace cvo {
     debug_plot = true;
 
     string left_color_folder = folder_name + "/image_2/";
+    
     path kitti(left_color_folder.c_str());
     for (auto & p : directory_iterator(kitti)) {
       if (is_regular_file(p.path())) {
@@ -78,7 +79,61 @@ namespace cvo {
                                          pcl::PointCloud<pcl::PointXYZ>::Ptr pc  ) {
     std::cerr<<"lidar-mono not implemented in KittiHandler\n";
     assert(0);
+  }
+
+  int KittiHandler::read_next_lidar(pcl::PointCloud<pcl::PointXYZI>::Ptr pc  ) {
+
+    if (curr_index >= names.size())
+      return -1;
     
+    string lidar_bin_path = folder_name + "/velodyne/" + names[curr_index-1] + ".bin";
+    
+    std::ifstream fLidar(lidar_bin_path.c_str(),std::ios::in|std::ios::binary);
+
+    fLidar.seekg (0, fLidar.end);
+    int fLidar_length = fLidar.tellg();
+    fLidar.seekg (0, fLidar.beg);
+    int num_lidar_points = fLidar_length / 4;
+    std::cout << "fLidar_length: " << fLidar_length << ", num_lidar_points: " << num_lidar_points << std::endl;
+
+    std::vector<float> lidar_points;
+
+    if (fLidar.is_open()){
+      int num_bytes = sizeof(float) * fLidar_length;
+      
+      lidar_points.resize(fLidar_length);
+      infile.open(lidar_bin_path.c_str(),std::ios::in| std::ifstream::binary);
+
+      infile.read( reinterpret_cast<char *>(lidar_points.data()), num_bytes );
+      infile.close();
+
+      std::cout<<"lidar_bin_path "<<lidar_bin_path<<std::endl;
+      for(int r=0; r<num_lidar_points; ++r){          
+          pcl::PointCloud<pcl::PointXYZI>::PointType temp_pcl;
+          // temp_pcl.x = lidar_points[r*4+0];
+          // temp_pcl.y = lidar_points[r*4+1];
+          // temp_pcl.z = lidar_points[r*4+2];
+          temp_pcl.x = -lidar_points[r*4+1];
+          temp_pcl.y = -lidar_points[r*4+2];
+          temp_pcl.z = lidar_points[r*4+0];
+          // std::cout << "DEGUS-Kitti: point " << to_string(r) << ", intensity=" << to_string(lidar_points[r*4+3]) << std::endl;
+          temp_pcl.intensity = lidar_points[r*4+3];
+          
+          if(temp_pcl.x == 0 && temp_pcl.y == 0 && temp_pcl.z == 0 && temp_pcl.intensity == 0){
+            // std::cout << "only " << r-1 << " points are valid" << std::endl;
+            break;
+          }
+
+          pc->push_back(temp_pcl);
+      }     
+    }
+    else {
+      cerr<<"Lidar doesn't read successfully: "<<lidar_bin_path<<"\n"<<std::flush;
+      return -1;
+      
+    }
+
+    return 0;
   }
 
 

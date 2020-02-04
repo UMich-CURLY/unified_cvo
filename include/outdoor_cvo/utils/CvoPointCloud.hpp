@@ -10,6 +10,9 @@
 #include "utils/StaticStereo.hpp"
 #include "utils/Calibration.hpp"
 #include "utils/data_type.hpp"
+
+#include <pcl/point_types.h>
+#include <pcl/point_cloud.h>
 //#include "mapping/bkioctomap.h"
 
 namespace semantic_bki {
@@ -29,6 +32,8 @@ namespace cvo {
     CvoPointCloud(const RawImage & left_raw_image,
                   const cv::Mat & right_image,
                   const Calibration &calib);
+    
+    CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc);
 
     CvoPointCloud(const semantic_bki::SemanticBKIOctoMap * map,
                   int num_semantic_class);
@@ -56,6 +61,7 @@ namespace cvo {
     void write_to_color_pcd(const std::string & name) const;
     void write_to_label_pcd(const std::string & name) const;
     void write_to_txt(const std::string & name) const;
+    void write_to_intensity_pcd(const std::string & name) const;
    
   private:
     int num_points_;

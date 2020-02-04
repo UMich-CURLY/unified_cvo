@@ -197,6 +197,30 @@ namespace cvo{
     //  write_to_label_pcd("labeled_input.pcd");
     //}
   }
+
+  CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc) {
+    int expected_points = 5000;
+    double intensity_bound = 0.4;
+    double depth_bound = 3.0;
+    double distance_bound = 40.0;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
+    std::vector <double> output_depth_grad;
+    std::vector <double> output_intenstity_grad;
+    edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, pc_out, output_depth_grad, output_intenstity_grad);
+     
+    // start to fill in class members
+    num_points_ = pc_out->size();
+    num_classes_ = 0;
+    features_.resize(num_points_, 1);
+
+    for (int i = 0; i < num_points_ ; i++) {
+      Vec3f xyz(pc_out->points[i].x, pc_out->points[i].y, pc_out->points[i].z);
+      // std::cout << "is_good_point? " << is_good_point(xyz) << std::endl;
+      positions_.push_back(xyz);
+      // std::cout << "DEBUG-CVOPCL: intensity=" << pc_out->points[i].intensity << std::endl;
+      features_(i) = pc_out->points[i].intensity;
+    }
+  }
   
   CvoPointCloud::CvoPointCloud(const semantic_bki::SemanticBKIOctoMap * map,
                                const int num_classes) {
@@ -301,6 +325,7 @@ namespace cvo{
       p.x = positions_[i](0);
       p.y = positions_[i](1);
       p.z = positions_[i](2);
+      
       uint8_t b = static_cast<uint8_t>(std::min(255, (int)(features_(i,0) * 255) ) );
       uint8_t g = static_cast<uint8_t>(std::min(255, (int)(features_(i,1) * 255) ) );
       uint8_t r = static_cast<uint8_t>(std::min(255, (int)(features_(i,2) * 255)));
@@ -350,6 +375,19 @@ namespace cvo{
 
     }
     
+  }
+
+  void CvoPointCloud::write_to_intensity_pcd(const std::string & name) const {
+    pcl::PointCloud<pcl::PointXYZI> pc;
+    for (int i = 0; i < num_points_; i++) {
+      pcl::PointXYZI p;
+      p.x = positions_[i](0);
+      p.y = positions_[i](1);
+      p.z = positions_[i](2);
+      p.intensity = features_(i);
+      pc.push_back(p);
+    }
+    pcl::io::savePCDFileASCII(name ,pc);  
   }
   
 

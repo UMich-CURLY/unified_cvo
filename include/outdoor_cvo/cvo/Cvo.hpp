@@ -50,7 +50,7 @@
 #include <boost/timer/timer.hpp>
 // #include <omp.h>
 #include <tbb/tbb.h>
-#define IS_USING_SEMANTICS
+// #define IS_USING_SEMANTICS
 
 //using namespace std;
 using namespace nanoflann;
@@ -72,6 +72,7 @@ namespace cvo{
     float ell_init;
     float ell_min;
     float ell_max;
+    float ell_max_fixed;
     double dl;           // changes for ell in each iteration
     double dl_step;
     float min_dl_step;
