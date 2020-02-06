@@ -98,8 +98,6 @@ int main(int argc, char *argv[]) {
     accum_output<<std::flush;
     */
 
-
-    /*    
     std::cout<<"\n---------------------------------------------------"<<std::endl;
     std::cout<<"Aligning "<<i<<" and "<<i+1<<" with CPU "<<std::endl;
     Eigen::Affine3f result_cpu,init_guess_inv_cpu;
@@ -119,8 +117,8 @@ int main(int argc, char *argv[]) {
     init_guess_cpu = init_guess_cpu*result_cpu;
     std::cout<<"accum tf: \n"<<init_guess_cpu.matrix()<<std::endl;
     
-
-    */
+    
+  
 
 
   }

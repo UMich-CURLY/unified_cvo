@@ -164,11 +164,11 @@ namespace cvo {
   inline void CvoState::reset_state_at_new_iter () {
 
     cudaMemset( (void*)A_host.mat, 0, sizeof(float) * A_host.rows * A_host.cols );
-    cudaMemset( (void*)A_host.ind_row2col , 0 , sizeof(int )* A_host.rows * A_host.cols  );
+    cudaMemset( (void*)A_host.ind_row2col , -1 , sizeof(int )* A_host.rows * A_host.cols  );
     cudaMemset( (void*)Axx_host.mat, 0, sizeof(float) * Axx_host.rows * Axx_host.cols  );
-    cudaMemset( (void*)Axx_host.ind_row2col , 0 , sizeof(int )* Axx_host.rows * Axx_host.cols);
+    cudaMemset( (void*)Axx_host.ind_row2col , -1 , sizeof(int )* Axx_host.rows * Axx_host.cols);
     cudaMemset( (void*)Ayy_host.mat, 0, sizeof(float) * Ayy_host.rows * Ayy_host.cols  );
-    cudaMemset( (void*)Ayy_host.ind_row2col , 0 , sizeof(int )* Ayy_host.rows * Ayy_host.cols );
+    cudaMemset( (void*)Ayy_host.ind_row2col , -1 , sizeof(int )* Ayy_host.rows * Ayy_host.cols );
     
   }
   

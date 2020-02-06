@@ -59,7 +59,7 @@ namespace cvo{
     prev_transform(Eigen::Affine3f::Identity()),
     accum_tf(Eigen::Affine3f::Identity()),
     accum_tf_vis(Eigen::Affine3f::Identity()),
-    debug_print(true)
+    debug_print(false)
   {
     FILE* ptr = fopen(param_file.c_str(), "r" ); 
     if (ptr!=NULL) 
@@ -128,7 +128,7 @@ namespace cvo{
     prev_transform(Eigen::Affine3f::Identity()),
     accum_tf(Eigen::Affine3f::Identity()),
     accum_tf_vis(Eigen::Affine3f::Identity()),
-    debug_print(true)
+    debug_print(false)
   {
     FILE* ptr = fopen("cvo_params.txt", "r" ); 
     if (ptr!=NULL) 
@@ -350,12 +350,14 @@ namespace cvo{
               // concrrent access !
               if (a > sp_thres){
                 A_trip_concur_.push_back(Trip_t(i,idx,a));
-                /*if (debug_print && i == 1000) {
+                if (debug_print && i == 1000) {
                   std::cout<<"Inside se_kernel: i=1000, j="<<idx<<", d2="<<d2<<", k="<<k<<
-                    ", ck="<<ck<<", the point_b is ("<<(*cloud_b_pos)[idx].transpose()<<std::endl;
+                    ", ck="<<ck
+                           <<", the point_a is ("<<(*cloud_a_pos)[i].transpose()
+                           <<", the point_b is ("<<(*cloud_b_pos)[idx].transpose()<<std::endl;
                   std::cout<<"feature_a "<<feature_a.transpose()<<", feature_b "<<feature_b.transpose()<<std::endl;
                   
-                  }*/
+                }
               }
              
             
@@ -568,14 +570,15 @@ namespace cvo{
                                          double_v += partial_v.transpose();
                                          dl += partial_dl;
                                          omegav_lock.unlock();
-                                         if (i == 1000)
-                                           printf("partial_dl[1000] is %lf, dl_yx is %lf, dl_xx is %lf, dl_ayy is %lf\n", dl_yx+dl_ayy+dl_xx,dl_yx, dl_xx, dl_ayy );
+                                         //                                         if (debug_print && i == 1000)
+                                         //printf("partial_dl[1000] is %lf, dl_yx is %lf, dl_xx is %lf, dl_ayy is %lf\n", dl_yx+dl_ayy+dl_xx,dl_yx, dl_xx, dl_ayy );
                                        });
     //end = chrono::system_clock::now();
     //std::cout<<"time for this tbb gradient flow is "<<(end- start).count()<<std::endl;
     
     // }
-    printf("dl before Ayy is %lf\n", dl);
+    //if (debug_print)
+    //printf("dl before Ayy is %lf\n", dl);
           // if num_moving > num_fixed, update the rest of Ayy to dl 
     if(num_moving>num_fixed){
       tbb::parallel_for(int(num_fixed),num_moving,[&](int i){
@@ -606,9 +609,9 @@ namespace cvo{
     // update them to class-wide variables
     omega = double_omega.cast<float>();
     v = double_v.cast<float>();
-    std::cout<<"dl total is "<<dl<<std::endl;
+    if (debug_print )std::cout<<"dl total is "<<dl<<std::endl;
     dl = dl/(Axx.nonZeros()+Ayy.nonZeros()-2*A.nonZeros());
-    std::cout<<"dl after normalization is "<< dl<<std::endl;
+    if (debug_print)std::cout<<"dl after normalization is "<< dl<<std::endl;
   }
 
 
@@ -639,8 +642,8 @@ namespace cvo{
                                              xiz_dot_xi2z(j,0) = (-xiz.row(j).dot(xi2z.row(j)));
                                              epsil_const(j,0) = xi2z.row(j).squaredNorm()+2*xiz.row(j).dot(xi3z.row(j));
 
-                                          
-                                             if (j == 1000) {
+                                             /*
+                                             if (debug_print && j == 1000) {
                                                printf("j==1000, xiz=(%f %f %f), xi2z=(%f %f %f), xi3z=(%f %f %f), xi4z=(%f %f %f), normxiz2=%f, xiz_dot_xi2z=%f, epsil_const=%f\n ",
                                                       xiz.row(j)(0), xiz.row(j)(1), xiz.row(j)(2),
                                                       xi2z.row(j)(0),xi2z.row(j)(1),xi2z.row(j)(2),
@@ -649,7 +652,7 @@ namespace cvo{
                                                       normxiz2(j, 0), xiz_dot_xi2z(j, 0), epsil_const(j, 0)
                                                       );
       
-                                             }
+                                                      }*/
 
                                            });
 
@@ -693,11 +696,11 @@ namespace cvo{
                                            Di += double(A_ij * (delta_ij+beta_ij*gamma_ij + beta_ij*beta_ij*beta_ij/6.0));
                                            Ei += double(A_ij * (epsil_ij+beta_ij*delta_ij+1/2.0*beta_ij*beta_ij*gamma_ij\
                                                                 + 1/2.0*gamma_ij*gamma_ij + 1/24.0*beta_ij*beta_ij*beta_ij*beta_ij));
-                                           if (i == 1000 && idx==1074 ) {
+                                           /*if (debug_print && i == 1000 && idx==1074 ) {
                                              printf("i==1000,j=1074,  Aij=%f, beta_ij=%f, gamma_ij=%f, delta_ij=%f, epsil_ij=%f\n",
                                                     A_ij, beta_ij, gamma_ij, delta_ij, epsil_ij);
-                                             
-      }
+                                                    
+                                                    }*/
 
                                          }
         
@@ -714,9 +717,9 @@ namespace cvo{
     Eigen::VectorXf p_coef(4);
     p_coef << 4.0*float(E),3.0*float(D),2.0*float(C),float(B);
 
-    if (debug_print)
+    //if (debug_print)
       //printf("BCDE is %lf %lf %lf %lf\n",B, C, D, E );
-      std::cout<<"BCDE is "<<p_coef.transpose()<<std::endl;
+    //  std::cout<<"BCDE is "<<p_coef.transpose()<<std::endl;
     
     // solve polynomial roots
     Eigen::VectorXcf rc = poly_solver(p_coef);
@@ -765,8 +768,8 @@ namespace cvo{
     chrono::duration<double> t_transform_pcd = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_flow = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_step = chrono::duration<double>::zero();
-    //for(int k=0; k<MAX_ITER; k++){
-    for(int k=0; k<2; k++){
+    for(int k=0; k<MAX_ITER; k++){
+    //for(int k=0; k<1; k++){
       // update transformation matrix
       update_tf();
 
