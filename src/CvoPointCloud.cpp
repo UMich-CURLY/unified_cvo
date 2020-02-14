@@ -198,7 +198,7 @@ namespace cvo{
     int expected_points = 5000;
     double intensity_bound = 0.4;
     double depth_bound = 3.0;
-    double distance_bound = 30.0;
+    double distance_bound = 40.0;
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;

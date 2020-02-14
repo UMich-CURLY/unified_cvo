@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
 
   int total_num = 0;
   
-  std::ofstream accum_tf_output_file("results/cvo_f2f_tracking_"+dataset_num+use_semantic_str+".txt");
+  std::ofstream accum_tf_output_file("results/cvo_f2f_tracking_"+dataset_num+use_semantic_str+"_30m_geo_l75.txt");
   std::ofstream in_product_output_file("results/inner_product_all_"+dataset_num+use_semantic_str+".txt");
 
   vector<string> files;
