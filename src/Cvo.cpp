@@ -295,6 +295,8 @@ namespace cvo{
     if (debug_print ) std::cout<<"l is "<<l<<",d2_thres is "<<d2_thres<<std::endl;
     const float d2_c_thres = -2.0*c_ell*c_ell*log(sp_thres/c_sigma/c_sigma);
     if (debug_print) std::cout<<"d2_c_thres is "<<d2_c_thres<<std::endl;
+    // std::cout<<"DEBUG-CVO: l is "<<l<<",d2_thres is "<<d2_thres<<std::endl;
+    // std::cout<<"DEBUG-CVO: d2_c_thres is "<<d2_c_thres<<std::endl;
     
     /** 
      * kdtreeeeeeeeeeeeeeeeeeeee
@@ -340,8 +342,8 @@ namespace cvo{
             Eigen::VectorXf label_b = cloud_b->labels().row(idx);
             d2_semantic = ((label_a-label_b).squaredNorm());
 #endif
-            
-            if(d2_color<d2_c_thres){
+            // std::cout<<"DEBUG-CVO: d2 = " << d2 << ", d2_color = " << d2_color << std::endl;
+            // if(d2_color<d2_c_thres){
               k = s2*exp(-d2/(2.0*l*l));
               // std::cout<<"DEBUG-CVO: k=" << k << std::endl;
               ck = c_sigma*c_sigma*exp(-d2_color/(2.0*c_ell*c_ell));
@@ -359,7 +361,7 @@ namespace cvo{
                 // std::cout<<"DEBUG-CVO: k=" << k << std::endl;
               // }
               // std::cout<<"DEBUG-CVO: sk=" << sk << std::endl;
-              // ck = 1;
+              ck = 1;
               a = ck*k*sk;
               // std::cout<<"DEBUG-CVO: a=" << a << std::endl;
               // std::cout<<"DEBUG-CVO: sp_thres=" << sp_thres << std::endl;
@@ -370,7 +372,7 @@ namespace cvo{
               }
              
             
-            }
+            // }
           }
         }
       });
@@ -736,6 +738,9 @@ namespace cvo{
     chrono::duration<double> t_transform_pcd = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_flow = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_step = chrono::duration<double>::zero();
+    std::ofstream dist_log("lidar_cvo_dist_log.txt");
+
+
     for(int k=0; k<MAX_ITER; k++){
       // update transformation matrix
       update_tf();
@@ -785,6 +790,9 @@ namespace cvo{
 
       // if the se3 distance is smaller than eps2, break
       if (debug_print)std::cout<<"dist: "<<dist_se3(dR, dT)<<std::endl;
+      dist_log << dist_se3(dR, dT) << "\n";
+      dist_log<<std::flush;
+
       if(dist_se3(dR,dT)<eps_2){
         iter = k;
         std::cout<<"dist: "<<dist_se3(dR,dT)<<std::endl;
@@ -808,6 +816,8 @@ namespace cvo{
         // std::cout<<transform.matrix()<<std::endl;
       // }
     }
+
+    dist_log.close();
 
     std::cout<<"cvo # of iterations is "<<iter<<std::endl;
     std::cout<<"t_transform_pcd is "<<t_transform_pcd.count()<<"\n";

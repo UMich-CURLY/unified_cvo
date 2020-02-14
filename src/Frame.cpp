@@ -72,7 +72,7 @@ namespace cvo {
       h(0),
       w(0),
       calib(calib),
-      raw_image_(image),
+      raw_image_(),
       points_(pc),
       local_map_(nullptr),
       is_keyframe_(false),

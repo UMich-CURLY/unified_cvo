@@ -94,7 +94,7 @@ namespace cvo{
 
     Eigen::Matrix3f R;   // orientation
     Eigen::Vector3f T;   // translation
-    Eigen::SparseMatrix<float,Eigen::RowMajor> A;      // coefficient matrix, represented in sparse
+    Eigen::SparseMatrix<float,Eigen::RowMajor> A;        // coefficient matrix, represented in sparse
     Eigen::SparseMatrix<float,Eigen::RowMajor> Axx;      // coefficient matrix, represented in sparse
     Eigen::SparseMatrix<float,Eigen::RowMajor> Ayy;      // coefficient matrix, represented in sparse
     Eigen::Vector3f omega;  // so(3) part of twist

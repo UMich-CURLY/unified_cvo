@@ -71,7 +71,7 @@ namespace cvo {
 
     if (debug_plot)
       visualize_semantic_image("last_semantic.png", semantics.data(), num_semantic_class, left.cols, left.rows );
-
+    
     return 0;
   }
 
@@ -86,7 +86,7 @@ namespace cvo {
     if (curr_index >= names.size())
       return -1;
     
-    string lidar_bin_path = folder_name + "/velodyne/" + names[curr_index-1] + ".bin";
+    string lidar_bin_path = folder_name + "/velodyne/" + names[curr_index] + ".bin";
     
     std::ifstream fLidar(lidar_bin_path.c_str(),std::ios::in|std::ios::binary);
 
@@ -94,7 +94,7 @@ namespace cvo {
     int fLidar_length = fLidar.tellg();
     fLidar.seekg (0, fLidar.beg);
     int num_lidar_points = fLidar_length / 4;
-    std::cout << "fLidar_length: " << fLidar_length << ", num_lidar_points: " << num_lidar_points << std::endl;
+    // std::cout << "fLidar_length: " << fLidar_length << ", num_lidar_points: " << num_lidar_points << std::endl;
 
     std::vector<float> lidar_points;
 
@@ -107,7 +107,6 @@ namespace cvo {
       infile.read( reinterpret_cast<char *>(lidar_points.data()), num_bytes );
       infile.close();
 
-      std::cout<<"lidar_bin_path "<<lidar_bin_path<<std::endl;
       for(int r=0; r<num_lidar_points; ++r){          
           pcl::PointCloud<pcl::PointXYZI>::PointType temp_pcl;
           // temp_pcl.x = lidar_points[r*4+0];
@@ -116,8 +115,9 @@ namespace cvo {
           temp_pcl.x = -lidar_points[r*4+1];
           temp_pcl.y = -lidar_points[r*4+2];
           temp_pcl.z = lidar_points[r*4+0];
-          // std::cout << "DEGUS-Kitti: point " << to_string(r) << ", intensity=" << to_string(lidar_points[r*4+3]) << std::endl;
           temp_pcl.intensity = lidar_points[r*4+3];
+          // std::cout << "DEGUS-Kitti: point " << to_string(r) << "x=" << to_string(temp_pcl.x) << ", y=" << to_string(temp_pcl.y) 
+          //                                    << ", z=" << to_string(temp_pcl.z) << ", intensity=" << to_string(temp_pcl.intensity) << std::endl;
           
           if(temp_pcl.x == 0 && temp_pcl.y == 0 && temp_pcl.z == 0 && temp_pcl.intensity == 0){
             // std::cout << "only " << r-1 << " points are valid" << std::endl;
@@ -132,7 +132,7 @@ namespace cvo {
       return -1;
       
     }
-
+    curr_index ++;
     return 0;
   }
 

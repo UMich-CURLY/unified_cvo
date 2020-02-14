@@ -467,10 +467,8 @@ namespace cvo
     int num_points = pc_in->points.size();
     int previous_quadrant = get_quadrant(pc_in->points[0]);
     int ring_num = 0;
-    std::cout << "input point cloud size: " << num_points << std::endl;
 
-    for(int i = 1; i<num_points; i++) {
-      // check quarant for each point and seperate scans from different ring
+    for(int i = 1; i<num_points; i++) {      
       int quadrant = get_quadrant(pc_in->points[i]);
       if(quadrant == 1 && previous_quadrant == 4 && ring_num < beam_num-1){
         ring_num += 1;
@@ -491,7 +489,7 @@ namespace cvo
 
       if( (intenstity_grad > intensity_bound || depth_grad > depth_bound) 
            && (point.intensity > 0.0) 
-           && ((point.x!=0.0) || (point.y!=0.0) || (point.y!=0.0)) //){
+           && ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0)) //){
            && ((abs(point.x) < distance_bound) && (abs(point.y) < distance_bound) && (abs(point.z) < distance_bound))){
           // std::cout << "points: " << point.x << ", " << point.y << ", " << point.z << ", " << point.intensity << std::endl;
           pc_out->push_back(pc_in->points[i]);
@@ -501,7 +499,6 @@ namespace cvo
 
       previous_quadrant = quadrant;      
     }
-    std::cout << "output point cloud size: " << pc_out->size() << std::endl;
 
     // visualize
     // pcl::visualization::PCLVisualizer input_viewer ("Input Point Cloud Viewer");

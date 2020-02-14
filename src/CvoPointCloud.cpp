@@ -191,35 +191,32 @@ namespace cvo{
       }
 
     }
-    //std::cout<<"\n";
-    //if (num_classes_) {
-    //  std::cout<<"Read labels: last sum is  " << labels_.row(0).sum()<<"\ndetailed distribution is "<<labels_.row(num_points_-1)<<"\n";
     //  write_to_label_pcd("labeled_input.pcd");
-    //}
   }
 
   CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc) {
     int expected_points = 5000;
     double intensity_bound = 0.4;
     double depth_bound = 3.0;
-    double distance_bound = 40.0;
+    double distance_bound = 30.0;
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
     edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, pc_out, output_depth_grad, output_intenstity_grad);
      
-    // start to fill in class members
+    // fill in class members
     num_points_ = pc_out->size();
     num_classes_ = 0;
     features_.resize(num_points_, 1);
 
     for (int i = 0; i < num_points_ ; i++) {
-      Vec3f xyz(pc_out->points[i].x, pc_out->points[i].y, pc_out->points[i].z);
-      // std::cout << "is_good_point? " << is_good_point(xyz) << std::endl;
+      Vec3f xyz;
+      xyz << pc_out->points[i].x, pc_out->points[i].y, pc_out->points[i].z;
       positions_.push_back(xyz);
-      // std::cout << "DEBUG-CVOPCL: intensity=" << pc_out->points[i].intensity << std::endl;
-      features_(i) = pc_out->points[i].intensity;
+      features_(i,0) = pc_out->points[i].intensity;
     }
+
+    // write_to_intensity_pcd("kitti_lidar.pcd");
   }
   
   CvoPointCloud::CvoPointCloud(const semantic_bki::SemanticBKIOctoMap * map,
