@@ -45,7 +45,6 @@ namespace cvo {
       cerr<<"Image doesn't read successfully: "<<left_name<<", "<<right_name<<"\n";
       return -1;
     }
-    curr_index ++;
     return 0;
   }
 
@@ -56,7 +55,7 @@ namespace cvo {
     if (read_next_stereo(left, right))
       return -1;
     
-    string semantic_name = folder_name + "/image_semantic/" + names[curr_index-1] + ".bin";
+    string semantic_name = folder_name + "/image_semantic/" + names[curr_index] + ".bin";
     int num_bytes = sizeof(float) * num_semantic_class * left.total();
     semantics.resize(left.total() * num_semantic_class);
     infile.open(semantic_name.c_str(),std::ios::in| std::ifstream::binary);
@@ -130,10 +129,12 @@ namespace cvo {
     else {
       cerr<<"Lidar doesn't read successfully: "<<lidar_bin_path<<"\n"<<std::flush;
       return -1;
-      
     }
-    curr_index ++;
     return 0;
+  }
+
+  void KittiHandler::next_frame_index() {
+    curr_index ++;
   }
 
 
