@@ -8,7 +8,7 @@
 #include <thrust/device_vector.h>
 #include <Eigen/Dense>
 
-#define KDTREE_K_SIZE 100
+#define KDTREE_K_SIZE 300
 
 namespace Eigen {
                  typedef Matrix<float,1,3> Vector3f_row;                 
@@ -126,7 +126,9 @@ namespace cvo {
 #ifdef IS_USING_KDTREE
     int A_cols = KDTREE_K_SIZE;
 #else
-    int A_cols = target_points->size();
+    //int A_cols = target_points->size();
+    int A_cols = KDTREE_K_SIZE;
+    Axx_cols = KDTREE_K_SIZE;
 #endif
     A = init_SparseKernelMat_gpu(A_rows, A_cols, A_host);
     Axx = init_SparseKernelMat_gpu(A_rows, Axx_cols, Axx_host);

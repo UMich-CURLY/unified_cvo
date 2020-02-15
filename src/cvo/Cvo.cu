@@ -27,6 +27,7 @@
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
+//#include <pcl/filters/voxel_grid.h>
 
 #include <thrust/functional.h>
 #include <thrust/transform.h>
@@ -65,10 +66,13 @@ namespace cvo{
     thrust::host_vector<CvoPoint> host_cloud;
     //pcl::PointCloud<CvoPoint> host_cloud ;
     host_cloud.resize(num_points);
+    //host_cloud.resize(3500);
     //gpu_cloud->resize(num_points);
 
     // loop through all points
+    int actual_num = 0;
     for(int i=0; i<num_points; ++i){
+      //for(int i=0; i<3500; ++i){
       // set positions
       (host_cloud)[i].x = positions[i](0);
       (host_cloud)[i].y = positions[i](1);
@@ -100,6 +104,7 @@ namespace cvo{
       //  printf("Total %d, Raw input from pcl at 1000th: \n", num_points);
       //  print_point(host_cloud[i]);
       //}
+      actual_num ++;
     }
 
     //gpu_cloud->points = host_cloud;
@@ -108,17 +113,19 @@ namespace cvo{
     return gpu_cloud;
   }
 
-  void CvoPointCloud_to_pcl(const CvoPointCloud& cvo_cloud, pcl::PointCloud<CvoPoint> & pcl_cloud){
+  void CvoPointCloud_to_pcl(const CvoPointCloud& cvo_cloud, pcl::PointCloud<CvoPoint> & out_cloud){
     int num_points = cvo_cloud.num_points();
     const ArrayVec3f & positions = cvo_cloud.positions();
     const Eigen::Matrix<float, Eigen::Dynamic, FEATURE_DIMENSIONS> & features = cvo_cloud.features();
     const Eigen::Matrix<float, Eigen::Dynamic, NUM_CLASSES> & labels = cvo_cloud.labels();
 
     // set basic informations for pcl_cloud
+    pcl::PointCloud<CvoPoint> pcl_cloud;
     pcl_cloud.points.resize(num_points);
     pcl_cloud.width = num_points;
     pcl_cloud.height = 1;
     // loop through all points
+    //for(int i=0; i<num_points; ++i){
     for(int i=0; i<num_points; ++i){
       // set positions
       pcl_cloud.points[i].x = positions[i](0);
@@ -138,6 +145,16 @@ namespace cvo{
         pcl_cloud[i].label_distribution[j] = labels(i,j);
 
     }
+
+    /*
+    pcl::VoxelGrid<pcl::PointCloud<CvoPoint>> voxel_grid;
+    voxel_grid.setInputCloud(pcl_cloud);
+    voxel_grid.setLeafSize(0.1f, 0.1f, 0.1f);
+    voxel_grid.filter(out_cloud);
+
+    std::cout<<"before voxel filter "<<pcl_cloud.size()<<" points, after "<<out_cloud.size()<<std::endl;
+    */
+    
   }
 
   CvoGPU::CvoGPU(const std::string & param_file) {
@@ -277,7 +294,12 @@ namespace cvo{
 #else      
     for (int j = 0; j < b_size ; j++) {
       int ind_b = j;
+      if (num_inds == KDTREE_K_SIZE) break;
 #endif
+      //A_mat->mat[i * A_mat->cols + ind_b] = 0;
+      //A_mat->ind_row2col[i * A_mat->cols + ind_b] = -1;
+
+      
       //float d2 = (cloud_y_gpu[ind_b] - cloud_x_gpu[i]).squaredNorm();
       // d2 = (x-y)^2
       float d2 = (squared_dist( points_b[ind_b] ,*p_a ));
@@ -336,7 +358,7 @@ namespace cvo{
             A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
 #else
             //A_mat->mat[i * A_mat->cols + j] = a;
-            A_mat->mat[i * A_mat->cols + ind_b] = a;
+            A_mat->mat[i * A_mat->cols + num_inds] = a;
             A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
             num_inds++;
             //if (i == 1000) {
@@ -558,9 +580,10 @@ namespace cvo{
     int A_rows = A->rows;
     int A_cols = A->cols;
     int Axx_cols = Axx->cols;
+    int Ayy_cols = Ayy->cols;
 
-    float * Ai = A->mat + i * A_cols;
-    float * Axxi = Axx->mat + i * Axx_cols ;
+    float * Ai = A->mat + i * A->cols;
+    float * Axxi = Axx->mat + i * Axx->cols;
     float * Ayyi = nullptr;
     if (i < Ayy->rows)
       Ayyi = Ayy->mat + i * Ayy->cols;
@@ -577,6 +600,7 @@ namespace cvo{
     Eigen::Vector3f v_i = Eigen::Vector3f::Zero();
     float dl_i = 0;
     for (int j = 0; j < A_cols; j++) {
+    //for (int j = 0; j < KDTREE_K_SIZE; j++) {
       //int idx = j; //A->ind_row2col[i * A_cols + j];
       int idx = A->ind_row2col[i*A_cols+j];
       if (idx == -1) break;
@@ -600,15 +624,19 @@ namespace cvo{
       Eigen::Vector3f diff_yx_j = py_eig - px_eig;
       float sum_diff_yx_2_j = diff_yx_j.squaredNorm();
 
-      omega_i = omega_i + cross_xy_j *  *(Ai + idx);
-      v_i = v_i + diff_yx_j *  *(Ai + idx);
-      dl_i = dl_i - sum_diff_yx_2_j * *(Ai + idx);
+      omega_i = omega_i + cross_xy_j *  *(Ai + j );
+      v_i = v_i + diff_yx_j *  *(Ai + j);
+      dl_i = dl_i - sum_diff_yx_2_j * *(Ai + j);
+      //if (i == 1000) {
+      //  printf("i==1000, sum_diff_yx_2_j is %.8f, Aij is %.8f\n", sum_diff_yx_2_j, *(Ai+j));
+      //}
     }
 
     double dl_yx = 0, dl_ayy = 0, dl_xx = 0;
-    dl_yx = partial_dl[i] = double(2 / ell_3 * dl_i);
+    partial_dl[i] = double(2 / ell_3 * dl_i);
+    dl_yx = double(2/ell_3 * dl_i);
     dl_i = 0;
-    for (int j = 0; j<Axx_cols; j++) {
+    for (int j = 0; j<KDTREE_K_SIZE; j++) {
     //for (int j = 0; j<100; j++) {
       int idx = Axx->ind_row2col[i * A_cols + j];
       //int idx = j;
@@ -623,12 +651,12 @@ namespace cvo{
       //subtract(py_arr, px_arr, diff_xx + 3 *j, 3);
       //diff_xx.row(j) = (py_eig - px_eig ).transpose();
       float sum_diff_xx_2_j = squared_dist(py_arr, px_arr, 3);
-      dl_i += sum_diff_xx_2_j * *(Axxi + idx);
+      dl_i += sum_diff_xx_2_j * *(Axxi + j);
       //sum_diff_xx_2[j] = square_norm(diff_xx+3*j, 3);
       //sum_diff_xx_2(j) = (py_eig - px_eig).squaredNorm();
     }
     dl_xx = double(1/ell_3 * dl_i);
-    
+    /*
     if (i < Ayy->rows) {
       auto py_left = &cloud_y[i];
       //float py_left_arr[3] = {py_left->x, py_left->y, py_left->z};
@@ -636,9 +664,9 @@ namespace cvo{
       py_left_eig << py_left->x, py_left->y, py_left->z;
       //for (int j = 0; j<A_cols; j++) {
       
-      for (int j = 0; j<Ayy->cols; j++) {
+      for (int j = 0; j<Ayy_cols; j++) {
         //int idx = j; //Ayy->ind_row2col[i * A_cols + j];
-        int idx = Ayy->ind_row2col[i * A_cols + j];
+        int idx = Ayy->ind_row2col[i * Ayy_cols + j];
         if (idx == -1) break;
         //float val = Ayy->mat[i*A_cols +j];
         CvoPoint * py = &cloud_y[idx];
@@ -650,11 +678,11 @@ namespace cvo{
         //diff_yy.row(j) = (py_eig - py_left_eig ).transpose();
         //subtract(py_arr, py_left_arr, diff_yy+3*j, 3);
         float sum_diff_yy_2_j = (py_eig - py_left_eig).squaredNorm();
-        dl_i += sum_diff_yy_2_j * *(Ayyi + idx);
-        dl_ayy += sum_diff_yy_2_j * *(Ayyi + idx);
+        //dl_i += sum_diff_yy_2_j * *(Ayyi + j);
+        //dl_ayy += sum_diff_yy_2_j * *(Ayyi + j);
       }
-      dl_ayy = double(1 /ell_3 * dl_ayy);
-    }
+      //dl_ayy = double(1 /ell_3 * dl_ayy);
+      }*/
    
     //float omega_i[3];
     Eigen::Vector3d & omega_i_eig = omega_all_gpu[i];
@@ -691,8 +719,8 @@ namespace cvo{
     partial_dl[i] += double(1/ell_3 * dl_i);
 
     //if (i == 1000) {
-    //  printf("partial_dl[1000] is %lf, dl_yx is %lf, dl_xx is %lf, dl_ayy is %lf\n", partial_dl[i], dl_yx, dl_xx, dl_ayy);
-    //}
+    //printf("partial_dl[%d] is %lf, dl_yx is %lf, dl_xx is %lf, dl_ayy is %lf\n",i, partial_dl[i], dl_yx, dl_xx, dl_ayy);
+      //}
 
   }
 
@@ -712,7 +740,7 @@ namespace cvo{
     partial_dl_Ayy[i] = 0;
     float ell_3 = (ell) * (ell) * (ell);
     
-    float * Ayyi = Ayy->mat + i * Ayy_cols;
+    float * Ayyi = Ayy->mat + i * KDTREE_K_SIZE;
     //MatKD3f diff_yy = MatKD3f::Zero();
     //float diff_yy[30000];
     //VecKDf sum_diff_yy_2 = VecKDf::Zero();
@@ -726,7 +754,7 @@ namespace cvo{
       //Eigen::Vector3f py_eig;
       //py_eig << py->x, py->y, py->z;
       float py_arr[3] = {py->x, py->y, py->z};
-      prod += Ayyi[idx] * squared_dist(py_arr, px_arr, 3) ;
+      prod += Ayyi[j] * squared_dist(py_arr, px_arr, 3) ;
       //float diff[3];
       //subtract(py_arr, px_arr, diff, 3);
       //diff_yy.row(j) = (py_eig - px_eig).transpose();
@@ -866,8 +894,8 @@ namespace cvo{
     //Eigen::Vector3d::Zero(), thrust::plus<Eigen::Vector3d>() )).cast<float>() ;
 
     *v = (thrust::reduce(cvo_state->v_gpu.begin(), cvo_state->v_gpu.end())).cast<float>();
-    float dl_A = thrust::reduce(cvo_state->partial_dl_gradient.begin(), cvo_state->partial_dl_gradient.end());
-    float dl_Ayy = thrust::reduce(cvo_state->partial_dl_Ayy.begin(), cvo_state->partial_dl_Ayy.end());
+    float dl_A = (float)thrust::reduce(cvo_state->partial_dl_gradient.begin(), cvo_state->partial_dl_gradient.end());
+    float dl_Ayy = (float)thrust::reduce(cvo_state->partial_dl_Ayy.begin(), cvo_state->partial_dl_Ayy.end());
 
     // Eigen::Vector3d::Zero(), plus_vector)).cast<float>();
     cudaMemcpy(cvo_state->omega, omega, sizeof(Eigen::Vector3f), cudaMemcpyHostToDevice );
@@ -965,7 +993,7 @@ namespace cvo{
     Eigen::Vector3f px;
     px << cloud_x[i].x, cloud_x[i].y, cloud_x[i].z;
     B[i] = C[i] = D[i] = E[i] = 0.0;
-    for (int j = 0; j < A->cols; j++) {
+    for (int j = 0; j < KDTREE_K_SIZE; j++) {
 #ifdef IS_USING_KDTREE      
       int idx = A->ind_row2col[i * A_cols + j];
 #else
@@ -989,7 +1017,7 @@ namespace cvo{
       float epsil_ij = (-temp_coef * (epsil_const[idx] \
                                       + (2.0*xi4z[idx]*diff_xy).value()  ));
 
-      float A_ij = A->mat[i * A_cols + idx];
+      float A_ij = A->mat[i * A_cols + j];
       // eq (34)
       B[i] += double(A_ij * beta_ij);
       C[i] += double(A_ij * (gamma_ij+beta_ij*beta_ij/2.0));
@@ -1110,7 +1138,7 @@ namespace cvo{
 
     std::cout<<"Start iteration\n";
     for(int k=0; k<params.MAX_ITER; k++){
-      //for(int k=0; k<1; k++){
+      //for(int k=0; k<2; k++){
       if (debug_print) printf("new iteration....\n");
       cvo_state.reset_state_at_new_iter();
       if (debug_print) printf("just reset A mat\n");

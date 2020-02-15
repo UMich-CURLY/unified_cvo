@@ -548,11 +548,12 @@ namespace cvo{
                                              int idx = it.col();
                                              Ayyi(0,j) = it.value();    // extract current value in A
                                              diff_yy.row(j) = ((*cloud_y)[idx]-(*cloud_y)[i]).transpose();
+                                             sum_diff_yy_2(j,0) = diff_yy.row(j).squaredNorm();
                                              ++j;
                                            }
                                            // update dl from Ayy
-                                           dl_ayy = double((1/ell_3*Ayyi*sum_diff_yy_2)(0,0));
-                                           partial_dl += double((1/ell_3*Ayyi*sum_diff_yy_2)(0,0));
+                                           //dl_ayy = double((1/ell_3*Ayyi*sum_diff_yy_2)(0,0));
+                                           //partial_dl += double((1/ell_3*Ayyi*sum_diff_yy_2)(0,0));
                                          }
                                          partial_omega = (1/c*Ai*cross_xy).cast<double>();
                                          partial_v = (1/d*Ai*diff_yx).cast<double>();
@@ -569,16 +570,22 @@ namespace cvo{
                                          double_omega += partial_omega.transpose();
                                          double_v += partial_v.transpose();
                                          dl += partial_dl;
+                                         if (debug_print && i == 1000) {
+                                           std::cout<<"sum_diff_yx_2 is "<<sum_diff_yx_2.transpose()<<"\n, Aij is "<<Ai.transpose()<<std::endl<<std::flush;
+                                         }
+                                         //printf("partial_dl[%d] is %lf, dl_yx is %lf, dl_xx is %lf, dl_ayy is %lf\n", i,  dl_yx+dl_ayy+dl_xx,dl_yx, dl_xx, dl_ayy );
+                                         
+                                         
+
                                          omegav_lock.unlock();
-                                         //                                         if (debug_print && i == 1000)
-                                         //printf("partial_dl[1000] is %lf, dl_yx is %lf, dl_xx is %lf, dl_ayy is %lf\n", dl_yx+dl_ayy+dl_xx,dl_yx, dl_xx, dl_ayy );
+                                         
                                        });
     //end = chrono::system_clock::now();
     //std::cout<<"time for this tbb gradient flow is "<<(end- start).count()<<std::endl;
     
     // }
-    //if (debug_print)
-    //printf("dl before Ayy is %lf\n", dl);
+    if (debug_print)
+    printf("dl before Ayy is %lf\n", dl);
           // if num_moving > num_fixed, update the rest of Ayy to dl 
     if(num_moving>num_fixed){
       tbb::parallel_for(int(num_fixed),num_moving,[&](int i){
@@ -769,7 +776,7 @@ namespace cvo{
     chrono::duration<double> t_compute_flow = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_step = chrono::duration<double>::zero();
     for(int k=0; k<MAX_ITER; k++){
-    //for(int k=0; k<1; k++){
+    //for(int k=0; k<2; k++){
       // update transformation matrix
       update_tf();
 
