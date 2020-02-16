@@ -29,6 +29,7 @@ int main(int argc, char *argv[]) {
     std::cout<<"num_classes: "<<num_class<<std::endl;
     use_semantic_str = "_semantic";
     use_semantic = true;
+    #define IS_USING_SEMANTICS
   }
   
   int mode = stoi(argv[1]); // 0 for online generate 1 for read txt
@@ -55,6 +56,9 @@ int main(int argc, char *argv[]) {
   }
   else if(data_type==1){
     kitti_lidar.set_start_index(start_frame);
+
+    #undef FEATURE_DIMENSIONS
+    #define FEATURE_DIMENSIONS 1
   }    
   
   if(mode==0){
@@ -93,7 +97,7 @@ int main(int argc, char *argv[]) {
   accum_tf_list.push_back(init_guess.matrix());
   std::vector<float> in_product_list;
   in_product_list.push_back(1);
-  cv::Mat left, right, empty_image;
+  cv::Mat left, right;
   std::vector<float> semantics;
   std::shared_ptr<cvo::Frame> source_frame;
   std::shared_ptr<cvo::Frame> target_frame;
@@ -124,7 +128,7 @@ int main(int argc, char *argv[]) {
     else if(data_type==1){
       if(kitti_lidar.read_next_lidar(pc) == 0){ 
         kitti_lidar.next_frame_index();         
-        std::shared_ptr<cvo::Frame> temp_pcl_source(new cvo::Frame(start_frame, empty_image, pc, calib ));
+        std::shared_ptr<cvo::Frame> temp_pcl_source(new cvo::Frame(start_frame, pc, calib ));
         pcl_source_frame = temp_pcl_source;
       }
     }
@@ -176,7 +180,7 @@ int main(int argc, char *argv[]) {
         pcl::PointCloud<pcl::PointXYZI>::Ptr pc (new pcl::PointCloud<pcl::PointXYZI>);
         if(kitti_lidar.read_next_lidar(pc) == 0){
           kitti_lidar.next_frame_index();
-          std::shared_ptr<cvo::Frame> temp_pcl_target(new cvo::Frame(i, empty_image, pc, calib));
+          std::shared_ptr<cvo::Frame> temp_pcl_target(new cvo::Frame(i, pc, calib));
           pcl_target_frame = temp_pcl_target; 
         }
 

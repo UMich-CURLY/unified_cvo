@@ -106,24 +106,39 @@ namespace cvo {
       infile.read( reinterpret_cast<char *>(lidar_points.data()), num_bytes );
       infile.close();
 
+      // Eigen::Affine3f tf_change_basis = Eigen::Affine3f::Identity();
+      Eigen::Affine3f rx = Eigen::Affine3f::Identity();
+      Eigen::Affine3f ry = Eigen::Affine3f(Eigen::AngleAxisf(-M_PI/2.0, Eigen::Vector3f::UnitY()));
+      Eigen::Affine3f rz = Eigen::Affine3f(Eigen::AngleAxisf(M_PI/2.0, Eigen::Vector3f::UnitZ()));
+      Eigen::Affine3f tf_change_basis = rz * ry * rx;
+
       for(int r=0; r<num_lidar_points; ++r){          
           pcl::PointCloud<pcl::PointXYZI>::PointType temp_pcl;
-          // temp_pcl.x = lidar_points[r*4+0];
-          // temp_pcl.y = lidar_points[r*4+1];
-          // temp_pcl.z = lidar_points[r*4+2];
-          temp_pcl.x = -lidar_points[r*4+1];
-          temp_pcl.y = -lidar_points[r*4+2];
-          temp_pcl.z = lidar_points[r*4+0];
-          temp_pcl.intensity = lidar_points[r*4+3];
-          // std::cout << "DEGUS-Kitti: point " << to_string(r) << "x=" << to_string(temp_pcl.x) << ", y=" << to_string(temp_pcl.y) 
+          pcl::PointCloud<pcl::PointXYZI>::PointType pcl_after_tf;
+          temp_pcl.x = lidar_points[r*4+0];
+          temp_pcl.y = lidar_points[r*4+1];
+          temp_pcl.z = lidar_points[r*4+2];
+
+          Eigen::Vector4f temp_pt(temp_pcl.x, temp_pcl.y, temp_pcl.z, 1);
+          Eigen::Vector4f after_tf_pt = tf_change_basis.matrix() * temp_pt;
+          pcl_after_tf.x = after_tf_pt(0);
+          pcl_after_tf.y = after_tf_pt(1);
+          pcl_after_tf.z = after_tf_pt(2);
+          // pcl_after_tf.x = -temp_pcl.y;
+          // pcl_after_tf.y = -temp_pcl.z;
+          // pcl_after_tf.z = temp_pcl.x;
+
+          pcl_after_tf.intensity = lidar_points[r*4+3];
+          // std::cout << "DEGUS-Kitti: point before " << to_string(r) << ", x=" << to_string(temp_pcl.x) << ", y=" << to_string(temp_pcl.y) 
           //                                    << ", z=" << to_string(temp_pcl.z) << ", intensity=" << to_string(temp_pcl.intensity) << std::endl;
+          // std::cout << "DEGUS-Kitti: point after  " << to_string(r) << ", x=" << to_string(pcl_after_tf.x) << ", y=" << to_string(pcl_after_tf.y) 
+          //                                    << ", z=" << to_string(pcl_after_tf.z) << ", intensity=" << to_string(pcl_after_tf.intensity) << std::endl;
           
-          if(temp_pcl.x == 0 && temp_pcl.y == 0 && temp_pcl.z == 0 && temp_pcl.intensity == 0){
-            // std::cout << "only " << r-1 << " points are valid" << std::endl;
+          if(pcl_after_tf.x == 0 && pcl_after_tf.y == 0 && pcl_after_tf.z == 0 && pcl_after_tf.intensity == 0){
             break;
           }
 
-          pc->push_back(temp_pcl);
+          pc->push_back(pcl_after_tf);
       }     
     }
     else {

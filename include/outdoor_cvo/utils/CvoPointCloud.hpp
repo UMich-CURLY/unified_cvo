@@ -15,6 +15,7 @@
 #include <pcl/point_cloud.h>
 //#include "mapping/bkioctomap.h"
 
+
 namespace semantic_bki {
   class SemanticBKIOctoMap;
 }
@@ -53,9 +54,10 @@ namespace cvo {
     // getters
     int num_points() const {return num_points_;}
     int num_classes() const {return num_classes_;}
+    int feature_dimensions() const {return feature_dimensions_;}
     const ArrayVec3f & positions() const {return positions_;}
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & labels() const { return labels_;}
-    const Eigen::Matrix<float, Eigen::Dynamic, 5> & features() const {return features_;}
+    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & features() const {return features_;}
 
     // for visualization via pcl_viewer
     void write_to_color_pcd(const std::string & name) const;
@@ -66,11 +68,11 @@ namespace cvo {
   private:
     int num_points_;
     int num_classes_;
+    int feature_dimensions_;
     
     ArrayVec3f positions_;  // points position. x,y,z
-    Eigen::Matrix<float, Eigen::Dynamic, 5> features_;   // rgb, gradient in [0,1]
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> features_;   // rgb, gradient in [0,1]
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> labels_; // number of points by number of classes
-
 
     cv::Vec3f avg_pixel_color_pattern(const cv::Mat & raw, int u, int v, int w);
 

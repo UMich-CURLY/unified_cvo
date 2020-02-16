@@ -337,13 +337,16 @@ namespace cvo{
           
           if(d2<d2_thres){
             Eigen::Matrix<float,Eigen::Dynamic,1> feature_b = cloud_b->features().row(idx).transpose();
+            // std::cout<<"\nDEBUG-CVO: feature_a=" << feature_a << std::endl;
+            // std::cout<<"\nDEBUG-CVO: feature_b=" << feature_b << std::endl;
             d2_color = ((feature_a-feature_b).squaredNorm());
+
 #ifdef IS_USING_SEMANTICS            
             Eigen::VectorXf label_b = cloud_b->labels().row(idx);
             d2_semantic = ((label_a-label_b).squaredNorm());
 #endif
             // std::cout<<"DEBUG-CVO: d2 = " << d2 << ", d2_color = " << d2_color << std::endl;
-            // if(d2_color<d2_c_thres){
+            if(d2_color<d2_c_thres){
               k = s2*exp(-d2/(2.0*l*l));
               // std::cout<<"DEBUG-CVO: k=" << k << std::endl;
               ck = c_sigma*c_sigma*exp(-d2_color/(2.0*c_ell*c_ell));
@@ -354,14 +357,14 @@ namespace cvo{
               sk = 1;
 #endif        
               // std::cout<<"DEBUG-CVO: d2=" << d2 << std::endl;
-              // std::cout<<"DEBUG-CVO: d2_color=" << d2_color << std::endl;
+              // std::cout<<"\nDEBUG-CVO: d2_color=" << d2_color << std::endl;
               // std::cout<<"DEBUG-CVO: ck=" << ck << std::endl;
               // if (cloud_a->num_points() != cloud_b->num_points()){
                 // std::cout<<"DEBUG-CVO: d2=" << d2 << std::endl;
                 // std::cout<<"DEBUG-CVO: k=" << k << std::endl;
               // }
               // std::cout<<"DEBUG-CVO: sk=" << sk << std::endl;
-              ck = 1;
+              // ck = 1;
               a = ck*k*sk;
               // std::cout<<"DEBUG-CVO: a=" << a << std::endl;
               // std::cout<<"DEBUG-CVO: sp_thres=" << sp_thres << std::endl;
@@ -372,7 +375,7 @@ namespace cvo{
               }
              
             
-            // }
+            }
           }
         }
       });

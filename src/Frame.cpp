@@ -65,7 +65,6 @@ namespace cvo {
   }
 
   Frame::Frame(int ind,
-          const cv::Mat & image,
           pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
           const Calibration & calib)
     : id(ind),
