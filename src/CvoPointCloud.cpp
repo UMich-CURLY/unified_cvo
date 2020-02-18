@@ -237,6 +237,41 @@ namespace cvo{
 
     // write_to_intensity_pcd("kitti_lidar.pcd");
   }
+
+  CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, const std::vector<int> & semantic) {
+    int expected_points = 5000;
+    double intensity_bound = 0.4;
+    double depth_bound = 3.0;
+    double distance_bound = 40.0;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
+    std::vector <double> output_depth_grad;
+    std::vector <double> output_intenstity_grad;
+    std::vector <int> semantic_out;
+    edge_detection(pc, semantic, expected_points, intensity_bound, depth_bound, distance_bound, pc_out, output_depth_grad, output_intenstity_grad, semantic_out);
+    // fill in class members
+    num_points_ = pc_out->size();
+    num_classes_ = 19; //TODO: get it from input
+    
+    feature_dimensions_ = 1;
+    features_.resize(num_points_, feature_dimensions_);
+    labels_.resize(num_points_, num_classes_);
+
+    for (int i = 0; i < num_points_ ; i++) {
+      Vec3f xyz;
+      xyz << pc_out->points[i].x, pc_out->points[i].y, pc_out->points[i].z;
+      positions_.push_back(xyz);
+      features_(i, 0) = pc_out->points[i].intensity; 
+
+      // add one-hot semantic labels
+      VecXf_row one_hot_label;
+      one_hot_label = VecXf_row::Zero(1,num_classes_);
+      one_hot_label[semantic_out[i]] = 1;
+
+      labels_.row(i) = one_hot_label;
+      int max_class = 0;
+      labels_.row(i).maxCoeff(&max_class);
+    }
+  }
   
   CvoPointCloud::CvoPointCloud(const semantic_bki::SemanticBKIOctoMap * map,
                                const int num_classes) {

@@ -50,7 +50,7 @@
 #include <boost/timer/timer.hpp>
 // #include <omp.h>
 #include <tbb/tbb.h>
-// #define IS_USING_SEMANTICS
+#define IS_USING_SEMANTICS
 
 //using namespace std;
 using namespace nanoflann;

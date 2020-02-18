@@ -10,5 +10,5 @@ do
     num_classes=19
     data_type=1
 
-    ./build/bin/cvo_f2f $mode $path $pcd_path $calib_name $output_file $start_frame $dataset $data_type #$num_classes
+    ./build/bin/cvo_f2f $mode $path $pcd_path $calib_name $output_file $start_frame $dataset $data_type $num_classes
 done

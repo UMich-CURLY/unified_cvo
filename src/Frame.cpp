@@ -65,8 +65,8 @@ namespace cvo {
   }
 
   Frame::Frame(int ind,
-          pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
-          const Calibration & calib)
+               pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
+               const Calibration & calib)
     : id(ind),
       h(0),
       w(0),
@@ -81,7 +81,25 @@ namespace cvo {
     tracking_pose_from_last_keyframe_.set_relative_transform(ind, eye, 1.0 );
 
     // points_.write_to_intensity_pcd("lidar_pcd/" + std::to_string(ind)+".pcd");
-  };
+  }
+
+  Frame::Frame(int ind,
+               pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
+               const std::vector<int> & semantics,
+               const Calibration & calib)
+    : id(ind),
+      h(0),
+      w(0),
+      calib(calib),
+      raw_image_(), 
+      points_(pc, semantics),
+      local_map_(nullptr),
+      is_keyframe_(false),
+      tracking_pose_from_last_keyframe_(ind){
+    pose_in_graph_.setIdentity();
+    Eigen::Affine3f eye = Eigen::Affine3f::Identity();
+    tracking_pose_from_last_keyframe_.set_relative_transform(ind, eye, 1.0 );
+  }
   
   Frame::~Frame() {
   }

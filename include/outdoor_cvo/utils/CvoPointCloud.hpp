@@ -36,6 +36,9 @@ namespace cvo {
     
     CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc);
 
+    CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, 
+                  const std::vector<int> & semantics);
+
     CvoPointCloud(const semantic_bki::SemanticBKIOctoMap * map,
                   int num_semantic_class);
 

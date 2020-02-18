@@ -104,6 +104,7 @@ int main(int argc, char *argv[]) {
   std::shared_ptr<cvo::Frame> pcl_source_frame;
   std::shared_ptr<cvo::Frame> pcl_target_frame;
   pcl::PointCloud<pcl::PointXYZI>::Ptr pc (new pcl::PointCloud<pcl::PointXYZI>);
+  std::vector<int> semantics_lidar;
 
   // load the first image
   if(mode==0){
@@ -111,7 +112,7 @@ int main(int argc, char *argv[]) {
       if(use_semantic){
         // create first frame for kf
         if (kitti_stereo.read_next_stereo(left, right, num_class, semantics ) == 0) {
-        kitti_stereo.next_frame_index();
+          kitti_stereo.next_frame_index();
           std::shared_ptr<cvo::Frame> temp_source(new cvo::Frame(start_frame, left, right, num_class, semantics, calib ));
           source_frame = temp_source; 
         }
@@ -119,17 +120,28 @@ int main(int argc, char *argv[]) {
       else{
         // create first frame for kf
         if(kitti_stereo.read_next_stereo(left, right) == 0){
-        kitti_stereo.next_frame_index();
+          kitti_stereo.next_frame_index();
           std::shared_ptr<cvo::Frame> temp_source(new cvo::Frame(start_frame, left, right, calib ));
           source_frame = temp_source;
         }
       }
     }
     else if(data_type==1){
-      if(kitti_lidar.read_next_lidar(pc) == 0){ 
-        kitti_lidar.next_frame_index();         
-        std::shared_ptr<cvo::Frame> temp_pcl_source(new cvo::Frame(start_frame, pc, calib ));
-        pcl_source_frame = temp_pcl_source;
+      if(use_semantic){
+        // create first frame for kf
+        if (kitti_lidar.read_next_lidar(pc, semantics_lidar ) == 0) {
+          kitti_lidar.next_frame_index();
+          std::shared_ptr<cvo::Frame> temp_pcl_source(new cvo::Frame(start_frame, pc, semantics_lidar, calib ));
+          pcl_source_frame = temp_pcl_source;
+        }
+      }
+      else{
+        // create first frame for kf
+        if(kitti_lidar.read_next_lidar(pc) == 0){
+          kitti_lidar.next_frame_index();
+          std::shared_ptr<cvo::Frame> temp_pcl_source(new cvo::Frame(start_frame, pc, calib ));
+          pcl_source_frame = temp_pcl_source;
+        }
       }
     }
   }
@@ -178,10 +190,22 @@ int main(int argc, char *argv[]) {
       }
       else if(data_type==1){
         pcl::PointCloud<pcl::PointXYZI>::Ptr pc (new pcl::PointCloud<pcl::PointXYZI>);
-        if(kitti_lidar.read_next_lidar(pc) == 0){
-          kitti_lidar.next_frame_index();
-          std::shared_ptr<cvo::Frame> temp_pcl_target(new cvo::Frame(i, pc, calib));
-          pcl_target_frame = temp_pcl_target; 
+        std::vector<int> semantics_lidar;
+        if(use_semantic){
+          // create first frame for kf
+          if (kitti_lidar.read_next_lidar(pc, semantics_lidar ) == 0) {
+            kitti_lidar.next_frame_index();
+            std::shared_ptr<cvo::Frame> temp_pcl_target(new cvo::Frame(i, pc, semantics_lidar, calib ));
+            pcl_target_frame = temp_pcl_target; 
+          }
+        }
+        else{
+          // create first frame for kf
+          if(kitti_lidar.read_next_lidar(pc) == 0){
+            kitti_lidar.next_frame_index();
+            std::shared_ptr<cvo::Frame> temp_pcl_target(new cvo::Frame(i, pc, calib ));
+            pcl_target_frame = temp_pcl_target; 
+          }
         }
 
         auto& source_fr = pcl_source_frame->points(); // keyframe

@@ -18,6 +18,9 @@ namespace cvo{
     int read_next_lidar_mono(cv::Mat & image,
                               pcl::PointCloud<pcl::PointXYZ>::Ptr pc);
     int read_next_lidar(pcl::PointCloud<pcl::PointXYZI>::Ptr pc);
+    int read_next_lidar(pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
+                        std::vector<int> & semantics);
+    std::map<int,int> create_label_map();
     void next_frame_index();
     void set_start_index(int start);
     int get_current_index();
