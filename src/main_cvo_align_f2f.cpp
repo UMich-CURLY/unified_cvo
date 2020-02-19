@@ -23,6 +23,7 @@ int main(int argc, char *argv[]) {
   //You could put any file path in here, e.g. "/home/me/mwah" to list that directory
   int num_class= 0;
   string use_semantic_str = "";
+  string use_lidar_str = "";
   bool use_semantic = false;
   if (argc > 9) {
     num_class = stoi(argv[9]);
@@ -40,18 +41,24 @@ int main(int argc, char *argv[]) {
   int start_frame = stoi(argv[6]);
   string dataset_num = argv[7];
   int data_type = stoi(argv[8]); // 0 for stereo, 1 for lidar
+  
+  if(data_type==1){
+    use_lidar_str = "_lidar";
+  }
+  
 
   int total_num = 0;
   
-  std::ofstream accum_tf_output_file("results/cvo_f2f_tracking_"+dataset_num+use_semantic_str+".txt");
-  std::ofstream in_product_output_file("results/inner_product_all_"+dataset_num+use_semantic_str+".txt");
+  std::ofstream accum_tf_output_file("results/cvo_f2f_tracking_"+dataset_num+use_lidar_str+use_semantic_str+".txt");
+  std::ofstream in_product_output_file("results/inner_product_all_"+dataset_num+use_lidar_str+use_semantic_str+".txt");
 
   vector<string> files;
   std::cout<<"pth: "<<pth<<std::endl;
-  cvo::KittiHandler kitti_stereo(pth), kitti_lidar(pth);
-  cvo::Calibration calib(calib_name);
+  cvo::KittiHandler kitti_stereo(pth, data_type), kitti_lidar(pth, data_type);
+  cvo::Calibration calib;
 
   if (data_type==0){
+    calib.read_file(calib_name);
     kitti_stereo.set_start_index(start_frame);
   }
   else if(data_type==1){

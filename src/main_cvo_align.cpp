@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
 
   vector<string> files;
   std::cout<<"pth: "<<pth<<std::endl;
-  cvo::KittiHandler kitti(pth);
+  cvo::KittiHandler kitti(pth, 0);
   cvo::Calibration calib(calib_name);
 
   kitti.set_start_index(start_frame);

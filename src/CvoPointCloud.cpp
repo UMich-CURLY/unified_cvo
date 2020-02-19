@@ -418,7 +418,8 @@ namespace cvo{
       p.label = (uint32_t) l;
       pc.push_back(p);
     }
-    pcl::io::savePCDFileASCII(name ,pc);  
+    pcl::io::savePCDFileASCII(name ,pc); 
+    std::cout << "Finished write to label pcd" << std::endl; 
   }
 
   void CvoPointCloud::write_to_txt(const std::string & name) const {
@@ -427,7 +428,7 @@ namespace cvo{
       outfile << num_points_<<" "<<num_classes_<<"\n";
       for (int i = 0; i < num_points_; i++) {
         outfile << positions_[i](0)<<" "<<positions_[i](1) <<" "<<positions_[i](2)<<std::endl;
-        for (int j = 0; j < 5; j++) {
+        for (int j = 0; j < feature_dimensions_; j++) {
           outfile << features_(i, j)<<" ";
         }
         if (num_classes_)
@@ -440,6 +441,7 @@ namespace cvo{
       outfile.close();
 
     }
+    std::cout << "Finished write to txt" << std::endl; 
     
   }
 
@@ -454,6 +456,7 @@ namespace cvo{
       pc.push_back(p);
     }
     pcl::io::savePCDFileASCII(name ,pc);  
+    std::cout << "Finished write to intensity pcd" << std::endl; 
   }
   
 

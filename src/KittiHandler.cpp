@@ -15,14 +15,19 @@ using namespace std;
 using namespace boost::filesystem;
 
 namespace cvo {
-  KittiHandler::KittiHandler(std::string kitti_folder) {
+  KittiHandler::KittiHandler(std::string kitti_folder, int data_type) {
     curr_index = 0;
     folder_name = kitti_folder;
     debug_plot = true;
-
-    string left_color_folder = folder_name + "/image_2/";
+    string data_folder;
+    if(data_type==0){
+      data_folder = folder_name + "/image_2/";
+    }
+    else if(data_type==1){
+      data_folder = folder_name + "/velodyne/";
+    }
     
-    path kitti(left_color_folder.c_str());
+    path kitti(data_folder.c_str());
     for (auto & p : directory_iterator(kitti)) {
       if (is_regular_file(p.path())) {
         string curr_file = p.path().filename().string();
