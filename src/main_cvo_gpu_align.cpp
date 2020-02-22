@@ -61,6 +61,7 @@ int main(int argc, char *argv[]) {
     source_fr.read_cvo_pointcloud_from_file(f1);
     cvo::CvoPointCloud target_fr;//(files[i+1]);
     target_fr.read_cvo_pointcloud_from_file(f2);
+    std::cout<<"source frame size "<<source_fr.num_points()<<", target_frame size is "<<target_fr.num_points()<<std::endl;
 
     Eigen::Matrix4f result, init_guess_inv;
     init_guess_inv = init_guess.inverse();
@@ -97,7 +98,7 @@ int main(int argc, char *argv[]) {
     accum_output<<"\n";
     accum_output<<std::flush;
     */
-
+    /*
     std::cout<<"\n---------------------------------------------------"<<std::endl;
     std::cout<<"Aligning "<<i<<" and "<<i+1<<" with CPU "<<std::endl;
     Eigen::Affine3f result_cpu,init_guess_inv_cpu;
@@ -116,7 +117,7 @@ int main(int argc, char *argv[]) {
     // append accum_tf_list for future initialization
     init_guess_cpu = init_guess_cpu*result_cpu;
     std::cout<<"accum tf: \n"<<init_guess_cpu.matrix()<<std::endl;
-    
+    */
     
   
 

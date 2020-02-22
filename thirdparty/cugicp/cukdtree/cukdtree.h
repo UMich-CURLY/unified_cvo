@@ -5,6 +5,8 @@
 
 #include <chrono>
 
+#define KDTREE_K_SIZE 50
+
 namespace perl_registration {
 
 struct TreeNode {
@@ -37,7 +39,7 @@ class cuPQueue {
   int _m_size;
   int _m_top;
 
-  float _m_priorities[100];
+  float _m_priorities[KDTREE_K_SIZE];
   int *_m_values;
 
  public:

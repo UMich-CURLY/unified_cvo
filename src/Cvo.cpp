@@ -59,7 +59,7 @@ namespace cvo{
     prev_transform(Eigen::Affine3f::Identity()),
     accum_tf(Eigen::Affine3f::Identity()),
     accum_tf_vis(Eigen::Affine3f::Identity()),
-    debug_print(false)
+    debug_print(true)
   {
     FILE* ptr = fopen(param_file.c_str(), "r" ); 
     if (ptr!=NULL) 
@@ -128,7 +128,7 @@ namespace cvo{
     prev_transform(Eigen::Affine3f::Identity()),
     accum_tf(Eigen::Affine3f::Identity()),
     accum_tf_vis(Eigen::Affine3f::Identity()),
-    debug_print(false)
+    debug_print(true)
   {
     FILE* ptr = fopen("cvo_params.txt", "r" ); 
     if (ptr!=NULL) 
@@ -478,9 +478,6 @@ namespace cvo{
     // compute SE kernel for Axy
     se_kernel(ptr_fixed_pcd,ptr_moving_pcd,cloud_x,cloud_y,A, A_trip_concur);
 
-    if (debug_print ) {std::cout<<"nonzeros in A "<<A.nonZeros()<<std::endl;
-    }
-    
     // compute SE kernel for Axx and Ayy
     se_kernel(ptr_fixed_pcd,ptr_fixed_pcd,cloud_x,cloud_x,Axx, A_trip_concur);
     
@@ -488,6 +485,12 @@ namespace cvo{
     se_kernel(ptr_moving_pcd,ptr_moving_pcd,cloud_y,cloud_y,Ayy, A_trip_concur);
     //end = chrono::system_clock::now();
     //std::cout<<"time for this kernel is "<<(end- start).count()<<std::endl;
+    if (debug_print ) {
+      std::cout<<"nonzeros in A "<<A.nonZeros()
+               <<"nonzeros in Axx "<<Axx.nonZeros()
+               <<"nonzeros in Ayy "<<Ayy.nonZeros()<<std::endl;
+    }
+    
 
     // some initialization of the variables
     omega = Eigen::Vector3f::Zero();
@@ -552,8 +555,8 @@ namespace cvo{
                                              ++j;
                                            }
                                            // update dl from Ayy
-                                           //dl_ayy = double((1/ell_3*Ayyi*sum_diff_yy_2)(0,0));
-                                           //partial_dl += double((1/ell_3*Ayyi*sum_diff_yy_2)(0,0));
+                                           dl_ayy = double((1/ell_3*Ayyi*sum_diff_yy_2)(0,0));
+                                           partial_dl += double((1/ell_3*Ayyi*sum_diff_yy_2)(0,0));
                                          }
                                          partial_omega = (1/c*Ai*cross_xy).cast<double>();
                                          partial_v = (1/d*Ai*diff_yx).cast<double>();
@@ -775,8 +778,8 @@ namespace cvo{
     chrono::duration<double> t_transform_pcd = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_flow = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_step = chrono::duration<double>::zero();
-    for(int k=0; k<MAX_ITER; k++){
-    //for(int k=0; k<2; k++){
+    //for(int k=0; k<MAX_ITER; k++){
+    for(int k=0; k<2; k++){
       // update transformation matrix
       update_tf();
 
