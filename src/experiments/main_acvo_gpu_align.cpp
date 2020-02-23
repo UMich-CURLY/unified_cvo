@@ -6,7 +6,7 @@
 #include <fstream>
 #include <cmath>
 #include <boost/filesystem.hpp>
-#include <opencv2/opencv.hpp>
+//#include <opencv2/opencv.hpp>
 
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/AdaptiveCvoGPU.hpp"

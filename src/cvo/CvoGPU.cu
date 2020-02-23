@@ -36,7 +36,7 @@
 #include <thrust/transform.h>
 #include <thrust/sequence.h>
 #include <thrust/copy.h>
-
+#include <tbb/tbb.h>
 #include <chrono>
 #include <cstdio>
 #include <fstream>

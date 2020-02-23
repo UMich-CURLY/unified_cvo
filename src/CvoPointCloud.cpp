@@ -8,10 +8,11 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl/io/pcd_io.h>
+#include <tbb/tbb.h>
 #include "utils/CvoPointCloud.hpp"
 #include "utils/StaticStereo.hpp"
 #include "utils/CvoPixelSelector.hpp"
-#include "mapping/bkioctomap.h"
+//#include "mapping/bkioctomap.h"
 namespace cvo{
 
   static bool is_good_point(const Vec3f & xyz, const Vec2i uv, int h, int w ) {
@@ -82,21 +83,36 @@ namespace cvo{
     if (infile.is_open()) {
       infile >> total_num_points >> num_classes_;
       positions_.resize(num_points_);
-      features_.resize(num_points_, 5);
+      feature_dimensions_ = 5;
+      features_.resize(num_points_, feature_dimensions_);
       labels_.resize(num_points_, num_classes_);
 
       for (int i =0; i < total_num_points ; i++) {
-        Vec3f pos;
-        Vec5f feature;
+        Vec3f pos;        
         VecXf label(num_classes_);
         infile >> pos(0) >> pos(1) >> pos(2);
-        for (int j = 0 ; j < 5; j++)
-          infile >> feature(j);
+        Vec5f feature;
+        float feature_1;
+
+        if(feature_dimensions_==5){          
+          for (int j = 0 ; j < feature_dimensions_; j++)
+            infile >> feature(j);
+        }
+        else if(feature_dimensions_==1){          
+          infile >> feature_1;
+        } 
+        
         for (int j = 0; j < num_classes_; j++)
           infile >> label(j);
         if (is_good_point(pos)) {
           positions_[ good_point_ind] = pos.transpose();
-          features_.row(good_point_ind ) = feature.transpose();
+          if(feature_dimensions_==5){
+            features_.row(good_point_ind ) = feature.transpose();
+          }
+          else if(feature_dimensions_==1){
+            features_(good_point_ind ) = feature_1;
+          } 
+          
           labels_.row(good_point_ind ) = label.transpose();
           good_point_ind ++;
         }
@@ -155,7 +171,8 @@ namespace cvo{
     num_classes_ = left_image.num_class();
     if (num_classes_ )
       labels_.resize(num_points_, num_classes_);
-    features_.resize(num_points_, 5);
+    feature_dimensions_ = 5;
+    features_.resize(num_points_, feature_dimensions_);
     for (int i = 0; i < num_points_ ; i++) {
       int u = output_uv[good_point_ind[i]](0);
       int v = output_uv[good_point_ind[i]](1);
@@ -190,55 +207,73 @@ namespace cvo{
       }
 
     }
-    //std::cout<<"\n";
-    //if (num_classes_) {
-    //  std::cout<<"Read labels: last sum is  " << labels_.row(0).sum()<<"\ndetailed distribution is "<<labels_.row(num_points_-1)<<"\n";
     //  write_to_label_pcd("labeled_input.pcd");
-    //}
   }
-  
-  CvoPointCloud::CvoPointCloud(const semantic_bki::SemanticBKIOctoMap * map,
-                               const int num_classes) {
-    num_classes_ = num_classes;
-    int num_point_counter = 0;
-    std::vector<std::vector<float> > features;
-    std::vector<std::vector<float> > labels;
-    positions_.reserve(65536);
-    features.reserve(65536);
-    labels.reserve(65536);
+
+  CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, int target_num_points, int beam_num) {
+    int expected_points = target_num_points;
+    double intensity_bound = 0.4;
+    double depth_bound = 3.0;
+    double distance_bound = 40.0;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
+    std::vector <double> output_depth_grad;
+    std::vector <double> output_intenstity_grad;
+    edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
+                   pc_out, output_depth_grad, output_intenstity_grad);
+     
+    // fill in class members
+    num_points_ = pc_out->size();
+    num_classes_ = 0;
     
-    for (auto it = map->begin_leaf(); it != map->end_leaf(); ++it) {
-      if (it.get_node().get_state() == semantic_bki::State::OCCUPIED) {
-        // position
-        semantic_bki::point3f  p = it.get_loc();
-        Vec3f xyz;
-        xyz << p.x(), p.y(), p.z();
-        positions_.push_back(xyz);
-               
-        // features
-        std::vector<float> feature(5, 0);
-        it.get_node().get_features(feature);
-        features.push_back(feature);
-        // labels
-        std::vector<float> label(num_classes_, 0);
-        it.get_node().get_occupied_probs(label);
-        labels.push_back(label);
-        num_point_counter++;
-      }
-    }
-      
-    num_points_ = num_point_counter ;
-    features_.resize(num_points_, 5);
-    labels_.resize(num_points_, num_classes);
+    // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
+    feature_dimensions_ = 1;
+    features_.resize(num_points_, feature_dimensions_);
 
-    for (int i = 0; i < num_points_; i++) {
-      //memcpy(labels_.data()+ num_classes * sizeof(float) * i, labels[i].data(), num_classes * sizeof(float));
-      labels_.row(i) = Eigen::Map<VecXf_row>(labels[i].data(), num_classes);
-      features_.row(i) = Eigen::Map<Vec5f_row>(features[i].data());
-
+    for (int i = 0; i < num_points_ ; i++) {
+      Vec3f xyz;
+      xyz << pc_out->points[i].x, pc_out->points[i].y, pc_out->points[i].z;
+      positions_.push_back(xyz);
+      features_(i, 0) = pc_out->points[i].intensity;      
     }
-    //std::cout<<"Read labels from map:\nlabel" << labels_.row(0)<<"\n"<<labels_.row(num_points_-1)<<", color: ";
-    //std::cout<< features_.row(0)<<"\n"<<features_.row(num_points_-1)<<"\n";
+
+    // write_to_intensity_pcd("kitti_lidar.pcd");
+  }
+
+  CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, const std::vector<int> & semantic ,
+                               int num_classes,  int target_num_points , int beam_num) {
+    int expected_points = target_num_points;
+    double intensity_bound = 0.4;
+    double depth_bound = 3.0;
+    double distance_bound = 40.0;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
+    std::vector <double> output_depth_grad;
+    std::vector <double> output_intenstity_grad;
+    std::vector <int> semantic_out;
+    edge_detection(pc, semantic, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
+                   pc_out, output_depth_grad, output_intenstity_grad, semantic_out);
+    // fill in class members
+    num_points_ = pc_out->size();
+    num_classes_ = num_classes; //TODO: get it from input
+    
+    feature_dimensions_ = 1;
+    features_.resize(num_points_, feature_dimensions_);
+    labels_.resize(num_points_, num_classes_);
+
+    for (int i = 0; i < num_points_ ; i++) {
+      Vec3f xyz;
+      xyz << pc_out->points[i].x, pc_out->points[i].y, pc_out->points[i].z;
+      positions_.push_back(xyz);
+      features_(i, 0) = pc_out->points[i].intensity; 
+
+      // add one-hot semantic labels
+      VecXf_row one_hot_label;
+      one_hot_label = VecXf_row::Zero(1,num_classes_);
+      one_hot_label[semantic_out[i]] = 1;
+
+      labels_.row(i) = one_hot_label;
+      int max_class = 0;
+      labels_.row(i).maxCoeff(&max_class);
+    }
   }
 
   CvoPointCloud::CvoPointCloud(){}
@@ -247,14 +282,15 @@ namespace cvo{
     
   }
 
-  int CvoPointCloud::read_cvo_pointcloud_from_file(const std::string & filename) {
+  int CvoPointCloud::read_cvo_pointcloud_from_file(const std::string & filename, int feature_dim) {
     std::ifstream infile(filename);
+    feature_dimensions_ = feature_dim;
     if (infile.is_open()) {
       infile>> num_points_;
       infile>> num_classes_;
       positions_.clear();
       positions_.resize(num_points_);
-      features_.resize(num_points_, 5);
+      features_.resize(num_points_, feature_dimensions_);
       if (num_classes_)
         labels_.resize(num_points_, num_classes_ );
       for (int i = 0; i < num_points_; i++) {
@@ -300,6 +336,7 @@ namespace cvo{
       p.x = positions_[i](0);
       p.y = positions_[i](1);
       p.z = positions_[i](2);
+      
       uint8_t b = static_cast<uint8_t>(std::min(255, (int)(features_(i,0) * 255) ) );
       uint8_t g = static_cast<uint8_t>(std::min(255, (int)(features_(i,1) * 255) ) );
       uint8_t r = static_cast<uint8_t>(std::min(255, (int)(features_(i,2) * 255)));
@@ -326,7 +363,8 @@ namespace cvo{
       p.label = (uint32_t) l;
       pc.push_back(p);
     }
-    pcl::io::savePCDFileASCII(name ,pc);  
+    pcl::io::savePCDFileASCII(name ,pc); 
+    std::cout << "Finished write to label pcd" << std::endl; 
   }
 
   void CvoPointCloud::write_to_txt(const std::string & name) const {
@@ -335,7 +373,7 @@ namespace cvo{
       outfile << num_points_<<" "<<num_classes_<<"\n";
       for (int i = 0; i < num_points_; i++) {
         outfile << positions_[i](0)<<" "<<positions_[i](1) <<" "<<positions_[i](2)<<std::endl;
-        for (int j = 0; j < 5; j++) {
+        for (int j = 0; j < feature_dimensions_; j++) {
           outfile << features_(i, j)<<" ";
         }
         if (num_classes_)
@@ -348,7 +386,22 @@ namespace cvo{
       outfile.close();
 
     }
+    std::cout << "Finished write to txt" << std::endl; 
     
+  }
+
+  void CvoPointCloud::write_to_intensity_pcd(const std::string & name) const {
+    pcl::PointCloud<pcl::PointXYZI> pc;
+    for (int i = 0; i < num_points_; i++) {
+      pcl::PointXYZI p;
+      p.x = positions_[i](0);
+      p.y = positions_[i](1);
+      p.z = positions_[i](2);
+      p.intensity = features_(i);
+      pc.push_back(p);
+    }
+    pcl::io::savePCDFileASCII(name ,pc);  
+    std::cout << "Finished write to intensity pcd" << std::endl; 
   }
   
 

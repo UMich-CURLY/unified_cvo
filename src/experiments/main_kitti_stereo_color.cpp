@@ -11,7 +11,7 @@
 #include "utils/Calibration.hpp"
 int main(int argc, char ** argv) {
   
-  cvo::KittiHandler kitti(argv[1]);
+  cvo::KittiHandler kitti(argv[1], 0);
   int total_iters = kitti.get_total_number();
 
   cvo::PoseGraph pose_graph;

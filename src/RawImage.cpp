@@ -27,6 +27,10 @@ namespace cvo {
     memcpy(semantic_image_.data(), semantic.data(), sizeof(float) * semantic.size() );
   }
 
+  RawImage::RawImage(){
+    
+  }
+
   void RawImage::compute_image_gradient() {
 
     int h = color_.rows;

@@ -36,7 +36,7 @@
 #include <thrust/transform.h>
 #include <thrust/sequence.h>
 #include <thrust/copy.h>
-
+#include <tbb/tbb.h>
 #include <chrono>
 #include <cstdio>
 #include <fstream>
@@ -1158,7 +1158,7 @@ namespace cvo{
         break;
       }
 
-      cvo_state.ell = cvo_state.ell + params.dl_step*cvo_state.dl;
+      cvo_state.ell = cvo_state.ell - params.dl_step*cvo_state.dl;
       if(cvo_state.ell>=cvo_state.ell_max){
         cvo_state.ell = cvo_state.ell_max*0.7;
         cvo_state.ell_max = cvo_state.ell_max*0.7;

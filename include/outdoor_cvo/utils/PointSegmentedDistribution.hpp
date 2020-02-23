@@ -11,8 +11,8 @@
 
 #include <Eigen/Core>
 
-#define NUM_CLASSES 19
-#define FEATURE_DIMENSIONS 5
+//#define NUM_CLASSES 19
+//#define FEATURE_DIMENSIONS 5
 
 
 namespace pcl {

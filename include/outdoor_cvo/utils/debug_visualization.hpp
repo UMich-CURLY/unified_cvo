@@ -81,7 +81,7 @@ namespace cvo {
     cv::Mat img(h, w, CV_8UC1);
 
 
-    std::cout<<"visualize_semantic_image : first point labels are ";
+    std::cout<<"visualize_semantic_image: first point labels are ";
     for (int i = 0; i < num_class; i++) {
       std::cout<<image_semantics[i]<<", ";
     }

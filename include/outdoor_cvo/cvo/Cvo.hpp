@@ -17,9 +17,6 @@
 
 
 // #include "data_type.h"
-#include "cvo/LieGroup.h"
-#include "cvo/nanoflann.hpp"
-#include "cvo/KDTreeVectorOfVectorsAdaptor.h"
 #include "utils/CvoPointCloud.hpp"
 // #include "pcd_generator.hpp"
 
@@ -46,14 +43,13 @@
 #include <Eigen/Cholesky> 
 #include <unsupported/Eigen/MatrixFunctions>
 #include <Eigen/StdVector>
-#include <opencv2/core/mat.hpp>
-#include <boost/timer/timer.hpp>
+
 // #include <omp.h>
-#include <tbb/tbb.h>
+//#include <tbb/tbb.h>
 //#define IS_USING_SEMANTICS
 
 //using namespace std;
-using namespace nanoflann;
+
 
 namespace cvo{
   class cvo{
@@ -72,6 +68,7 @@ namespace cvo{
     float ell_init;
     float ell_min;
     float ell_max;
+    float ell_max_fixed;
     double dl;           // changes for ell in each iteration
     double dl_step;
     float min_dl_step;
@@ -93,7 +90,7 @@ namespace cvo{
 
     Eigen::Matrix3f R;   // orientation
     Eigen::Vector3f T;   // translation
-    Eigen::SparseMatrix<float,Eigen::RowMajor> A;      // coefficient matrix, represented in sparse
+    Eigen::SparseMatrix<float,Eigen::RowMajor> A;        // coefficient matrix, represented in sparse
     Eigen::SparseMatrix<float,Eigen::RowMajor> Axx;      // coefficient matrix, represented in sparse
     Eigen::SparseMatrix<float,Eigen::RowMajor> Ayy;      // coefficient matrix, represented in sparse
     Eigen::Vector3f omega;  // so(3) part of twist
