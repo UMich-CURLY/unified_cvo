@@ -53,10 +53,11 @@ namespace cvo{
   namespace cukdtree = perl_registration;
 
   static bool is_logging = false;
-  static bool debug_print = true;
+  static bool debug_print = false;
   
   CvoPointCloudGPU::SharedPtr CvoPointCloud_to_gpu(const CvoPointCloud & cvo_cloud ) {
     int num_points = cvo_cloud.num_points();
+    std::cout<<"Feature dimension is "<<FEATURE_DIMENSIONS<<", num class is "<<NUM_CLASSES<<std::endl;
     const ArrayVec3f & positions = cvo_cloud.positions();
     const Eigen::Matrix<float, Eigen::Dynamic, FEATURE_DIMENSIONS> & features = cvo_cloud.features();
 #ifdef IS_USING_SEMANTICS
@@ -903,7 +904,7 @@ namespace cvo{
     normxiz2[j] = xiz[j].squaredNorm();
     xiz_dot_xi2z[j]  = (-xiz[j] .dot(xi2z[j]));
     epsil_const[j] = xi2z[j].squaredNorm()+2*xiz[j].dot(xi3z[j]);
-    
+    /*
     if (j == 1000) {
       printf("j==1000, cloud_y[j] is (%f, %f, %f), xiz=(%f %f %f), xi2z=(%f %f %f), xi3z=(%f %f %f), xi4z=(%f %f %f), normxiz2=%f, xiz_dot_xi2z=%f, epsil_const=%f\n ",
              cloud_y[j].x , cloud_y[j].y, cloud_y[j].z,
@@ -915,7 +916,7 @@ namespace cvo{
              );
       
              }
-    
+    */
   }
 
   __global__ void compute_step_size_poly_coeff(float temp_coef,

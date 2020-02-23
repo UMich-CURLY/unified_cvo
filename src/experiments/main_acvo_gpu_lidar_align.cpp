@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
   cvo::AdaptiveCvoGPU cvo_align("/home/rayzhang/outdoor_cvo/acvo_params_gpu.txt" );
   cvo::cvo cvo_align_cpu("/home/rayzhang/outdoor_cvo/cvo_params.txt");
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
-  init_guess(2,3)=0;
+  init_guess(2,2)=0.75;
   Eigen::Affine3f init_guess_cpu = Eigen::Affine3f::Identity();
   init_guess_cpu.matrix()(2,3)=0;
   // start the iteration
@@ -52,8 +52,8 @@ int main(int argc, char *argv[]) {
     
     // calculate initial guess
     std::cout<<"\n\n\n\n============================================="<<std::endl;
-    std::string f1 = data_folder + "/" + std::to_string(i)+"_label.txt";
-    std::string f2 = data_folder + "/" + std::to_string(i+1)+"_label.txt";
+    std::string f1 = data_folder + "/" + std::to_string(i)+".txt";
+    std::string f2 = data_folder + "/" + std::to_string(i+1)+".txt";
     std::cout<<"Aligning "<<f1<<" and "<<f2<<" with GPU "<<std::endl;
 
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
