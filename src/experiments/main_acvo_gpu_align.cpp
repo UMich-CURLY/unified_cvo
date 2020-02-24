@@ -22,7 +22,8 @@ int main(int argc, char *argv[]) {
   string cvo_param_file(argv[2]);
   std::ofstream relative_output(argv[3]);
   std::ofstream accum_output(argv[4]);
-  int max_num = std::stoi(argv[5]);
+  int start_frame = std::stoi(argv[5]);
+  int max_num = std::stoi(argv[6]);
   
   vector<string> files;
   // cycle through the directory
@@ -35,8 +36,8 @@ int main(int argc, char *argv[]) {
       string current_file = p.path().string();
       files.push_back(data_folder + to_string(total_num) + ".txt" );
       total_num += 1;
-      if (total_num == max_num )
-        break;
+      //if (total_num == max_num )
+      //  break;
       // cout <<"reading "<< current_file << endl; 
     }
   }
@@ -50,7 +51,7 @@ int main(int argc, char *argv[]) {
 
   Eigen::Matrix4f accum_mat = Eigen::Matrix4f::Identity();
   // start the iteration
-  for (int i = 0; i<total_num ; i++) {
+  for (int i = start_frame; i<min(total_num, start_frame+max_num) ; i++) {
     
     // calculate initial guess
     std::cout<<"\n\n\n\n============================================="<<std::endl;
