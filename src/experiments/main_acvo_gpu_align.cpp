@@ -47,6 +47,8 @@ int main(int argc, char *argv[]) {
   init_guess(2,3)=0;
   Eigen::Affine3f init_guess_cpu = Eigen::Affine3f::Identity();
   init_guess_cpu.matrix()(2,3)=0;
+
+  Eigen::Matrix4f accum_mat = Eigen::Matrix4f::Identity();
   // start the iteration
   for (int i = 0; i<total_num ; i++) {
     
@@ -77,10 +79,11 @@ int main(int argc, char *argv[]) {
     std::cout<<"Transform is "<<result <<"\n\n";
 
     // append accum_tf_list for future initialization
-    init_guess = init_guess*result;
-    std::cout<<"accum tf: \n"<<init_guess<<std::endl;
+    init_guess = result;
+    accum_mat = accum_mat * result;
+    std::cout<<"accum tf: \n"<<accum_mat<<std::endl;
     
-    /*
+    
     // log relative pose
     Eigen::Matrix4f relative_mat = result;
     relative_output << relative_mat(0,0)<<" "<<relative_mat(0,1)<<" "<<relative_mat(0,2)<<" "<<relative_mat(0,3)<<" "
@@ -90,14 +93,14 @@ int main(int argc, char *argv[]) {
     relative_output<<std::flush;
    
     // log accumulated pose
-    Eigen::Matrix4f accum_mat = init_guess;
+
     accum_output << accum_mat(0,0)<<" "<<accum_mat(0,1)<<" "<<accum_mat(0,2)<<" "<<accum_mat(0,3)<<" "
                 <<accum_mat(1,0)<<" " <<accum_mat(1,1)<<" "<<accum_mat(1,2)<<" "<<accum_mat(1,3)<<" "
                 <<accum_mat(2,0)<<" " <<accum_mat(2,1)<<" "<<accum_mat(2,2)<<" "<<accum_mat(2,3);
     accum_output<<"\n";
     accum_output<<std::flush;
-    */
-
+    
+    /*
     std::cout<<"\n---------------------------------------------------"<<std::endl;
     std::cout<<"Aligning "<<i<<" and "<<i+1<<" with CPU "<<std::endl;
     Eigen::Affine3f result_cpu,init_guess_inv_cpu;
@@ -116,7 +119,7 @@ int main(int argc, char *argv[]) {
     // append accum_tf_list for future initialization
     init_guess_cpu = init_guess_cpu*result_cpu;
     std::cout<<"accum tf: \n"<<init_guess_cpu.matrix()<<std::endl;
-    
+    */
     
   
 

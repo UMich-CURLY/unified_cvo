@@ -53,7 +53,7 @@ namespace cvo{
   namespace cukdtree = perl_registration;
 
   static bool is_logging = false;
-  static bool debug_print = true;
+  static bool debug_print = false;
   
   CvoPointCloudGPU::SharedPtr CvoPointCloud_to_gpu(const CvoPointCloud & cvo_cloud ) {
     int num_points = cvo_cloud.num_points();
@@ -358,10 +358,11 @@ namespace cvo{
             A_mat->mat[i * A_mat->cols + num_inds] = a;
             A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
             num_inds++;
+            /*
             if (i == 1000) {
               printf("[se_kernel] cloud_x[%d] (%f, %f, %f), cloud_y[%d] (%f, %f, %f):  non_zero_A ind %d, value %f\n", j, p_a->x, p_a->y, p_a->z, 1000, p_b->x, p_b->y, p_b->z, num_inds,  a);
               
-            }
+              }*/
 
               
 
@@ -1205,7 +1206,7 @@ namespace cvo{
     normxiz2[j] = xiz[j].squaredNorm();
     xiz_dot_xi2z[j]  = (-xiz[j] .dot(xi2z[j]));
     epsil_const[j] = xi2z[j].squaredNorm()+2*xiz[j].dot(xi3z[j]);
- 
+    /*
     if (j == 1000) {
       printf("j==1000, cloud+yi is (%f,%f,%f), xiz=(%f %f %f), xi2z=(%f %f %f), xi3z=(%f %f %f), xi4z=(%f %f %f), normxiz2=%f, xiz_dot_xi2z=%f, epsil_const=%f\n ",
              cloud_y[j].x , cloud_y[j].y, cloud_y[j].z,
@@ -1217,7 +1218,7 @@ namespace cvo{
              );
       
     }
-    
+    */
   }
 
   __global__ void compute_step_size_poly_coeff(float temp_coef,
@@ -1277,11 +1278,12 @@ namespace cvo{
       D[i] += double(A_ij * (delta_ij+beta_ij*gamma_ij + beta_ij*beta_ij*beta_ij/6.0));
       E[i] += double(A_ij * (epsil_ij+beta_ij*delta_ij+1/2.0*beta_ij*beta_ij*gamma_ij\
                            + 1/2.0*gamma_ij*gamma_ij + 1/24.0*beta_ij*beta_ij*beta_ij*beta_ij));
+      /*
      if (i == 1074 && j == 1000) {
         printf("x==1000, y==1074, Aij=%f, beta_ij=%f, gamma_ij=%f, delta_ij=%f, epsil_ij=%f\n",
                A_ij, beta_ij, gamma_ij, delta_ij, epsil_ij);
         
-     }
+               }*/
     }
     
   }
@@ -1365,6 +1367,7 @@ namespace cvo{
     Mat33f R = init_guess_transform.block<3,3>(0,0);
     Vec3f T= init_guess_transform.block<3,1>(0,3);
 
+    
 
     std::cout<<"[align] convert points to gpu\n";
     CvoPointCloudGPU::SharedPtr source_gpu = CvoPointCloud_to_gpu(source_points);
@@ -1389,7 +1392,8 @@ namespace cvo{
     chrono::duration<double> t_compute_flow = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_step = chrono::duration<double>::zero();
 
-    std::cout<<"Start iteration\n";
+    std::cout<<"Start iteration, init transform is \n";
+    std::cout<<init_guess_transform<<std::endl;
     for(int k=0; k<params.MAX_ITER; k++){
     //for(int k=0; k<2; k++){
       if (debug_print) printf("new iteration %d, ell is %f\n", k, cvo_state.ell);
