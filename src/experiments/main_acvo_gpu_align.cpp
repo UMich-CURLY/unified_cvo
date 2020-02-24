@@ -19,10 +19,10 @@ int main(int argc, char *argv[]) {
   // list all files in current directory.
   //You could put any file path in here, e.g. "/home/me/mwah" to list that directory
   string data_folder (argv[1]);
-  //string cvo_param_file(argv[2]);
-  std::ofstream relative_output(argv[2]);
-  std::ofstream accum_output(argv[3]);
-  int max_num = std::stoi(argv[4]);
+  string cvo_param_file(argv[2]);
+  std::ofstream relative_output(argv[3]);
+  std::ofstream accum_output(argv[4]);
+  int max_num = std::stoi(argv[5]);
   
   vector<string> files;
   // cycle through the directory
@@ -41,8 +41,8 @@ int main(int argc, char *argv[]) {
     }
   }
   
-  cvo::AdaptiveCvoGPU cvo_align("/home/rayzhang/outdoor_cvo/acvo_params_gpu.txt" );
-  cvo::cvo cvo_align_cpu("/home/rayzhang/outdoor_cvo/cvo_params.txt");
+  cvo::AdaptiveCvoGPU cvo_align(cvo_param_file );
+  cvo::cvo cvo_align_cpu("/home/rayzhang/outdoor_cvo/cvo_params/cvo_params.txt");
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
   init_guess(2,3)=0;
   Eigen::Affine3f init_guess_cpu = Eigen::Affine3f::Identity();
@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
 
     Eigen::Matrix4f result, init_guess_inv;
     init_guess_inv = init_guess.inverse();
-    printf("Start align...\n");
+    printf("Start align... num_fixed is %d, num_moving is %d\n", source_fr.num_points(), target_fr.num_points());
     std::cout<<std::flush;
     cvo_align.align(source_fr, target_fr, init_guess_inv, result);
     
@@ -114,14 +114,14 @@ int main(int argc, char *argv[]) {
     //int non_zeros_in_A = cvo_align.number_of_non_zeros_in_A();
     std::cout<<"The cpu inner product between "<<i <<" and "<< i+1 <<" is "<<in_product_cpu<<"\n";
     //std::cout<<"The normalized inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_normalized<<"\n";
-    std::cout<<"Transform is "<<result_cpu.matrix() <<"\n\n";
-
-    // append accum_tf_list for future initialization
-    init_guess_cpu = init_guess_cpu*result_cpu;
-    std::cout<<"accum tf: \n"<<init_guess_cpu.matrix()<<std::endl;
+    std::cout<<"Transform cpu is "<<result_cpu.matrix() <<"\n\n";
     */
+    // append accum_tf_list for future initialization
+    //init_guess_cpu = init_guess_cpu*result_cpu;
+    //std::cout<<"accum tf: \n"<<init_guess_cpu.matrix()<<std::endl;
     
-  
+    std::cout<<"\n\n===========next frame=============\n\n";
+   
 
 
   }

@@ -65,7 +65,7 @@ namespace cvo{
     prev_transform(Eigen::Affine3f::Identity()),
     accum_tf(Eigen::Affine3f::Identity()),
     accum_tf_vis(Eigen::Affine3f::Identity()),
-    debug_print(false)
+    debug_print(true)
   {
     FILE* ptr = fopen(param_file.c_str(), "r" ); 
     if (ptr!=NULL) 
@@ -136,7 +136,7 @@ namespace cvo{
     prev_transform(Eigen::Affine3f::Identity()),
     accum_tf(Eigen::Affine3f::Identity()),
     accum_tf_vis(Eigen::Affine3f::Identity()),
-    debug_print(false)
+    debug_print(true)
   {
     FILE* ptr = fopen("cvo_params.txt", "r" ); 
     if (ptr!=NULL) 
@@ -539,6 +539,7 @@ namespace cvo{
 
     float ell_3 = ell*ell*ell;
 
+    double dl_ayy_sum = 0, dl_axx_sum =  0, dl_axy_sum = 0;
     // loop through points in cloud_x
     //start = chrono::system_clock::now();
     tbb::parallel_for(int(0),num_fixed,[&](int i){
@@ -581,6 +582,7 @@ namespace cvo{
                                            ++j;
                                          }
                                          double dl_ayy = 0, dl_yx =0, dl_xx= 0;
+                                         
                                          if(i<num_moving){
                                            j = 0; 
                                            for(Eigen::SparseMatrix<float,Eigen::RowMajor>::InnerIterator it(Ayy,i); it; ++it){
@@ -592,6 +594,7 @@ namespace cvo{
                                            }
                                            // update dl from Ayy
                                            dl_ayy = double((1/ell_3*Ayyi*sum_diff_yy_2)(0,0));
+                                           
                                            partial_dl += double((1/ell_3*Ayyi*sum_diff_yy_2)(0,0));
                                          }
                                          partial_omega = (1/c*Ai*cross_xy).cast<double>();
@@ -609,6 +612,9 @@ namespace cvo{
                                          double_omega += partial_omega.transpose();
                                          double_v += partial_v.transpose();
                                          dl += partial_dl;
+                                         dl_ayy_sum += dl_ayy ;
+                                         dl_axx_sum += dl_xx ;
+                                         dl_axy_sum += dl_yx ;
                                          if (debug_print && i == 1000) {
                                            std::cout<<"sum_diff_yx_2 is "<<sum_diff_yx_2.transpose()<<"\n, Aij is "<<Ai.transpose()<<std::endl<<std::flush;
                                          }
@@ -623,11 +629,14 @@ namespace cvo{
     //std::cout<<"time for this tbb gradient flow is "<<(end- start).count()<<std::endl;
     
     // }
-    if (debug_print)
-    printf("dl before Ayy is %lf\n", dl);
+    if (debug_print) {
+      printf("dl before Ayy is %lf, dl_Axy is %lf, dl_Axx is %lf, dl_Ayy is %lf\n", dl, dl_axy_sum, dl_axx_sum, dl_ayy_sum);      
+    }
+
           // if num_moving > num_fixed, update the rest of Ayy to dl 
     if(num_moving>num_fixed){
       tbb::parallel_for(int(num_fixed),num_moving,[&](int i){
+      //tbb::parallel_for(int(0),num_moving,[&](int i){
                                                     int num_non_zeros_yy = Ayy.innerVector(i).nonZeros();
                                                     Eigen::MatrixXf Ayyi = Eigen::MatrixXf::Zero(1,num_non_zeros_yy);
                                                     Eigen::MatrixXf diff_yy = Eigen::MatrixXf::Zero(num_non_zeros_yy,3);
@@ -817,7 +826,8 @@ namespace cvo{
 
     //std::ofstream dist_log("lidar_cvo_dist_log.txt");
 
-    for(int k=0; k<MAX_ITER; k++){
+    //for(int k=0; k<MAX_ITER; k++){
+    for(int k=0; k<2; k++){
 
       // update transformation matrix
       update_tf();
@@ -831,7 +841,7 @@ namespace cvo{
       // compute omega and v
       start = chrono::system_clock::now();
       compute_flow();
-      if (debug_print)std::cout<<"iter "<<k<< "omega: \n"<<omega<<"\nv: \n"<<v<<std::endl;
+      if (debug_print) std::cout<<"iter "<<k<< "omega: \n"<<omega<<"\nv: \n"<<v<<std::endl;
       end = std::chrono::system_clock::now();
       t_compute_flow += (end - start);
 
@@ -883,7 +893,11 @@ namespace cvo{
       }
               
       ell = (ell<ell_min)? ell_min:ell;
-      // std::cout<<"ell" << ell <<std::endl;
+      if (debug_print) {
+        std::cout<<"dl is "<<dl<<", ell is "<<ell<<std::endl;
+        
+      }
+      std::cout<<"ell" << ell <<std::endl;
 
       // std::cout<<"iter: "<<k<<std::endl;
       // if(debug_print){

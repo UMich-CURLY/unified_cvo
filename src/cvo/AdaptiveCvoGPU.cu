@@ -823,7 +823,7 @@ namespace cvo{
       printf("finsih compute_flow_gpu_no_eigen\n");
       
     }
-    
+
     //if (cvo_state->num_moving > cvo_state->num_fixed )
     compute_flow_gpu_ell_Ayy_no_eigen<<<cvo_state->Ayy_host.rows / CUDA_BLOCK_SIZE + 1 ,CUDA_BLOCK_SIZE>>>(params_gpu,
                                                                                                              //compute_flow_gpu_ell_Ayy_no_eigen<<< 1 ,1>>>(params_gpu,
@@ -1092,7 +1092,7 @@ namespace cvo{
     std::cout<<"Start iteration\n";
     for(int k=0; k<params.MAX_ITER; k++){
     //for(int k=0; k<2; k++){
-      if (debug_print) printf("new iteration....\n");
+      if (debug_print) printf("new iteration...., dl is %f\n", cvo_state.ell);
       cvo_state.reset_state_at_new_iter();
       if (debug_print) printf("just reset A mat\n");
       
