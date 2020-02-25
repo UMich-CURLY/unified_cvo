@@ -168,7 +168,7 @@ namespace cvo{
   }
 
   void AdaptiveCvoGPU::write_params(CvoParams * p_cpu) {
-    params = *p_cpu;
+    //params = *p_cpu;
     cudaMemcpy( (void*)params_gpu, p_cpu, sizeof(CvoParams), cudaMemcpyHostToDevice  );
     
   }
@@ -1095,7 +1095,7 @@ namespace cvo{
     chrono::duration<double> t_compute_flow = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_step = chrono::duration<double>::zero();
 
-    std::cout<<"Start iteration, init ell is "<<params.ell_init<<std::endl;
+    std::cout<<"Start iteration, init ell is "<<params.ell_init<<", max_iter is "<<params.MAX_ITER<<std::endl;
     for(int k=0; k<params.MAX_ITER; k++){
     //for(int k=0; k<2; k++){
       if (debug_print) printf("new iteration...., dl is %f\n", cvo_state.ell);

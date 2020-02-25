@@ -160,7 +160,7 @@ namespace cvo{
     // constructor and destructor
     AdaptiveCvoGPU(const std::string & f);
     ~AdaptiveCvoGPU();
-    CvoParams  get_params() {return params;}
+    CvoParams & get_params() {return params;}
     void write_params(CvoParams * param);
     
     /**

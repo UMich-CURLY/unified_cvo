@@ -33,11 +33,12 @@ int main(int argc, char *argv[]) {
   
   
   cvo::AdaptiveCvoGPU cvo_align(cvo_param_file );
-  cvo::CvoParams init_param = cvo_align.get_params();
-  cvo::CvoParams first_frame_param = init_param;
-  first_frame_param.ell_init = 0.95;
-  first_frame_param.ell_max = 1.0;
-  cvo_align.write_params(&first_frame_param);
+  cvo::CvoParams & init_param = cvo_align.get_params();
+  float ell_init = init_param.ell_init;
+  float ell_max = init_param.ell_max;
+  init_param.ell_init = 0.95;
+  init_param.ell_max = 1.0;
+  cvo_align.write_params(&init_param);
   
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
   init_guess(2,3)=0;
@@ -106,6 +107,8 @@ int main(int argc, char *argv[]) {
    
     source = target;
     if (i == start_frame) {
+      init_param.ell_init = ell_init;
+      init_param.ell_max = ell_max;
       cvo_align.write_params(&init_param);
       
     }
