@@ -273,6 +273,10 @@ add_executable(acvo_align_semantic_gpu_raw_img ${PROJECT_SOURCE_DIR}/src/experim
 target_compile_definitions(acvo_align_semantic_gpu_raw_img PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_USING_SEMANTICS)
 target_link_libraries(acvo_align_semantic_gpu_raw_img acvo_gpu_semantic_lib cvo_utils_lib pose_graph_lib  boost_filesystem boost_system)
 
+add_executable(acvo_align_semantic_gpu_raw_lidar ${PROJECT_SOURCE_DIR}/src/experiments/main_semantic_acvo_gpu_lidar_align_raw.cpp)
+target_compile_definitions(acvo_align_semantic_gpu_raw_lidar PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_USING_SEMANTICS)
+target_link_libraries(acvo_align_semantic_gpu_raw_lidar acvo_gpu_semantic_lib cvo_utils_lib pose_graph_lib  boost_filesystem boost_system)
+
 
 add_executable(cvo_align_gpu ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align.cpp)
 target_compile_definitions(cvo_align_gpu PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
