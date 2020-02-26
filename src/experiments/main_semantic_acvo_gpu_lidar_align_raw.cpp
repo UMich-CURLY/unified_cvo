@@ -37,8 +37,8 @@ int main(int argc, char *argv[]) {
   cvo::CvoParams & init_param = cvo_align.get_params();
   float ell_init = init_param.ell_init;
   float ell_max = init_param.ell_max;
-  init_param.ell_init = 0.95;
-  init_param.ell_max = 1.0;
+  init_param.ell_init = 0.45;
+  init_param.ell_max = 0.5;
   cvo_align.write_params(&init_param);
   
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
