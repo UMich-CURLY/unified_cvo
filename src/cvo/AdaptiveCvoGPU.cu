@@ -317,6 +317,16 @@ namespace cvo{
       
       if(d2<d2_thres  ){
         //float feature_b[5] = {(float)p_a->r, (float)p_a->g, (float)p_a->b,  p_a->gradient[0], p_a->gradient[1]  };
+#ifdef IS_GEOMETRIC_ONLY
+        float a = s2*exp(-d2/(2.0*l*l));
+         if (a > cvo_params->sp_thres){
+            A_mat->mat[i * A_mat->cols + num_inds] = a;
+            A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
+        	num_inds++;
+	  }
+#else
+        
+        
         CvoPoint * p_b = &points_b[ind_b];
         float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
 
@@ -324,7 +334,7 @@ namespace cvo{
         float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
 #endif
 
-# if __CUDA_ARCH__>=200
+
         /*
         if (i == 1000 && j==1074) {
           float * fa = p_a->features;
@@ -335,7 +345,7 @@ namespace cvo{
 
                   }*/
 
-#endif  
+
 
             
         if(d2_color<d2_c_thres){
@@ -348,13 +358,13 @@ namespace cvo{
 #endif              
           float a = ck*k*sk;
           
-# if __CUDA_ARCH__>=200
+          //#endif
           //if (i == 1000 && j == 1074) {
           // if (i == 1000)
           //  printf("se_kernel: i=%d,j=%d: d2_color is %f, d2_c_thres is %f,k is %f, ck is %f\n", i,j,d2_color, d2_c_thres, k, ck );
             //  printf("se_kernel: i==1000: k is %f, ck is %f\n", k, ck );
             //}
-#endif  
+
 
           // concrrent access !
           if (a > cvo_params->sp_thres){
@@ -381,6 +391,7 @@ namespace cvo{
 
             
         }
+#endif        
       }
 
 
@@ -1277,7 +1288,9 @@ namespace cvo{
               sk = 1;
 #endif              
               a = ck*k*sk;
-
+#ifdef IS_GEOMETRIC_ONLY
+	      a = k;
+#endif
               if (a > params.sp_thres){
                 A_trip_concur_.push_back(Trip_t(i,idx,a));
               }
