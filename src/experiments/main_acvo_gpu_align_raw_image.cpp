@@ -13,6 +13,7 @@
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/AdaptiveCvoGPU.hpp"
 #include "cvo/Cvo.hpp"
+#include "cvo/CvoParams.hpp"
 using namespace std;
 using namespace boost::filesystem;
 
@@ -33,6 +34,14 @@ int main(int argc, char *argv[]) {
   
   
   cvo::AdaptiveCvoGPU cvo_align(cvo_param_file );
+  cvo::CvoParams init_param = cvo_align.get_params();
+  cvo::CvoParams first_frame_param = init_param;
+  first_frame_param.ell_init = 0.95;
+  first_frame_param.ell_max = 1.0;
+  cvo_align.write_params(&first_frame_param);
+
+  std::cout<<"write ell! ell init is "<<cvo_align.get_params().ell_init<<std::endl;
+
   //cvo::cvo cvo_align_cpu("/home/rayzhang/outdoor_cvo/cvo_params/cvo_params.txt");
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
   init_guess(2,3)=0;
@@ -102,6 +111,11 @@ int main(int argc, char *argv[]) {
     std::cout<<"\n\n===========next frame=============\n\n";
    
     source = target;
+    if (i == start_frame) {
+      cvo_align.write_params(&init_param);
+      
+    }
+
 
   }
 
