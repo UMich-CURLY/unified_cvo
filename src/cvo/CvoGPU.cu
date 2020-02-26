@@ -314,6 +314,16 @@ namespace cvo{
                }*/
       
       if(d2<d2_thres  ){
+
+#ifdef IS_GEOMETRIC_ONLY
+        float a = 1.0;
+        A_mat->mat[i * A_mat->cols + num_inds] = a;
+        A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
+        num_inds++;
+
+#else
+        
+
         //float feature_b[5] = {(float)p_a->r, (float)p_a->g, (float)p_a->b,  p_a->gradient[0], p_a->gradient[1]  };
         float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
 
@@ -321,7 +331,7 @@ namespace cvo{
         float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
 #endif
 
-# if __CUDA_ARCH__>=200
+
         /*
         if (i == 1000 && j==1074) {
           float * fa = p_a->features;
@@ -332,10 +342,14 @@ namespace cvo{
 
                   }*/
 
-#endif  
-
-            
         if(d2_color<d2_c_thres){
+
+          //#ifdef IS_GEOMETRIC_ONLY
+          //float a = s2*exp(-d2/(2.0*l*l));
+
+          //#else
+        
+          
           float k = s2*exp(-d2/(2.0*l*l));
           float ck = c_sigma*c_sigma*exp(-d2_color/(2.0*c_ell*c_ell));
 #ifdef IS_USING_SEMANTICS              
@@ -344,16 +358,17 @@ namespace cvo{
           float sk = 1;
 #endif              
           float a = ck*k*sk;
-          
-# if __CUDA_ARCH__>=200
+          //#endif          
+
           //if (i == 1000 && j == 1074)
           //  printf("se_kernel: i=%d,j=%d: d2_color is %f, d2_c_thres is %f,k is %f, ck is %f\n", i,j,d2_color, d2_c_thres, k, ck );
           //printf("se_kernel: i==1000: k is %f, ck is %f\n", k, ck );
 
-#endif  
+
 
           // concrrent access !
           if (a > cvo_params->sp_thres){
+
             //A_mat->mat[i * A_mat->cols + j] = a;
             A_mat->mat[i * A_mat->cols + num_inds] = a;
             A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
@@ -378,6 +393,7 @@ namespace cvo{
 
             
         }
+#endif        
       }
 
 

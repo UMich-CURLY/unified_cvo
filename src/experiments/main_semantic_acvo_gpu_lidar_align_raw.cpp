@@ -9,7 +9,9 @@
 //#include <opencv2/opencv.hpp>
 #include "dataset_handler/KittiHandler.hpp"
 #include "graph_optimizer/Frame.hpp"
-#include "utils/Calibration.hpp"
+
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/AdaptiveCvoGPU.hpp"
 #include "cvo/Cvo.hpp"
@@ -20,7 +22,7 @@ using namespace boost::filesystem;
 int main(int argc, char *argv[]) {
   // list all files in current directory.
   //You could put any file path in here, e.g. "/home/me/mwah" to list that directory
-  cvo::KittiHandler kitti(argv[1], 0);
+  cvo::KittiHandler kitti(argv[1], 1);
   int total_iters = kitti.get_total_number();
   string cvo_param_file(argv[2]);
   string calib_file;
@@ -31,13 +33,12 @@ int main(int argc, char *argv[]) {
   kitti.set_start_index(start_frame);
   int max_num = std::stoi(argv[5]);
   
-  
   cvo::AdaptiveCvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();
   float ell_init = init_param.ell_init;
   float ell_max = init_param.ell_max;
-  init_param.ell_init = 0.95;
-  init_param.ell_max = 1.0;
+  init_param.ell_init = 0.45;
+  init_param.ell_max = 0.5;
   cvo_align.write_params(&init_param);
   
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
@@ -47,12 +48,12 @@ int main(int argc, char *argv[]) {
   Eigen::Matrix4f accum_mat = Eigen::Matrix4f::Identity();
   // start the iteration
 
-  cv::Mat source_left, source_right;
-  std::vector<float> semantics_source;
-  kitti.read_next_stereo(source_left, source_right, 19, semantics_source);
+  pcl::PointCloud<pcl::PointXYZI>::Ptr source_pc(new pcl::PointCloud<pcl::PointXYZI>);
+  std::vector<int> semantics_source;
+  kitti.read_next_lidar(source_pc,  semantics_source);
   //kitti.read_next_stereo(source_left, source_right);
-  std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_left, source_right,
-                                                    19, semantics_source, 
+  std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_pc,
+                                                     semantics_source, 
                                                     calib));
   //0.2));
   
@@ -63,13 +64,13 @@ int main(int argc, char *argv[]) {
     std::cout<<"Aligning "<<i<<" and "<<i+1<<" with GPU "<<std::endl;
 
     kitti.next_frame_index();
-    cv::Mat left, right;
-    vector<float> semantics_target;
-    if (kitti.read_next_stereo(left, right, 19, semantics_target) != 0) {
+    pcl::PointCloud<pcl::PointXYZI>::Ptr target_pc(new pcl::PointCloud<pcl::PointXYZI>);
+    std::vector<int> semantics_target;
+    if (kitti.read_next_lidar(target_pc, semantics_target) != 0) {
       std::cout<<"finish all files\n";
       break;
     }
-    std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, left, right, 19, semantics_target, calib));
+    std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, target_pc, semantics_target, calib));
 
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
     auto source_fr = source->points();
