@@ -53,7 +53,7 @@ namespace cvo{
   namespace cukdtree = perl_registration;
 
   static bool is_logging = false;
-  static bool debug_print = true;
+  static bool debug_print = false;
   
   CvoPointCloudGPU::SharedPtr CvoPointCloud_to_gpu(const CvoPointCloud & cvo_cloud ) {
     int num_points = cvo_cloud.num_points();

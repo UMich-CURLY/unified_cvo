@@ -12,7 +12,8 @@
  **/
 
 #include "LieGroup.h"
-
+#include <unsupported/Eigen/MatrixFunctions>
+#include <opencv2/core/eigen.hpp>
 using namespace std;
 
 const float TOLERANCE = 1e-6;
@@ -270,17 +271,24 @@ Eigen::VectorXcf poly_solver(const Eigen::VectorXf& coef){
   return roots;
 }
 
-//__attribute__((force_align_arg_pointer))
+__attribute__((force_align_arg_pointer))
 float dist_se3(const Eigen::Matrix3f& R, const Eigen::Vector3f& T)  {
   // create transformation matrix
-  Eigen::Matrix4f temp_transform ;
-  //Eigen::Matrix4f temp_transform;// = Eigen::Matrix4f::Identity();
+  //Eigen::Matrix4d temp_transform ;
+  Eigen::Matrix4f temp_transform  = Eigen::Matrix4f::Identity();
   temp_transform.block<3,3>(0,0)=R;
   temp_transform.block<3,1>(0,3)=T;
   (temp_transform)(3,3) = 1.0;
-    
+  //cv::Mat T_cv;
+  //cv::Mat loged;
+  //cv::eigen2cv(temp_transform, T_cv);
+  //cv::log(T_cv, loged);
+  //std::cout<<("compute log...")<<temp_transform<<std::endl<<"of mat"<<std::flush;
   // distance = frobenius_norm(logm(trans))
   float d = temp_transform.log().norm();
-  printf("ennd of dist-se3\n");
+  //printf("get log norm\n");
+  //std::cout<<logs<<std::endl<<std::flush;
+  //float  d = sqrt(logs(0) * logs(0) + logs(1) * logs(1) + logs(2) * logs(2));
+  //std::cout<<("ennd of dist-se3\n")<<std::flush;
   return d;
 }
