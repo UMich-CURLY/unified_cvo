@@ -24,10 +24,11 @@ int main(int argc, char *argv[]) {
   std::ofstream accum_output(argv[4]);
   int start_frame = std::stoi(argv[5]);
   int max_num = std::stoi(argv[6]);
+
   
   vector<string> files;
   // cycle through the directory
-  std::cout<<"reading cvo points from txt files..."<<std::endl;
+  std::cout<<"reading cvo points from txt files..."<<std::endl<<std::flush;
   int total_num = 0;
   for(auto & p : boost::filesystem::directory_iterator( data_folder ) ) {
     // If it's not a directory, list it. If you want to list directories too, just remove this check.
@@ -43,7 +44,16 @@ int main(int argc, char *argv[]) {
   }
   
   cvo::AdaptiveCvoGPU cvo_align(cvo_param_file );
-  cvo::cvo cvo_align_cpu("/home/rayzhang/outdoor_cvo/cvo_params/cvo_params.txt");
+  cvo::CvoParams & init_param = cvo_align.get_params();
+  float ell_init = init_param.ell_init;
+  float ell_max = init_param.ell_max;
+  init_param.ell_init = 0.95;
+  init_param.ell_max = 1.0;
+  cvo_align.write_params(&init_param);
+
+
+  
+  //cvo::cvo cvo_align_cpu("/home/rayzhang/outdoor_cvo/cvo_params/cvo_params.txt");
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
   init_guess(2,3)=0;
   Eigen::Affine3f init_guess_cpu = Eigen::Affine3f::Identity();
@@ -122,7 +132,13 @@ int main(int argc, char *argv[]) {
     //std::cout<<"accum tf: \n"<<init_guess_cpu.matrix()<<std::endl;
     
     std::cout<<"\n\n===========next frame=============\n\n";
-   
+       if (i == start_frame) {
+      init_param.ell_init = ell_init;
+      init_param.ell_max = ell_max;
+      cvo_align.write_params(&init_param);
+      
+    }
+
 
 
   }

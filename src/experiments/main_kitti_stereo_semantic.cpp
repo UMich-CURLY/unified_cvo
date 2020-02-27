@@ -8,7 +8,7 @@
 #include "dataset_handler/KittiHandler.hpp"
 #include "graph_optimizer/Frame.hpp"
 #include "graph_optimizer/PoseGraph.hpp"
-#include "utils/Calibration.hpp"
+
 int main(int argc, char ** argv) {
   assert(argc > 3);
   cvo::KittiHandler kitti(argv[1], 0);
