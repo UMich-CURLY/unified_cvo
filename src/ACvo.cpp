@@ -5,13 +5,13 @@
  * -------------------------------------------------------------------------- */
 
 /**
- *  @file   cvo.cpp
+ *  @file   acvo.cpp
  *  @author Tzu-yuan Lin, Maani Ghaffari 
- *  @brief  Source file for contineuous visual odometry registration
- *  @date   November 03, 2019
+ *  @brief  Source file for adaptive contineuous visual odometry registration
+ *  @date   Feburary 3, 2020
  **/
 
-#include "cvo/Cvo.hpp"
+#include "cvo/ACvo.hpp"
 #include <chrono>
 #include <cstdio>
 #include <fstream>
@@ -24,7 +24,7 @@ namespace cvo{
 
   static bool is_logging = false;
 
-  cvo::cvo(const std::string & param_file):
+  acvo::acvo(const std::string & param_file):
     // initialize parameters
     init(false),           // initialization indicator
     ell_init(0.15*7),             // kernel characteristic length-scale
@@ -32,9 +32,6 @@ namespace cvo{
     ell_min(0.0391*7),
     ell_max(0.15*7),
     ell_max_fixed(0.15*7),
-    ell_reduced_1(0.1),
-    ell_reduced_2(0.06),
-    ell_reduced_3(0.03),
     dl(0),
     dl_step(0.3),
     min_dl_step(0.05),
@@ -67,7 +64,7 @@ namespace cvo{
     if (ptr!=NULL) 
     {
       std::cout<<"reading cvo params from file\n";
-      fscanf(ptr, "%f\n%f\n%f\n%f\n%f\n%lf\n%lf\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n%f\n%f\n%f\n",
+      fscanf(ptr, "%f\n%f\n%f\n%f\n%f\n%lf\n%lf\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n",
              &ell_init
              ,& ell
              ,& ell_min
@@ -88,10 +85,7 @@ namespace cvo{
              ,& MAX_ITER
              ,& min_step
              ,& eps
-             ,& eps_2
-             ,& ell_reduced_1
-             ,& ell_reduced_2
-             ,& ell_reduced_3);
+             ,& eps_2);
       fclose(ptr);
     }
     if (is_logging) {
@@ -101,7 +95,7 @@ namespace cvo{
     }
   }
 
-  cvo::cvo():
+  acvo::acvo():
     // initialize parameters
     init(false),           // initialization indicator
     ell_init(0.15*7),             // kernel characteristic length-scale
@@ -109,9 +103,6 @@ namespace cvo{
     ell_min(0.0391*7),
     ell_max(0.15*7),
     ell_max_fixed(0.55),
-    ell_reduced_1(0.1),
-    ell_reduced_2(0.06),
-    ell_reduced_3(0.03),
     dl(0),
     dl_step(0.3),
     min_dl_step(0.05),
@@ -144,7 +135,7 @@ namespace cvo{
     if (ptr!=NULL) 
     {
       std::cout<<"reading cvo params from file\n";
-      fscanf(ptr, "%f\n%f\n%f\n%f\n%f\n%lf\n%lf\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n%f\n%f\n%f\n",
+      fscanf(ptr, "%f\n%f\n%f\n%f\n%f\n%lf\n%lf\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n",
              &ell_init
              ,& ell
              ,& ell_min
@@ -165,10 +156,7 @@ namespace cvo{
              ,& MAX_ITER
              ,& min_step
              ,& eps
-             ,& eps_2
-             ,& ell_reduced_1
-             ,& ell_reduced_2
-             ,& ell_reduced_3);
+             ,& eps_2);
       fclose(ptr);
     }
     if (is_logging) {
@@ -176,10 +164,10 @@ namespace cvo{
       init_guess_file = fopen("cvo_init_guess.txt", "w");
       assert (relative_transform_file && init_guess_file);
     }
-    std::cout<<"Using CVO"<<std::endl;
+    std::cout<<"Using ACVO"<<std::endl;
   }
 
-  cvo::~cvo() {
+  acvo::~acvo() {
     if (is_logging){
       if (relative_transform_file)
         fclose(relative_transform_file);
@@ -188,7 +176,7 @@ namespace cvo{
     }
   }
 
-  inline Eigen::VectorXcf cvo::poly_solver(const Eigen::VectorXf& coef){
+  inline Eigen::VectorXcf acvo::poly_solver(const Eigen::VectorXf& coef){
     // extract order
     int order = coef.size()-1;
     Eigen::VectorXcf roots;
@@ -206,7 +194,7 @@ namespace cvo{
     return roots;
   }
 
-  inline float cvo::dist_se3(const Eigen::Matrix3f& R, const Eigen::Vector3f& T){
+  inline float acvo::dist_se3(const Eigen::Matrix3f& R, const Eigen::Vector3f& T){
     // create transformation matrix
     Eigen::Matrix4f temp_transform = Eigen::Matrix4f::Identity();
     temp_transform.block<3,3>(0,0)=R;
@@ -218,7 +206,7 @@ namespace cvo{
     return d;
   }
 
-  inline void cvo::update_tf(){
+  inline void acvo::update_tf(){
     // transform = [R', -R'*T; 0,0,0,1]
     transform.matrix().block<3,3>(0,0) = R.transpose();
     transform.matrix().block<3,1>(0,3) = -R.transpose()*T;
@@ -285,7 +273,7 @@ namespace cvo{
   */
   
 
-  void cvo::se_kernel(const CvoPointCloud* cloud_a, const CvoPointCloud* cloud_b, \
+  void acvo::se_kernel(const CvoPointCloud* cloud_a, const CvoPointCloud* cloud_b, \
                            cloud_t* cloud_a_pos, cloud_t* cloud_b_pos,\
                            Eigen::SparseMatrix<float,Eigen::RowMajor>& A_temp,
                            tbb::concurrent_vector<Trip_t> & A_trip_concur_)const {
@@ -371,7 +359,7 @@ namespace cvo{
 
   
 
-  void cvo::se_kernel_init_ell(const CvoPointCloud* cloud_a, const CvoPointCloud* cloud_b, \
+  void acvo::se_kernel_init_ell(const CvoPointCloud* cloud_a, const CvoPointCloud* cloud_b, \
                                cloud_t* cloud_a_pos, cloud_t* cloud_b_pos, \
                                Eigen::SparseMatrix<float,Eigen::RowMajor>& A_temp,
                                tbb::concurrent_vector<Trip_t> & A_trip_concur_)const {
@@ -457,7 +445,7 @@ namespace cvo{
 
   
   
-  void cvo::compute_flow(){
+  void acvo::compute_flow(){
 
     auto start = chrono::system_clock::now();
     auto end = chrono::system_clock::now();
@@ -468,10 +456,11 @@ namespace cvo{
     if (debug_print ) {std::cout<<"nonzeros in A "<<A.nonZeros()<<std::endl;
     }
     // compute SE kernel for Axx and Ayy
-    // Axx and Ayy is only for adaptive cvo
-    // se_kernel(ptr_fixed_pcd,ptr_fixed_pcd,cloud_x,cloud_x,Axx, A_trip_concur);
-    // se_kernel(ptr_moving_pcd,ptr_moving_pcd,cloud_y,cloud_y,Ayy, A_trip_concur);
-
+    se_kernel(ptr_fixed_pcd,ptr_fixed_pcd,cloud_x,cloud_x,Axx, A_trip_concur);
+    //start = chrono::system_clock::now();
+    se_kernel(ptr_moving_pcd,ptr_moving_pcd,cloud_y,cloud_y,Ayy, A_trip_concur);
+    //end = chrono::system_clock::now();
+    //std::cout<<"time for this kernel is "<<(end- start).count()<<std::endl;
     // some initialization of the variables
     omega = Eigen::Vector3f::Zero();
     v = Eigen::Vector3f::Zero();
@@ -484,26 +473,27 @@ namespace cvo{
     float ell_3 = ell*ell*ell;
 
     // loop through points in cloud_x
+    //start = chrono::system_clock::now();
     tbb::parallel_for(int(0),num_fixed,[&](int i){
                                          // for(int i=0; i<num_fixed; ++i){
                                          // initialize reused varaibles
                                          int num_non_zeros = A.innerVector(i).nonZeros();
-                                        //  int num_non_zeros_xx = Axx.innerVector(i).nonZeros();
-                                        //  int num_non_zeros_yy; 
-                                        //  num_non_zeros_yy = (i<num_moving)?Ayy.innerVector(i).nonZeros():0;
+                                         int num_non_zeros_xx = Axx.innerVector(i).nonZeros();
+                                         int num_non_zeros_yy; 
+                                         num_non_zeros_yy = (i<num_moving)?Ayy.innerVector(i).nonZeros():0;
                                          Eigen::MatrixXf Ai = Eigen::MatrixXf::Zero(1,num_non_zeros);
-                                        //  Eigen::MatrixXf Axxi = Eigen::MatrixXf::Zero(1,num_non_zeros_xx);
-                                        //  Eigen::MatrixXf Ayyi = Eigen::MatrixXf::Zero(1,num_non_zeros_yy);
+                                         Eigen::MatrixXf Axxi = Eigen::MatrixXf::Zero(1,num_non_zeros_xx);
+                                         Eigen::MatrixXf Ayyi = Eigen::MatrixXf::Zero(1,num_non_zeros_yy);
                                          Eigen::MatrixXf cross_xy = Eigen::MatrixXf::Zero(num_non_zeros,3);
                                          Eigen::MatrixXf diff_yx = Eigen::MatrixXf::Zero(num_non_zeros,3);
-                                        //  Eigen::MatrixXf diff_xx = Eigen::MatrixXf::Zero(num_non_zeros_xx,3);
-                                        //  Eigen::MatrixXf diff_yy = Eigen::MatrixXf::Zero(num_non_zeros_yy,3);
-                                        //  Eigen::MatrixXf sum_diff_yx_2 = Eigen::MatrixXf::Zero(num_non_zeros,1);
-                                        //  Eigen::MatrixXf sum_diff_xx_2 = Eigen::MatrixXf::Zero(num_non_zeros_xx,1);
-                                        //  Eigen::MatrixXf sum_diff_yy_2 = Eigen::MatrixXf::Zero(num_non_zeros_yy,1);
+                                         Eigen::MatrixXf diff_xx = Eigen::MatrixXf::Zero(num_non_zeros_xx,3);
+                                         Eigen::MatrixXf diff_yy = Eigen::MatrixXf::Zero(num_non_zeros_yy,3);
+                                         Eigen::MatrixXf sum_diff_yx_2 = Eigen::MatrixXf::Zero(num_non_zeros,1);
+                                         Eigen::MatrixXf sum_diff_xx_2 = Eigen::MatrixXf::Zero(num_non_zeros_xx,1);
+                                         Eigen::MatrixXf sum_diff_yy_2 = Eigen::MatrixXf::Zero(num_non_zeros_yy,1);
                                          Eigen::Matrix<double, 1, 3> partial_omega;
                                          Eigen::Matrix<double, 1, 3> partial_v;
-                                        //  double partial_dl = 0;
+                                         double partial_dl = 0;
 
                                          int j = 0;
                                          // loop through non-zero ids in ith row of A
@@ -512,82 +502,85 @@ namespace cvo{
                                            Ai(0,j) = it.value();    // extract current value in A
                                            cross_xy.row(j) = ((*cloud_x)[i].transpose().cross((*cloud_y)[idx].transpose()));
                                            diff_yx.row(j) = ((*cloud_y)[idx]-(*cloud_x)[i]).transpose();
-                                          //  sum_diff_yx_2(j,0) = diff_yx.row(j).squaredNorm();
+                                           sum_diff_yx_2(j,0) = diff_yx.row(j).squaredNorm();
                                            ++j;
                                          }
-                                        //  j = 0; 
-                                        //  for(Eigen::SparseMatrix<float,Eigen::RowMajor>::InnerIterator it(Axx,i); it; ++it){
-                                        //    int idx = it.col();
-                                        //    Axxi(0,j) = it.value();    // extract current value in A
-                                        //    diff_xx.row(j) = ((*cloud_x)[idx]-(*cloud_x)[i]).transpose();
-                                        //    sum_diff_xx_2(j,0) = diff_xx.row(j).squaredNorm();
-                                        //    ++j;
-                                        //  }
-                                        //  if(i<num_moving){
-                                        //    j = 0; 
-                                        //    for(Eigen::SparseMatrix<float,Eigen::RowMajor>::InnerIterator it(Ayy,i); it; ++it){
-                                        //      int idx = it.col();
-                                        //      Ayyi(0,j) = it.value();    // extract current value in A
-                                        //      diff_yy.row(j) = ((*cloud_y)[idx]-(*cloud_y)[i]).transpose();
-                                        //      ++j;
-                                        //    }
-                                        //    // update dl from Ayy
-                                        //    partial_dl += double((1/ell_3*Ayyi*sum_diff_yy_2)(0,0));
-                                        //  }
+                                         j = 0; 
+                                         for(Eigen::SparseMatrix<float,Eigen::RowMajor>::InnerIterator it(Axx,i); it; ++it){
+                                           int idx = it.col();
+                                           Axxi(0,j) = it.value();    // extract current value in A
+                                           diff_xx.row(j) = ((*cloud_x)[idx]-(*cloud_x)[i]).transpose();
+                                           sum_diff_xx_2(j,0) = diff_xx.row(j).squaredNorm();
+                                           ++j;
+                                         }
+                                         if(i<num_moving){
+                                           j = 0; 
+                                           for(Eigen::SparseMatrix<float,Eigen::RowMajor>::InnerIterator it(Ayy,i); it; ++it){
+                                             int idx = it.col();
+                                             Ayyi(0,j) = it.value();    // extract current value in A
+                                             diff_yy.row(j) = ((*cloud_y)[idx]-(*cloud_y)[i]).transpose();
+                                             sum_diff_yy_2(j,0) = diff_yy.row(j).squaredNorm();
+                                             ++j;
+                                           }
+                                           // update dl from Ayy
+                                           partial_dl += double((1/ell_3*Ayyi*sum_diff_yy_2)(0,0));
+                                         }
                                          partial_omega = (1/c*Ai*cross_xy).cast<double>();
                                          partial_v = (1/d*Ai*diff_yx).cast<double>();
 
                                          // update dl from Axy
-                                        //  partial_dl -= double(2*(1/ell_3*Ai*sum_diff_yx_2)(0,0));
+                                         partial_dl -= double(2*(1/ell_3*Ai*sum_diff_yx_2)(0,0));
         
                                          // update dl from Axx
-                                        //  partial_dl += double((1/ell_3*Axxi*sum_diff_xx_2)(0,0));
+                                         partial_dl += double((1/ell_3*Axxi*sum_diff_xx_2)(0,0));
 
                                          // sum them up
                                          omegav_lock.lock();
                                          double_omega += partial_omega.transpose();
                                          double_v += partial_v.transpose();
-                                        //  dl += partial_dl;
+                                         dl += partial_dl;
                                          omegav_lock.unlock();
                                        });
+    //end = chrono::system_clock::now();
+    //std::cout<<"time for this tbb gradient flow is "<<(end- start).count()<<std::endl;
     
     // }
 
     // if num_moving > num_fixed, update the rest of Ayy to dl 
-    // if(num_moving>num_fixed){
-    //   tbb::parallel_for(int(num_fixed),num_moving,[&](int i){
-    //                                                 int num_non_zeros_yy = Ayy.innerVector(i).nonZeros();
-    //                                                 Eigen::MatrixXf Ayyi = Eigen::MatrixXf::Zero(1,num_non_zeros_yy);
-    //                                                 Eigen::MatrixXf diff_yy = Eigen::MatrixXf::Zero(num_non_zeros_yy,3);
-    //                                                 Eigen::MatrixXf sum_diff_yy_2 = Eigen::MatrixXf::Zero(num_non_zeros_yy,1);
-    //                                                 double partial_dl = 0;
+    if(num_moving>num_fixed){
+      tbb::parallel_for(int(num_fixed),num_moving,[&](int i){
+                                                    int num_non_zeros_yy = Ayy.innerVector(i).nonZeros();
+                                                    Eigen::MatrixXf Ayyi = Eigen::MatrixXf::Zero(1,num_non_zeros_yy);
+                                                    Eigen::MatrixXf diff_yy = Eigen::MatrixXf::Zero(num_non_zeros_yy,3);
+                                                    Eigen::MatrixXf sum_diff_yy_2 = Eigen::MatrixXf::Zero(num_non_zeros_yy,1);
+                                                    double partial_dl = 0;
 
-    //                                                 int j = 0; 
-    //                                                 for(Eigen::SparseMatrix<float,Eigen::RowMajor>::InnerIterator it(Ayy,i); it; ++it){
-    //                                                   int idx = it.col();
-    //                                                   Ayyi(0,j) = it.value();    // extract current value in A
-    //                                                   diff_yy.row(j) = ((*cloud_y)[idx]-(*cloud_y)[i]).transpose();
-    //                                                   sum_diff_yy_2(j,0) = diff_yy.row(j).squaredNorm();
-    //                                                   ++j;
-    //                                                 }
-    //                                                 partial_dl += double((1/ell_3*Ayyi*sum_diff_yy_2)(0,0));
+                                                    int j = 0; 
+                                                    for(Eigen::SparseMatrix<float,Eigen::RowMajor>::InnerIterator it(Ayy,i); it; ++it){
+                                                      int idx = it.col();
+                                                      Ayyi(0,j) = it.value();    // extract current value in A
+                                                      diff_yy.row(j) = ((*cloud_y)[idx]-(*cloud_y)[i]).transpose();
+                                                      sum_diff_yy_2(j,0) = diff_yy.row(j).squaredNorm();
+                                                      ++j;
+                                                    }
+                                                    partial_dl += double((1/ell_3*Ayyi*sum_diff_yy_2)(0,0));
 
-    //                                                 omegav_lock.lock();
-    //                                                 dl += partial_dl;
-    //                                                 omegav_lock.unlock();
-    //                                               });
-    // }
+                                                    omegav_lock.lock();
+                                                    dl += partial_dl;
+                                                    omegav_lock.unlock();
+                                                  });
+    }
     
 
     // update them to class-wide variables
     omega = double_omega.cast<float>();
     v = double_v.cast<float>();
-    // dl = dl/(Axx.nonZeros()+Ayy.nonZeros()-2*A.nonZeros());
+    dl = dl/(Axx.nonZeros()+Ayy.nonZeros()-2*A.nonZeros());
 
   }
 
 
-  void cvo::compute_step_size(){
+  void acvo::compute_step_size(){
     // compute skew matrix
     Eigen::Matrix3f omega_hat = skew(omega);
     
@@ -692,14 +685,14 @@ namespace cvo{
     }
   }
 
-  void cvo::transform_pcd(){
+  void acvo::transform_pcd(){
     tbb::parallel_for(int(0), num_moving, [&]( int j ){
                                             (*cloud_y)[j] = transform.linear()*ptr_moving_pcd->positions()[j]+transform.translation();
                                           });
     
   }
 
-  // void cvo::convert_to_pcl_cloud(const CvoPointCloud& cvo_cloud, pcl::PointCloud<PointSegmentedDistribution> pcl_cloud){
+  // void acvo::convert_to_pcl_cloud(const CvoPointCloud& cvo_cloud, pcl::PointCloud<PointSegmentedDistribution> pcl_cloud){
   //   int num_points = cvo_cloud.num_points();
   //   ArrayVec3f positions = cvo_cloud.positions();
   //   Eigen::Matrix<float, Eigen::Dynamic, FEATURE_DIMENSIONS> features = cvo_cloud.features();
@@ -740,7 +733,7 @@ namespace cvo{
   //   }
   // }
 
-  int cvo::align(){
+  int acvo::align(){
     int ret = 0;
     
     int n = tbb::task_scheduler_init::default_num_threads();
@@ -811,21 +804,14 @@ namespace cvo{
         break;
       }
 
-      // ell = ell + dl_step*dl;
-      // if(ell>=ell_max){
-      //   ell = ell_max*0.7;
-      //   ell_max = ell_max*0.7;
-      // }
-      // ell = (ell<ell_min)? ell_min:ell;
-
-      // reduce ell
-    //   ell = (k>2)? ell_reduced_1:ell;	
-    //   ell = (k>9)? ell_reduced_2:ell;	
-    //   ell = (k>19)? ell_reduced_3:ell;
-    // ell = 1/(1+k*ell_reduced_1)*ell;
-      if(k%(int)ell_reduced_2==1){
-          ell = ell_reduced_1*ell;
+      ell = ell - dl_step*dl;
+      if(ell>=ell_max){
+        ell = ell_max*0.7;
+        ell_max = ell_max*0.7;
       }
+              
+      ell = (ell<ell_min)? ell_min:ell;
+      // std::cout<<ell<<std::endl;
 
       // std::cout<<"iter: "<<k<<std::endl;
       if(debug_print){
@@ -870,7 +856,7 @@ namespace cvo{
   }
  
 
-  void cvo::set_pcd(const CvoPointCloud& source_points,
+  void acvo::set_pcd(const CvoPointCloud& source_points,
                     const CvoPointCloud& target_points,
                     const Eigen::Affine3f & init_guess_transform,
                     bool is_using_init_guess) {
@@ -916,33 +902,33 @@ namespace cvo{
     }
 
     ell = ell_init;
-    // dl = 0;
-    // ell_max = ell_max_fixed;
+    dl = 0;
+    ell_max = ell_max_fixed;
     A_trip_concur.reserve(num_moving*20);
     A.resize(num_fixed,num_moving);
-    // Axx.resize(num_fixed,num_fixed);
-    // Ayy.resize(num_moving,num_moving);
+    Axx.resize(num_fixed,num_fixed);
+    Ayy.resize(num_moving,num_moving);
     A.setZero();
-    // Axx.setZero();
-    // Ayy.setZero();
+    Axx.setZero();
+    Ayy.setZero();
   }
 
   
-  float cvo::inner_product() const {
+  float acvo::inner_product() const {
     return A.sum()/num_fixed*1e6/num_moving;
   }
 
-  float cvo::inner_product_normalized() const {
+  float acvo::inner_product_normalized() const {
     return A.sum()/A.nonZeros();
     // return A.sum()/num_fixed*1e6/num_moving;
   }
 
-  int cvo::number_of_non_zeros_in_A() const{
+  int acvo::number_of_non_zeros_in_A() const{
     std::cout<<"num of non-zeros in A: "<<A.nonZeros()<<std::endl;
     return A.nonZeros();
   }
 
-  float cvo::inner_product(const CvoPointCloud& source_points,
+  float acvo::inner_product(const CvoPointCloud& source_points,
                                 const CvoPointCloud& target_points,
                                 const Eigen::Affine3f & s2t_frame_transform) const {
     if (source_points.num_points() == 0 || target_points.num_points() == 0) {

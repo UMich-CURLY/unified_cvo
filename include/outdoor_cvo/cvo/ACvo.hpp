@@ -6,14 +6,14 @@
  * -------------------------------------------------------------------------- */
 
 /**
- *  @file   cvo.hpp
+ *  @file   acvo.hpp
  *  @author Tzu-yuan Lin, Maani Ghaffari 
- *  @brief  Header file for contineuous visual odometry registration
- *  @date   November 03, 2019
+ *  @brief  Header file for adaptive contineuous visual odometry registration
+ *  @date   Feburary 3, 2020
  **/
 
-#ifndef CVO_H
-#define CVO_H
+#ifndef ACVO_H
+#define ACVO_H
 
 
 // #include "data_type.h"
@@ -56,7 +56,7 @@
 using namespace nanoflann;
 
 namespace cvo{
-  class cvo{
+  class acvo{
 
   private:
     // private variables
@@ -69,13 +69,9 @@ namespace cvo{
     ArrayVec3f *cloud_y;    // source points represented as a matrix (num_moving,3)
 
     
-    float ell_init;
     float ell_min;
-
+    
     float ell_max_fixed;
-    float ell_reduced_1;
-    float ell_reduced_2;
-    float ell_reduced_3;
     double dl;           // changes for ell in each iteration
     double dl_step;
     float min_dl_step;
@@ -112,6 +108,7 @@ namespace cvo{
     
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     float ell;          // kernel characteristic length-scale
+    float ell_init;
     float ell_max;
     // public variables
     bool init;          // initialization indicator
@@ -196,9 +193,9 @@ namespace cvo{
     // public funcitons
 
     // constructor and destructor
-    cvo();
-    cvo(const std::string & name);
-    ~cvo();
+    acvo();
+    acvo(const std::string & name);
+    ~acvo();
 
     /**
      * @brief initialize new point cloud and extract pcd as matrices
