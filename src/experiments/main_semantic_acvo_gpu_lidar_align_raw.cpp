@@ -32,6 +32,8 @@ int main(int argc, char *argv[]) {
   int start_frame = std::stoi(argv[4]);
   kitti.set_start_index(start_frame);
   int max_num = std::stoi(argv[5]);
+
+  accum_output <<"1 0 0 0 0 1 0 0 0 0 1 0\n";
   
   cvo::AdaptiveCvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();

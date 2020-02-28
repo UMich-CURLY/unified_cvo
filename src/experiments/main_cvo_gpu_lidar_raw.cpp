@@ -32,6 +32,9 @@ int main(int argc, char *argv[]) {
   int start_frame = std::stoi(argv[4]);
   kitti.set_start_index(start_frame);
   int max_num = std::stoi(argv[5]);
+
+  accum_output <<"1 0 0 0 0 1 0 0 0 0 1 0\n";
+
   
   cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();
@@ -56,8 +59,9 @@ int main(int argc, char *argv[]) {
                                                      semantics_source, 
                                                     calib));
   //0.2));
-  
-  for (int i = start_frame; i<min(total_iters, start_frame+max_num)-1 ; i++) {
+  double total_time = 0;
+  int i = start_frame;
+  for (; i<min(total_iters, start_frame+max_num)-1 ; i++) {
     
     // calculate initial guess
     std::cout<<"\n\n\n\n============================================="<<std::endl;
@@ -80,7 +84,9 @@ int main(int argc, char *argv[]) {
     init_guess_inv = init_guess.inverse();
     printf("Start align... num_fixed is %d, num_moving is %d\n", source_fr.num_points(), target_fr.num_points());
     std::cout<<std::flush;
-    cvo_align.align(source_fr, target_fr, init_guess_inv, result);
+    double this_time = 0;
+    cvo_align.align(source_fr, target_fr, init_guess_inv, result, &this_time);
+    total_time += this_time;
     
     // get tf and inner product from cvo getter
     double in_product = cvo_align.inner_product(source_fr, target_fr, result);
@@ -122,7 +128,7 @@ int main(int argc, char *argv[]) {
 
   }
 
-
+  std::cout<<"time per frame is "<<total_time / double(i - start_frame + 1)<<std::endl;
   accum_output.close();
 
   return 0;

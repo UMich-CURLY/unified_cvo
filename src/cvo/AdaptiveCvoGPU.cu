@@ -1077,7 +1077,8 @@ namespace cvo{
   int AdaptiveCvoGPU::align(const CvoPointCloud& source_points,
                     const CvoPointCloud& target_points,
                     const Eigen::Matrix4f & init_guess_transform,
-                    Eigen::Ref<Eigen::Matrix4f> transform) const {
+                            Eigen::Ref<Eigen::Matrix4f> transform,
+                            double*registration_seconds) const {
     
     Mat33f R = init_guess_transform.block<3,3>(0,0);
     Vec3f T= init_guess_transform.block<3,1>(0,3);
@@ -1100,7 +1101,8 @@ namespace cvo{
     //params.MAX_ITER = 1;
     int iter = params.MAX_ITER;
     Eigen::Vector3f omega, v;
-    
+
+    auto start_all = chrono::system_clock::now();    
     auto start = chrono::system_clock::now();
     chrono::duration<double> t_transform_pcd = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_flow = chrono::duration<double>::zero();
@@ -1194,18 +1196,22 @@ namespace cvo{
       // std::cout<<transform.matrix()<<std::endl;
       // }
     }
-
+    chrono::duration<double> t_all = chrono::system_clock::now() - start_all   ;
     std::cout<<"cvo # of iterations is "<<iter<<std::endl;
     std::cout<<"t_transform_pcd is "<<t_transform_pcd.count()<<"\n";
     std::cout<<"t_compute_flow is "<<t_compute_flow.count()<<"\n";
     std::cout<<"t_compute_step is "<<t_compute_step.count()<<"\n"<<std::flush;
+    std::cout<<"t_all is "<<t_all.count()<<"\n"<<std::flush;
     std::cout<<"adaptive cvo ends. final ell is "<<cvo_state.ell<<std::endl;
     // prev_transform = transform.matrix();
     // accum_tf.matrix() = transform.matrix().inverse() * accum_tf.matrix();
     //accum_tf = accum_tf * transform.matrix();
     //accum_tf_vis = accum_tf_vis * transform.matrix();   // accumilate tf for visualization
     update_tf(R, T, &cvo_state, transform);
-    
+
+    if (registration_seconds)
+      *registration_seconds = t_all.count();
+
     /*
     if (is_logging) {
       auto & Tmat = transform.matrix();

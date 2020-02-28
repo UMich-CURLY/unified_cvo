@@ -1389,7 +1389,8 @@ namespace cvo{
   int CvoGPU::align(const CvoPointCloud& source_points,
                     const CvoPointCloud& target_points,
                     const Eigen::Matrix4f & init_guess_transform,
-                    Eigen::Ref<Eigen::Matrix4f> transform) const {
+                    Eigen::Ref<Eigen::Matrix4f> transform,
+                    double *registration_seconds) const {
     
     Mat33f R = init_guess_transform.block<3,3>(0,0);
     Vec3f T= init_guess_transform.block<3,1>(0,3);
@@ -1501,7 +1502,7 @@ namespace cvo{
       cvo_state.ell = (cvo_state.ell<params.ell_min)? params.ell_min:cvo_state.ell;
       */
 
-      if (cvo_state.ell > params.ell_min) {
+      if (k > 0 && cvo_state.ell > params.ell_min) {
         if (k % 10 == 0 )
         cvo_state.ell = cvo_state.ell * 0.9;
 
@@ -1529,6 +1530,9 @@ namespace cvo{
     std::cout<<"t_compute_step is "<<t_compute_step.count()<<"\n"<<std::flush;
     std::cout<<"t_all is "<<t_all.count()<<"\n"<<std::flush;
     std::cout<<"non adaptive cvo ends. final ell is "<<cvo_state.ell<<std::endl;
+
+    if (registration_seconds)
+      *registration_seconds = t_all.count();
     // prev_transform = transform.matrix();
     // accum_tf.matrix() = transform.matrix().inverse() * accum_tf.matrix();
     //accum_tf = accum_tf * transform.matrix();
