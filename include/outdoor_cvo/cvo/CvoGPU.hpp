@@ -160,7 +160,8 @@ namespace cvo{
     // constructor and destructor
     CvoGPU(const std::string & f);
     ~CvoGPU();
-
+    CvoParams & get_params() {return params;}
+    void write_params(CvoParams * p_cpu);
     
     /**
      * @brief align two rgbd pointcloud
