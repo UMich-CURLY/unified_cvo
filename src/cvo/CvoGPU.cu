@@ -1503,7 +1503,7 @@ namespace cvo{
       */
 
       if (k > 0 && cvo_state.ell > params.ell_min) {
-        if (k % 10 == 0 )
+        if (k % 30 == 0 )
         cvo_state.ell = cvo_state.ell * 0.9;
 
       }
