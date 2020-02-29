@@ -371,9 +371,10 @@ namespace cvo{
           float a = ck*k*sk;
           //#endif          
 
-          //if (i == 1000 && j == 1074)
+          //if (i == 1000 && j == 51)
           //  printf("se_kernel: i=%d,j=%d: d2_color is %f, d2_c_thres is %f,k is %f, ck is %f\n", i,j,d2_color, d2_c_thres, k, ck );
-          //printf("se_kernel: i==1000: k is %f, ck is %f\n", k, ck );
+          // if ( i == 1000 )
+          // printf("se_kernel: i==1000, j==%d: k is %f, ck is %f\n", j, k, ck );
 
 
 
@@ -1424,7 +1425,7 @@ namespace cvo{
     std::cout<<"Start iteration, init transform is \n";
     std::cout<<init_guess_transform<<std::endl;
     for(int k=0; k<params.MAX_ITER; k++){
-    //for(int k=0; k<2; k++){
+      //for(int k=0; k<2; k++){
       if (debug_print) printf("new iteration %d, ell is %f\n", k, cvo_state.ell);
       cvo_state.reset_state_at_new_iter();
       if (debug_print) printf("just reset A mat\n");

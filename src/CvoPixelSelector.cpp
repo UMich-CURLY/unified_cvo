@@ -542,6 +542,7 @@ namespace cvo
     for(int i = 1; i<num_points; i++) {   
       if(semantic_in[i]==-1){
         // exclude unlabeled points
+
         continue;
       }   
       int quadrant = get_quadrant(pc_in->points[i]);
@@ -570,6 +571,8 @@ namespace cvo
           output_depth_grad.push_back(depth_grad);
           output_intenstity_grad.push_back(intenstity_grad);
           semantic_out.push_back(semantic_in[i]);
+
+          //std::cout<<" in edge detection , point "<<point.x<<", "<<point.y<<", "<<point.z<<", label "<<point.intensity<<std::endl;
       }
 
       previous_quadrant = quadrant;      

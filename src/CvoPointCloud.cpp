@@ -224,6 +224,8 @@ namespace cvo{
     // fill in class members
     num_points_ = pc_out->size();
     num_classes_ = 0;
+
+    
     
     // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
     feature_dimensions_ = 1;
@@ -258,6 +260,8 @@ namespace cvo{
     feature_dimensions_ = 1;
     features_.resize(num_points_, feature_dimensions_);
     labels_.resize(num_points_, num_classes_);
+
+    std::cout<<"Construct CvoPointCloud with "<<num_points_<<" points  from "<<pc->size()<<" points\n";
 
     for (int i = 0; i < num_points_ ; i++) {
       Vec3f xyz;
