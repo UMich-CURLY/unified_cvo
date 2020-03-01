@@ -1,6 +1,6 @@
 
 cd build && make -j && cd .. && \
-for i in 03
+for i in 01
 
 #for i in 00 01 02 03 04 05 07 08 09 10
 do
