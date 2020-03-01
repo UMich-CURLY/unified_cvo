@@ -295,7 +295,7 @@ namespace cvo{
 #endif
 
     //int * mat_inds = new int [kd_tree_max_leafIf they all have the same size, tha];
-    int num_inds = 0;
+    unsigned int num_inds = 0;
 
     for (int j = 0; j < b_size ; j++) {
       int ind_b = j;
@@ -318,7 +318,7 @@ namespace cvo{
       if(d2<d2_thres  ){
         //float feature_b[5] = {(float)p_a->r, (float)p_a->g, (float)p_a->b,  p_a->gradient[0], p_a->gradient[1]  };
 #ifdef IS_GEOMETRIC_ONLY
-        float a = s2*exp(-d2/(2.0*l*l));
+        float a = s2*exp(-d2/(2.0*l*l))*cvo_params->c_sigma;
          if (a > cvo_params->sp_thres){
             A_mat->mat[i * A_mat->cols + num_inds] = a;
             A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
@@ -878,9 +878,9 @@ namespace cvo{
     //std::cout<<"time for thrust_reduce is "<<std::chrono::duration_cast<std::chrono::milliseconds>((end- start)).count()<<std::endl;
 
     start = chrono::system_clock::now();
-    int Axx_nonzero = nonzeros(&cvo_state->Axx_host);
-    int Ayy_nonzero = nonzeros(&cvo_state->Ayy_host);
-    int A_nonzero = nonzeros(&cvo_state->A_host);
+    unsigned int Axx_nonzero = nonzeros(&cvo_state->Axx_host);
+    unsigned int Ayy_nonzero = nonzeros(&cvo_state->Ayy_host);
+    unsigned int A_nonzero = nonzeros(&cvo_state->A_host);
     cvo_state->dl = cvo_state->dl/double ( Axx_nonzero+Ayy_nonzero-2*A_nonzero);
     //cvo_state->dl /= double(cvo_state->cloud_x_gpu->size() * cvo_state->cloud_x_gpu->size() + 
     //                        cvo_state->cloud_y_gpu->size() * cvo_state->cloud_y_gpu->size() -
@@ -1077,7 +1077,8 @@ namespace cvo{
   int AdaptiveCvoGPU::align(const CvoPointCloud& source_points,
                     const CvoPointCloud& target_points,
                     const Eigen::Matrix4f & init_guess_transform,
-                    Eigen::Ref<Eigen::Matrix4f> transform) const {
+                            Eigen::Ref<Eigen::Matrix4f> transform,
+                            double*registration_seconds) const {
     
     Mat33f R = init_guess_transform.block<3,3>(0,0);
     Vec3f T= init_guess_transform.block<3,1>(0,3);
@@ -1100,7 +1101,8 @@ namespace cvo{
     //params.MAX_ITER = 1;
     int iter = params.MAX_ITER;
     Eigen::Vector3f omega, v;
-    
+
+    auto start_all = chrono::system_clock::now();    
     auto start = chrono::system_clock::now();
     chrono::duration<double> t_transform_pcd = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_flow = chrono::duration<double>::zero();
@@ -1194,18 +1196,22 @@ namespace cvo{
       // std::cout<<transform.matrix()<<std::endl;
       // }
     }
-
+    chrono::duration<double> t_all = chrono::system_clock::now() - start_all   ;
     std::cout<<"cvo # of iterations is "<<iter<<std::endl;
     std::cout<<"t_transform_pcd is "<<t_transform_pcd.count()<<"\n";
     std::cout<<"t_compute_flow is "<<t_compute_flow.count()<<"\n";
     std::cout<<"t_compute_step is "<<t_compute_step.count()<<"\n"<<std::flush;
+    std::cout<<"t_all is "<<t_all.count()<<"\n"<<std::flush;
     std::cout<<"adaptive cvo ends. final ell is "<<cvo_state.ell<<std::endl;
     // prev_transform = transform.matrix();
     // accum_tf.matrix() = transform.matrix().inverse() * accum_tf.matrix();
     //accum_tf = accum_tf * transform.matrix();
     //accum_tf_vis = accum_tf_vis * transform.matrix();   // accumilate tf for visualization
     update_tf(R, T, &cvo_state, transform);
-    
+
+    if (registration_seconds)
+      *registration_seconds = t_all.count();
+
     /*
     if (is_logging) {
       auto & Tmat = transform.matrix();

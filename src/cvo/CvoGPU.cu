@@ -77,9 +77,11 @@ namespace cvo{
       (host_cloud)[i].x = positions[i](0);
       (host_cloud)[i].y = positions[i](1);
       (host_cloud)[i].z = positions[i](2);
-      (host_cloud)[i].r = (uint8_t)std::min(255.0, (features(i,0) * 255.0));
-      (host_cloud)[i].g = (uint8_t)std::min(255.0, (features(i,1) * 255.0));
-      (host_cloud)[i].b = (uint8_t)std::min(255.0, (features(i,2) * 255.0));
+      if (FEATURE_DIMENSIONS >= 3) {
+        (host_cloud)[i].r = (uint8_t)std::min(255.0, (features(i,0) * 255.0));
+        (host_cloud)[i].g = (uint8_t)std::min(255.0, (features(i,1) * 255.0));
+        (host_cloud)[i].b = (uint8_t)std::min(255.0, (features(i,2) * 255.0));
+      }
 
       ///memcpy(host_cloud[i].features, features.row(i).data(), FEATURE_DIMENSIONS * sizeof(float));
       for (int j = 0; j < FEATURE_DIMENSIONS; j++)
@@ -164,6 +166,13 @@ namespace cvo{
     cudaMemcpy( (void*)params_gpu, &params, sizeof(CvoParams), cudaMemcpyHostToDevice  );
 
   }
+  
+  void CvoGPU::write_params(CvoParams * p_cpu) {
+    //params = *p_cpu;
+    cudaMemcpy( (void*)params_gpu, p_cpu, sizeof(CvoParams), cudaMemcpyHostToDevice  );
+    
+  }
+
 
   CvoGPU::~CvoGPU() {
     cudaFree(params_gpu);
@@ -288,7 +297,7 @@ namespace cvo{
 #endif
 
     //int * mat_inds = new int [kd_tree_max_leafIf they all have the same size, tha];
-    int num_inds = 0;
+    unsigned int num_inds = 0;
     //#ifdef IS_USING_KDTREE
     //for (int j = 0; j < KDTREE_K_SIZE ; j++) {
       //int ind_b = kdtree_inds[i * KDTREE_K_SIZE  + j];
@@ -316,10 +325,12 @@ namespace cvo{
       if(d2<d2_thres  ){
 
 #ifdef IS_GEOMETRIC_ONLY
-        float a = 1.0;
-        A_mat->mat[i * A_mat->cols + num_inds] = a;
-        A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
-        num_inds++;
+        float a = cvo_params->c_sigma;
+        if (a > cvo_params->sp_thres){
+          A_mat->mat[i * A_mat->cols + num_inds] = a;
+          A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
+          num_inds++;
+        }
 
 #else
         
@@ -360,9 +371,10 @@ namespace cvo{
           float a = ck*k*sk;
           //#endif          
 
-          //if (i == 1000 && j == 1074)
+          //if (i == 1000 && j == 51)
           //  printf("se_kernel: i=%d,j=%d: d2_color is %f, d2_c_thres is %f,k is %f, ck is %f\n", i,j,d2_color, d2_c_thres, k, ck );
-          //printf("se_kernel: i==1000: k is %f, ck is %f\n", k, ck );
+          // if ( i == 1000 )
+          // printf("se_kernel: i==1000, j==%d: k is %f, ck is %f\n", j, k, ck );
 
 
 
@@ -1378,7 +1390,8 @@ namespace cvo{
   int CvoGPU::align(const CvoPointCloud& source_points,
                     const CvoPointCloud& target_points,
                     const Eigen::Matrix4f & init_guess_transform,
-                    Eigen::Ref<Eigen::Matrix4f> transform) const {
+                    Eigen::Ref<Eigen::Matrix4f> transform,
+                    double *registration_seconds) const {
     
     Mat33f R = init_guess_transform.block<3,3>(0,0);
     Vec3f T= init_guess_transform.block<3,1>(0,3);
@@ -1402,7 +1415,8 @@ namespace cvo{
     //params.MAX_ITER = 1;
     int iter = params.MAX_ITER;
     Eigen::Vector3f omega, v;
-    
+
+    auto start_all = chrono::system_clock::now();
     auto start = chrono::system_clock::now();
     chrono::duration<double> t_transform_pcd = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_flow = chrono::duration<double>::zero();
@@ -1411,7 +1425,7 @@ namespace cvo{
     std::cout<<"Start iteration, init transform is \n";
     std::cout<<init_guess_transform<<std::endl;
     for(int k=0; k<params.MAX_ITER; k++){
-    //for(int k=0; k<2; k++){
+      //for(int k=0; k<2; k++){
       if (debug_print) printf("new iteration %d, ell is %f\n", k, cvo_state.ell);
       cvo_state.reset_state_at_new_iter();
       if (debug_print) printf("just reset A mat\n");
@@ -1432,6 +1446,7 @@ namespace cvo{
 
       compute_flow(&cvo_state, params_gpu, &omega, &v);
       if (debug_print)std::cout<<"iter "<<k<< "omega: \n"<<omega.transpose()<<"\nv: \n"<<v.transpose()<<std::endl;
+      if (k == 0) printf("nonzeros in A is %d\n", cvo_state.A_host.nonzero_sum);
       end = std::chrono::system_clock::now();
       t_compute_flow += (end - start);
 
@@ -1489,12 +1504,14 @@ namespace cvo{
       cvo_state.ell = (cvo_state.ell<params.ell_min)? params.ell_min:cvo_state.ell;
       */
 
-      if (k > 19)
-        cvo_state.ell = 0.1;
-      else if (k > 9)
-        cvo_state.ell = 0.15;
-      else if (k > 2)
-        cvo_state.ell = 0.25;
+      if (k > 150 && cvo_state.ell > params.ell_min) {
+      	 //if (k > 0){
+        if (k % 10 == 0 )
+            cvo_state.ell = cvo_state.ell * 0.9;
+	//wcvo_state.ell = params.ell_min;
+      }
+      
+
 
       if(debug_print) printf("end of iteration \n\n\n");
       
@@ -1506,12 +1523,19 @@ namespace cvo{
       // std::cout<<transform.matrix()<<std::endl;
       // }
     }
+    auto end_all = chrono::system_clock::now();
+    chrono::duration<double> t_all = chrono::duration<double>::zero();
+    t_all = end_all - start_all;
 
     std::cout<<"cvo # of iterations is "<<iter<<std::endl;
     std::cout<<"t_transform_pcd is "<<t_transform_pcd.count()<<"\n";
     std::cout<<"t_compute_flow is "<<t_compute_flow.count()<<"\n";
     std::cout<<"t_compute_step is "<<t_compute_step.count()<<"\n"<<std::flush;
+    std::cout<<"t_all is "<<t_all.count()<<"\n"<<std::flush;
     std::cout<<"non adaptive cvo ends. final ell is "<<cvo_state.ell<<std::endl;
+
+    if (registration_seconds)
+      *registration_seconds = t_all.count();
     // prev_transform = transform.matrix();
     // accum_tf.matrix() = transform.matrix().inverse() * accum_tf.matrix();
     //accum_tf = accum_tf * transform.matrix();
