@@ -22,7 +22,7 @@ add_compile_options(-std=c++14)
 # Release Mode
 #set(CMAKE_BUILD_TYPE Debug)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -O3 -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -O2 -msse  -msse2" )
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -O2" )
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -lmkl_intel_lp64 -lmkl_core -lmkl -liomp -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 #set(CMAKE_BUILD_TYPE Debug)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -std=c++17 -g  -msse -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
