@@ -40,8 +40,8 @@ int main(int argc, char *argv[]) {
   cvo::CvoParams & init_param = cvo_align.get_params();
   float ell_init = init_param.ell_init;
   float ell_max = init_param.ell_max;
-  init_param.ell_init = 1.0;//0.7;
-  init_param.ell_max = 1.2;//0.75;
+  init_param.ell_init = 2.0;//0.7;
+  init_param.ell_max = 2.2;//0.75;
   cvo_align.write_params(&init_param);
   
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
@@ -52,12 +52,12 @@ int main(int argc, char *argv[]) {
   // start the iteration
 
   pcl::PointCloud<pcl::PointXYZI>::Ptr source_pc(new pcl::PointCloud<pcl::PointXYZI>);
-  //std::vector<int> semantics_source;
-  kitti.read_next_lidar(source_pc);
+  std::vector<int> semantics_source;
+  kitti.read_next_lidar(source_pc,  semantics_source);
 
   //kitti.read_next_stereo(source_left, source_right);
   std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_pc,
-                                                    //                    semantics_source, 
+                                                     semantics_source, 
                                                     calib));
   //0.2));
   double total_time = 0;
@@ -70,13 +70,13 @@ int main(int argc, char *argv[]) {
 
     kitti.next_frame_index();
     pcl::PointCloud<pcl::PointXYZI>::Ptr target_pc(new pcl::PointCloud<pcl::PointXYZI>);
-    //std::vector<int> semantics_target;
-    if (kitti.read_next_lidar(target_pc) != 0) {
+    std::vector<int> semantics_target;
+    if (kitti.read_next_lidar(target_pc, semantics_target) != 0) {
       std::cout<<"finish all files\n";
       break;
     }
 
-    std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, target_pc, calib));
+    std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, target_pc, semantics_target, calib));
 
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
     auto source_fr = source->points();
