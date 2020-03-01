@@ -99,6 +99,13 @@ int main(int argc, char *argv[]) {
   Eigen::Affine3f init_guess;
   init_guess.matrix().setIdentity();
   // init_guess.matrix()(2,3)=0.75;
+  Eigen::Matrix4f result = init_guess.matrix();
+  result = init_guess.matrix();
+  accum_tf_output_file << result(0,0)<<" "<<result(0,1)<<" "<<result(0,2)<<" "<<result(0,3)<<" "
+                <<result(1,0)<<" " <<result(1,1)<<" "<<result(1,2)<<" "<<result(1,3)<<" "
+                <<result(2,0)<<" " <<result(2,1)<<" "<<result(2,2)<<" "<<result(2,3);
+  accum_tf_output_file<<"\n";
+  accum_tf_output_file<<std::flush;
   Eigen::Matrix4f tf_kf_im1 = Eigen::Matrix4f::Identity();
   Eigen::Matrix4f tf_im1_im2 = Eigen::Matrix4f::Identity();
   Eigen::Matrix4f accum_tf = Eigen::Matrix4f::Identity();
@@ -202,8 +209,8 @@ int main(int argc, char *argv[]) {
         auto& target_fr = target_frame->points();
         cvo_align.set_pcd(source_fr, target_fr, init_guess, true);
         if(i==start_frame+1){
-          cvo_align.ell = 0.95;
-          cvo_align.ell_max = 1;
+          cvo_align.ell = 1;
+          cvo_align.ell_max = 1.2;
           std::cout<<"initialize ell to: "<< cvo_align.ell<<std::endl;
         }
         cvo_align.align();
@@ -237,8 +244,8 @@ int main(int argc, char *argv[]) {
         auto& target_fr = pcl_target_frame->points();
         cvo_align.set_pcd(source_fr, target_fr, init_guess, true);
         if(i==start_frame+1){
-          cvo_align.ell = 0.95;
-          cvo_align.ell_max = 1;
+          cvo_align.ell = 1;
+          cvo_align.ell_max = 1.2;
           std::cout<<"initialize ell to: "<< cvo_align.ell<<std::endl;
         }
         cvo_align.align();
@@ -258,8 +265,8 @@ int main(int argc, char *argv[]) {
       
       cvo_align.set_pcd(const_source_fr, const_target_fr, init_guess, true);
       if(i==start_frame+1){
-          cvo_align.ell = 0.95;
-          cvo_align.ell_max = 1;
+          cvo_align.ell = 1;
+          cvo_align.ell_max = 1.2;
           std::cout<<"initialize ell to: "<< cvo_align.ell<<std::endl;
         }
       cvo_align.align();
@@ -269,7 +276,6 @@ int main(int argc, char *argv[]) {
     
     // get tf and inner product from cvo getter
     init_guess= cvo_align.get_transform();
-    Eigen::Matrix4f result = init_guess.matrix();
     double in_product = cvo_align.inner_product();
     double in_product_normalized = cvo_align.inner_product_normalized();
     int non_zeros_in_A = cvo_align.number_of_non_zeros_in_A();

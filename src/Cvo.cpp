@@ -61,7 +61,7 @@ namespace cvo{
     prev_transform(Eigen::Affine3f::Identity()),
     accum_tf(Eigen::Affine3f::Identity()),
     accum_tf_vis(Eigen::Affine3f::Identity()),
-    debug_print(true)
+    debug_print(false)
   {
     FILE* ptr = fopen(param_file.c_str(), "r" ); 
     if (ptr!=NULL) 
@@ -346,6 +346,7 @@ namespace cvo{
             if(d2_color<d2_c_thres){
               k = s2*exp(-d2/(2.0*l*l));
               ck = c_sigma*c_sigma*exp(-d2_color/(2.0*c_ell*c_ell));
+              // ck = 0.6;
 #ifdef IS_USING_SEMANTICS              
               sk = s_sigma*s_sigma*exp(-d2_semantic/(2.0*s_ell*s_ell));
 #else
@@ -432,6 +433,7 @@ namespace cvo{
             if(d2_color<d2_c_thres){
               k = s2*exp(-d2/(2.0*l*l));
               ck = c_sigma*c_sigma*exp(-d2_color/(2.0*c_ell*c_ell));
+              // ck = 0.6;
 #ifdef IS_USING_SEMANTICS              
               sk = s_sigma*s_sigma*exp(-d2_semantic/(2.0*s_ell*s_ell));
 #else
@@ -823,9 +825,12 @@ namespace cvo{
     //   ell = (k>9)? ell_reduced_2:ell;	
     //   ell = (k>19)? ell_reduced_3:ell;
     // ell = 1/(1+k*ell_reduced_1)*ell;
-      if(k%(int)ell_reduced_2==1){
+    if(k>ell_reduced_3){
+      if(k%(int)ell_reduced_2==0){
+        // std::cout<<"k: "<<k<<", r2: "<<ell_reduced_2<<", "<<k%(int)ell_reduced_2<<std::endl;
           ell = ell_reduced_1*ell;
       }
+    }
 
       // std::cout<<"iter: "<<k<<std::endl;
       if(debug_print){

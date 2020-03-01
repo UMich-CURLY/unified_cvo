@@ -120,7 +120,6 @@ namespace cvo {
       Eigen::Affine3f ry = Eigen::Affine3f(Eigen::AngleAxisf(-M_PI/2.0, Eigen::Vector3f::UnitY()));
       Eigen::Affine3f rz = Eigen::Affine3f(Eigen::AngleAxisf(M_PI/2.0, Eigen::Vector3f::UnitZ()));
       Eigen::Affine3f tf_change_basis = rz * ry * rx;
-
       for(int r=0; r<num_lidar_points; ++r){          
           pcl::PointCloud<pcl::PointXYZI>::PointType temp_pcl;
           pcl::PointCloud<pcl::PointXYZI>::PointType pcl_after_tf;
