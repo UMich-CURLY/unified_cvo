@@ -13,7 +13,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include "utils/CvoPointCloud.hpp"
-#include "cvo/AdaptiveCvoGPU.hpp"
+#include "cvo/CvoGPU.hpp"
 #include "cvo/Cvo.hpp"
 using namespace std;
 using namespace boost::filesystem;
@@ -34,13 +34,14 @@ int main(int argc, char *argv[]) {
   int max_num = std::stoi(argv[5]);
 
   accum_output <<"1 0 0 0 0 1 0 0 0 0 1 0\n";
+
   
-  cvo::AdaptiveCvoGPU cvo_align(cvo_param_file );
+  cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();
   float ell_init = init_param.ell_init;
   float ell_max = init_param.ell_max;
-  init_param.ell_init = 0.7;
-  init_param.ell_max = 0.75;
+  init_param.ell_init = 3.0;//0.7;
+  init_param.ell_max = 3.2;//0.75;
   cvo_align.write_params(&init_param);
   
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
@@ -53,13 +54,15 @@ int main(int argc, char *argv[]) {
   pcl::PointCloud<pcl::PointXYZI>::Ptr source_pc(new pcl::PointCloud<pcl::PointXYZI>);
   std::vector<int> semantics_source;
   kitti.read_next_lidar(source_pc,  semantics_source);
+
   //kitti.read_next_stereo(source_left, source_right);
   std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_pc,
                                                      semantics_source, 
                                                     calib));
   //0.2));
-  
-  for (int i = start_frame; i<min(total_iters, start_frame+max_num)-1 ; i++) {
+  double total_time = 0;
+  int i = start_frame;
+  for (; i<min(total_iters, start_frame+max_num)-1 ; i++) {
     
     // calculate initial guess
     std::cout<<"\n\n\n\n============================================="<<std::endl;
@@ -72,17 +75,22 @@ int main(int argc, char *argv[]) {
       std::cout<<"finish all files\n";
       break;
     }
+
     std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, target_pc, semantics_target, calib));
 
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
     auto source_fr = source->points();
+    std::cout<<"NUm of source pts is "<<source->points().num_points()<<"\n";
     auto target_fr = target->points();
+    std::cout<<"NUm of target pts is "<<target->points().num_points()<<"\n";
 
     Eigen::Matrix4f result, init_guess_inv;
     init_guess_inv = init_guess.inverse();
     printf("Start align... num_fixed is %d, num_moving is %d\n", source_fr.num_points(), target_fr.num_points());
     std::cout<<std::flush;
-    cvo_align.align(source_fr, target_fr, init_guess_inv, result);
+    double this_time = 0;
+    cvo_align.align(source_fr, target_fr, init_guess_inv, result, &this_time);
+    total_time += this_time;
     
     // get tf and inner product from cvo getter
     double in_product = cvo_align.inner_product(source_fr, target_fr, result);
@@ -124,7 +132,7 @@ int main(int argc, char *argv[]) {
 
   }
 
-
+  std::cout<<"time per frame is "<<total_time / double(i - start_frame + 1)<<std::endl;
   accum_output.close();
 
   return 0;

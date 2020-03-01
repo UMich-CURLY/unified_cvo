@@ -214,7 +214,7 @@ namespace cvo{
     int expected_points = target_num_points;
     double intensity_bound = 0.4;
     double depth_bound = 3.0;
-    double distance_bound = 40.0;
+    double distance_bound = 70.0;
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
@@ -224,6 +224,8 @@ namespace cvo{
     // fill in class members
     num_points_ = pc_out->size();
     num_classes_ = 0;
+
+    
     
     // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
     feature_dimensions_ = 1;
@@ -244,7 +246,7 @@ namespace cvo{
     int expected_points = target_num_points;
     double intensity_bound = 0.4;
     double depth_bound = 3.0;
-    double distance_bound = 40.0;
+    double distance_bound = 70.0;
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
@@ -258,6 +260,8 @@ namespace cvo{
     feature_dimensions_ = 1;
     features_.resize(num_points_, feature_dimensions_);
     labels_.resize(num_points_, num_classes_);
+
+    std::cout<<"Construct CvoPointCloud with "<<num_points_<<" points  from "<<pc->size()<<" points\n";
 
     for (int i = 0; i < num_points_ ; i++) {
       Vec3f xyz;

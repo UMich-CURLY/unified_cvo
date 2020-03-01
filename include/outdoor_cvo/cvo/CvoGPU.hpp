@@ -160,7 +160,8 @@ namespace cvo{
     // constructor and destructor
     CvoGPU(const std::string & f);
     ~CvoGPU();
-
+    CvoParams & get_params() {return params;}
+    void write_params(CvoParams * p_cpu);
     
     /**
      * @brief align two rgbd pointcloud
@@ -170,7 +171,8 @@ namespace cvo{
     int align(const CvoPointCloud& source_points,
               const CvoPointCloud& target_points,
               const Eigen::Matrix4f & init_guess_transform,
-              Eigen::Ref<Eigen::Matrix4f> transform) const;
+              Eigen::Ref<Eigen::Matrix4f> transform,
+              double *registration_seconds=nullptr ) const;
 
     // callable after each align
     float inner_product(const CvoPointCloud& source_points,
