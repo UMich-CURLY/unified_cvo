@@ -297,7 +297,7 @@ namespace cvo{
 #endif
 
     //int * mat_inds = new int [kd_tree_max_leafIf they all have the same size, tha];
-    int num_inds = 0;
+    unsigned int num_inds = 0;
     //#ifdef IS_USING_KDTREE
     //for (int j = 0; j < KDTREE_K_SIZE ; j++) {
       //int ind_b = kdtree_inds[i * KDTREE_K_SIZE  + j];
@@ -325,7 +325,7 @@ namespace cvo{
       if(d2<d2_thres  ){
 
 #ifdef IS_GEOMETRIC_ONLY
-        float a = 1.0;
+        float a = cvo_params->c_sigma;
         if (a > cvo_params->sp_thres){
           A_mat->mat[i * A_mat->cols + num_inds] = a;
           A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;

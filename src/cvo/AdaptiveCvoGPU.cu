@@ -295,7 +295,7 @@ namespace cvo{
 #endif
 
     //int * mat_inds = new int [kd_tree_max_leafIf they all have the same size, tha];
-    int num_inds = 0;
+    unsigned int num_inds = 0;
 
     for (int j = 0; j < b_size ; j++) {
       int ind_b = j;
@@ -318,7 +318,7 @@ namespace cvo{
       if(d2<d2_thres  ){
         //float feature_b[5] = {(float)p_a->r, (float)p_a->g, (float)p_a->b,  p_a->gradient[0], p_a->gradient[1]  };
 #ifdef IS_GEOMETRIC_ONLY
-        float a = s2*exp(-d2/(2.0*l*l));
+        float a = s2*exp(-d2/(2.0*l*l))*cvo_params->c_sigma;
          if (a > cvo_params->sp_thres){
             A_mat->mat[i * A_mat->cols + num_inds] = a;
             A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
@@ -878,9 +878,9 @@ namespace cvo{
     //std::cout<<"time for thrust_reduce is "<<std::chrono::duration_cast<std::chrono::milliseconds>((end- start)).count()<<std::endl;
 
     start = chrono::system_clock::now();
-    int Axx_nonzero = nonzeros(&cvo_state->Axx_host);
-    int Ayy_nonzero = nonzeros(&cvo_state->Ayy_host);
-    int A_nonzero = nonzeros(&cvo_state->A_host);
+    unsigned int Axx_nonzero = nonzeros(&cvo_state->Axx_host);
+    unsigned int Ayy_nonzero = nonzeros(&cvo_state->Ayy_host);
+    unsigned int A_nonzero = nonzeros(&cvo_state->A_host);
     cvo_state->dl = cvo_state->dl/double ( Axx_nonzero+Ayy_nonzero-2*A_nonzero);
     //cvo_state->dl /= double(cvo_state->cloud_x_gpu->size() * cvo_state->cloud_x_gpu->size() + 
     //                        cvo_state->cloud_y_gpu->size() * cvo_state->cloud_y_gpu->size() -
