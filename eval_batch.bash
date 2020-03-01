@@ -1,10 +1,10 @@
-gt_dir=/home/rayzhang/code/docker_home/outdoor_cvo/ground_truth/
+gt_dir=ground_truth/
 
-gicp_results_dir=/home/rayzhang/code/docker_home/outdoor_cvo/baselines/lidar/results_gicp/
-ndt_results_dir=/home/rayzhang/code/docker_home/outdoor_cvo/baselines/lidar/results_ndt/
-mc_results_dir=/home/rayzhang/code/docker_home/outdoor_cvo/baselines/lidar/results_mc/
+gicp_results_dir=baselines/lidar/results_gicp/
+ndt_results_dir=baselines/lidar/results_ndt/
+mc_results_dir=baselines/lidar/results_mc/
 
-results_dir=$1
+results_dir=$1/
 seq=$2
 
 
