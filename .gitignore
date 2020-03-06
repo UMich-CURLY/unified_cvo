@@ -44,4 +44,5 @@ tags
 .\#**
 .vscode
 build
-
+*.zip
+*.tar.gz

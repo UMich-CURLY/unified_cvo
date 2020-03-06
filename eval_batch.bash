@@ -14,15 +14,15 @@ cd ../..
 
 for seq in 00 01 02 03 04 05 06 07 08 09 10
 do
-echo $seq
+#echo $seq
     #for file in $results_dir"cvo_f2f_tracking_"$seq*; 
     #do
         #results_file_name="${file##*/}"
     #results_file_name=cvo_geometric_$1.txt
 results_file_name=$seq.txt
 gt_file_name=$seq.txt
-echo "$results_file_name"
-echo "baselines: "
+#echo "$results_file_name"
+$echo "baselines: "
 
 echo "gicp "
   ./devkit/cpp/evaluate_odometry $seq $gt_dir $gt_file_name $gicp_results_dir $results_file_name
