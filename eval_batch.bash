@@ -22,16 +22,16 @@ do
 results_file_name=$seq.txt
 gt_file_name=$seq.txt
 #echo "$results_file_name"
-$echo "baselines: "
+#$echo "baselines: "
 
-echo "gicp "
-  ./devkit/cpp/evaluate_odometry $seq $gt_dir $gt_file_name $gicp_results_dir $results_file_name
+#echo "gicp "
+#  ./devkit/cpp/evaluate_odometry $seq $gt_dir $gt_file_name $gicp_results_dir $results_file_name
 
-echo "mc"
-  ./devkit/cpp/evaluate_odometry $seq $gt_dir $gt_file_name $ndt_results_dir  $results_file_name
+#echo "mc"
+#  ./devkit/cpp/evaluate_odometry $seq $gt_dir $gt_file_name $ndt_results_dir  $results_file_name
 
-echo "ndt"
-  ./devkit/cpp/evaluate_odometry $seq $gt_dir $gt_file_name $mc_results_dir   $results_file_name
+#echo "ndt"
+#  ./devkit/cpp/evaluate_odometry $seq $gt_dir $gt_file_name $mc_results_dir   $results_file_name
 
   echo "cvo"
   ./devkit/cpp/evaluate_odometry $seq $gt_dir $gt_file_name $results_dir      $results_file_name
