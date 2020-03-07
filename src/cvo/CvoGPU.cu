@@ -1184,8 +1184,8 @@ namespace cvo{
     //Eigen::Vector3d::Zero(), thrust::plus<Eigen::Vector3d>() )).cast<float>() ;
 
     *v = (thrust::reduce(cvo_state->v_gpu.begin(), cvo_state->v_gpu.end())).cast<float>();
-    float dl_A = (float)thrust::reduce(cvo_state->partial_dl_gradient.begin(), cvo_state->partial_dl_gradient.end());
-    float dl_Ayy = (float)thrust::reduce(cvo_state->partial_dl_Ayy.begin(), cvo_state->partial_dl_Ayy.end());
+    //float dl_A = (float)thrust::reduce(cvo_state->partial_dl_gradient.begin(), cvo_state->partial_dl_gradient.end());
+    //float dl_Ayy = (float)thrust::reduce(cvo_state->partial_dl_Ayy.begin(), cvo_state->partial_dl_Ayy.end());
 
     // Eigen::Vector3d::Zero(), plus_vector)).cast<float>();
     cudaMemcpy(cvo_state->omega, omega, sizeof(Eigen::Vector3f), cudaMemcpyHostToDevice );
@@ -1502,6 +1502,9 @@ namespace cvo{
       T = (R.cast<double>() * dT + T.cast<double>()).cast<float>();
       R = (R.cast<double>() * dR).cast<float>();
 
+      Eigen::AngleAxisd R_angle(R.cast<double>() * dR);
+      R = R_angle.toRotationMatrix().cast<float>(); // re-orthogonalization
+
       // reduce ell
       // if the se3 distance is smaller than eps2, break
       if (debug_print) {
@@ -1539,8 +1542,8 @@ namespace cvo{
       // if (k > 2000 && cvo_state.ell > params.ell_min && is_first_frame == false) {
       // if (k > 499 && cvo_state.ell > params.ell_min) {
         //if (dist_this_iter < 0.005){
-      if (k > 200 && k % 30 == 0 ) 
-          cvo_state.ell = cvo_state.ell * 0.7;
+      if ( k % 100 == 0 && k > 0) 
+          cvo_state.ell = cvo_state.ell * 0.9;
         // if (cvo_state.ell < params.ell_min)
         //  cvo_state.ell = params.ell_min;
 	//cvo_state.ell = 0.005;//params.ell_min;
