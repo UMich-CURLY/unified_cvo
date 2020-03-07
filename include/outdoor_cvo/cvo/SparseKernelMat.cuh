@@ -26,7 +26,7 @@ namespace cvo {
   };
   
 
-  inline  int nonzeros(SparseKernelMat * A_host ) {
+  inline unsigned int nonzeros(SparseKernelMat * A_host ) {
     /*
      thrust::device_ptr<float> A_ptr = thrust::device_pointer_cast(A_host->mat);
      thrust::device_vector<float> v(A_ptr, A_ptr + A_host->rows * A_host->cols );

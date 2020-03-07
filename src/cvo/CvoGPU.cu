@@ -52,7 +52,7 @@ namespace cvo{
 
   namespace cukdtree = perl_registration;
 
-  static bool is_logging = false;
+  static bool is_logging = true;
   static bool debug_print = false;
   
   CvoPointCloudGPU::SharedPtr CvoPointCloud_to_gpu(const CvoPointCloud & cvo_cloud ) {
@@ -325,7 +325,7 @@ namespace cvo{
       if(d2<d2_thres  ){
 
 #ifdef IS_GEOMETRIC_ONLY
-        float a = cvo_params->c_sigma;
+        float a = s2*exp(-d2/(2.0*l*l));
         if (a > cvo_params->sp_thres){
           A_mat->mat[i * A_mat->cols + num_inds] = a;
           A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
@@ -1396,17 +1396,27 @@ namespace cvo{
     Mat33f R = init_guess_transform.block<3,3>(0,0);
     Vec3f T= init_guess_transform.block<3,1>(0,3);
 
-    
+    std::ofstream ell_file("ell_history.txt");
+    std::ofstream dist_change_file("dist_change_history.txt");
+    std::ofstream transform_file("transformation_history.txt");
+    std::ofstream step_file("step_history.txt");
+    std::ofstream w1("w1.txt");
+    std::ofstream w2("w2.txt");
+    std::ofstream w3("w3.txt");
+    std::ofstream v1("v1.txt");
+    std::ofstream v2("v2.txt");
+    std::ofstream v3("v3.txt");
 
+    
     std::cout<<"[align] convert points to gpu\n";
     CvoPointCloudGPU::SharedPtr source_gpu = CvoPointCloud_to_gpu(source_points);
     CvoPointCloudGPU::SharedPtr target_gpu = CvoPointCloud_to_gpu(target_points);
-
+    static bool is_first_frame = true;
     assert(source_gpu != nullptr && target_gpu != nullptr);
 
-    std::cout<<"construct new cvo state...\n";
-    CvoState cvo_state(source_gpu, target_gpu, params, false);
 
+    CvoState cvo_state(source_gpu, target_gpu, params, false);
+    std::cout<<"construct new cvo state..., init ell is "<<cvo_state.ell<<std::endl;
     int num_moving = cvo_state.num_moving;
     int num_fixed = cvo_state.num_fixed;
     
@@ -1422,10 +1432,11 @@ namespace cvo{
     chrono::duration<double> t_compute_flow = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_step = chrono::duration<double>::zero();
 
+    
     std::cout<<"Start iteration, init transform is \n";
     std::cout<<init_guess_transform<<std::endl;
     for(int k=0; k<params.MAX_ITER; k++){
-      //for(int k=0; k<2; k++){
+    //for(int k=0; k<2; k++){
       if (debug_print) printf("new iteration %d, ell is %f\n", k, cvo_state.ell);
       cvo_state.reset_state_at_new_iter();
       if (debug_print) printf("just reset A mat\n");
@@ -1433,6 +1444,12 @@ namespace cvo{
       // update transformation matrix to CvoState
       update_tf(R, T, &cvo_state, transform);
 
+      if (is_logging) {
+      Eigen::Matrix4f Tmat = transform;
+      transform_file << Tmat(0,0) <<" "<< Tmat(0,1) <<" "<< Tmat(0,2) <<" "<< Tmat(0,3)
+                  <<" "<< Tmat(1,0)<<" "<< Tmat(1,1) <<" "<< Tmat(1,2) <<" "<< Tmat(1,3)
+                  <<" "<< Tmat(2,0) <<" "<<  Tmat(2,1) <<" "<<  Tmat(2,2)<<" "<<  Tmat(2,3) <<"\n"<< std::flush;
+      }
       start = chrono::system_clock::now();
       // apply transform to the point cloud
       //transform_pcd(*cvo_data, R, T );
@@ -1474,24 +1491,38 @@ namespace cvo{
 
       // find the change of translation matrix dtrans
       if (debug_print) printf("Exp_SEK3...\n");
-      Eigen::Matrix<float,3,4> dtrans = Exp_SEK3(vec_joined, cvo_state.step).cast<float>();
+      //Eigen::Matrix<float,3,4> dtrans = Exp_SEK3(vec_joined, cvo_state.step).cast<float>();
+      Eigen::Matrix<float,3,4> dtrans = Exp_SEK3(vec_joined, 0.00005).cast<float>();
 
       // extract dR and dT from dtrans
-      Eigen::Matrix3f dR = dtrans.block<3,3>(0,0);
-      Eigen::Vector3f dT = dtrans.block<3,1>(0,3);
+      Eigen::Matrix3d dR = dtrans.block<3,3>(0,0).cast<double>();
+      Eigen::Vector3d dT = dtrans.block<3,1>(0,3).cast<double>();
 
       // calculate new R and T
-      T = R * dT + T;
-      R = R * dR;
+      T = (R.cast<double>() * dT + T.cast<double>()).cast<float>();
+      R = (R.cast<double>() * dR).cast<float>();
 
       // reduce ell
       // if the se3 distance is smaller than eps2, break
       if (debug_print) {
-        std::cout<<"dist: "<<dist_se3(dR, dT)<<std::endl<<"check bounds....\n";
+        std::cout<<"dist: "<<dist_se3(dR.cast<float>(), dT.cast<float>())<<std::endl<<"check bounds....\n";
       }
-      if(dist_se3(dR,dT)<params.eps_2){
+      float dist_this_iter = dist_se3(dR.cast<float>(),dT.cast<float>());
+      if (is_logging) {
+        ell_file << cvo_state.ell<<"\n";
+        dist_change_file << dist_this_iter<<"\n";
+        step_file << (cvo_state.step=0.00005)<<"\n";
+        w1 << omega(0)<<"\n";
+        w2 << omega(1)<<"\n";
+        w3 << omega(2)<<"\n";
+        v1 << v(0)<<"\n";
+        v2 << v(1)<<"\n";
+        v3 << v(2)<<"\n";
+      }
+     
+      if(dist_this_iter<params.eps_2){
         iter = k;
-        std::cout<<"dist: "<<dist_se3(dR,dT)<<std::endl;
+        std::cout<<"dist: "<<dist_se3(dR.cast<float>(),dT.cast<float>())<<std::endl;
         break;
       }
 
@@ -1504,12 +1535,16 @@ namespace cvo{
       cvo_state.ell = (cvo_state.ell<params.ell_min)? params.ell_min:cvo_state.ell;
       */
 
-      if (k > 150 && cvo_state.ell > params.ell_min) {
-      	 //if (k > 0){
-        if (k % 10 == 0 )
-            cvo_state.ell = cvo_state.ell * 0.9;
-	//wcvo_state.ell = params.ell_min;
-      }
+
+      // if (k > 2000 && cvo_state.ell > params.ell_min && is_first_frame == false) {
+      // if (k > 499 && cvo_state.ell > params.ell_min) {
+        //if (dist_this_iter < 0.005){
+      if (k > 200 && k % 30 == 0 ) 
+          cvo_state.ell = cvo_state.ell * 0.7;
+        // if (cvo_state.ell < params.ell_min)
+        //  cvo_state.ell = params.ell_min;
+	//cvo_state.ell = 0.005;//params.ell_min;
+      //}
       
 
 
@@ -1541,6 +1576,12 @@ namespace cvo{
     //accum_tf = accum_tf * transform.matrix();
     //accum_tf_vis = accum_tf_vis * transform.matrix();   // accumilate tf for visualization
     update_tf(R, T, &cvo_state, transform);
+    if (is_logging) {
+      ell_file.close();
+      dist_change_file.close();
+      transform_file.close();
+      step_file.close();
+    }
     
     /*
     if (is_logging) {
@@ -1553,6 +1594,7 @@ namespace cvo{
       fflush(relative_transform_file);
     }
     */
+    is_first_frame = false;
     return ret;
 
   }

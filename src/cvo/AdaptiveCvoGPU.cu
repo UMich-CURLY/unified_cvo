@@ -52,7 +52,7 @@ namespace cvo{
 
   namespace cukdtree = perl_registration;
 
-  static bool is_logging = false;
+  static bool is_logging = true;
   static bool debug_print = false;
   
   CvoPointCloudGPU::SharedPtr CvoPointCloud_to_gpu(const CvoPointCloud & cvo_cloud ) {
@@ -1087,8 +1087,13 @@ namespace cvo{
     std::cout<<"[align] convert points to gpu\n";
     CvoPointCloudGPU::SharedPtr source_gpu = CvoPointCloud_to_gpu(source_points);
     CvoPointCloudGPU::SharedPtr target_gpu = CvoPointCloud_to_gpu(target_points);
-
     assert(source_gpu != nullptr && target_gpu != nullptr);
+
+    
+    std::ofstream ell_file("ell_history.txt");
+    std::ofstream dist_change_file("dist_change_history.txt");
+    std::ofstream transform_file("transformation_history.txt");
+
 
     std::cout<<"construct new cvo state...\n";
     CvoState cvo_state(source_gpu, target_gpu, params,true);
@@ -1117,6 +1122,12 @@ namespace cvo{
       
       // update transformation matrix to CvoState
       update_tf(R, T, &cvo_state, transform);
+      if (is_logging) {
+      Eigen::Matrix4f Tmat = transform;
+      transform_file << Tmat(0,0) <<" "<< Tmat(0,1) <<" "<< Tmat(0,2) <<" "<< Tmat(0,3)
+                  <<" "<< Tmat(1,0)<<" "<< Tmat(1,1) <<" "<< Tmat(1,2) <<" "<< Tmat(1,3)
+                  <<" "<< Tmat(2,0) <<" "<<  Tmat(2,1) <<" "<<  Tmat(2,2)<<" "<<  Tmat(2,3) <<"\n"<< std::flush;
+      }
 
       start = chrono::system_clock::now();
       // apply transform to the point cloud
@@ -1177,6 +1188,11 @@ namespace cvo{
         std::cout<<"dist: "<<dist_se3(dR,dT)<<std::endl;
         break;
       }
+      float dist_this_iter = dist_se3(dR,dT);
+      if (is_logging) {
+        ell_file << cvo_state.ell<<"\n";
+        dist_change_file << dist_this_iter<<"\n";
+      }
 
       cvo_state.ell = cvo_state.ell - params.dl_step*cvo_state.dl;
       if(cvo_state.ell>=cvo_state.ell_max){
@@ -1208,6 +1224,11 @@ namespace cvo{
     //accum_tf = accum_tf * transform.matrix();
     //accum_tf_vis = accum_tf_vis * transform.matrix();   // accumilate tf for visualization
     update_tf(R, T, &cvo_state, transform);
+    if (is_logging) {
+      ell_file.close();
+      dist_change_file.close();
+      transform_file.close();
+    }
 
     if (registration_seconds)
       *registration_seconds = t_all.count();
