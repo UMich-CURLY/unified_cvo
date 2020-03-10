@@ -490,8 +490,8 @@ namespace cvo
       if( (intenstity_grad > intensity_bound || depth_grad > depth_bound)
           && (point.intensity > 0.0)
           && ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0)) //){
-          && (  point.x*point.x+point.y*point.y+point.z*point.z) < distance_bound * distance_bound  ) {
-        //&&  std::fabs(point.x) < distance_bound && std::fabs(point.y) < distance_bound && std::fabs(point.z) < distance_bound) {
+          //&& (  point.x*point.x+point.y*point.y+point.z*point.z) < distance_bound * distance_bound  ) {
+        &&  std::fabs(point.x) < distance_bound && std::fabs(point.y) < distance_bound && std::fabs(point.z) < distance_bound) {
 
           // std::cout << "points: " << point.x << ", " << point.y << ", " << point.z << ", " << point.intensity << std::endl;
           pc_out->push_back(pc_in->points[i]);

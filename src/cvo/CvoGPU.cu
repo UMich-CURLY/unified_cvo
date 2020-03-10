@@ -52,7 +52,7 @@ namespace cvo{
 
   namespace cukdtree = perl_registration;
 
-  static bool is_logging = true;
+  static bool is_logging = false;
   static bool debug_print = false;
   
   CvoPointCloudGPU::SharedPtr CvoPointCloud_to_gpu(const CvoPointCloud & cvo_cloud ) {
@@ -1396,17 +1396,17 @@ namespace cvo{
     Mat33f R = init_guess_transform.block<3,3>(0,0);
     Vec3f T= init_guess_transform.block<3,1>(0,3);
 
-    std::ofstream ell_file("ell_history.txt");
-    std::ofstream dist_change_file("dist_change_history.txt");
-    std::ofstream transform_file("transformation_history.txt");
-    std::ofstream step_file("step_history.txt");
-    std::ofstream w1("w1.txt");
-    std::ofstream w2("w2.txt");
-    std::ofstream w3("w3.txt");
-    std::ofstream v1("v1.txt");
-    std::ofstream v2("v2.txt");
-    std::ofstream v3("v3.txt");
-
+    std::ofstream ell_file("ell_history1.txt");
+    std::ofstream dist_change_file("dist_change_history1.txt");
+    std::ofstream transform_file("transformation_history1.txt");
+    std::ofstream step_file("step_history1.txt");
+    //std::ofstream w1("w1.txt");
+    //std::ofstream w2("w2.txt");
+    //std::ofstream w3("w3.txt");
+    //std::ofstream v1("v1.txt");
+    //std::ofstream v2("v2.txt");
+    //std::ofstream v3("v3.txt");
+    std::ofstream inner_product_file("inner_product.txt");
     
     std::cout<<"[align] convert points to gpu\n";
     CvoPointCloudGPU::SharedPtr source_gpu = CvoPointCloud_to_gpu(source_points);
@@ -1512,15 +1512,18 @@ namespace cvo{
       }
       float dist_this_iter = dist_se3(dR.cast<float>(),dT.cast<float>());
       if (is_logging) {
-        ell_file << cvo_state.ell<<"\n";
-        dist_change_file << dist_this_iter<<"\n";
-        step_file << (cvo_state.step=0.00005)<<"\n";
-        w1 << omega(0)<<"\n";
+        ell_file << cvo_state.ell<<"\n"<<std::flush;
+        dist_change_file << dist_this_iter<<"\n"<<std::flush;
+        //  step_file << (cvo_state.step=0.00005)<<"\n"<<std::flush;
+        /* w1 << omega(0)<<"\n";
         w2 << omega(1)<<"\n";
         w3 << omega(2)<<"\n";
         v1 << v(0)<<"\n";
         v2 << v(1)<<"\n";
-        v3 << v(2)<<"\n";
+        v3 << v(2)<<"\n";*/
+        float ip_curr = (double)cvo_state.A_host.nonzero_sum / (double)source_points.num_points() / (double) target_points.num_points();
+        inner_product_file<<ip_curr<<std::flush;
+        //inner_product_file<<this->inner_product(source_points, target_points, transform)<<"\n"<<std::flush;
       }
      
       if(dist_this_iter<params.eps_2){
@@ -1542,7 +1545,7 @@ namespace cvo{
       // if (k > 2000 && cvo_state.ell > params.ell_min && is_first_frame == false) {
       // if (k > 499 && cvo_state.ell > params.ell_min) {
         //if (dist_this_iter < 0.005){
-      if ( k % 100 == 0 && k > 0) 
+      if ( k % 30 == 0 && k > 0) 
           cvo_state.ell = cvo_state.ell * 0.9;
         // if (cvo_state.ell < params.ell_min)
         //  cvo_state.ell = params.ell_min;
@@ -1579,12 +1582,13 @@ namespace cvo{
     //accum_tf = accum_tf * transform.matrix();
     //accum_tf_vis = accum_tf_vis * transform.matrix();   // accumilate tf for visualization
     update_tf(R, T, &cvo_state, transform);
-    if (is_logging) {
+    //if (is_logging) {
       ell_file.close();
       dist_change_file.close();
       transform_file.close();
       step_file.close();
-    }
+      inner_product_file.close();
+    //}
     
     /*
     if (is_logging) {
