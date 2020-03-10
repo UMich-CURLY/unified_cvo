@@ -1491,8 +1491,8 @@ namespace cvo{
 
       // find the change of translation matrix dtrans
       if (debug_print) printf("Exp_SEK3...\n");
-      //Eigen::Matrix<float,3,4> dtrans = Exp_SEK3(vec_joined, cvo_state.step).cast<float>();
-      Eigen::Matrix<float,3,4> dtrans = Exp_SEK3(vec_joined, 0.00005).cast<float>();
+      Eigen::Matrix<float,3,4> dtrans = Exp_SEK3(vec_joined, cvo_state.step).cast<float>();
+      //Eigen::Matrix<float,3,4> dtrans = Exp_SEK3(vec_joined, 0.00005).cast<float>();
 
       // extract dR and dT from dtrans
       Eigen::Matrix3d dR = dtrans.block<3,3>(0,0).cast<double>();
@@ -1500,7 +1500,7 @@ namespace cvo{
 
       // calculate new R and T
       T = (R.cast<double>() * dT + T.cast<double>()).cast<float>();
-      R = (R.cast<double>() * dR).cast<float>();
+      //R = (R.cast<double>() * dR).cast<float>();
 
       Eigen::AngleAxisd R_angle(R.cast<double>() * dR);
       R = R_angle.toRotationMatrix().cast<float>(); // re-orthogonalization
