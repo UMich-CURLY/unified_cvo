@@ -491,7 +491,7 @@ namespace cvo
       if( (intenstity_grad > intensity_bound || depth_grad > depth_bound) 
            && (point.intensity > 0.0) 
            && ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0)) //){
-           && ((abs(point.x) < distance_bound) && (abs(point.y) < distance_bound) && (abs(point.z) < distance_bound))){
+           && (sqrt(point.x*point.x + point.y*point.y + point.z*point.z) < distance_bound)){
           // std::cout << "points: " << point.x << ", " << point.y << ", " << point.z << ", " << point.intensity << std::endl;
           pc_out->push_back(pc_in->points[i]);
           output_depth_grad.push_back(depth_grad);
@@ -566,7 +566,7 @@ namespace cvo
       if( (intenstity_grad > intensity_bound || depth_grad > depth_bound) 
            && (point.intensity > 0.0) 
            && ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0)) //){
-           && ((abs(point.x) < distance_bound) && (abs(point.y) < distance_bound) && (abs(point.z) < distance_bound))){
+           && (sqrt(point.x*point.x + point.y*point.y + point.z*point.z) < distance_bound)){
           pc_out->push_back(pc_in->points[i]);
           output_depth_grad.push_back(depth_grad);
           output_intenstity_grad.push_back(intenstity_grad);
