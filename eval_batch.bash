@@ -27,10 +27,10 @@ $echo "baselines: "
 #echo "gicp "
 #  ./devkit/cpp/evaluate_odometry $seq $gt_dir $gt_file_name $gicp_results_dir $results_file_name
 
-#echo "mc"
+#echo "ndt"
 #  ./devkit/cpp/evaluate_odometry $seq $gt_dir $gt_file_name $ndt_results_dir  $results_file_name
 
-#echo "ndt"
+#echo "mc"
 #  ./devkit/cpp/evaluate_odometry $seq $gt_dir $gt_file_name $mc_results_dir   $results_file_name
 
   echo "cvo"

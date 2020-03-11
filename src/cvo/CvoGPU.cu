@@ -160,7 +160,8 @@ namespace cvo{
   }
 
   CvoGPU::CvoGPU(const std::string & param_file) {
-    read_CvoParams(param_file.c_str(), &params);
+    // read_CvoParams(param_file.c_str(), &params);
+    read_CvoParams_yaml(param_file.c_str(), &params);
     printf("Some Cvo Params are: ell_init: %f, eps_2: %f\n", params.ell_init, params.eps_2);
     cudaMalloc((void**)&params_gpu, sizeof(CvoParams) );
     cudaMemcpy( (void*)params_gpu, &params, sizeof(CvoParams), cudaMemcpyHostToDevice  );
