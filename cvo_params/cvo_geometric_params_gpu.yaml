@@ -1,5 +1,6 @@
+%YAML:1.0
 ---
-ell_init: 0.8
+ell_init: 0.45
 ell_min: 0.05
 ell_max: 0.9
 dl: 0.0
@@ -15,4 +16,4 @@ s_sigma: 0.8
 MAX_ITER: 5000
 min_step: 0.2
 eps: 0.00005
-eps_2: 0.000006
+eps_2: 0.000012
