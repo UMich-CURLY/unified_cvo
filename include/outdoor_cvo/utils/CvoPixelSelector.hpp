@@ -41,9 +41,11 @@ namespace cvo
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
                      int num_want,
                      double intensity_bound, 
-                     double depth_bound,
+                     double depth_bound_horizontal,
+                     double depth_bound_vertical,
                      double distance_bound,
-                      int num_beams,
+                     double distance_bound_vertical,
+                     int beam_number,
                      // output
                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
                      std::vector <double> & output_depth_grad,
@@ -52,22 +54,16 @@ namespace cvo
                      const std::vector<int> & semantic_in,
                      int num_want,
                      double intensity_bound, 
-                     double depth_bound,
+                     double depth_bound_horizontal,
+                     double depth_bound_vertical,
                      double distance_bound,
-                      int num_beams,
+                     double distance_bound_vertical,
+                     int beam_number,
                      // output
                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
                      std::vector <double> & output_depth_grad,
                      std::vector <double> & output_intenstity_grad,
                      std::vector<int> & semantic_out);
-  void laserCloudHandler(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
-                        int num_want,
-                        double intensity_bound, 
-                        double depth_bound,
-                        // output
-                        pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
-                        std::vector <double> & output_depth_grad,
-                        std::vector <double> & output_intenstity_grad);
   int get_quadrant(pcl::PointXYZI point);
 
   
