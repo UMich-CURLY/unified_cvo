@@ -1546,8 +1546,8 @@ namespace cvo{
       // if (k > 2000 && cvo_state.ell > params.ell_min && is_first_frame == false) {
       // if (k > 499 && cvo_state.ell > params.ell_min) {
         //if (dist_this_iter < 0.005){
-      if (   k % 30 == 0 && k > 60 && cvo_state.ell * 0.9 > params.ell_min) 
-          cvo_state.ell = cvo_state.ell * 0.9;
+      if (   k % 30 == 0 && k > 30 && cvo_state.ell * 0.9 > params.ell_min) 
+          cvo_state.ell = cvo_state.ell * 0.75;
         // if (cvo_state.ell < params.ell_min)
         //  cvo_state.ell = params.ell_min;
 	//cvo_state.ell = 0.005;//params.ell_min;
