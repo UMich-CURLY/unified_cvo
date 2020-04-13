@@ -8,6 +8,7 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl/io/pcd_io.h>
+#include <pcl/common/transforms.h>
 #include <tbb/tbb.h>
 #include "utils/CvoPointCloud.hpp"
 #include "utils/StaticStereo.hpp"
@@ -213,19 +214,21 @@ namespace cvo{
   CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, int target_num_points, int beam_num) {
     int expected_points = target_num_points;
     double intensity_bound = 0.4;
-    double depth_bound = 4.0;
-    double distance_bound = 80.0;
+    double depth_bound_horizontal = 3.0;
+    double depth_bound_vertical = 2.0;
+    double distance_bound = 40.0;
+    double distance_bound_vertical = 15.0;
+
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
+    
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
-    edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
+    edge_detection(pc, expected_points, intensity_bound, depth_bound_horizontal, depth_bound_vertical, distance_bound, distance_bound_vertical, beam_num,
                    pc_out, output_depth_grad, output_intenstity_grad);
      
     // fill in class members
     num_points_ = pc_out->size();
-    num_classes_ = 0;
-
-    
+    num_classes_ = 0;    
     
     // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
     feature_dimensions_ = 1;
@@ -237,21 +240,26 @@ namespace cvo{
       positions_.push_back(xyz);
       features_(i, 0) = pc_out->points[i].intensity;      
     }
+    //pcl::io::savePCDFileASCII("lidar"+std::to_string(num_points_)+"_input.pcd", *pc.get());
+    //write_to_intensity_pcd("lidar"+std::to_string(num_points_)+".pcd");
 
-    write_to_intensity_pcd("kitti_lidar.pcd");
   }
 
   CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, const std::vector<int> & semantic ,
                                int num_classes,  int target_num_points , int beam_num) {
     int expected_points = target_num_points;
     double intensity_bound = 0.4;
-    double depth_bound = 4.0;
-    double distance_bound = 75.0;
+
+    double depth_bound_horizontal = 3.0;
+    double depth_bound_vertical = 2.0;
+    double distance_bound = 40.0;
+    double distance_bound_vertical = 15.0;
+
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
     std::vector <int> semantic_out;
-    edge_detection(pc, semantic, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
+    edge_detection(pc, semantic, expected_points, intensity_bound, depth_bound_horizontal, depth_bound_vertical, distance_bound, distance_bound_vertical, beam_num,
                    pc_out, output_depth_grad, output_intenstity_grad, semantic_out);
     // fill in class members
     num_points_ = pc_out->size();

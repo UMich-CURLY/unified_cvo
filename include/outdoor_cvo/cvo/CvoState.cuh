@@ -8,7 +8,7 @@
 #include <thrust/device_vector.h>
 #include <Eigen/Dense>
 
-#define KDTREE_K_SIZE 300
+#define KDTREE_K_SIZE 500
 
 namespace Eigen {
                  typedef Matrix<float,1,3> Vector3f_row;                 

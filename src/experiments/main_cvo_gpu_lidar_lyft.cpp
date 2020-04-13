@@ -7,7 +7,7 @@
 #include <cmath>
 #include <boost/filesystem.hpp>
 //#include <opencv2/opencv.hpp>
-#include "dataset_handler/KittiHandler.hpp"
+#include "dataset_handler/LyftHandler.hpp"
 #include "graph_optimizer/Frame.hpp"
 
 #include <pcl/point_cloud.h>
@@ -22,30 +22,31 @@ using namespace boost::filesystem;
 int main(int argc, char *argv[]) {
   // list all files in current directory.
   //You could put any file path in here, e.g. "/home/me/mwah" to list that directory
-  cvo::KittiHandler kitti(argv[1], 1);
-  int total_iters = kitti.get_total_number();
+  cvo::LyftHandler lyft(argv[1], 1);
+  int total_iters = lyft.get_total_number();
   string cvo_param_file(argv[2]);
   string calib_file;
   calib_file = string(argv[1] ) +"/cvo_calib.txt"; 
   cvo::Calibration calib(calib_file);
   std::ofstream accum_output(argv[3]);
   int start_frame = std::stoi(argv[4]);
-  kitti.set_start_index(start_frame);
+  lyft.set_start_index(start_frame);
   int max_num = std::stoi(argv[5]);
 
   accum_output <<"1 0 0 0 0 1 0 0 0 0 1 0\n";
 
+  std::ofstream num_pts_output("num_points.txt");
   
   cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();
   float ell_init = init_param.ell_init;
   float ell_max = init_param.ell_max;
   init_param.ell_init = 1.0;//0.7;
-  init_param.ell_max = 1.2;//0.75;
+  init_param.ell_max = 2.2;//0.75;
   cvo_align.write_params(&init_param);
   
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
-  init_guess(2,3)=0.0;
+  init_guess(2,3)=0;
   Eigen::Affine3f init_guess_cpu = Eigen::Affine3f::Identity();
   init_guess_cpu.matrix()(2,3)=0;
   Eigen::Matrix4f accum_mat = Eigen::Matrix4f::Identity();
@@ -53,9 +54,9 @@ int main(int argc, char *argv[]) {
 
   pcl::PointCloud<pcl::PointXYZI>::Ptr source_pc(new pcl::PointCloud<pcl::PointXYZI>);
   //std::vector<int> semantics_source;
-  kitti.read_next_lidar(source_pc);
+  lyft.read_next_lidar(source_pc);
 
-  //kitti.read_next_stereo(source_left, source_right);
+  //lyft.read_next_stereo(source_left, source_right);
   std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_pc,
                                                     //                    semantics_source, 
                                                     calib));
@@ -68,10 +69,10 @@ int main(int argc, char *argv[]) {
     std::cout<<"\n\n\n\n============================================="<<std::endl;
     std::cout<<"Aligning "<<i<<" and "<<i+1<<" with GPU "<<std::endl;
 
-    kitti.next_frame_index();
+    lyft.next_frame_index();
     pcl::PointCloud<pcl::PointXYZI>::Ptr target_pc(new pcl::PointCloud<pcl::PointXYZI>);
     //std::vector<int> semantics_target;
-    if (kitti.read_next_lidar(target_pc) != 0) {
+    if (lyft.read_next_lidar(target_pc) != 0) {
       std::cout<<"finish all files\n";
       break;
     }
@@ -83,6 +84,9 @@ int main(int argc, char *argv[]) {
     std::cout<<"NUm of source pts is "<<source->points().num_points()<<"\n";
     auto target_fr = target->points();
     std::cout<<"NUm of target pts is "<<target->points().num_points()<<"\n";
+
+    num_pts_output << source->points().num_points() << "\n";
+    num_pts_output << std::flush;
 
     Eigen::Matrix4f result, init_guess_inv;
     init_guess_inv = init_guess.inverse();
@@ -134,6 +138,7 @@ int main(int argc, char *argv[]) {
 
   std::cout<<"time per frame is "<<total_time / double(i - start_frame + 1)<<std::endl;
   accum_output.close();
-
+  num_pts_output.close();
   return 0;
 }
+

@@ -446,7 +446,7 @@ bool eval (int seq, string gt_dir, string gt_file_name, string result_dir, strin
     vector<Matrix> poses_result = loadPoses(result_dir + result_file_name);
    
     // plot status
-    mail->msg("Processing: %s, poses: %d/%d",file_name,poses_result.size(),poses_gt.size());
+    //mail->msg("Processing: %s, poses: %d/%d",file_name,poses_result.size(),poses_gt.size());
     
     // check for errors
     if (poses_gt.size()==0 || poses_result.size()!=poses_gt.size()) {
@@ -514,7 +514,7 @@ int32_t main (int32_t argc,char *argv[]) {
   mail = new Mail();
   // if (argc==4) mail = new Mail(argv[3]);
   // else         mail = new Mail();
-  mail->msg("Thank you for participating in our evaluation!");
+  //mail->msg("Thank you for participating in our evaluation!");
 
   // run evaluation
   bool success = eval(seq, gt_dir, gt_file_name, result_dir, result_file_name, mail);
