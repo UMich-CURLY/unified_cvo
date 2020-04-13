@@ -11,7 +11,7 @@
 #include "graph_optimizer/Frame.hpp"
 #include "utils/Calibration.hpp"
 #include "utils/CvoPointCloud.hpp"
-#include "cvo/AdaptiveCvoGPU.hpp"
+#include "cvo/CvoGPU.hpp"
 #include "cvo/Cvo.hpp"
 #include "cvo/CvoParams.hpp"
 using namespace std;
@@ -33,11 +33,11 @@ int main(int argc, char *argv[]) {
   int max_num = std::stoi(argv[5]);
   
   
-  cvo::AdaptiveCvoGPU cvo_align(cvo_param_file );
+  cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams init_param = cvo_align.get_params();
   cvo::CvoParams first_frame_param = init_param;
-  first_frame_param.ell_init = 0.95;
-  first_frame_param.ell_max = 1.0;
+  first_frame_param.ell_init = 1.0;
+  first_frame_param.ell_max = 1.1;
   cvo_align.write_params(&first_frame_param);
 
   std::cout<<"write ell! ell init is "<<cvo_align.get_params().ell_init<<std::endl;

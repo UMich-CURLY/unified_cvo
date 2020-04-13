@@ -11,7 +11,7 @@
 #include "graph_optimizer/Frame.hpp"
 #include "utils/Calibration.hpp"
 #include "utils/CvoPointCloud.hpp"
-#include "cvo/AdaptiveCvoGPU.hpp"
+#include "cvo/CvoGPU.hpp"
 #include "cvo/Cvo.hpp"
 using namespace std;
 using namespace boost::filesystem;
@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
   int max_num = std::stoi(argv[5]);
   
   
-  cvo::AdaptiveCvoGPU cvo_align(cvo_param_file );
+  cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();
   float ell_init = init_param.ell_init;
   float ell_max = init_param.ell_max;

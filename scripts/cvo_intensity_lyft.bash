@@ -13,6 +13,6 @@ mkdir -p results/lyft/cvo_intensity_lidar/
 
 cd build && make -j && cd .. && \
 
-    ./build/bin/cvo_align_gpu_lidar_lyft /home/rayzhang/code/docker_home/media/Samsung_T5/lyft/v1.02-train/lidar/$data_seq \
-                                         cvo_params/cvo_intensity_lyft_params_gpu.yaml \
-                                         results/lyft/cvo_intensity_lidar/$data_seq.txt 100 2 
+    ./build/bin/cvo_align_gpu_lidar_lyft /home/rayzhang/code/docker_home/media/Samsung_T5/lyft/v1.02-train/lyft_kitti/train/$data_seq/ \
+                                         cvo_params/cvo_intensity_params_lyft.yaml \
+                                         results/lyft/cvo_intensity_lidar/$data_seq.txt 0 100000 
