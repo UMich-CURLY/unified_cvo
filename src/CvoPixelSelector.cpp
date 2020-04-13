@@ -454,9 +454,11 @@ namespace cvo
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
                      int num_want,
                      double intensity_bound, 
-                     double depth_bound,
+                     double depth_bound_horizontal,
+                     double depth_bound_vertical,
                      double distance_bound,
-                      int beam_number,
+                     double distance_bound_vertical,
+                     int beam_number,
                      // output
                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
                      std::vector <double> & output_depth_grad,
@@ -468,38 +470,56 @@ namespace cvo
     int num_points = pc_in->points.size();
     int previous_quadrant = get_quadrant(pc_in->points[0]);
     int ring_num = 0;
+    int num_points_in_one_ring = 0;
+    int num_points_counting = 1;
 
-    for(int i = 1; i<num_points; i++) {      
-      int quadrant = get_quadrant(pc_in->points[i]);
+    for(int i = 1; i<num_points; i++) {  
+      const auto& point = pc_in->points[i];    
+      int quadrant = get_quadrant(point);      
+
       if(quadrant == 1 && previous_quadrant == 4 && ring_num < beam_num-1){
         ring_num += 1;
+        num_points_in_one_ring = num_points_counting;
+        num_points_counting = 1;
+        previous_quadrant = quadrant;
         continue;
+      }
+      else{
+        num_points_counting += 1;
       }
 
       // select points
-      const auto& point_l = pc_in->points[i-1];
-      const auto& point = pc_in->points[i];
+      const auto& point_l = pc_in->points[i-1];      
       const auto& point_r = pc_in->points[i+1];
-      
-      double depth_grad = std::max((point_l.getVector3fMap()-point.getVector3fMap()).norm(),
-                      (point.getVector3fMap()-point_r.getVector3fMap()).norm());
+
+      double distance = sqrt(point.x*point.x + point.y*point.y + point.z*point.z);
+
+      // horizontal
+      double depth_grad_horizontal = std::max((point_l.getVector3fMap()-point.getVector3fMap()).norm(), (point.getVector3fMap()-point_r.getVector3fMap()).norm());
       
       double intenstity_grad = std::max(
                               std::abs( point_l.intensity - point.intensity ),
                               std::abs( point.intensity - point_r.intensity ));
-      if( (intenstity_grad > intensity_bound || depth_grad > depth_bound)
+      if( (intenstity_grad > intensity_bound || depth_grad_horizontal > depth_bound_horizontal)
           && (point.intensity > 0.0)
           && ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0)) //){
-          //&& (  point.x*point.x+point.y*point.y+point.z*point.z) < distance_bound * distance_bound  ) {
-        &&  std::fabs(point.x) < distance_bound && std::fabs(point.y) < distance_bound && std::fabs(point.z) < distance_bound) {
+          && (  point.x*point.x+point.y*point.y+point.z*point.z) < distance_bound * distance_bound  ) {
+          //&&  std::fabs(point.x) < distance_bound && std::fabs(point.y) < distance_bound && std::fabs(point.z) < distance_bound) {
 
-          // std::cout << "points: " << point.x << ", " << point.y << ", " << point.z << ", " << point.intensity << std::endl;
+        if( 
+           (depth_grad_horizontal > depth_bound_horizontal) // for lyft dataset 
+           //  ((intenstity_grad > intensity_bound) || (depth_grad_horizontal > depth_bound_horizontal) || (depth_grad_vertical > depth_bound_vertical)) // for kitti dataset
+           //&& ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0))
+           //  && (point.intensity > 0)
+           //&& (distance < distance_bound)){
+            ) {
           pc_out->push_back(pc_in->points[i]);
-          output_depth_grad.push_back(depth_grad);
+          output_depth_grad.push_back(depth_grad_horizontal);
           output_intenstity_grad.push_back(intenstity_grad);
-      }
+        }
 
       previous_quadrant = quadrant;      
+      }
     }
 
     // visualize
@@ -517,46 +537,60 @@ namespace cvo
     // }
     
     // pcl::io::savePCDFile("input.pcd", *pc_in);
-    // pcl::io::savePCDFile("output.pcd", *pc_out);
+    pcl::io::savePCDFile("output.pcd", *pc_out);
   }
 
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
                      const std::vector<int> & semantic_in,
                      int num_want,
                      double intensity_bound, 
-                     double depth_bound,
+                     double depth_bound_horizontal,
+                     double depth_bound_vertical,
                      double distance_bound,
-                      int beam_number,
+                     double distance_bound_vertical,
+                     int beam_number,
                      // output
                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
                      std::vector <double> & output_depth_grad,
                      std::vector <double> & output_intenstity_grad,
                      std::vector<int> & semantic_out) {
-
+    
     int beam_num = beam_number;
     std::vector<int> indices;
     pcl::removeNaNFromPointCloud(*pc_in, *pc_in, indices);
     int num_points = pc_in->points.size();
     int previous_quadrant = get_quadrant(pc_in->points[0]);
     int ring_num = 0;
+    int num_points_in_one_ring = 0;
+    int num_points_counting = 1;
+    double depth_bound;
 
-    for(int i = 1; i<num_points; i++) {   
+    for(int i = 1; i<num_points; i++) {      
       if(semantic_in[i]==-1){
         // exclude unlabeled points
-
         continue;
-      }   
+      }
+      
       int quadrant = get_quadrant(pc_in->points[i]);
       if(quadrant == 1 && previous_quadrant == 4 && ring_num < beam_num-1){
         ring_num += 1;
+        num_points_in_one_ring = num_points_counting;
+        num_points_counting = 0;
+        previous_quadrant = quadrant;
         continue;
+      }
+      else{
+        num_points_counting += 1;
       }
 
       // select points
       const auto& point_l = pc_in->points[i-1];
       const auto& point = pc_in->points[i];
       const auto& point_r = pc_in->points[i+1];
+
+      double distance = sqrt(point.x*point.x + point.y*point.y + point.z*point.z);
       
+      // horizontal
       double depth_grad = std::max((point_l.getVector3fMap()-point.getVector3fMap()).norm(),
                       (point.getVector3fMap()-point_r.getVector3fMap()).norm());
       
@@ -564,61 +598,47 @@ namespace cvo
                               std::abs( point_l.intensity - point.intensity ),
                               std::abs( point.intensity - point_r.intensity ));
 
-      if( (intenstity_grad > intensity_bound || depth_grad > depth_bound)
-          && (point.intensity > 0.0)
-          && ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0)) //){
-          &&  (point.x*point.x+point.y*point.y+point.z*point.z) < distance_bound * distance_bound){
 
-        //&& std::fabs(point.x) < distance_bound && std::fabs(point.y) < distance_bound && std::fabs(point.z) < distance_bound) {
-          
+      if(ring_num > 0 && ring_num < beam_num-1 && distance < distance_bound_vertical){
+        const auto& point_down = pc_in->points[i-num_points_in_one_ring];
+        depth_grad = (point_down.getVector3fMap()-point.getVector3fMap()).norm(); 
+        intenstity_grad = std::abs( point_down.intensity - point.intensity );
+        depth_bound = depth_bound_vertical;
+      }
+      else{
+        depth_bound = depth_bound_horizontal;
+      }
+
+      if( (depth_grad > depth_bound) 
+           && ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0))
+           && (point.intensity > 0)
+           && (distance < distance_bound)){
+
           pc_out->push_back(pc_in->points[i]);
           output_depth_grad.push_back(depth_grad);
           output_intenstity_grad.push_back(intenstity_grad);
           semantic_out.push_back(semantic_in[i]);
-
-          //std::cout<<" in edge detection , point "<<point.x<<", "<<point.y<<", "<<point.z<<", label "<<point.intensity<<std::endl;
       }
 
       previous_quadrant = quadrant;      
     }
   }
 
-  void laserCloudHandler(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
-                        int num_want,
-                        double intensity_bound, 
-                        double depth_bound,
-                        // output
-                        pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
-                        std::vector <double> & output_depth_grad,
-                        std::vector <double> & output_intenstity_grad)
-{
-  int N_SCANS = 64;
-  std::vector<int> scanStartInd(N_SCANS, 0);
-  std::vector<int> scanEndInd(N_SCANS, 0);
-  
-  // double timeScanCur = laserCloudMsg->header.stamp.toSec();
-  // pcl::PointCloud<pcl::PointXYZ> laserCloudIn;
-  // pcl::fromROSMsg(*laserCloudMsg, laserCloudIn);
-  std::vector<int> indices;
-  pcl::removeNaNFromPointCloud(*pc_in, *pc_in, indices);
-  int cloudSize = pc_in->points.size();
-  float startOri = -atan2(pc_in->points[0].y, pc_in->points[0].x);
-  float endOri = -atan2(pc_in->points[cloudSize - 1].y,
-                        pc_in->points[cloudSize - 1].x) + 2 * M_PI;
-
-
-
-
-}
-
   int get_quadrant(pcl::PointXYZI point){
     int res = 0;
-    float x = point.x;
-    float y = point.y;
+    /* because for kitti dataset lidar, we changed the coordinate...
+    now.x = -raw.y;
+    now.y = -raw.z;
+    now.z = raw.x;
+    */
+    float x = point.z;
+    float y = -point.x;
+
     if(x > 0 && y >= 0){res = 1;}
     else if(x <= 0 && y > 0){res = 2;}
     else if(x < 0 && y <= 0){res = 3;}
-    else if(x >= 0 && y < 0){res = 4;}
+    else if(x >= 0 && y < 0){res = 4;}   
+
     return res;
     }
 }
