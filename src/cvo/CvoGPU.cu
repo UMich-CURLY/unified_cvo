@@ -52,7 +52,7 @@ namespace cvo{
 
   namespace cukdtree = perl_registration;
 
-  static bool is_logging = true;
+  static bool is_logging = false;
   static bool debug_print = false;
   
   CvoPointCloudGPU::SharedPtr CvoPointCloud_to_gpu(const CvoPointCloud & cvo_cloud ) {
@@ -255,7 +255,7 @@ namespace cvo{
 
     cudaMemcpy(cvo_state->R_gpu->data(), R_inv.data(), sizeof(Eigen::Matrix3f), cudaMemcpyHostToDevice);
     cudaMemcpy(cvo_state->T_gpu->data(), T_inv.data(), sizeof(Eigen::Vector3f), cudaMemcpyHostToDevice );
-
+    if (debug_print) std::cout<<"R,T is "<<R<<std::endl<<T<<std::endl;
     if (debug_print) std::cout<<"transform mat R"<<transform.block<3,3>(0,0)<<"\nT: "<<transform.block<3,1>(0,3)<<std::endl;
   }
 
@@ -1491,8 +1491,8 @@ namespace cvo{
 
       // find the change of translation matrix dtrans
       if (debug_print) printf("Exp_SEK3...\n");
-      //Eigen::Matrix<float,3,4> dtrans = Exp_SEK3(vec_joined, cvo_state.step).cast<float>();
-      Eigen::Matrix<float,3,4> dtrans = Exp_SEK3(vec_joined, 0.00005).cast<float>();
+      Eigen::Matrix<float,3,4> dtrans = Exp_SEK3(vec_joined, cvo_state.step).cast<float>();
+      //Eigen::Matrix<float,3,4> dtrans = Exp_SEK3(vec_joined, 0.00005).cast<float>();
 
       // extract dR and dT from dtrans
       Eigen::Matrix3d dR = dtrans.block<3,3>(0,0).cast<double>();
@@ -1500,7 +1500,7 @@ namespace cvo{
 
       // calculate new R and T
       T = (R.cast<double>() * dT + T.cast<double>()).cast<float>();
-      R = (R.cast<double>() * dR).cast<float>();
+      //R = (R.cast<double>() * dR).cast<float>();
 
       Eigen::AngleAxisd R_angle(R.cast<double>() * dR);
       R = R_angle.toRotationMatrix().cast<float>(); // re-orthogonalization
@@ -1542,7 +1542,7 @@ namespace cvo{
       // if (k > 2000 && cvo_state.ell > params.ell_min && is_first_frame == false) {
       // if (k > 499 && cvo_state.ell > params.ell_min) {
         //if (dist_this_iter < 0.005){
-      if ( k % 100 == 0 && k > 0) 
+      if (k > 0 &&  k %  30 == 0 ) 
           cvo_state.ell = cvo_state.ell * 0.9;
         // if (cvo_state.ell < params.ell_min)
         //  cvo_state.ell = params.ell_min;
@@ -1554,12 +1554,13 @@ namespace cvo{
       if(debug_print) printf("end of iteration \n\n\n");
       
       // std::cout<<"iter: "<<k<<std::endl;
-      // if(debug_print){
+      if(debug_print){
       // std::cout<<"num non zeros in A: "<<A.nonZeros()<<std::endl;
       // std::cout<<"inner product before normalized: "<<A.sum()<<std::endl;
       // std::cout<<"inner product after normalized: "<<A.sum()/num_fixed/num_moving*1e6<<std::endl; 
-      // std::cout<<transform.matrix()<<std::endl;
-      // }
+      std::cout<<R<<std::endl<<T<<std::endl<<std::endl; 
+	      //std::cout<<transform.matrix()<<std::endl;
+      }
     }
     auto end_all = chrono::system_clock::now();
     chrono::duration<double> t_all = chrono::duration<double>::zero();
