@@ -22,21 +22,18 @@ do
 results_file_name=$seq.txt
 gt_file_name=$seq.txt
 #echo "$results_file_name"
-#$echo "baselines: "
 
 #echo "gicp "
 #  ./devkit/cpp/evaluate_odometry $seq $gt_dir $gt_file_name $gicp_results_dir $results_file_name
 
-#echo "mc"
+#echo "ndt"
 #  ./devkit/cpp/evaluate_odometry $seq $gt_dir $gt_file_name $ndt_results_dir  $results_file_name
 
-#echo "ndt"
+#echo "mc"
 #  ./devkit/cpp/evaluate_odometry $seq $gt_dir $gt_file_name $mc_results_dir   $results_file_name
 
   echo "cvo"
   ./devkit/cpp/evaluate_odometry $seq $gt_dir $gt_file_name $results_dir      $results_file_name
-        # ./devkit/cpp/evaluate_odometry 05 /media/justin/LaCie/data/kitti/sequences/ groundtruth.txt ../../results/ cvo_f2f_tracking_05_08.txt
-    #$done
 done
 
 

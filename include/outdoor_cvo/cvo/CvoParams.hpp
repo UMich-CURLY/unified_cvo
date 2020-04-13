@@ -2,12 +2,12 @@
 #include <cstdio>
 #include <iostream>
 #include <fstream>
-
+#include <opencv2/core.hpp>
 
 namespace cvo {
 
   
-
+  
   // all params to tune :(
   struct CvoParams {
     int gpu_thread_num;
@@ -33,8 +33,39 @@ namespace cvo {
     float min_step;     // minimum step size for integration
     float step;         // integration step size
     
-    
   };
+
+  inline void read_CvoParams_yaml(const char *filename, CvoParams * params) {
+    cv::FileStorage fs;
+    std::cout<<"open "<<filename<<std::endl;
+    fs.open(std::string(filename), cv::FileStorage::READ );
+    if (!fs.isOpened()) {
+      std::cerr << "Failed to open " << filename << std::endl;
+      return;
+    }
+    
+    params->ell_init = (float) fs["ell_init"];
+    params->ell_min = (float) fs["ell_min"];
+    params->ell_max = (float) fs["ell_max"];
+    params->dl = (double) fs["dl"];
+    params->dl_step = (double) fs["dl_step"];
+    params->sigma = (float) fs["sigma"];
+    params->sp_thres = (float) fs["sp_thres"];
+    params->c = (float) fs["c"];
+    params->d = (float) fs["d"];
+    params->c_ell = (float) fs["c_ell"];
+    params->c_sigma = (float) fs["c_sigma"];
+    params->s_ell = (float) fs["s_ell"];
+    params->s_sigma = (float) fs["s_sigma"];
+    params->MAX_ITER = (float) fs["MAX_ITER"];
+    params->eps = (float) fs["eps"];
+    params->eps_2 = (float) fs["eps_2"];
+    params->min_step = (float) fs["min_step"];
+
+    std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<std::endl;
+    fs.release();
+    return;
+  }
 
   inline void read_CvoParams(const char * filename, CvoParams * params) {
     //FILE * ptr = fopen(filename, "r");

@@ -1225,11 +1225,9 @@ namespace cvo{
     //accum_tf = accum_tf * transform.matrix();
     //accum_tf_vis = accum_tf_vis * transform.matrix();   // accumilate tf for visualization
     update_tf(R, T, &cvo_state, transform);
-    if (is_logging) {
       ell_file.close();
       dist_change_file.close();
       transform_file.close();
-    }
 
     if (registration_seconds)
       *registration_seconds = t_all.count();
