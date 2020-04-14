@@ -1494,6 +1494,7 @@ namespace cvo{
       //inner_product_file << A.sum()<<"\n";
       //inner_product_file << std::flush;
 
+      }
     }
     auto end_all = chrono::system_clock::now();
     chrono::duration<double> t_all = chrono::duration<double>::zero();
