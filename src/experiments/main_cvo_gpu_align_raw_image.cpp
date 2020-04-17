@@ -38,10 +38,10 @@ int main(int argc, char *argv[]) {
   float ell_init = init_param.ell_init;
   float ell_max = init_param.ell_max;
 
-  init_param.ell_init = 0.45;
-  init_param.ell_max = 1.1;
+  //init_param.ell_init = 0.45;
+  //init_param.ell_max = 1.1;
 
-  cvo_align.write_params(&init_param);
+  //cvo_align.write_params(&init_param);
 
   std::cout<<"write ell! ell init is "<<cvo_align.get_params().ell_init<<std::endl;
 
@@ -115,10 +115,10 @@ int main(int argc, char *argv[]) {
    
     source = target;
     if (i == start_frame) {
-      init_param.ell_init = ell_init;
-      init_param.ell_max = ell_max;
+      //init_param.ell_init = ell_init;
+      //init_param.ell_max = ell_max;
 
-      cvo_align.write_params(&init_param);
+      //cvo_align.write_params(&init_param);
       
     }
 
