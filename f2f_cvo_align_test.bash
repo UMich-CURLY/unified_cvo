@@ -1,6 +1,6 @@
 mode=0  # 0 for online generated points 1 for reading txt
 
-for dataset in 04 06 03 00 01 05 02 08  
+for dataset in 05
 do
     path="/media/justin/LaCie/data/kitti/sequences/"$dataset
     pcd_path="cvo_points/"
@@ -10,5 +10,4 @@ do
     num_classes=19
     data_type=1
     ./build/bin/cvo_f2f $mode $path $pcd_path $calib_name $output_file $start_frame $dataset $data_type #num_classes
-
 done

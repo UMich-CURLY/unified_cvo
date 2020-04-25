@@ -94,7 +94,9 @@ namespace cvo{
     float eps_2;        // threshold for se3 distance
     float min_step;     // minimum step size for integration
     float step;         // integration step size
-
+    float prev_dist;  
+    float ell_init_ratio;
+    
     Eigen::Matrix3f R;   // orientation
     Eigen::Vector3f T;   // translation
     Eigen::SparseMatrix<float,Eigen::RowMajor> A;      // coefficient matrix, represented in sparse
@@ -102,7 +104,7 @@ namespace cvo{
     Eigen::SparseMatrix<float,Eigen::RowMajor> Ayy;      // coefficient matrix, represented in sparse
     Eigen::Vector3f omega;  // so(3) part of twist
     Eigen::Vector3f v;      // R^3 part of twist
-
+        
     // variables for cloud manipulations
     typedef Eigen::Triplet<float> Trip_t;
     tbb::concurrent_vector<Trip_t> A_trip_concur;
@@ -145,7 +147,7 @@ namespace cvo{
      * @return d: se3 distance of given R and T
      */
     inline float dist_se3(const Eigen::Matrix3f& R, const Eigen::Vector3f& T);
-
+    inline float dist_se3(const Eigen::Matrix4f& tf);
     /**
      * @brief update transformation matrix
      */

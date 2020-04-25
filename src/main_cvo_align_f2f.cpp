@@ -101,11 +101,13 @@ int main(int argc, char *argv[]) {
   // init_guess.matrix()(2,3)=0.75;
   Eigen::Matrix4f result = init_guess.matrix();
   result = init_guess.matrix();
-  accum_tf_output_file << result(0,0)<<" "<<result(0,1)<<" "<<result(0,2)<<" "<<result(0,3)<<" "
-                <<result(1,0)<<" " <<result(1,1)<<" "<<result(1,2)<<" "<<result(1,3)<<" "
-                <<result(2,0)<<" " <<result(2,1)<<" "<<result(2,2)<<" "<<result(2,3);
-  accum_tf_output_file<<"\n";
-  accum_tf_output_file<<std::flush;
+  for(int i=0; i<start_frame+1; ++i){
+    accum_tf_output_file << result(0,0)<<" "<<result(0,1)<<" "<<result(0,2)<<" "<<result(0,3)<<" "
+                  <<result(1,0)<<" " <<result(1,1)<<" "<<result(1,2)<<" "<<result(1,3)<<" "
+                  <<result(2,0)<<" " <<result(2,1)<<" "<<result(2,2)<<" "<<result(2,3);
+    accum_tf_output_file<<"\n";
+    accum_tf_output_file<<std::flush;
+  }
   Eigen::Matrix4f tf_kf_im1 = Eigen::Matrix4f::Identity();
   Eigen::Matrix4f tf_im1_im2 = Eigen::Matrix4f::Identity();
   Eigen::Matrix4f accum_tf = Eigen::Matrix4f::Identity();
@@ -178,7 +180,7 @@ int main(int argc, char *argv[]) {
     }
     else{
       init_guess.setIdentity();
-      // init_guess.matrix()(2,3)=-0.75;
+      init_guess.matrix()(2,3)=-1;
     }
 
     std::cout<<"\n============================================="<<std::endl;

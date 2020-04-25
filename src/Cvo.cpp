@@ -67,7 +67,7 @@ namespace cvo{
     if (ptr!=NULL) 
     {
       std::cout<<"reading cvo params from file\n";
-      fscanf(ptr, "%f\n%f\n%f\n%f\n%f\n%lf\n%lf\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n%f\n%f\n%f\n",
+      fscanf(ptr, "%f\n%f\n%f\n%f\n%f\n%lf\n%lf\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n",
              &ell_init
              ,& ell
              ,& ell_min
@@ -91,7 +91,8 @@ namespace cvo{
              ,& eps_2
              ,& ell_reduced_1
              ,& ell_reduced_2
-             ,& ell_reduced_3);
+             ,& ell_reduced_3
+             ,& ell_init_ratio);
       fclose(ptr);
     }
     if (is_logging) {
@@ -132,6 +133,7 @@ namespace cvo{
     min_step(2*1.0e-1),    // minimum integration step
     eps(5*1.0e-5),         // threshold for stopping the function
     eps_2(1.0e-5),         // threshold for se3 distance
+    prev_dist(1.0),
     R(Eigen::Matrix3f::Identity(3,3)), // initialize rotation matrix to I
     T(Eigen::Vector3f::Zero()),        // initialize translation matrix to zeros
     transform(Eigen::Affine3f::Identity()),    // initialize transformation to I
@@ -144,7 +146,7 @@ namespace cvo{
     if (ptr!=NULL) 
     {
       std::cout<<"reading cvo params from file\n";
-      fscanf(ptr, "%f\n%f\n%f\n%f\n%f\n%lf\n%lf\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n%f\n%f\n%f\n",
+      fscanf(ptr, "%f\n%f\n%f\n%f\n%f\n%lf\n%lf\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n",
              &ell_init
              ,& ell
              ,& ell_min
@@ -168,7 +170,8 @@ namespace cvo{
              ,& eps_2
              ,& ell_reduced_1
              ,& ell_reduced_2
-             ,& ell_reduced_3);
+             ,& ell_reduced_3
+             ,& ell_init_ratio);
       fclose(ptr);
     }
     if (is_logging) {
@@ -214,6 +217,14 @@ namespace cvo{
     
     // distance = frobenius_norm(logm(trans))
     float d = temp_transform.log().norm();
+    
+    return d;
+  }
+
+  inline float cvo::dist_se3(const Eigen::Matrix4f& tf){
+
+    // distance = frobenius_norm(logm(trans))
+    float d = tf.log().norm();
     
     return d;
   }
@@ -752,7 +763,12 @@ namespace cvo{
     iter = MAX_ITER;
 
     auto start = chrono::system_clock::now();
-
+    
+    // std::ofstream ell_file("ell_history.txt");
+    // std::ofstream dist_change_file("dist_change_history.txt");
+    // std::ofstream transform_file("transformation_history.txt");
+    // std::ofstream inner_product_file("inner_product.txt");
+    
     chrono::duration<double> t_transform_pcd = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_flow = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_step = chrono::duration<double>::zero();
@@ -829,7 +845,23 @@ namespace cvo{
       if(k%(int)ell_reduced_2==0){
         // std::cout<<"k: "<<k<<", r2: "<<ell_reduced_2<<", "<<k%(int)ell_reduced_2<<std::endl;
           ell = ell_reduced_1*ell;
+          // ell = ell_reduced_1*exp(prev_dist/ell_reduced_3);
       }
+    }
+    if (is_logging) {
+      Eigen::Matrix4f Tmat = transform.matrix();
+      transform_file << Tmat(0,0) <<" "<< Tmat(0,1) <<" "<< Tmat(0,2) <<" "<< Tmat(0,3)
+                  <<" "<< Tmat(1,0)<<" "<< Tmat(1,1) <<" "<< Tmat(1,2) <<" "<< Tmat(1,3)
+                  <<" "<< Tmat(2,0) <<" "<<  Tmat(2,1) <<" "<<  Tmat(2,2)<<" "<<  Tmat(2,3) <<"\n"<< std::flush;
+      transform_file<<std::flush;
+    }
+    if (is_logging) {
+        ell_file << ell<<"\n";
+        ell_file <<std::flush;
+        dist_change_file << dist_se3(dR,dT)<<"\n";
+        dist_change_file<<std::flush;
+        inner_product_file<<A.sum()<<"\n";
+        inner_product_file<<std::flush;
     }
 
       // std::cout<<"iter: "<<k<<std::endl;
@@ -846,13 +878,20 @@ namespace cvo{
 
       // std::cout<<dist_se3(dR,dT)<<std::endl;
     }
-
+    if (is_logging) {
+      ell_file.close();
+      dist_change_file.close();
+      transform_file.close();
+      inner_product_file.close();
+    }
     std::cout<<"cvo # of iterations is "<<iter<<std::endl;
     std::cout<<"t_transform_pcd is "<<t_transform_pcd.count()<<"\n";
     std::cout<<"t_compute_flow is "<<t_compute_flow.count()<<"\n";
     std::cout<<"t_compute_step is "<<t_compute_step.count()<<"\n"<<std::flush;
     std::cout<<" final ell is "<<ell<<std::endl;
     prev_transform = transform.matrix();
+    prev_dist = dist_se3(prev_transform.matrix());
+    std::cout<<"this dist: "<<prev_dist<<std::endl;
     // accum_tf.matrix() = transform.matrix().inverse() * accum_tf.matrix();
     accum_tf = accum_tf * transform.matrix();
     accum_tf_vis = accum_tf_vis * transform.matrix();   // accumilate tf for visualization
@@ -905,6 +944,7 @@ namespace cvo{
     // std::cout<<"init cvo: \n"<<transform.matrix()<<std::endl;
     if (is_using_init_guess) {
       transform = init_guess_transform;
+      // transform = Eigen::Affine3f::Identity();
       R = transform.linear();
       T = transform.translation();
     }
@@ -921,6 +961,9 @@ namespace cvo{
     }
 
     ell = ell_init;
+    // ell = prev_dist * ell_init_ratio;
+    // std::cout<<"prev_dist: "<<prev_dist<<std::endl;
+    // std::cout<<"init ell: "<<ell<<std::endl;
     // dl = 0;
     // ell_max = ell_max_fixed;
     A_trip_concur.reserve(num_moving*20);
