@@ -102,10 +102,12 @@ include_directories(
 message("CXX_FLAGS are ${CMAKE_CXX_FLAGS}")
 
 # compile main library.
-add_library(elas ${ELAS_LIB_SOURCE})
+add_library(elas SHARED ${ELAS_LIB_SOURCE})
 
-add_library(cvo ${CVO_LIB_SOURCE})
+add_library(cvo SHARED ${CVO_LIB_SOURCE})
 target_link_libraries(cvo elas ${Boost_LIBRARIES} ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARIES}  ${OpenCV_LIBS} ${TBB_LIBRARIES} gtsam  gtsam_unstable )
+set_target_properties(cvo PROPERTIES LIBRARY_OUTPUT_NAME outdoor_cvo_cpu)
+
 
 add_library(acvo ${CVO_LIB_SOURCE})
 target_link_libraries(acvo elas ${Boost_LIBRARIES} ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARIES}  ${OpenCV_LIBS} ${TBB_LIBRARIES} gtsam  gtsam_unstable )
@@ -129,3 +131,21 @@ target_link_libraries(cvo_map2map cvo boost_system)
 
 add_executable(cvo_local_mapping ${PROJECT_SOURCE_DIR}/src/main_local_mapping.cpp )
 target_link_libraries(cvo_local_mapping cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES}  )
+
+
+export(PACKAGE cvo)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
+set_target_properties(cvo PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+get_property(cvo_include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
+get_property(cvo_library_dirs TARGET cvo PROPERTY LIBRARY_OUTPUT_DIRECTORY)
+get_property(cvo_libraries TARGET cvo PROPERTY LIBRARY_OUTPUT_NAME)
+
+message("cvo_include_dirs: " ${cvo_include_dirs})
+message("cvo_library_dirs: " ${cvo_library_dirs})
+message("cvo_libraries: " ${cvo_libraries})
+
+# Configure config file for local build tree
+configure_file(${PROJECT_SOURCE_DIR}/cmake/cvoConfig.cmake.in
+  "${PROJECT_BINARY_DIR}/cvoConfig.cmake" @ONLY)
+
+message("PROJECT_BINARY_DIR: " ${PROJECT_BINARY_DIR})

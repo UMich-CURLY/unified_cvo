@@ -222,6 +222,7 @@ namespace cvo{
      *        return 0 if sucess. return -1 if fails
      */
     int align();
+    int align_one_iter();
 
     // callable after each align
     float inner_product() const ;
@@ -237,8 +238,9 @@ namespace cvo{
     Eigen::Affine3f get_transform() {return transform;}
     Eigen::Affine3f get_prev_transform() {return prev_transform;}
     Eigen::Affine3f get_accum_transform() {return accum_tf;}
-
-
+    const CvoPointCloud* get_fixed_pcd() {return ptr_fixed_pcd;};
+    const CvoPointCloud* get_moving_pcd() {return ptr_moving_pcd;};
+    Eigen::SparseMatrix<float,Eigen::RowMajor> get_A_matrix() {return A;};
     
     //void run_cvo(const int dataset_seq,const cv::Mat& RGB_img,const cv::Mat& dep_img, MatrixXf_row semantic_label);
   };
