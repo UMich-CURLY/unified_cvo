@@ -223,6 +223,7 @@ namespace cvo{
      */
     int align();
     int align_one_iter();
+    void pcd_destructor();
 
     // callable after each align
     float inner_product() const ;

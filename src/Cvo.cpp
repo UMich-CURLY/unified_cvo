@@ -909,7 +909,7 @@ namespace cvo{
  
   int cvo::align_one_iter(){
 
-    std::cout<<"-------------------- iteration: "<<iter<<"--------------"<<std::endl;
+    // std::cout<<"-------------------- iteration: "<<iter<<"--------------"<<std::endl;
     update_tf();
 
     // apply transform to the point cloud
@@ -962,10 +962,12 @@ namespace cvo{
 
     update_tf();
 
+    return 0;
+  }
+
+  void cvo::pcd_destructor(){
     delete cloud_x;
     delete cloud_y;
-
-    return 0;
   }
 
   void cvo::set_pcd(const CvoPointCloud& source_points,
