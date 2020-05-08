@@ -109,6 +109,19 @@ namespace cvo{
     typedef Eigen::Triplet<float> Trip_t;
     tbb::concurrent_vector<Trip_t> A_trip_concur;
 
+    // variables for indicator
+    std::queue<float> indicator_start_queue;
+    std::queue<float> indicator_end_queue;
+    float indicator_start_sum;
+    float indicator_end_sum;
+    float last_indicator;
+    bool decrease;
+    bool last_decrease;
+    bool increase;
+    bool skip_iteration;
+    float indicator;
+
+
 
   public:
     
@@ -194,6 +207,11 @@ namespace cvo{
      * 
      **/
     // void convert_to_pcl_cloud(const CvoPointCloud& cvo_cloud, pcl::PointCloud<PointSegmentedDistribution> pcl_cloud);
+
+    /**
+     * @brief compute indicator and change lenthscale if needed
+     */
+    void compute_indicator();
 
   public:
     // public funcitons

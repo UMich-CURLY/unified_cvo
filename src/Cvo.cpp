@@ -61,7 +61,16 @@ namespace cvo{
     prev_transform(Eigen::Affine3f::Identity()),
     accum_tf(Eigen::Affine3f::Identity()),
     accum_tf_vis(Eigen::Affine3f::Identity()),
-    debug_print(false)
+    debug_print(false),
+    //indicator
+    indicator_start_sum(0.0),
+    indicator_end_sum(0.0),
+    last_indicator(0.0),
+    decrease(false),
+    last_decrease(false),
+    increase(false),
+    skip_iteration(false),
+    indicator(0.0)
   {
     FILE* ptr = fopen(param_file.c_str(), "r" ); 
     if (ptr!=NULL) 
@@ -140,7 +149,16 @@ namespace cvo{
     prev_transform(Eigen::Affine3f::Identity()),
     accum_tf(Eigen::Affine3f::Identity()),
     accum_tf_vis(Eigen::Affine3f::Identity()),
-    debug_print(false)
+    debug_print(false),
+    //indicator
+    indicator_start_sum(0.0),
+    indicator_end_sum(0.0),
+    last_indicator(0.0),
+    decrease(false),
+    last_decrease(false),
+    increase(false),
+    skip_iteration(false),
+    indicator(0.0)
   {
     FILE* ptr = fopen("cvo_params.txt", "r" ); 
     if (ptr!=NULL) 
@@ -912,11 +930,26 @@ namespace cvo{
     // std::cout<<"-------------------- iteration: "<<iter<<"--------------"<<std::endl;
     update_tf();
 
-    // apply transform to the point cloud
-    transform_pcd();
+    
+    if(skip_iteration){
+      // we skipped the iteration last time, so now we don't transform the point cloud
+      skip_iteration = false;
+    }
+    else{
+      // apply transform to the point cloud
+      transform_pcd();
+    }
       
     // compute omega and v
     compute_flow();
+
+    // compute indicator
+    compute_indicator();
+
+    if(skip_iteration){
+      // indicator drop, rerun iteration
+      return 2;
+    }
 
     // compute step size for integrating the flow
     compute_step_size();
@@ -1075,6 +1108,102 @@ namespace cvo{
     //std::cout<<"num of non-zeros in A: "<<A_mat.nonZeros()<<std::endl;
     // return A_mat.sum()/A_mat.nonZeros();
     return A_mat.sum()/fixed_positions.size()*1e6/moving_positions.size() ;
+  }
+
+  void cvo::compute_indicator(){
+    // compute indicator and change lenthscale if needed
+    indicator = (double)A.nonZeros() / (double) A.rows() / (double) A.cols();
+    // decrease or increase lengthscale using indicator
+
+    // start queue is not full yet
+    if(indicator_start_queue.size() < 5){
+      // add current indicator to the start queue
+      indicator_start_queue.push(indicator);
+      // compute sum
+      indicator_start_sum += indicator;
+    }
+    // start queue is full, start building the end queue
+    else{
+      if(indicator_end_queue.size() < 5){
+        // add current indicator to the end queue and compute sum
+        indicator_end_queue.push(indicator);
+        indicator_end_sum += indicator;
+      }
+      else{
+        // check if criteria for decreasing legnthscale is satisfied
+        if(indicator_end_sum / indicator_start_sum >= 1.0){
+          decrease = true;
+          std::queue<float> empty;
+          std::swap( indicator_start_queue, empty );
+          std::queue<float> empty2;
+          std::swap( indicator_end_queue, empty2 );
+          indicator_start_sum = 0;
+          indicator_end_sum = 0;
+        }
+        // check if criteria for increasing legnthscale is satisfied
+        else if(indicator_end_sum / indicator_start_sum < 0.7){
+          increase = true;
+          std::queue<float> empty;
+          std::swap( indicator_start_queue, empty );
+          std::queue<float> empty2;
+          std::swap( indicator_end_queue, empty2 );
+          indicator_start_sum = 0;
+          indicator_end_sum = 0;
+        }
+        else{
+          // move the first indicator in the end queue to the start queue 
+          indicator_end_sum -= indicator_end_queue.front();
+          indicator_start_sum += indicator_end_queue.front();
+          indicator_start_queue.push(indicator_end_queue.front());
+          indicator_end_queue.pop();
+          indicator_start_sum -= indicator_start_queue.front();
+          indicator_start_queue.pop();
+          // add current indicator to the end queue and compute sum
+          indicator_end_queue.push(indicator);
+          indicator_end_sum += indicator;
+        }
+      }
+    }
+
+    // // detect indicator drop and skip iteration
+    // if((last_indicator - indicator) / last_indicator > 0.2){
+    //   // suddenly drop
+    //   if(last_decrease){
+    //     // drop because of decreasing lenthscale, keep track of the last indicator
+    //     last_indicator = indicator;
+    //   }
+    //   else{
+    //     // increase lengthscale and skip iteration
+    //     if(ell < ell_max){
+    //       increase = true;
+    //       skip_iteration = true;
+    //     }
+    //     else{
+    //       skip_iteration = false;
+    //     }
+    //   }
+    // }
+    // else{
+    //   // nothing bad happened, keep track of the last indicator
+    //   last_indicator = indicator;
+    // }
+
+    // DEBUG
+    // std::cout << "indicator=" << indicator << ", start size=" << indicator_start_queue.size() << ", sum=" << indicator_start_sum \
+    // << ", end size=" << indicator_end_queue.size() << ", sum=" << indicator_end_sum << std::endl;
+    
+    if(decrease && ell > ell_min){
+      ell = ell * 0.9;
+      last_decrease = true;
+      decrease = false;
+    }
+    else if(~decrease && last_decrease){
+      last_decrease = false;
+    }
+    if(increase && ell < ell_max){
+      ell = ell * 1.1;
+      increase = false;
+    }
   }
 
 }
