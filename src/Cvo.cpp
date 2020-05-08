@@ -907,7 +907,7 @@ namespace cvo{
 
   }
  
-  int cvo::align_one_iter(){
+  int cvo::align_one_iter(int cur_iter){
 
     // std::cout<<"-------------------- iteration: "<<iter<<"--------------"<<std::endl;
     update_tf();
@@ -954,11 +954,13 @@ namespace cvo{
     }
 
     // reduce ell
-    ell = ell_reduced_1*ell;
+    if(cur_iter>ell_reduced_3){
+      if(cur_iter%(int)ell_reduced_2==0){
+          ell = ell_reduced_1*ell;
+      }
+    }
 
-    prev_transform = transform.matrix();
-    prev_dist = dist_se3(prev_transform.matrix());
-    accum_tf = accum_tf * transform.matrix();
+    prev_iter_transform = transform.matrix();
 
     update_tf();
 

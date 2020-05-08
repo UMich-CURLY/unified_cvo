@@ -120,6 +120,7 @@ namespace cvo{
     int iter;           // final iteration for display
     Eigen::Affine3f transform;  // transformation matrix
     Eigen::Affine3f prev_transform;
+    Eigen::Affine3f prev_iter_transform;
     Eigen::Affine3f accum_tf;       // accumulated transformation matrix for trajectory
     Eigen::Affine3f accum_tf_vis;
 
@@ -222,7 +223,7 @@ namespace cvo{
      *        return 0 if sucess. return -1 if fails
      */
     int align();
-    int align_one_iter();
+    int align_one_iter(int cur_iter);
     void pcd_destructor();
 
     // callable after each align
@@ -238,6 +239,7 @@ namespace cvo{
 
     Eigen::Affine3f get_transform() {return transform;}
     Eigen::Affine3f get_prev_transform() {return prev_transform;}
+    Eigen::Affine3f get_prev_iter_transform() {return prev_iter_transform;}
     Eigen::Affine3f get_accum_transform() {return accum_tf;}
     const CvoPointCloud* get_fixed_pcd() {return ptr_fixed_pcd;};
     const CvoPointCloud* get_moving_pcd() {return ptr_moving_pcd;};
