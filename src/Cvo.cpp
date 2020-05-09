@@ -987,11 +987,11 @@ namespace cvo{
     }
 
     // reduce ell
-    if(cur_iter>ell_reduced_3){
-      if(cur_iter%(int)ell_reduced_2==0){
-          ell = ell_reduced_1*ell;
-      }
-    }
+    // if(cur_iter>ell_reduced_3){
+    //   if(cur_iter%(int)ell_reduced_2==0){
+    //       ell = ell_reduced_1*ell;
+    //   }
+    // }
 
     prev_iter_transform = transform.matrix();
 
@@ -1116,7 +1116,7 @@ namespace cvo{
     // decrease or increase lengthscale using indicator
 
     // start queue is not full yet
-    if(indicator_start_queue.size() < 5){
+    if(indicator_start_queue.size() < ell_reduced_2){
       // add current indicator to the start queue
       indicator_start_queue.push(indicator);
       // compute sum
@@ -1124,7 +1124,7 @@ namespace cvo{
     }
     // start queue is full, start building the end queue
     else{
-      if(indicator_end_queue.size() < 5){
+      if(indicator_end_queue.size() < ell_reduced_2){
         // add current indicator to the end queue and compute sum
         indicator_end_queue.push(indicator);
         indicator_end_sum += indicator;
@@ -1165,7 +1165,7 @@ namespace cvo{
       }
     }
 
-    // // detect indicator drop and skip iteration
+    // detect indicator drop and skip iteration
     // if((last_indicator - indicator) / last_indicator > 0.2){
     //   // suddenly drop
     //   if(last_decrease){
@@ -1189,11 +1189,11 @@ namespace cvo{
     // }
 
     // DEBUG
-    // std::cout << "indicator=" << indicator << ", start size=" << indicator_start_queue.size() << ", sum=" << indicator_start_sum \
-    // << ", end size=" << indicator_end_queue.size() << ", sum=" << indicator_end_sum << std::endl;
+    std::cout << "indicator=" << indicator << ", start size=" << indicator_start_queue.size() << ", sum=" << indicator_start_sum \
+    << ", end size=" << indicator_end_queue.size() << ", sum=" << indicator_end_sum << std::endl;
     
     if(decrease && ell > ell_min){
-      ell = ell * 0.9;
+      ell = ell * ell_reduced_1;
       last_decrease = true;
       decrease = false;
     }
@@ -1201,7 +1201,7 @@ namespace cvo{
       last_decrease = false;
     }
     if(increase && ell < ell_max){
-      ell = ell * 1.1;
+      ell = ell * ell_reduced_3;
       increase = false;
     }
   }
