@@ -1201,6 +1201,7 @@ namespace cvo{
         }
       }
     }
+    
     // detect indicator drop and skip iteration
     // if((last_indicator - indicator) / last_indicator > 0.2){
     //   // suddenly drop
@@ -1223,6 +1224,7 @@ namespace cvo{
     //   // nothing bad happened, keep track of the last indicator
     //   last_indicator = indicator;
     // }
+
     if(decrease && ell > ell_min){
       ell = ell * ell_reduced_1;
       last_decrease = true;
