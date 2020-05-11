@@ -52,7 +52,7 @@ namespace cvo{
 
   namespace cukdtree = perl_registration;
 
-  static bool is_logging = false;
+  static bool is_logging = true;
   static bool debug_print = false;
   
   CvoPointCloudGPU::SharedPtr CvoPointCloud_to_gpu(const CvoPointCloud & cvo_cloud ) {
@@ -1522,8 +1522,10 @@ namespace cvo{
         v1 << v(0)<<"\n";
         v2 << v(1)<<"\n";
         v3 << v(2)<<"\n";*/
-        float ip_curr = (double)cvo_state.A_host.nonzero_sum / (double)source_points.num_points() / (double) target_points.num_points();
-        inner_product_file<<ip_curr<<std::flush;
+        //float ip_curr = A_sum(&cvo_state.A_host) / cvo_state.A_host.nonzero_sum;
+        float ip_curr = this->inner_product(source_points, target_points, transform);
+        //float ip_curr = (double)cvo_state.A_host.nonzero_sum / (double)source_points.num_points() / (double) target_points.num_points();
+        inner_product_file<<ip_curr<<"\n"<<std::flush;
         //inner_product_file<<this->inner_product(source_points, target_points, transform)<<"\n"<<std::flush;
       }
      
@@ -1547,7 +1549,7 @@ namespace cvo{
       // if (k > 499 && cvo_state.ell > params.ell_min) {
         //if (dist_this_iter < 0.005){
       if (   k % 30 == 0 && k > 30 && cvo_state.ell * 0.9 > params.ell_min) 
-          cvo_state.ell = cvo_state.ell * 0.75;
+          cvo_state.ell = cvo_state.ell * 0.8;
         // if (cvo_state.ell < params.ell_min)
         //  cvo_state.ell = params.ell_min;
 	//cvo_state.ell = 0.005;//params.ell_min;
@@ -1616,7 +1618,8 @@ namespace cvo{
     bool debug_print = false;
     A_trip_concur_.clear();
     const float s2= params.sigma*params.sigma;
-    const float l = params.ell_init;
+     const float l = params.ell_min;
+    // const float l = params.ell_init;
 
     // convert k threshold to d2 threshold (so that we only need to calculate k when needed)
     const float d2_thres = -2.0*l*l*log(params.sp_thres/s2);
@@ -1718,8 +1721,9 @@ namespace cvo{
     A_mat.setZero();
     se_kernel_init_ell_cpu(&source_points, &target_points, &fixed_positions, &moving_positions, A_mat, A_trip_concur_ , params );
     //std::cout<<"num of non-zeros in A: "<<A_mat.nonZeros()<<std::endl;
-    // return A_mat.sum()/A_mat.nonZeros();
-    return A_mat.sum()/fixed_positions.size()*1e6/moving_positions.size() ;
+    //return float(A_mat.sum())/float(A_mat.nonZeros());
+    //return A_mat.sum()/fixed_positions.size()*1e8/moving_positions.size() ;
+    return float(A_mat.nonZeros()) / float(fixed_positions.size()) / float(moving_positions.size() ) * 10000 ;
   }
 
 

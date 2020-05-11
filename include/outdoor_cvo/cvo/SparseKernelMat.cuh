@@ -54,6 +54,14 @@ namespace cvo {
     
   }
 
+  inline float A_sum(SparseKernelMat * A_host) {
+     thrust::device_ptr<float> A_ptr = thrust::device_pointer_cast(A_host->mat);
+     thrust::device_vector<float> v(A_ptr, A_ptr + A_host->rows * A_host->cols );
+     return thrust::reduce(v.begin(), v.end());
+    
+    
+  }
+
   inline void clear_SparseKernelMat(SparseKernelMat * A_host) {
     //SparseKernelMat A;
     //cudaMemcpy(&A, A_gpu, sizeof(SparseKernelMat), cudaMemcpyDeviceToHost);

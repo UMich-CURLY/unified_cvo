@@ -1,6 +1,6 @@
 %YAML:1.0
 ---
-ell_init: 0.65
+ell_init: 0.45
 ell_min: 0.05
 ell_max: 0.9
 dl: 0.0
