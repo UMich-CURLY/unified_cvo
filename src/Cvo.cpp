@@ -70,7 +70,12 @@ namespace cvo{
     last_decrease(false),
     increase(false),
     skip_iteration(false),
-    indicator(0.0)
+    indicator(0.0),
+    ell_file("ell_history.txt"),
+    dist_change_file("dist_change_history.txt"),
+    transform_file("transformation_history.txt"),
+    inner_product_file("inner_product.txt"),
+    effective_points_file("effective_points.txt")
   {
     FILE* ptr = fopen(param_file.c_str(), "r" ); 
     if (ptr!=NULL) 
@@ -158,7 +163,12 @@ namespace cvo{
     last_decrease(false),
     increase(false),
     skip_iteration(false),
-    indicator(0.0)
+    indicator(0.0),
+    ell_file("ell_history.txt"),
+    dist_change_file("dist_change_history.txt"),
+    transform_file("transformation_history.txt"),
+    inner_product_file("inner_product.txt"),
+    effective_points_file("effective_points.txt")
   {
     FILE* ptr = fopen("cvo_params.txt", "r" ); 
     if (ptr!=NULL) 
@@ -207,6 +217,11 @@ namespace cvo{
       if (init_guess_file)
         fclose(init_guess_file);
     }
+    ell_file.close();
+    dist_change_file.close();
+    transform_file.close();
+    inner_product_file.close();
+    effective_points_file.close();
   }
 
   inline Eigen::VectorXcf cvo::poly_solver(const Eigen::VectorXf& coef){
@@ -782,11 +797,6 @@ namespace cvo{
 
     auto start = chrono::system_clock::now();
     
-    // std::ofstream ell_file("ell_history.txt");
-    // std::ofstream dist_change_file("dist_change_history.txt");
-    // std::ofstream transform_file("transformation_history.txt");
-    // std::ofstream inner_product_file("inner_product.txt");
-    
     chrono::duration<double> t_transform_pcd = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_flow = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_step = chrono::duration<double>::zero();
@@ -795,6 +805,13 @@ namespace cvo{
       if(debug_print) std::cout<<"-------------------- iteration: "<<k<<"--------------"<<std::endl;
 
       update_tf();
+
+      auto Tmat_affine = get_transform();
+      auto Tmat = Tmat_affine.matrix();
+      transform_file << Tmat(0,0) <<" "<< Tmat(0,1) <<" "<< Tmat(0,2) <<" "<< Tmat(0,3)
+                      <<" "<< Tmat(1,0)<<" "<< Tmat(1,1) <<" "<< Tmat(1,2) <<" "<< Tmat(1,3)
+                      <<" "<< Tmat(2,0) <<" "<<  Tmat(2,1) <<" "<<  Tmat(2,2)<<" "<<  Tmat(2,3) <<"\n"<< std::flush;
+
 
       start = chrono::system_clock::now();
       // apply transform to the point cloud
@@ -839,6 +856,13 @@ namespace cvo{
       T = R * dT + T;
       R = R * dR;
 
+      float dist_this_iter = dist_se3(dR.cast<float>(),dT.cast<float>());
+      ell_file << ell<<"\n"<<std::flush;
+      dist_change_file << dist_this_iter<<"\n"<<std::flush;
+      indicator = (double)A.nonZeros() / (double) A.rows() / (double) A.cols();
+      effective_points_file << indicator << "\n" << std::flush;
+      inner_product_file << A.sum() << "\n" << std::flush;
+
       // if the se3 distance is smaller than eps2, break
       if (debug_print)std::cout<<"dist: "<<dist_se3(dR, dT)<<std::endl;
       if(dist_se3(dR,dT)<eps_2){
@@ -846,6 +870,8 @@ namespace cvo{
         std::cout<<"dist: "<<dist_se3(dR,dT)<<std::endl;
         break;
       }
+
+      compute_indicator();
 
       // ell = ell + dl_step*dl;
       // if(ell>=ell_max){
@@ -859,11 +885,11 @@ namespace cvo{
     //   ell = (k>9)? ell_reduced_2:ell;	
     //   ell = (k>19)? ell_reduced_3:ell;
     // ell = 1/(1+k*ell_reduced_1)*ell;
-    if(k>ell_reduced_3){
-      if(k%(int)ell_reduced_2==0){
-          ell = ell_reduced_1*ell;
-      }
-    }
+    // if(k>ell_reduced_3){
+    //   if(k%(int)ell_reduced_2==0){
+    //       ell = ell_reduced_1*ell;
+    //   }
+    // }
     if (is_logging) {
       // Eigen::Matrix4f Tmat = transform.matrix();
       // transform_file << Tmat(0,0) <<" "<< Tmat(0,1) <<" "<< Tmat(0,2) <<" "<< Tmat(0,3)
@@ -929,6 +955,11 @@ namespace cvo{
 
     // std::cout<<"-------------------- iteration: "<<iter<<"--------------"<<std::endl;
     update_tf();
+    auto Tmat_affine = get_transform();
+    auto Tmat = Tmat_affine.matrix();
+    transform_file << Tmat(0,0) <<" "<< Tmat(0,1) <<" "<< Tmat(0,2) <<" "<< Tmat(0,3)
+                <<" "<< Tmat(1,0)<<" "<< Tmat(1,1) <<" "<< Tmat(1,2) <<" "<< Tmat(1,3)
+                <<" "<< Tmat(2,0) <<" "<<  Tmat(2,1) <<" "<<  Tmat(2,2)<<" "<<  Tmat(2,3) <<"\n"<< std::flush;
 
     
     if(skip_iteration){
@@ -942,14 +973,6 @@ namespace cvo{
       
     // compute omega and v
     compute_flow();
-
-    // compute indicator
-    compute_indicator();
-
-    if(skip_iteration){
-      // indicator drop, rerun iteration
-      return 2;
-    }
 
     // compute step size for integrating the flow
     compute_step_size();
@@ -977,6 +1000,12 @@ namespace cvo{
     T = R * dT + T;
     R = R * dR;
 
+    float dist_this_iter = dist_se3(dR.cast<float>(),dT.cast<float>());
+    ell_file << ell<<"\n"<<std::flush;
+    dist_change_file << dist_this_iter<<"\n"<<std::flush;
+    indicator = (double)A.nonZeros() / (double) A.rows() / (double) A.cols();
+    effective_points_file << indicator << "\n" << std::flush;
+
     // if the se3 distance is smaller than eps2, break
     if (debug_print)std::cout<<"dist: "<<dist_se3(dR, dT)<<std::endl;
     if(dist_se3(dR,dT)<eps_2){
@@ -986,12 +1015,20 @@ namespace cvo{
       return 1;
     }
 
-    // reduce ell
-    if(cur_iter>ell_reduced_3){
-      if(cur_iter%(int)ell_reduced_2==0){
-          ell = ell_reduced_1*ell;
-      }
+    // compute indicator
+    compute_indicator();
+
+    if(skip_iteration){
+      // indicator drop, rerun iteration
+      return 2;
     }
+
+    // reduce ell
+    // if(cur_iter>ell_reduced_3){
+    //   if(cur_iter%(int)ell_reduced_2==0){
+    //       ell = ell_reduced_1*ell;
+    //   }
+    // }
 
     prev_iter_transform = transform.matrix();
 
@@ -1112,11 +1149,11 @@ namespace cvo{
 
   void cvo::compute_indicator(){
     // compute indicator and change lenthscale if needed
-    indicator = (double)A.nonZeros() / (double) A.rows() / (double) A.cols();
+    // indicator = (double)A.nonZeros() / (double) A.rows() / (double) A.cols();
+    indicator = A.sum();
     // decrease or increase lengthscale using indicator
-
     // start queue is not full yet
-    if(indicator_start_queue.size() < 5){
+    if(indicator_start_queue.size() < ell_reduced_2){
       // add current indicator to the start queue
       indicator_start_queue.push(indicator);
       // compute sum
@@ -1124,14 +1161,14 @@ namespace cvo{
     }
     // start queue is full, start building the end queue
     else{
-      if(indicator_end_queue.size() < 5){
+      if(indicator_end_queue.size() < ell_reduced_2){
         // add current indicator to the end queue and compute sum
         indicator_end_queue.push(indicator);
         indicator_end_sum += indicator;
       }
       else{
         // check if criteria for decreasing legnthscale is satisfied
-        if(indicator_end_sum / indicator_start_sum >= 1.0){
+        if(abs(1-indicator_end_sum/indicator_start_sum) < ell_reduced_3){
           decrease = true;
           std::queue<float> empty;
           std::swap( indicator_start_queue, empty );
@@ -1151,7 +1188,7 @@ namespace cvo{
           indicator_end_sum = 0;
         }
         else{
-          // move the first indicator in the end queue to the start queue 
+          // move the first indicator in the end queue to the start queue
           indicator_end_sum -= indicator_end_queue.front();
           indicator_start_sum += indicator_end_queue.front();
           indicator_start_queue.push(indicator_end_queue.front());
@@ -1164,8 +1201,7 @@ namespace cvo{
         }
       }
     }
-
-    // // detect indicator drop and skip iteration
+    // detect indicator drop and skip iteration
     // if((last_indicator - indicator) / last_indicator > 0.2){
     //   // suddenly drop
     //   if(last_decrease){
@@ -1187,13 +1223,8 @@ namespace cvo{
     //   // nothing bad happened, keep track of the last indicator
     //   last_indicator = indicator;
     // }
-
-    // DEBUG
-    // std::cout << "indicator=" << indicator << ", start size=" << indicator_start_queue.size() << ", sum=" << indicator_start_sum \
-    // << ", end size=" << indicator_end_queue.size() << ", sum=" << indicator_end_sum << std::endl;
-    
     if(decrease && ell > ell_min){
-      ell = ell * 0.9;
+      ell = ell * ell_reduced_1;
       last_decrease = true;
       decrease = false;
     }
@@ -1201,9 +1232,13 @@ namespace cvo{
       last_decrease = false;
     }
     if(increase && ell < ell_max){
-      ell = ell * 1.1;
+      ell = ell * 1/ell_reduced_1;
       increase = false;
     }
+    // DEBUG
+    // std::cout << "indicator=" << indicator << ", start size=" << indicator_start_queue.size() << ", sum=" << indicator_start_sum \
+    // << ", end size=" << indicator_end_queue.size() << ", sum=" << indicator_end_sum \
+    // <<", 1-ratio: "<< abs(1-indicator_end_sum/indicator_start_sum)<<", ell: "<<ell <<std::endl;
   }
 
 }
