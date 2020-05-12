@@ -1350,7 +1350,7 @@ namespace cvo{
       // check if criteria for decreasing legnthscale is satisfied
       if(indicator_end_sum / indicator_start_sum > 0.99
          &&
-         indicator_end_sum / indicator_start_sum  < 1.05){
+         indicator_end_sum / indicator_start_sum  < 1.1){
         decrease = true;
         std::queue<float> empty;
         std::swap( indicator_start_queue, empty );
