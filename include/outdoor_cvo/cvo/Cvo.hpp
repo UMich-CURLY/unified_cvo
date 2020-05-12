@@ -121,6 +121,11 @@ namespace cvo{
     bool skip_iteration;
     float indicator;
 
+    std::ofstream ell_file;
+    std::ofstream dist_change_file;
+    std::ofstream transform_file;
+    std::ofstream inner_product_file;
+    std::ofstream effective_points_file;
 
 
   public:
