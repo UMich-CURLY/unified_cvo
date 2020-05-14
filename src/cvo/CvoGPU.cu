@@ -160,6 +160,11 @@ namespace cvo{
     
   }
 
+  float compute_ranged_lengthscale(float curr_dist_square, float curr_ell, float min_ell, float max_ell ) {
+    
+    
+  }
+
   CvoGPU::CvoGPU(const std::string & param_file) {
     // read_CvoParams(param_file.c_str(), &params);
     read_CvoParams_yaml(param_file.c_str(), &params);
@@ -1327,11 +1332,12 @@ namespace cvo{
                                               float & indicator_start_sum,
                                               float & indicator_end_sum,
                                               const float indicator,
-                                              const int queue_len
+                                              const CvoParams & params
                                               ) {
     // decrease or increase lengthscale using indicator
     // start queue is not full yet
     bool decrease = false;
+    int queue_len = params.indicator_window_size;
     if(indicator_start_queue.size() < queue_len){
       // add current indicator to the start queue
       indicator_start_queue.push(indicator);
@@ -1342,21 +1348,27 @@ namespace cvo{
       indicator_end_queue.push(indicator);
       indicator_end_sum += indicator;
     }
+
+    //std::cout<<"ratio is "<<indicator_end_sum / indicator_start_sum<<std::endl;
     //static std::ofstream ratio("ip_ratio.txt",std::ofstream::out | std::ofstream::app );
     // start queue is full, start building the end queue
     if (indicator_start_queue.size() >= queue_len && indicator_end_queue.size() >= queue_len){
       // ratio<< indicator_end_sum / indicator_start_sum<<"\n"<<std::flush;
       //std::cout<<"ip ratio is "<<indicator_end_sum / indicator_start_sum<<" from "<<indicator_end_sum<<" over "<<indicator_start_sum<<std::endl;
       // check if criteria for decreasing legnthscale is satisfied
-      if(indicator_end_sum / indicator_start_sum > 0.99
+      if(indicator_end_sum / indicator_start_sum > 1 - params.indicator_stable_threshold
          &&
-         indicator_end_sum / indicator_start_sum  < 1.1){
+         indicator_end_sum / indicator_start_sum  < 1 + params.indicator_stable_threshold){
         decrease = true;
         std::queue<float> empty;
-        std::swap( indicator_start_queue, empty );
+        std::swap( indicator_start_queue, indicator_end_queue );
+
+        std::swap( indicator_end_queue, empty );
+        
         std::queue<float> empty2;
-        std::swap( indicator_end_queue, empty2 );
+        std::swap( indicator_start_queue, empty2 );
         indicator_start_sum = 0;
+        //indicator_start_sum = indicator_end_sum;
         indicator_end_sum = 0;
       }
       /*
@@ -1371,7 +1383,7 @@ namespace cvo{
       indicator_end_sum = 0;
       }*/
       else {
-      // move the first indicator in the end queue to the start queue 
+        //move the first indicator in the end queue to the start queue 
         indicator_end_sum -= indicator_end_queue.front();
         indicator_start_sum += indicator_end_queue.front();
         indicator_start_queue.push(indicator_end_queue.front());
@@ -1381,7 +1393,7 @@ namespace cvo{
         // add current indicator to the end queue and compute sum
         indicator_end_queue.push(indicator);
         indicator_end_sum += indicator;
-      }
+       }
     } //else {
       //ratio << 1.0 <<"\n"<< std::flush;
       
@@ -1575,14 +1587,15 @@ namespace cvo{
         std::cout<<"dist: "<<dist_this_iter <<std::endl<<"check bounds....\n";
       }
 
-      //float ip_curr = (float)((double)cvo_state.A_host.nonzero_sum / (double)source_points.num_points() / (double) target_points.num_points());
-      float ip_curr = (float) this->inner_product(source_points, target_points, transform);
+
+      float ip_curr = (float)((double)cvo_state.A_host.nonzero_sum / (double)source_points.num_points() / (double) target_points.num_points());
+      //float ip_curr = (float) this->inner_product(source_points, target_points, transform);
       bool need_decay_ell = A_sparsity_indicator_ell_update( indicator_start_queue,
                                                              indicator_end_queue,
                                                              indicator_start_sum,
                                                              indicator_end_sum,
                                                              ip_curr,
-                                                             5);
+                                                             params);
       if (is_logging) {
         ell_file << cvo_state.ell<<"\n"<<std::flush;
         dist_change_file << dist_this_iter<<"\n"<<std::flush;
@@ -1599,8 +1612,8 @@ namespace cvo{
         break;
       }
 
-      if (k>30 && need_decay_ell  ) {
-        cvo_state.ell = cvo_state.ell * 0.75;
+      if (k>params.ell_decay_start && need_decay_ell  ) {
+        cvo_state.ell = cvo_state.ell * params.ell_decay_rate;
         if (cvo_state.ell < params.ell_min)
           cvo_state.ell = params.ell_min;
       }
@@ -1760,8 +1773,8 @@ namespace cvo{
     se_kernel_init_ell_cpu(&source_points, &target_points, &fixed_positions, &moving_positions, A_mat, A_trip_concur_ , params );
     //std::cout<<"num of non-zeros in A: "<<A_mat.nonZeros()<<std::endl;
     //return float(A_mat.sum())/float(A_mat.nonZeros());
-    //return A_mat.sum()/fixed_positions.size()*1e8/moving_positions.size() ;
-    return float(A_mat.nonZeros()) / float(fixed_positions.size()) / float(moving_positions.size() ) * 100 ;
+    return A_mat.sum()/fixed_positions.size()*1e5/moving_positions.size() ;
+    //return float(A_mat.nonZeros()) / float(fixed_positions.size()) / float(moving_positions.size() ) * 100 ;
   }
   
  

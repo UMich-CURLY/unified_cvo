@@ -52,7 +52,7 @@ for i in range(ell.size):
     
 
 iters = np.arange(ell.size)
-dist_line, = plt.plot(iters, dist, label="dist")
+#dist_line, = plt.plot(iters, dist, label="dist")
 ell_line, = plt.plot(iters,ell, label="ell", linestyle='dashed')
 ip_line, = plt.plot(iters, ip * 1e2, label='inner_product')
 rerr_line, = plt.plot(iters, r_err * 10, label="rotation error", linestyle="dotted")
@@ -65,6 +65,6 @@ terr_line, = plt.plot(iters, t_err, label="translation error", linestyle="dotted
 #v3_l, = plt.plot(iters, v3, label="v3")
 #plt.legend(handles=[ell_line, dist_line, step_line, rerr_line,terr_line ])
 #plt.legend(handles=[rerr_line,terr_line,w1_l, w2_l, w3_l, v1_l, v2_l, v3_l ])
-plt.legend(handles=[ell_line, ip_line,  rerr_line,terr_line, dist_line ])
+plt.legend(handles=[ell_line, ip_line,  rerr_line,terr_line])
 plt.show()
 
