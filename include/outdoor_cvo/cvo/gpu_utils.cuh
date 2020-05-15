@@ -13,6 +13,13 @@ namespace cvo {
       -(*v)[1], (*v)[0], 0;
   }
 
+  __device__
+  float compute_range_ell(float curr_ell, float curr_dist_to_sensor, float min_dist, float max_dist ) {
+    return ((curr_dist_to_sensor - min_dist) / (max_dist - min_dist) + 1.0)* curr_ell;
+    
+  }
+
+
 
   template<typename T>
   T * thrust_raw_arr(std::shared_ptr<thrust::device_vector<T>> v_thrust) {
