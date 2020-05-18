@@ -214,7 +214,9 @@ namespace cvo{
     int expected_points = target_num_points;
     double intensity_bound = 0.4;
     double depth_bound = 4.0;
+
     double distance_bound = 75.0;
+
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
@@ -246,6 +248,7 @@ namespace cvo{
     int expected_points = target_num_points;
     double intensity_bound = 0.4;
     double depth_bound = 4.0;
+
     double distance_bound = 75.0;
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
     std::vector <double> output_depth_grad;
@@ -255,8 +258,9 @@ namespace cvo{
                    pc_out, output_depth_grad, output_intenstity_grad, semantic_out);
     // fill in class members
     num_points_ = pc_out->size();
+
     num_classes_ = num_classes; //TODO: get it from input
-    
+
     feature_dimensions_ = 1;
     features_.resize(num_points_, feature_dimensions_);
     labels_.resize(num_points_, num_classes_);

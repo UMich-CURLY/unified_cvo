@@ -1,0 +1,41 @@
+Average instance sizes : 
+
+"truck" 	:  1801.103394,
+"person" 	:  1234.262573,
+"train" 	: 18448.460938,
+"bicycle" 	:  1244.791260,
+"motorcycle" 	:   695.617676,
+"bus" 		:  2761.151611,
+"caravan" 	:  1017.777771,
+"rider" 	:  1318.393921,
+"trailer" 	: 14457.615234,
+"car" 		:  3669.255859,
+
+
+Testing Average instance sizes : 
+
+"truck"		:  1542.088257,
+"person"	:  1437.359497,
+"train"		: 34961.125000,
+"bicycle"	:  1599.363647,
+"motorcycle"	:   573.923096,
+"bus"		:  2100.000000,
+"caravan"	:   158.500000,
+"rider"		:  1654.162109,
+"trailer"	: 12489.750000,
+"car"		:  4070.542969,
+
+
+Training Average instance sizes :
+ 
+"truck"		:  2062.683105,
+"person"	:   872.750000,
+"train"		: 11109.500000,
+"bicycle"	:   912.851074,
+"motorcycle"	:  1091.125000,
+"bus"		:  3248.315674,
+"caravan"	:  1263.285767,
+"rider"		:   890.000000,
+"trailer"	: 17606.199219,
+"car"		:  3310.775879,
+

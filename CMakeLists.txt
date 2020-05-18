@@ -134,6 +134,10 @@ set (ACVO_GPU_SOURCE
   #${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
   )
 
+set (ACVO_CPU_SOURCE
+  ${PROJECT_SOURCE_DIR}/src/cvo/ACvo.cpp
+  )
+
 set (CVO_GPU_SOURCE
   ${PROJECT_SOURCE_DIR}/src/cvo/CvoGPU.cu
   #${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
@@ -170,7 +174,6 @@ add_library(lie_group_utils SHARED ${LIE_GROUP_SOURCE})
 add_library(cvo_utils_lib SHARED ${CVO_UTILS_SOURCE})
 target_link_libraries(cvo_utils_lib pcl_io opencv_core opencv_photo elas opencv_imgcodecs pcl_filters pcl_io ${TBB_LIBRARIES})
 
-
 add_library(bki_mapping_lib SHARED ${BKI_MAPPING_SOURCE})
 target_link_libraries(bki_mapping_lib cvo_utils_lib pcl_filters pcl_io  )
 
@@ -178,12 +181,25 @@ target_link_libraries(bki_mapping_lib cvo_utils_lib pcl_filters pcl_io  )
 # A-CVO cpu
 add_library(cvo_cpu_lib SHARED ${CVO_CPU_SOURCE} )
 target_link_libraries(cvo_cpu_lib PRIVATE  lie_group_utils ${TBB_LIBRARIES} pcl_io  cxsparse)
+
 add_library(cvo_cpu_semantic_lib SHARED ${CVO_CPU_SOURCE} )
 target_compile_definitions(cvo_cpu_semantic_lib PRIVATE -DIS_USING_SEMANTICS)
 target_link_libraries(cvo_cpu_semantic_lib lie_group_utils ${TBB_LIBRARIES} pcl_io  cxsparse)
 
+add_library(acvo_cpu_lib SHARED ${ACVO_CPU_SOURCE} )
+target_link_libraries(acvo_cpu_lib PRIVATE  lie_group_utils ${TBB_LIBRARIES} pcl_io  cxsparse)
+
+add_library(acvo_cpu_semantic_lib SHARED ${ACVO_CPU_SOURCE} )
+target_compile_definitions(acvo_cpu_semantic_lib PRIVATE -DIS_USING_SEMANTICS)
+target_link_libraries(acvo_cpu_semantic_lib lie_group_utils ${TBB_LIBRARIES} pcl_io  cxsparse)
+
+
 add_library(pose_graph_lib SHARED ${POSE_GRAPH_SOURCE})
 target_link_libraries(pose_graph_lib PRIVATE cvo_utils_lib bki_mapping_lib cvo_cpu_lib opencv_core opencv_imgcodecs boost_filesystem  gtsam gtsam_unstable pcl_io )
+
+add_executable(cvo_f2f ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_align_f2f.cpp )
+target_link_libraries(cvo_f2f cvo_cpu_lib boost_system pose_graph_lib cvo_cpu_lib cvo_utils_lib boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
+
 
 
 
@@ -337,3 +353,25 @@ target_compile_definitions(acvo_semantic_lidar_align_gpu PRIVATE -DNUM_CLASSES=1
 target_link_libraries(acvo_semantic_lidar_align_gpu  acvo_gpu_semantic_lidar_lib cvo_cpu_semantic_lib cvo_utils_lib boost_filesystem boost_system)
 
 endif()
+
+#add_executable(cvo_local_mapping ${PROJECT_SOURCE_DIR}/src/main_local_mapping.cpp )
+#target_link_libraries(cvo_local_mapping cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES}  )
+
+
+#export(PACKAGE cvo)
+#set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
+#set_target_properties(cvo PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+#get_property(cvo_include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
+#get_property(cvo_library_dirs TARGET cvo PROPERTY LIBRARY_OUTPUT_DIRECTORY)
+#get_property(cvo_libraries TARGET cvo PROPERTY LIBRARY_OUTPUT_NAME)
+
+#message("cvo_include_dirs: " ${cvo_include_dirs})
+#message("cvo_library_dirs: " ${cvo_library_dirs})
+#message("cvo_libraries: " ${cvo_libraries})
+
+# Configure config file for local build tree
+#configure_file(${PROJECT_SOURCE_DIR}/cmake/cvoConfig.cmake.in
+#  "${PROJECT_BINARY_DIR}/cvoConfig.cmake" @ONLY)
+
+#message("PROJECT_BINARY_DIR: " ${PROJECT_BINARY_DIR})
+#>>>>>>> origin/indicator_visualizer

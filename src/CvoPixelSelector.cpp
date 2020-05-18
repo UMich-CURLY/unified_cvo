@@ -494,6 +494,7 @@ namespace cvo
         //&&  std::fabs(point.x) < distance_bound && std::fabs(point.y) < distance_bound && std::fabs(point.z) < distance_bound) {
 
 
+
           // std::cout << "points: " << point.x << ", " << point.y << ", " << point.z << ", " << point.intensity << std::endl;
           pc_out->push_back(pc_in->points[i]);
           output_depth_grad.push_back(depth_grad);
