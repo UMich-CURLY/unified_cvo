@@ -49,6 +49,8 @@ namespace cvo{
     //c_ell(200),             // kernel characteristic length-scale for color kernel
     c_ell(0.5),
     c_sigma(1),
+    n_ell(0.1),
+    n_sigma(1),
     s_ell(0.1),
     s_sigma(1),
     MAX_ITER(2000),        // maximum number of iteration
@@ -81,7 +83,7 @@ namespace cvo{
     if (ptr!=NULL) 
     {
       std::cout<<"reading cvo params from file\n";
-      fscanf(ptr, "%f\n%f\n%f\n%f\n%f\n%lf\n%lf\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n",
+      fscanf(ptr, "%f\n%f\n%f\n%f\n%f\n%f\n%f\n%lf\n%lf\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n",
              &ell_init
              ,& ell
              ,& ell_min
@@ -97,6 +99,8 @@ namespace cvo{
              ,& d
              ,& c_ell
              ,& c_sigma
+             ,& n_ell
+             ,& n_sigma
              , &s_ell
              ,& s_sigma
              ,& MAX_ITER
@@ -141,6 +145,8 @@ namespace cvo{
     //c_ell(200),             // kernel characteristic length-scale for color kernel
     c_ell(0.5),
     c_sigma(1),
+    n_ell(0.1),
+    n_sigma(1),
     s_ell(0.1),
     s_sigma(1),
     MAX_ITER(2000),        // maximum number of iteration
@@ -174,7 +180,7 @@ namespace cvo{
     if (ptr!=NULL) 
     {
       std::cout<<"reading cvo params from file\n";
-      fscanf(ptr, "%f\n%f\n%f\n%f\n%f\n%lf\n%lf\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n",
+      fscanf(ptr, "%f\n%f\n%f\n%f\n%f\n%f\n%f\n%lf\n%lf\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n",
              &ell_init
              ,& ell
              ,& ell_min
@@ -190,6 +196,8 @@ namespace cvo{
              ,& d
              ,& c_ell
              ,& c_sigma
+             ,& n_ell
+             ,& n_sigma
              , &s_ell
              ,& s_sigma
              ,& MAX_ITER
@@ -353,7 +361,7 @@ namespace cvo{
 
     // loop through points
     tbb::parallel_for(int(0),cloud_a->num_points(),[&](int i){
-    //for(int i=0; i<num_fixed; ++i){
+    // for(int i=0; i<num_fixed; ++i){
 
         const float search_radius = d2_thres;
         std::vector<std::pair<size_t,float>>  ret_matches;
@@ -365,6 +373,8 @@ namespace cvo{
 
         Eigen::Matrix<float,Eigen::Dynamic,1> feature_a = cloud_a->features().row(i).transpose();
 
+        Eigen::Matrix<float,Eigen::Dynamic,1> normal_a = cloud_a->normals().row(i).transpose();
+
 #ifdef IS_USING_SEMANTICS        
         Eigen::VectorXf label_a = cloud_a->labels().row(i);
 #endif
@@ -375,13 +385,17 @@ namespace cvo{
           // d2 = (x-y)^2
           float k = 0;
           float ck = 0;
+          float nk = 1;
           float sk = 1;
           float d2_color = 0;
+          float d2_normal = 0;
           float d2_semantic = 0;
           float a = 0;
           if(d2<d2_thres){
             Eigen::Matrix<float,Eigen::Dynamic,1> feature_b = cloud_b->features().row(idx).transpose();
+            Eigen::Matrix<float,Eigen::Dynamic,1> normal_b = cloud_b->normals().row(idx).transpose();
             d2_color = ((feature_a-feature_b).squaredNorm());
+            // d2_normal = ((normal_a-normal_b).squaredNorm());
 #ifdef IS_USING_SEMANTICS            
             Eigen::VectorXf label_b = cloud_b->labels().row(idx);
             d2_semantic = ((label_a-label_b).squaredNorm());
@@ -390,14 +404,17 @@ namespace cvo{
             if(d2_color<d2_c_thres){
               k = s2*exp(-d2/(2.0*l*l));
               ck = c_sigma*c_sigma*exp(-d2_color/(2.0*c_ell*c_ell));
+              // nk = n_sigma*n_sigma*exp(-d2_normal/(2.0*n_ell*n_ell));
+              nk = n_sigma*n_sigma*normal_a.dot(normal_b);
               // ck = 0.6;
 #ifdef IS_USING_SEMANTICS              
               sk = s_sigma*s_sigma*exp(-d2_semantic/(2.0*s_ell*s_ell));
 #else
               sk = 1;
 #endif              
-              a = ck*k*sk;
-
+              // nk=1;
+              a = ck*k*sk*nk;
+              // std::cout<<"norm_a-b: "<<(normal_a-normal_b).transpose()<<", d2: "<<d2_normal<<", nk: "<<nk<<std::endl;
               if (a > sp_thres){
                 A_trip_concur_.push_back(Trip_t(i,idx,a));
               }
@@ -408,7 +425,7 @@ namespace cvo{
         }
       });
 
-        //}
+        // }
     // form A
     A_temp.setFromTriplets(A_trip_concur_.begin(), A_trip_concur_.end());
     A_temp.makeCompressed();
@@ -794,7 +811,6 @@ namespace cvo{
 
     // loop until MAX_ITER
     iter = MAX_ITER;
-
     auto start = chrono::system_clock::now();
     
     chrono::duration<double> t_transform_pcd = chrono::duration<double>::zero();

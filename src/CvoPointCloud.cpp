@@ -216,10 +216,27 @@ namespace cvo{
     double depth_bound = 4.0;
     double distance_bound = 55.0;
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PointCloud<pcl::Normal>::Ptr normals_out (new pcl::PointCloud<pcl::Normal>);
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
-    edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, pc_out, output_depth_grad, output_intenstity_grad);
+    edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, pc_out,\
+                   output_depth_grad, output_intenstity_grad, normals_out);
      
+    
+    /*
+      ----------visualize selected points and normals-----------
+    */
+    // pcl::visualization::PCLVisualizer viewer("PCL Viewer");
+    // viewer.addPointCloudNormals<pcl::PointXYZI,pcl::Normal>(pc_out, normals_out,1,0.1, "normals1");
+    // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 1.0, 0.0, 0.0, "normals1");
+    // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 3, "normals1");
+    // pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZI> rgb2 (pc_out, 0, 255, 0); //This will display the point cloud in green (R,G,B)
+    // viewer.addPointCloud<pcl::PointXYZI> (pc_out, rgb2, "cloud_RGB2");
+    // while (!viewer.wasStopped ())
+    // {
+    //   viewer.spinOnce ();
+    // }
+    
     // fill in class members
     num_points_ = pc_out->size();
     num_classes_ = 0;
@@ -227,13 +244,19 @@ namespace cvo{
     // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
     feature_dimensions_ = 1;
     features_.resize(num_points_, feature_dimensions_);
+    normals_.resize(num_points_,3);
 
     for (int i = 0; i < num_points_ ; i++) {
       Vec3f xyz;
       xyz << pc_out->points[i].x, pc_out->points[i].y, pc_out->points[i].z;
       positions_.push_back(xyz);
       features_(i, 0) = pc_out->points[i].intensity;      
+      normals_(i,0) = normals_out->points[i].normal_x;
+      normals_(i,1) = normals_out->points[i].normal_y;
+      normals_(i,2) = normals_out->points[i].normal_z;
     }
+
+    // std::cout<<normals_<<std::endl;
 
     // write_to_intensity_pcd("kitti_lidar.pcd");
   }

@@ -61,6 +61,7 @@ namespace cvo {
     const ArrayVec3f & positions() const {return positions_;}
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & labels() const { return labels_;}
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & features() const {return features_;}
+    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals() const {return normals_;}
 
     // for visualization via pcl_viewer
     void write_to_color_pcd(const std::string & name) const;
@@ -75,6 +76,7 @@ namespace cvo {
     
     ArrayVec3f positions_;  // points position. x,y,z
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> features_;   // rgb, gradient in [0,1]
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> normals_;  // surface normals
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> labels_; // number of points by number of classes
 
     cv::Vec3f avg_pixel_color_pattern(const cv::Mat & raw, int u, int v, int w);

@@ -52,6 +52,7 @@
 #include <tbb/tbb.h>
 // #define IS_USING_SEMANTICS
 
+
 //using namespace std;
 using namespace nanoflann;
 
@@ -87,6 +88,8 @@ namespace cvo{
     float color_scale;  // color space inner product scale
     float c_ell;        // kernel characteristic length-scale for color kernel
     float c_sigma;      // kernel signal variance for color kernel
+    float n_ell;
+    float n_sigma;
     float s_ell;        // length-scale for semantic labels
     float s_sigma;      // signal variance for semantic labels
     int MAX_ITER;       // maximum number of iteration

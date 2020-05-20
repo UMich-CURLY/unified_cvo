@@ -31,7 +31,6 @@ int main(int argc, char *argv[]) {
     std::cout<<"num_classes: "<<num_class<<std::endl;
     use_semantic_str = "_semantic";
     use_semantic = true;
-    #define IS_USING_SEMANTICS
   }
   
   int mode = stoi(argv[1]); // 0 for online generate 1 for read txt
