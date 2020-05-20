@@ -245,6 +245,17 @@ namespace cvo{
   }
   
 
+  __device__
+  float compute_range_ell(float curr_ell, float curr_dist_to_sensor, float min_dist, float max_dist ) {
+    //return ((curr_dist_to_sensor - min_dist) / (max_dist - min_dist) + 1.0)* curr_ell;
+    float final_ell = ((curr_dist_to_sensor) / 500.0 + 1.0)* curr_ell;
+
+    return  final_ell;
+    return curr_ell;
+  }
+
+
+  
   void update_tf(const Mat33f & R, const Vec3f & T,
                  // outputs
                  CvoState * cvo_state,
@@ -456,6 +467,10 @@ namespace cvo{
     CvoPoint * p_a =  &points_a[i];
     float a_to_sensor = sqrtf(p_a->x * p_a->x + p_a->y * p_a->y + p_a->z * p_a->z);
     float l = compute_range_ell(ell, a_to_sensor , 1, 80 );
+    if (a_to_sensor > 40 ) {
+      //printf("ell: from %f to %f, curr_dist_to_sensor is %f\n", ell, l,a_to_sensor);
+      
+    }
        
     // convert k threshold to d2 threshold (so that we only need to calculate k when needed)
     float d2_thres = -2.0*l*l*log(sp_thres/s2);

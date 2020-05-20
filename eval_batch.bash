@@ -22,7 +22,7 @@ do
 results_file_name=$seq.txt
 gt_file_name=$seq.txt
 #echo "$results_file_name"
-$echo "baselines: "
+#$echo "baselines: "
 
 #echo "gicp "
 #  ./devkit/cpp/evaluate_odometry $seq $gt_dir $gt_file_name $gicp_results_dir $results_file_name

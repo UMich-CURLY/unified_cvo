@@ -357,21 +357,23 @@ endif()
 #add_executable(cvo_local_mapping ${PROJECT_SOURCE_DIR}/src/main_local_mapping.cpp )
 #target_link_libraries(cvo_local_mapping cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES}  )
 
-
-#export(PACKAGE cvo)
-#set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
-#set_target_properties(cvo PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+#################################################################
+# exporting libraries 
+#################################################################
+export(PACKAGE OUTDOOR_CVO)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
+set_target_properties(cvo_gpu_lib PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+set_target_properties(cvo_cpu_lib PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 #get_property(cvo_include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
-#get_property(cvo_library_dirs TARGET cvo PROPERTY LIBRARY_OUTPUT_DIRECTORY)
-#get_property(cvo_libraries TARGET cvo PROPERTY LIBRARY_OUTPUT_NAME)
+#get_property(cvo_library_dirs TARGET OUTDOOR_CVO PROPERTY LIBRARY_OUTPUT_DIRECTORY)
+#get_property(cvo_libraries TARGET OUTDOOR_CVO PROPERTY LIBRARY_OUTPUT_NAME)
 
 #message("cvo_include_dirs: " ${cvo_include_dirs})
 #message("cvo_library_dirs: " ${cvo_library_dirs})
 #message("cvo_libraries: " ${cvo_libraries})
 
 # Configure config file for local build tree
-#configure_file(${PROJECT_SOURCE_DIR}/cmake/cvoConfig.cmake.in
-#  "${PROJECT_BINARY_DIR}/cvoConfig.cmake" @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/cmake/cvoConfig.cmake.in
+  "${PROJECT_BINARY_DIR}/cvoConfig.cmake" @ONLY)
 
-#message("PROJECT_BINARY_DIR: " ${PROJECT_BINARY_DIR})
-#>>>>>>> origin/indicator_visualizer
+message("PROJECT_BINARY_DIR: " ${PROJECT_BINARY_DIR})
