@@ -59,6 +59,7 @@ namespace cvo{
     int num_points = cvo_cloud.num_points();
     const ArrayVec3f & positions = cvo_cloud.positions();
     const Eigen::Matrix<float, Eigen::Dynamic, FEATURE_DIMENSIONS> & features = cvo_cloud.features();
+    // const Eigen::Matrix<float, Eigen::Dynamic, 2> & types = cvo_cloud.types();
 #ifdef IS_USING_SEMANTICS
     auto & labels = cvo_cloud.labels();
 #endif
@@ -120,6 +121,7 @@ namespace cvo{
     const ArrayVec3f & positions = cvo_cloud.positions();
     const Eigen::Matrix<float, Eigen::Dynamic, FEATURE_DIMENSIONS> & features = cvo_cloud.features();
     const Eigen::Matrix<float, Eigen::Dynamic, NUM_CLASSES> & labels = cvo_cloud.labels();
+    // const Eigen::Matrix<float, Eigen::Dynamic, 2> & types = cvo_cloud.types();
 
     // set basic informations for pcl_cloud
     pcl::PointCloud<CvoPoint> pcl_cloud;

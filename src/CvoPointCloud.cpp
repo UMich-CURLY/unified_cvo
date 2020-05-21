@@ -12,6 +12,7 @@
 #include "utils/CvoPointCloud.hpp"
 #include "utils/StaticStereo.hpp"
 #include "utils/CvoPixelSelector.hpp"
+#include "utils/LidarPointSelector.hpp"
 //#include "mapping/bkioctomap.h"
 namespace cvo{
 
@@ -144,9 +145,6 @@ namespace cvo{
                   expected_points,
                   output_uv);
 
-
-
-
     std::vector<int> good_point_ind;
     int h = left_image.color().rows;
     int w = left_image.color().cols;
@@ -218,24 +216,33 @@ namespace cvo{
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
-    edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
-                   pc_out, output_depth_grad, output_intenstity_grad);
-     
+    std::vector <float> edge_or_surface;
+    LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
+    // lps.edge_detection(pc, pc_out, output_depth_grad, output_intenstity_grad);
+    lps.loam_point_selector(pc, pc_out, edge_or_surface);
+    
     // fill in class members
     num_points_ = pc_out->size();
     num_classes_ = 0;
-
-    
     
     // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
     feature_dimensions_ = 1;
     features_.resize(num_points_, feature_dimensions_);
+    types_.resize(num_points_, 2);
 
     for (int i = 0; i < num_points_ ; i++) {
       Vec3f xyz;
       xyz << pc_out->points[i].x, pc_out->points[i].y, pc_out->points[i].z;
       positions_.push_back(xyz);
-      features_(i, 0) = pc_out->points[i].intensity;      
+      features_(i, 0) = pc_out->points[i].intensity;
+      if (edge_or_surface[i] == 0){
+        types_(i, 0) = 1;
+        types_(i, 1) = 0;
+      }
+      else if (edge_or_surface[i] == 1){
+        types_(i, 0) = 0;
+        types_(i, 1) = 1;
+      }
     }
 
     // write_to_intensity_pcd("kitti_lidar.pcd");
@@ -251,8 +258,9 @@ namespace cvo{
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
     std::vector <int> semantic_out;
-    edge_detection(pc, semantic, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
-                   pc_out, output_depth_grad, output_intenstity_grad, semantic_out);
+    LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
+    lps.edge_detection(pc, semantic, pc_out, output_depth_grad, output_intenstity_grad, semantic_out);
+
     // fill in class members
     num_points_ = pc_out->size();
     num_classes_ = num_classes; //TODO: get it from input
