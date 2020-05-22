@@ -42,7 +42,7 @@ find_package(CUDA REQUIRED)
 #set(CUDA_SEPARABLE_COMPILATION ON)
 #$set(CUDA_PROPAGATE_HOST_FLAGS ON)
 #set(CUDA_HOST_COMPILER g++)
-#list( APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_61,code=sm_61;")
+#list( APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75;")
 
 
 #set(EIGEN_INCLUDE_DIR /usr/local/include/eigen3)
@@ -72,16 +72,16 @@ set(CMAKE_CXX_FLAGS
 
 find_package(CUDA)
 #SET(CUDA_SEPARABLE_COMPILATION ON)
-#set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++14; -Xcompiler -fPIC; -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -O2; -use_fast_math; --extended-lambda; -gencode arch=compute_61,code=sm_61;)
+#set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++14; -Xcompiler -fPIC; -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -O2; -use_fast_math; --extended-lambda; -gencode arch=compute_75,code=sm_75;)
 #list(APPEND CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS}  "-Xcompiler -std=c++14  -O3 -rdc=true -Wno-deprecated-gpu-targets -lgsl -lgslcblas -lm -use_fast_math"  )
-#list(APPEND CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-ccbin g++-8 --extended-lambda -gencode arch=compute_61,code=sm_61" )
-set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --extended-lambda  -gencode arch=compute_61,code=sm_61"  )
+#list(APPEND CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-ccbin g++-8 --extended-lambda -gencode arch=compute_75,code=sm_75" )
+set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --extended-lambda  -gencode arch=compute_75,code=sm_75"  )
 foreach(flag IN LISTS " -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -use_fast_math; -fPIC"  )
   add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${flag}>")
 endforeach()
 
-#set (CUDA_NVCC_FLAGS "${CMAKE_CUDA_FLAGS}  --extended-lambda  -gencode arch=compute_61,code=sm_61"  )
-#set (CMAKE_CUDA_FLAGS "  --extended-lambda  -gencode arch=compute_61,code=sm_61"  )
+#set (CUDA_NVCC_FLAGS "${CMAKE_CUDA_FLAGS}  --extended-lambda  -gencode arch=compute_75,code=sm_75"  )
+#set (CMAKE_CUDA_FLAGS "  --extended-lambda  -gencode arch=compute_75,code=sm_75"  )
 
 # thirdparty elas
 set(ELAS_LIB_SOURCE
@@ -95,6 +95,8 @@ set(ELAS_LIB_SOURCE
 set(CVO_UTILS_SOURCE
   ${PROJECT_SOURCE_DIR}/src/StaticStereo.cpp
   ${PROJECT_SOURCE_DIR}/src/CvoPixelSelector.cpp
+  ${PROJECT_SOURCE_DIR}/src/LidarPointSelector.cpp
+  ${PROJECT_SOURCE_DIR}/src/LoamScanRegistration.cpp
   ${PROJECT_SOURCE_DIR}/src/RawImage.cpp
   ${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
   
