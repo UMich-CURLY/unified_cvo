@@ -179,7 +179,7 @@ int main(int argc, char *argv[]) {
     }
     else{
       init_guess.setIdentity();
-      init_guess.matrix()(2,3)=-1;
+      init_guess.matrix()(2,3)=0;
     }
 
     std::cout<<"\n============================================="<<std::endl;

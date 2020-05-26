@@ -951,6 +951,32 @@ namespace cvo{
     accum_tf_vis = accum_tf_vis * transform.matrix();   // accumilate tf for visualization
     update_tf();
 
+    pcl::PointCloud<pcl::PointNormal>::Ptr fixed_vis = ptr_fixed_pcd->cloud_with_normals();
+    pcl::PointCloud<pcl::PointNormal>::Ptr moving_vis = ptr_moving_pcd->cloud_with_normals();
+
+    pcl::transformPointCloud (*moving_vis, *moving_vis, transform);
+
+    pcl::visualization::PCLVisualizer viewer("PCL Viewer");
+    viewer.addPointCloudNormals<pcl::PointNormal,pcl::PointNormal>(fixed_vis, fixed_vis,1,0.1, "normals1");
+    viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 7/255.0, 181/255.0, 255/255.0, "normals1");
+    viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 3, "normals1");
+
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointNormal> rgb (fixed_vis, 7, 85, 255); //This will display the point cloud in green (R,G,B)
+    viewer.addPointCloud<pcl::PointNormal> (fixed_vis, rgb, "cloud_RGB");
+
+
+    viewer.addPointCloudNormals<pcl::PointNormal,pcl::PointNormal>(moving_vis, moving_vis,1,0.1, "normals2");
+    viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 255/255.0, 128/255.0, 80/255.0, "normals2");
+    viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 3, "normals2");
+
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointNormal> rgb2 (moving_vis, 255, 185, 8); //This will display the point cloud in green (R,G,B)
+    viewer.addPointCloud<pcl::PointNormal> (moving_vis, rgb2, "cloud_RGB2");
+
+    while (!viewer.wasStopped ())
+    {
+      viewer.spinOnce ();
+    }
+
     delete cloud_x;
     delete cloud_y;
     if (is_logging) {

@@ -143,9 +143,14 @@ namespace cvo{
     select_pixels(left_image,
                   expected_points,
                   output_uv);
-
-
-
+    // for (int h = 0; h < left_image.color().cols; h++){
+    //   for (int w = 0; w < left_image.color().rows; w++){
+    //     Vec2i uv;
+    //     uv << h , w;
+    //     output_uv.push_back(uv);
+    //   }
+    // }
+    
 
     std::vector<int> good_point_ind;
     int h = left_image.color().rows;
@@ -208,6 +213,7 @@ namespace cvo{
 
     }
     //  write_to_label_pcd("labeled_input.pcd");
+    // write_to_color_pcd("test.pcd");
   }
 
   CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc) {
@@ -236,6 +242,13 @@ namespace cvo{
     // {
     //   viewer.spinOnce ();
     // }
+
+    pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals_temp(new pcl::PointCloud<pcl::PointNormal>);
+    cloud_with_normals_ = cloud_with_normals_temp;
+    pcl::copyPointCloud(*pc_out, *cloud_with_normals_);
+    pcl::copyPointCloud(*normals_out, *cloud_with_normals_);
+    // pcl::io::savePCDFileASCII("test.pcd", *cloud_with_normals_);
+
     
     // fill in class members
     num_points_ = pc_out->size();

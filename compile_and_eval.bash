@@ -13,7 +13,7 @@ g++-9 -g -o evaluate_odometry evaluate_odometry.cpp matrix.cpp
 cd ../..
 
 
-for seq in 01 02 03 04 05 06 07
+for seq in 05
 do
 echo $seq
     #for file in $results_dir"cvo_f2f_tracking_"$seq*; 

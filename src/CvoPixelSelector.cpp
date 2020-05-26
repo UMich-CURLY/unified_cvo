@@ -481,7 +481,7 @@ namespace cvo
       // Use all neighbors in a sphere of radius 50cm
       ne.setRadiusSearch(1);
       // ne.setKSearch(30);
-      ne.setInputCloud(pc_in);
+      // ne.setInputCloud(pc_in);
       ne.compute(*normals);
 
       /*
