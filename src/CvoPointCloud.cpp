@@ -213,13 +213,28 @@ namespace cvo{
     double intensity_bound = 0.4;
     double depth_bound = 3.0;
     double distance_bound = 40.0;
-    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);    
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
     std::vector <float> edge_or_surface;
     LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
+
+    // running edge detection by its own
     // lps.edge_detection(pc, pc_out, output_depth_grad, output_intenstity_grad);
-    lps.loam_point_selector(pc, pc_out, edge_or_surface);
+
+    // running loam edge detection by its own
+    // lps.loam_point_selector(pc, pc_out, edge_or_surface);
+
+    // running lego loam point selection by its own
+    lps.legoloam_point_selector(pc, pc_out, edge_or_surface);
+
+    // ruunning edge detection + lego loam point selection
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
+    // lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad);    
+    // lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface);    
+    // *pc_out += *pc_out_edge;
+    // *pc_out += *pc_out_surface;
     
     // fill in class members
     num_points_ = pc_out->size();
@@ -235,14 +250,14 @@ namespace cvo{
       xyz << pc_out->points[i].x, pc_out->points[i].y, pc_out->points[i].z;
       positions_.push_back(xyz);
       features_(i, 0) = pc_out->points[i].intensity;
-      if (edge_or_surface[i] == 0){
-        types_(i, 0) = 1;
-        types_(i, 1) = 0;
-      }
-      else if (edge_or_surface[i] == 1){
-        types_(i, 0) = 0;
-        types_(i, 1) = 1;
-      }
+      // if (edge_or_surface[i] == 0){
+      //   types_(i, 0) = 1;
+      //   types_(i, 1) = 0;
+      // }
+      // else if (edge_or_surface[i] == 1){
+      //   types_(i, 0) = 0;
+      //   types_(i, 1) = 1;
+      // }
     }
 
     // write_to_intensity_pcd("kitti_lidar.pcd");

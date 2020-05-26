@@ -323,6 +323,7 @@ class LoamScanRegistration{
     std::vector<pcl::PointCloud<pcl::PointXYZI> > _laserCloudScans;
 
     int get_quadrant(pcl::PointXYZI point);
+    void compute_normal_and_remove_ground(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, std::vector <float> & edge_or_surface);
 };
 
 

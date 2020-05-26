@@ -9,8 +9,10 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
+
 #include "utils/LidarPointSelector.hpp"
 #include "utils/LoamScanRegistration.hpp"
+#include "utils/LeGoLoamPointSelection.hpp"
 
 namespace cvo
 {
@@ -152,6 +154,18 @@ namespace cvo
     //using loam_velodyne's functions
     LoamScanRegistration lsr(-24.9f, 2, 64);
     lsr.process(*laserCloudIn, pc_out, edge_or_surface);
+
+    // pcl::io::savePCDFile("raw_input.pcd", *laserCloudIn);
+    // pcl::io::savePCDFile("loam_pointselection.pcd", *pc_out);
+  }
+
+  void LidarPointSelector::legoloam_point_selector(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
+                                                  pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
+                                                  std::vector <float> & edge_or_surface) {
+    //using LeGO-LOAM's functions
+
+    LeGoLoamPointSelection lego_loam;
+    lego_loam.cloudHandler(pc_in, pc_out, edge_or_surface);
 
     // pcl::io::savePCDFile("raw_input.pcd", *laserCloudIn);
     // pcl::io::savePCDFile("loam_pointselection.pcd", *pc_out);

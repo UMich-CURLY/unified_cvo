@@ -42,6 +42,11 @@ This is an implementation of the algorithm described in the following paper:
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
+
+// #include <pcl/features/normal_3d_omp.h>
+// #include <pcl/visualization/cloud_viewer.h>
+// #include <pcl/search/impl/search.hpp>
+
 #include "utils/LoamScanRegistration.hpp"
 
 namespace cvo
@@ -130,40 +135,35 @@ namespace cvo
         continue;
       }
 
-      // calculate horizontal point angle
-      float ori = -std::atan2(point.x, point.z);
-      if (!halfPassed) {
-        if (ori < startOri - M_PI / 2) {
-          ori += 2 * M_PI;
-        } else if (ori > startOri + M_PI * 3 / 2) {
-          ori -= 2 * M_PI;
-        }
+      // // calculate horizontal point angle
+      // float ori = -std::atan2(point.x, point.z);
+      // if (!halfPassed) {
+      //   if (ori < startOri - M_PI / 2) {
+      //     ori += 2 * M_PI;
+      //   } else if (ori > startOri + M_PI * 3 / 2) {
+      //     ori -= 2 * M_PI;
+      //   }
 
-        if (ori - startOri > M_PI) {
-          halfPassed = true;
-        }
-      } else {
-        ori += 2 * M_PI;
+      //   if (ori - startOri > M_PI) {
+      //     halfPassed = true;
+      //   }
+      // } else {
+      //   ori += 2 * M_PI;
 
-        if (ori < endOri - M_PI * 3 / 2) {
-          ori += 2 * M_PI;
-        } else if (ori > endOri + M_PI / 2) {
-          ori -= 2 * M_PI;
-        }
-      }
+      //   if (ori < endOri - M_PI * 3 / 2) {
+      //     ori += 2 * M_PI;
+      //   } else if (ori > endOri + M_PI / 2) {
+      //     ori -= 2 * M_PI;
+      //   }
+      // }
 
       // calculate relative scan time based on point orientation
-      float relTime = _scanPeriod * (ori - startOri) / (endOri - startOri);
+      // float relTime = _scanPeriod * (ori - startOri) / (endOri - startOri);
       // TODO: this intensity is not correct!!
-      // Why are you changing the intensity???
       // point.intensity = scanID + relTime;
 
-      // remove ground points by intensity
-      // if (laserCloudIn[i].intensity == 0){
-      //   continue;
-      // } else{
-        _laserCloudScans[scanID].push_back(point);
-      // }
+      _laserCloudScans[scanID].push_back(point);
+      
 
     }
 
@@ -320,14 +320,58 @@ namespace cvo
     // if (_surfacePointsLessFlat.size() > 0)
     //   pcl::io::savePCDFile("surfacePointsLessFlat.pcd", _surfacePointsLessFlat);
 
-    // pcl::visualization::PCLVisualizer viewer("PCL Viewer");
-    // pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZI> rgb2 (pc_in, 0, 255, 0); //This will display the point cloud in green (R,G,B)
-    // viewer.addPointCloud<pcl::PointXYZI> (pc_in, rgb2, "cloud_RGB2");
-    // // viewer.addPointCloud<pcl::PointXYZI>(pc_in, "original_cloud");
-    // while (!viewer.wasStopped ())
-    // {
-    //   viewer.spinOnce ();
+    compute_normal_and_remove_ground(pc_out, edge_or_surface);
+  }
+
+  void LoamScanRegistration::compute_normal_and_remove_ground(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, 
+                                                              std::vector <float> & edge_or_surface)
+  {
+    // // compute normal of the surface 
+    // pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal>);
+    // pcl::NormalEstimationOMP<pcl::PointXYZI, pcl::Normal> ne;
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface;
+    // // *pc_out_surface = pcl::createPointCloud(_surfacePointsFlat);
+    // pc_out_surface = _surfacePointsFlat.makeShared();
+    // ne.setInputCloud(pc_out_surface);
+    // // Create an empty kdtree representation, and pass it to the normal estimation object.
+    // // Its content will be filled inside the object, based on the given input dataset (as no other search surface is given).
+    // pcl::search::KdTree<pcl::PointXYZI>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZI> ());
+    // ne.setSearchMethod(tree);
+    // // Use all neighbors in a sphere of radius 50cm
+    // ne.setRadiusSearch(1);
+    // // ne.setKSearch(30);
+    // ne.compute(*normals);
+
+    // // push back if normal is not ground
+    // float threshold = 0.0875;  // 5 degree
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_without_ground (new pcl::PointCloud<pcl::PointXYZI>);
+    // std::vector <float> edge_or_surface_without_ground;
+    // int index_surface = 0;
+    // for (int i=0; i<pc_out->size(); i++){
+    //   if (edge_or_surface[i] == 1){
+    //     // surface, examinate the normal
+    //     if (!isnan(normals->points[index_surface].normal_x)){
+    //       float angle_xy = abs(normals->points[index_surface].normal_x / normals->points[index_surface].normal_y);
+    //       float angle_zy = abs(normals->points[index_surface].normal_z / normals->points[index_surface].normal_y);
+    //       if (angle_xy > threshold || angle_zy > threshold){
+    //         // this is not the ground, push back
+    //         pc_out_without_ground->push_back(pc_out->points[i]);
+    //         edge_or_surface_without_ground.push_back(1);
+    //       }
+    //     }
+    //     index_surface += 1;        
+    //   }
+    //   else if (edge_or_surface[i] == 0){
+    //     // edge, just push back the point
+    //     pc_out_without_ground->push_back(pc_out->points[i]);
+    //     edge_or_surface_without_ground.push_back(0);
+    //   }
     // }
+    
+    // // replace pointer (?)
+    // pc_out = pc_out_without_ground;
+    // edge_or_surface = edge_or_surface_without_ground;
+
   }
 
   void LoamScanRegistration::setRegionBuffersFor(const size_t& startIdx, const size_t& endIdx)
