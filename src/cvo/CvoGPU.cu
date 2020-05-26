@@ -1477,8 +1477,8 @@ namespace cvo{
       cvo_state.ell = (cvo_state.ell<params.ell_min)? params.ell_min:cvo_state.ell;
       */
       if (k > 0 && cvo_state.ell > params.ell_min) {
-        if (k % 30 == 0 )
-        cvo_state.ell = cvo_state.ell * 0.9;
+        if (k % 10 == 0 )
+        cvo_state.ell = cvo_state.ell * 0.5;
       }
       
       if(debug_print) printf("end of iteration \n\n\n");
