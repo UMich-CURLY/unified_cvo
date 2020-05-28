@@ -405,7 +405,7 @@ namespace cvo{
               k = s2*exp(-d2/(2.0*l*l));
               ck = c_sigma*c_sigma*exp(-d2_color/(2.0*c_ell*c_ell));
               // nk = n_sigma*n_sigma*exp(-d2_normal/(2.0*n_ell*n_ell));
-              nk = n_sigma*n_sigma*normal_a.dot(normal_b);
+              nk = abs(n_sigma*n_sigma*normal_a.dot(normal_b));
               // ck = 0.6;
 #ifdef IS_USING_SEMANTICS              
               sk = s_sigma*s_sigma*exp(-d2_semantic/(2.0*s_ell*s_ell));
@@ -886,7 +886,9 @@ namespace cvo{
         std::cout<<"dist: "<<dist_se3(dR,dT)<<std::endl;
         break;
       }
-
+      if(k==0){
+        number_of_non_zeros_in_A();
+      }
       compute_indicator();
 
       // ell = ell + dl_step*dl;
@@ -951,31 +953,37 @@ namespace cvo{
     accum_tf_vis = accum_tf_vis * transform.matrix();   // accumilate tf for visualization
     update_tf();
 
-    pcl::PointCloud<pcl::PointNormal>::Ptr fixed_vis = ptr_fixed_pcd->cloud_with_normals();
-    pcl::PointCloud<pcl::PointNormal>::Ptr moving_vis = ptr_moving_pcd->cloud_with_normals();
+    
 
-    pcl::transformPointCloud (*moving_vis, *moving_vis, transform);
+    /* 
+    *  visualize pcd with normal
+    */
 
-    pcl::visualization::PCLVisualizer viewer("PCL Viewer");
-    viewer.addPointCloudNormals<pcl::PointNormal,pcl::PointNormal>(fixed_vis, fixed_vis,1,0.1, "normals1");
-    viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 7/255.0, 181/255.0, 255/255.0, "normals1");
-    viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 3, "normals1");
+    // pcl::PointCloud<pcl::PointNormal>::Ptr fixed_vis = ptr_fixed_pcd->cloud_with_normals();
+    // pcl::PointCloud<pcl::PointNormal>::Ptr moving_vis = ptr_moving_pcd->cloud_with_normals();
 
-    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointNormal> rgb (fixed_vis, 7, 85, 255); //This will display the point cloud in green (R,G,B)
-    viewer.addPointCloud<pcl::PointNormal> (fixed_vis, rgb, "cloud_RGB");
+    // pcl::transformPointCloud (*moving_vis, *moving_vis, transform);
+
+    // pcl::visualization::PCLVisualizer viewer("PCL Viewer");
+    // viewer.addPointCloudNormals<pcl::PointNormal,pcl::PointNormal>(fixed_vis, fixed_vis,1,0.1, "normals1");
+    // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 7/255.0, 181/255.0, 255/255.0, "normals1");
+    // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 3, "normals1");
+
+    // pcl::visualization::PointCloudColorHandlerCustom<pcl::PointNormal> rgb (fixed_vis, 7, 85, 255); //This will display the point cloud in green (R,G,B)
+    // viewer.addPointCloud<pcl::PointNormal> (fixed_vis, rgb, "cloud_RGB");
 
 
-    viewer.addPointCloudNormals<pcl::PointNormal,pcl::PointNormal>(moving_vis, moving_vis,1,0.1, "normals2");
-    viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 255/255.0, 128/255.0, 80/255.0, "normals2");
-    viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 3, "normals2");
+    // viewer.addPointCloudNormals<pcl::PointNormal,pcl::PointNormal>(moving_vis, moving_vis,1,0.1, "normals2");
+    // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 255/255.0, 128/255.0, 80/255.0, "normals2");
+    // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 3, "normals2");
 
-    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointNormal> rgb2 (moving_vis, 255, 185, 8); //This will display the point cloud in green (R,G,B)
-    viewer.addPointCloud<pcl::PointNormal> (moving_vis, rgb2, "cloud_RGB2");
+    // pcl::visualization::PointCloudColorHandlerCustom<pcl::PointNormal> rgb2 (moving_vis, 255, 185, 8); //This will display the point cloud in green (R,G,B)
+    // viewer.addPointCloud<pcl::PointNormal> (moving_vis, rgb2, "cloud_RGB2");
 
-    while (!viewer.wasStopped ())
-    {
-      viewer.spinOnce ();
-    }
+    // while (!viewer.wasStopped ())
+    // {
+    //   viewer.spinOnce ();
+    // }
 
     delete cloud_x;
     delete cloud_y;

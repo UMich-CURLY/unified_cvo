@@ -243,10 +243,11 @@ namespace cvo{
     //   viewer.spinOnce ();
     // }
 
-    pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals_temp(new pcl::PointCloud<pcl::PointNormal>);
-    cloud_with_normals_ = cloud_with_normals_temp;
-    pcl::copyPointCloud(*pc_out, *cloud_with_normals_);
-    pcl::copyPointCloud(*normals_out, *cloud_with_normals_);
+    // pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals_temp(new pcl::PointCloud<pcl::PointNormal>);
+    // cloud_with_normals_ = cloud_with_normals_temp;
+    // pcl::copyPointCloud(*pc_out, *cloud_with_normals_);
+    // pcl::copyPointCloud(*normals_out, *cloud_with_normals_);
+    
     // pcl::io::savePCDFileASCII("test.pcd", *cloud_with_normals_);
 
     
