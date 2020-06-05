@@ -33,6 +33,8 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
+#include <pcl/impl/point_types.hpp>
+#include <pcl/features/normal_3d_omp.h>
 //#include <pcl/visualization/cloud_viewer.h>
 
 #include "utils/CvoPixelSelector.hpp"
@@ -460,7 +462,8 @@ namespace cvo
                      // output
                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
                      std::vector <double> & output_depth_grad,
-                     std::vector <double> & output_intenstity_grad) {
+                     std::vector <double> & output_intenstity_grad,
+                     pcl::PointCloud<pcl::Normal>::Ptr normals_out) {
 
     int beam_num = beam_number;
     std::vector<int> indices;
@@ -468,6 +471,38 @@ namespace cvo
     int num_points = pc_in->points.size();
     int previous_quadrant = get_quadrant(pc_in->points[0]);
     int ring_num = 0;
+
+#ifdef IS_USING_NORMALS 
+    std::cout<<"calculate surface normals\n";
+      pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal>);
+      pcl::NormalEstimationOMP<pcl::PointXYZI, pcl::Normal> ne;
+      ne.setInputCloud(pc_in);
+      // Create an empty kdtree representation, and pass it to the normal estimation object.
+      // Its content will be filled inside the object, based on the given input dataset (as no other search surface is given).
+      pcl::search::KdTree<pcl::PointXYZI>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZI> ());
+      ne.setSearchMethod(tree);
+      // Use all neighbors in a sphere of radius 50cm
+      ne.setRadiusSearch(1);
+      // ne.setKSearch(30);
+      // ne.setInputCloud(pc_in);
+      ne.compute(*normals);
+      std::cout<<"get noramls\n";
+
+      /*
+        ----------visualize normals----------
+      */
+      // pcl::visualization::PCLVisualizer viewer("PCL Viewer");
+      // viewer.addPointCloudNormals<pcl::PointXYZI,pcl::Normal>(pc_in, normals,10,0.1, "normals1");
+      // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 1.0, 0.0, 0.0, "normals1");
+      // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 3, "normals1");
+      // pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZI> rgb2 (pc_in, 0, 255, 0); //This will display the point cloud in green (R,G,B)
+      // viewer.addPointCloud<pcl::PointXYZI> (pc_in, rgb2, "cloud_RGB2");
+      // // viewer.addPointCloud<pcl::PointXYZI>(pc_in, "original_cloud");
+      // while (!viewer.wasStopped ())
+      // {
+      //   viewer.spinOnce ();
+      // }
+#endif
 
     for(int i = 1; i<num_points; i++) {      
       int quadrant = get_quadrant(pc_in->points[i]);
@@ -489,16 +524,20 @@ namespace cvo
                               std::abs( point.intensity - point_r.intensity ));
       if( (intenstity_grad > intensity_bound || depth_grad > depth_bound)
           && (point.intensity > 0.0)
+#ifdef IS_USING_NORMALS
+          && (!isnan(normals->points[i].normal_x))
+#endif
           && ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0)) //){
           && (  point.x*point.x+point.y*point.y+point.z*point.z) < distance_bound * distance_bound  ) {
         //&&  std::fabs(point.x) < distance_bound && std::fabs(point.y) < distance_bound && std::fabs(point.z) < distance_bound) {
-
-
 
           // std::cout << "points: " << point.x << ", " << point.y << ", " << point.z << ", " << point.intensity << std::endl;
           pc_out->push_back(pc_in->points[i]);
           output_depth_grad.push_back(depth_grad);
           output_intenstity_grad.push_back(intenstity_grad);
+#ifdef IS_USING_NORMALS          
+          normals_out->push_back(normals->points[i]);
+#endif
       }
 
       previous_quadrant = quadrant;      

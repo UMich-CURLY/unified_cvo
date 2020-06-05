@@ -20,11 +20,11 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 #set (CMAKE_POSITION_INDEPENDENT_CODE FALSE)
 add_compile_options(-std=c++14)
 # Release Mode
-set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -O3 -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
+#set(CMAKE_BUILD_TYPE Release)
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -O3 -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -lmkl_intel_lp64 -lmkl_core -lmkl -liomp -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
-#set(CMAKE_BUILD_TYPE Debug)
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -std=c++17 -g  -msse -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
+set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -g  -msse -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 
 #set(BUILD_TYPE RelWithDebInfo)
 
@@ -53,6 +53,8 @@ find_package(PCL REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(GTSAM REQUIRED)
 find_package(OpenMP)
+#find_package(VTK REQUIRED)
+#include(${VTK_USE_FILE})
 
 find_package(OpenMP)
 if (OPENMP_FOUND)
@@ -172,7 +174,13 @@ add_library(elas SHARED ${ELAS_LIB_SOURCE})
 add_library(lie_group_utils SHARED ${LIE_GROUP_SOURCE})
 
 add_library(cvo_utils_lib SHARED ${CVO_UTILS_SOURCE})
-target_link_libraries(cvo_utils_lib pcl_io opencv_core opencv_photo elas opencv_imgcodecs pcl_filters pcl_io ${TBB_LIBRARIES})
+target_link_libraries(cvo_utils_lib opencv_core opencv_photo opencv_highgui elas opencv_imgcodecs pcl_filters pcl_io ${TBB_LIBRARIES})
+
+add_library(cvo_utils_normal_lib SHARED ${CVO_UTILS_SOURCE})
+target_compile_definitions(cvo_utils_normal_lib PRIVATE -DIS_USING_NORMALS )
+target_link_libraries(cvo_utils_normal_lib  opencv_core opencv_highgui opencv_photo elas opencv_imgcodecs pcl_filters pcl_features pcl_io ${TBB_LIBRARIES})
+
+
 
 add_library(bki_mapping_lib SHARED ${BKI_MAPPING_SOURCE})
 target_link_libraries(bki_mapping_lib cvo_utils_lib pcl_filters pcl_io  )
@@ -180,7 +188,7 @@ target_link_libraries(bki_mapping_lib cvo_utils_lib pcl_filters pcl_io  )
 #############################################
 # A-CVO cpu
 add_library(cvo_cpu_lib SHARED ${CVO_CPU_SOURCE} )
-target_link_libraries(cvo_cpu_lib PRIVATE  lie_group_utils ${TBB_LIBRARIES} pcl_io  cxsparse)
+target_link_libraries(cvo_cpu_lib PRIVATE  lie_group_utils ${TBB_LIBRARIES} pcl_io  cxsparse )
 
 add_library(cvo_cpu_semantic_lib SHARED ${CVO_CPU_SOURCE} )
 target_compile_definitions(cvo_cpu_semantic_lib PRIVATE -DIS_USING_SEMANTICS)
@@ -197,6 +205,10 @@ target_link_libraries(acvo_cpu_semantic_lib lie_group_utils ${TBB_LIBRARIES} pcl
 add_library(pose_graph_lib SHARED ${POSE_GRAPH_SOURCE})
 target_link_libraries(pose_graph_lib PRIVATE cvo_utils_lib bki_mapping_lib cvo_cpu_lib opencv_core opencv_imgcodecs boost_filesystem  gtsam gtsam_unstable pcl_io )
 
+add_library(pose_graph_normal_lib SHARED ${POSE_GRAPH_SOURCE})
+target_link_libraries(pose_graph_normal_lib PRIVATE cvo_utils_normal_lib bki_mapping_lib cvo_cpu_lib opencv_core opencv_imgcodecs boost_filesystem  gtsam gtsam_unstable pcl_io )
+
+
 add_executable(cvo_f2f ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_align_f2f.cpp )
 target_link_libraries(cvo_f2f cvo_cpu_lib boost_system pose_graph_lib cvo_cpu_lib cvo_utils_lib boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
 
@@ -209,7 +221,7 @@ target_link_libraries(cvo_f2f cvo_cpu_lib boost_system pose_graph_lib cvo_cpu_li
 if (${PROJECT_NAME}_ENABLE_CUDA)
 add_library(acvo_gpu_lib  ${ACVO_GPU_SOURCE})
 set_target_properties(acvo_gpu_lib PROPERTIES
-  POSITION_DEPENDENT_CODE ON
+  POSITION_INDEPENDENT_CODE ON
   CUDA_SEPERABLE_COMPILATION ON 
   COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 target_compile_definitions(acvo_gpu_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
@@ -258,7 +270,8 @@ if (${PROJECT_NAME}_ENABLE_CUDA)
 add_library(cvo_gpu_lib ${CVO_GPU_SOURCE})
 target_link_libraries(cvo_gpu_lib PRIVATE lie_group_utils cvo_utils_lib )
 target_compile_definitions(cvo_gpu_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
-set_target_properties(cvo_gpu_lib PROPERTIES POSITION_INDEPENDENT_CODE ON
+set_target_properties(cvo_gpu_lib PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
   CUDA_SEPERABLE_COMPILATION ON
   COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 
@@ -267,13 +280,23 @@ set_target_properties(cvo_gpu_lib PROPERTIES POSITION_INDEPENDENT_CODE ON
 #target_compile_definitions(cvo_gpu_exec PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
 #target_link_libraries(cvo_gpu_exec  elas cvo_gpu_lib ${Boost_LIBRARIES} ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARIES}  ${OpenCV_LIBS} ${TBB_LIBRARIES} gtsam  gtsam_unstable )
 
-add_library(cvo_gpu_lidar_lib ${CVO_GPU_SOURCE})
+add_library(cvo_gpu_lidar_lib SHARED ${CVO_GPU_SOURCE})
 target_compile_definitions(cvo_gpu_lidar_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY)
 target_link_libraries(cvo_gpu_lidar_lib PRIVATE lie_group_utils cvo_utils_lib)
-set_target_properties(cvo_gpu_lidar_lib PROPERTIES POSITION_INDEPENDENT_CODE ON
+set_target_properties(cvo_gpu_lidar_lib PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
     CUDA_SEPERABLE_COMPILATION ON
     COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 
+
+add_library(cvo_gpu_lidar_normal_lib SHARED ${CVO_GPU_SOURCE})
+target_compile_definitions(cvo_gpu_lidar_normal_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_NORMALS)
+target_link_libraries(cvo_gpu_lidar_normal_lib PRIVATE lie_group_utils cvo_utils_normal_lib )
+set_target_properties(cvo_gpu_lidar_normal_lib PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+    CUDA_SEPERABLE_COMPILATION ON
+    COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
+  
 
 add_library(cvo_gpu_lidar_intensity_lib ${CVO_GPU_SOURCE})
 target_compile_definitions(cvo_gpu_lidar_intensity_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 )
@@ -315,11 +338,11 @@ target_link_libraries(acvo_align_gpu_raw_img acvo_gpu_lib cvo_utils_lib pose_gra
 add_executable(acvo_align_semantic_gpu_raw_img ${PROJECT_SOURCE_DIR}/src/experiments/main_acvo_semantic_gpu_align_raw_image.cpp)
 target_compile_definitions(acvo_align_semantic_gpu_raw_img PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_USING_SEMANTICS)
 target_link_libraries(acvo_align_semantic_gpu_raw_img acvo_gpu_semantic_lib cvo_utils_lib pose_graph_lib  boost_filesystem boost_system)
-
+ 
 add_executable(acvo_align_semantic_gpu_raw_lidar ${PROJECT_SOURCE_DIR}/src/experiments/main_semantic_acvo_gpu_lidar_align_raw.cpp)
 target_compile_definitions(acvo_align_semantic_gpu_raw_lidar PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_SEMANTICS)
 target_link_libraries(acvo_align_semantic_gpu_raw_lidar acvo_gpu_semantic_lidar_lib cvo_utils_lib pose_graph_lib  boost_filesystem boost_system)
-
+ 
 
 add_executable(acvo_geometric_gpu_raw_lidar ${PROJECT_SOURCE_DIR}/src/experiments/main_semantic_acvo_gpu_lidar_align_raw.cpp)
 target_compile_definitions(acvo_geometric_gpu_raw_lidar PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY)
@@ -337,6 +360,12 @@ target_link_libraries(cvo_align_gpu cvo_gpu_lib cvo_cpu_lib cvo_utils_lib boost_
 add_executable(cvo_align_gpu_lidar_raw ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw.cpp)
 target_compile_definitions(cvo_align_gpu_lidar_raw PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY)
 target_link_libraries(cvo_align_gpu_lidar_raw cvo_gpu_lidar_lib cvo_cpu_lib pose_graph_lib cvo_utils_lib boost_filesystem boost_system)
+
+
+add_executable(cvo_align_gpu_lidar_normal ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw.cpp)
+target_compile_definitions(cvo_align_gpu_lidar_normal PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_NORMALS)
+target_link_libraries(cvo_align_gpu_lidar_normal cvo_gpu_lidar_normal_lib pose_graph_normal_lib cvo_utils_normal_lib boost_filesystem boost_system)
+
 
 add_executable(cvo_align_gpu_lidar_intensity_raw ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_intensity.cpp)
 target_compile_definitions(cvo_align_gpu_lidar_intensity_raw PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1)

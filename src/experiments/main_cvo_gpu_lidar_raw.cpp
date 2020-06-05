@@ -14,12 +14,13 @@
 #include <pcl/point_types.h>
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/CvoGPU.hpp"
-#include "cvo/Cvo.hpp"
+//#include "cvo/Cvo.hpp"
 using namespace std;
 using namespace boost::filesystem;
 
 
 int main(int argc, char *argv[]) {
+  std::cout<<"start\n";
   // list all files in current directory.
   //You could put any file path in here, e.g. "/home/me/mwah" to list that directory
   cvo::KittiHandler kitti(argv[1], 1);
@@ -35,7 +36,7 @@ int main(int argc, char *argv[]) {
 
   accum_output <<"1 0 0 0 0 1 0 0 0 0 1 0\n";
 
-  
+  std::cout<<"new cvo_align\n";
   cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();
   float ell_init = init_param.ell_init;
@@ -54,6 +55,8 @@ int main(int argc, char *argv[]) {
   pcl::PointCloud<pcl::PointXYZI>::Ptr source_pc(new pcl::PointCloud<pcl::PointXYZI>);
   std::vector<int> semantics_source;
   kitti.read_next_lidar(source_pc,  semantics_source);
+
+  std::cout<<"read next lidar\n"; 
 
   //kitti.read_next_stereo(source_left, source_right);
   std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_pc,

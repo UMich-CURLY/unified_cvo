@@ -29,6 +29,8 @@
 #include "utils/data_type.hpp"
 #include "utils/RawImage.hpp"
 
+#include <pcl/features/normal_3d_omp.h>
+#include <pcl/search/impl/search.hpp>
 
 namespace cvo
 {
@@ -47,7 +49,8 @@ namespace cvo
                      // output
                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
                      std::vector <double> & output_depth_grad,
-                     std::vector <double> & output_intenstity_grad);
+                     std::vector <double> & output_intenstity_grad,
+                     pcl::PointCloud<pcl::Normal>::Ptr normals_out);
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
                      const std::vector<int> & semantic_in,
                      int num_want,
@@ -59,7 +62,7 @@ namespace cvo
                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
                      std::vector <double> & output_depth_grad,
                      std::vector <double> & output_intenstity_grad,
-                     std::vector<int> & semantic_out);
+                     std::vector<int> & semantic_out); 
   void laserCloudHandler(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
                         int num_want,
                         double intensity_bound, 

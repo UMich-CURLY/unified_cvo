@@ -143,9 +143,14 @@ namespace cvo{
     select_pixels(left_image,
                   expected_points,
                   output_uv);
-
-
-
+    // for (int h = 0; h < left_image.color().cols; h++){
+    //   for (int w = 0; w < left_image.color().rows; w++){
+    //     Vec2i uv;
+    //     uv << h , w;
+    //     output_uv.push_back(uv);
+    //   }
+    // }
+    
 
     std::vector<int> good_point_ind;
     int h = left_image.color().rows;
@@ -208,6 +213,7 @@ namespace cvo{
 
     }
     //  write_to_label_pcd("labeled_input.pcd");
+    // write_to_color_pcd("test.pcd");
   }
 
   CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, int target_num_points, int beam_num) {
@@ -218,11 +224,39 @@ namespace cvo{
     double distance_bound = 75.0;
 
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PointCloud<pcl::Normal>::Ptr normals_out (new pcl::PointCloud<pcl::Normal>);
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
+
+    std::cout<<"start edge detection\n";
+ 
     edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
-                   pc_out, output_depth_grad, output_intenstity_grad);
+                   pc_out, output_depth_grad, output_intenstity_grad, normals_out);
+
      
+    
+    /*
+      ----------visualize selected points and normals-----------
+    */
+    // pcl::visualization::PCLVisualizer viewer("PCL Viewer");
+    // viewer.addPointCloudNormals<pcl::PointXYZI,pcl::Normal>(pc_out, normals_out,1,0.1, "normals1");
+    // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 1.0, 0.0, 0.0, "normals1");
+    // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 3, "normals1");
+    // pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZI> rgb2 (pc_out, 0, 255, 0); //This will display the point cloud in green (R,G,B)
+    // viewer.addPointCloud<pcl::PointXYZI> (pc_out, rgb2, "cloud_RGB2");
+    // while (!viewer.wasStopped ())
+    // {
+    //   viewer.spinOnce ();
+    // }
+
+    // pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals_temp(new pcl::PointCloud<pcl::PointNormal>);
+    // cloud_with_normals_ = cloud_with_normals_temp;
+    // pcl::copyPointCloud(*pc_out, *cloud_with_normals_);
+    // pcl::copyPointCloud(*normals_out, *cloud_with_normals_);
+    
+    // pcl::io::savePCDFileASCII("test.pcd", *cloud_with_normals_);
+
+    
     // fill in class members
     num_points_ = pc_out->size();
     num_classes_ = 0;
@@ -232,15 +266,22 @@ namespace cvo{
     // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
     feature_dimensions_ = 1;
     features_.resize(num_points_, feature_dimensions_);
+    normals_.resize(num_points_,3);
 
     for (int i = 0; i < num_points_ ; i++) {
       Vec3f xyz;
       xyz << pc_out->points[i].x, pc_out->points[i].y, pc_out->points[i].z;
       positions_.push_back(xyz);
-      features_(i, 0) = pc_out->points[i].intensity;      
+      features_(i, 0) = pc_out->points[i].intensity;
+#ifdef IS_USING_NORMALS      
+      normals_(i,0) = normals_out->points[i].normal_x;
+      normals_(i,1) = normals_out->points[i].normal_y;
+      normals_(i,2) = normals_out->points[i].normal_z;
+#endif      
     }
 
     write_to_intensity_pcd("kitti_lidar.pcd");
+
   }
 
   CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, const std::vector<int> & semantic ,
