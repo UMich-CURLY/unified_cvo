@@ -448,22 +448,23 @@ namespace cvo
       }
       //cv::imshow("heat map", heatmap);
       //cv::waitKey(200);
-      cv::imwrite("heatmap.png", heatmap);
+      //cv::imwrite("heatmap.png", heatmap);
       
     }
+
   }
 
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
-                     int num_want,
-                     double intensity_bound, 
-                     double depth_bound,
-                     double distance_bound,
+                      int num_want,
+                      double intensity_bound, 
+                      double depth_bound,
+                      double distance_bound,
                       int beam_number,
-                     // output
-                     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
-                     std::vector <double> & output_depth_grad,
-                     std::vector <double> & output_intenstity_grad,
-                     pcl::PointCloud<pcl::Normal>::Ptr normals_out) {
+                      // output
+                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
+                      std::vector <double> & output_depth_grad,
+                      std::vector <double> & output_intenstity_grad,
+                      pcl::PointCloud<pcl::Normal>::Ptr normals_out) {
 
     int beam_num = beam_number;
     std::vector<int> indices;
@@ -473,35 +474,35 @@ namespace cvo
     int ring_num = 0;
 
 #ifdef IS_USING_NORMALS 
-    std::cout<<"calculate surface normals\n";
-      pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal>);
-      pcl::NormalEstimationOMP<pcl::PointXYZI, pcl::Normal> ne;
-      ne.setInputCloud(pc_in);
-      // Create an empty kdtree representation, and pass it to the normal estimation object.
-      // Its content will be filled inside the object, based on the given input dataset (as no other search surface is given).
-      pcl::search::KdTree<pcl::PointXYZI>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZI> ());
-      ne.setSearchMethod(tree);
-      // Use all neighbors in a sphere of radius 50cm
-      ne.setRadiusSearch(1);
-      // ne.setKSearch(30);
-      // ne.setInputCloud(pc_in);
-      ne.compute(*normals);
-      std::cout<<"get noramls\n";
+    //std::cout<<"calculate surface normals\n";
+    pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal>);
+    pcl::NormalEstimationOMP<pcl::PointXYZI, pcl::Normal> ne;
+    ne.setInputCloud(pc_in);
+    // Create an empty kdtree representation, and pass it to the normal estimation object.
+    // Its content will be filled inside the object, based on the given input dataset (as no other search surface is given).
+    pcl::search::KdTree<pcl::PointXYZI>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZI> ());
+    ne.setSearchMethod(tree);
+    // Use all neighbors in a sphere of radius 50cm
+    ne.setRadiusSearch(1);
+    // ne.setKSearch(30);
+    // ne.setInputCloud(pc_in);
+    ne.compute(*normals);
+    //std::cout<<"get noramls\n";
 
-      /*
-        ----------visualize normals----------
-      */
-      // pcl::visualization::PCLVisualizer viewer("PCL Viewer");
-      // viewer.addPointCloudNormals<pcl::PointXYZI,pcl::Normal>(pc_in, normals,10,0.1, "normals1");
-      // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 1.0, 0.0, 0.0, "normals1");
-      // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 3, "normals1");
-      // pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZI> rgb2 (pc_in, 0, 255, 0); //This will display the point cloud in green (R,G,B)
-      // viewer.addPointCloud<pcl::PointXYZI> (pc_in, rgb2, "cloud_RGB2");
-      // // viewer.addPointCloud<pcl::PointXYZI>(pc_in, "original_cloud");
-      // while (!viewer.wasStopped ())
-      // {
-      //   viewer.spinOnce ();
-      // }
+    /*
+      ----------visualize normals----------
+    */
+    // pcl::visualization::PCLVisualizer viewer("PCL Viewer");
+    // viewer.addPointCloudNormals<pcl::PointXYZI,pcl::Normal>(pc_in, normals,10,0.1, "normals1");
+    // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 1.0, 0.0, 0.0, "normals1");
+    // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 3, "normals1");
+    // pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZI> rgb2 (pc_in, 0, 255, 0); //This will display the point cloud in green (R,G,B)
+    // viewer.addPointCloud<pcl::PointXYZI> (pc_in, rgb2, "cloud_RGB2");
+    // // viewer.addPointCloud<pcl::PointXYZI>(pc_in, "original_cloud");
+    // while (!viewer.wasStopped ())
+    // {
+    //   viewer.spinOnce ();
+    // }
 #endif
 
     for(int i = 1; i<num_points; i++) {      
@@ -517,11 +518,11 @@ namespace cvo
       const auto& point_r = pc_in->points[i+1];
       
       double depth_grad = std::max((point_l.getVector3fMap()-point.getVector3fMap()).norm(),
-                      (point.getVector3fMap()-point_r.getVector3fMap()).norm());
+                                   (point.getVector3fMap()-point_r.getVector3fMap()).norm());
       
       double intenstity_grad = std::max(
-                              std::abs( point_l.intensity - point.intensity ),
-                              std::abs( point.intensity - point_r.intensity ));
+                                        std::abs( point_l.intensity - point.intensity ),
+                                        std::abs( point.intensity - point_r.intensity ));
       if( (intenstity_grad > intensity_bound || depth_grad > depth_bound)
           && (point.intensity > 0.0)
 #ifdef IS_USING_NORMALS
@@ -531,12 +532,12 @@ namespace cvo
           && (  point.x*point.x+point.y*point.y+point.z*point.z) < distance_bound * distance_bound  ) {
         //&&  std::fabs(point.x) < distance_bound && std::fabs(point.y) < distance_bound && std::fabs(point.z) < distance_bound) {
 
-          // std::cout << "points: " << point.x << ", " << point.y << ", " << point.z << ", " << point.intensity << std::endl;
-          pc_out->push_back(pc_in->points[i]);
-          output_depth_grad.push_back(depth_grad);
-          output_intenstity_grad.push_back(intenstity_grad);
+        // std::cout << "points: " << point.x << ", " << point.y << ", " << point.z << ", " << point.intensity << std::endl;
+        pc_out->push_back(pc_in->points[i]);
+        output_depth_grad.push_back(depth_grad);
+        output_intenstity_grad.push_back(intenstity_grad);
 #ifdef IS_USING_NORMALS          
-          normals_out->push_back(normals->points[i]);
+        normals_out->push_back(normals->points[i]);
 #endif
       }
 
@@ -562,17 +563,17 @@ namespace cvo
   }
 
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
-                     const std::vector<int> & semantic_in,
-                     int num_want,
-                     double intensity_bound, 
-                     double depth_bound,
-                     double distance_bound,
+                      const std::vector<int> & semantic_in,
+                      int num_want,
+                      double intensity_bound, 
+                      double depth_bound,
+                      double distance_bound,
                       int beam_number,
-                     // output
-                     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
-                     std::vector <double> & output_depth_grad,
-                     std::vector <double> & output_intenstity_grad,
-                     std::vector<int> & semantic_out) {
+                      // output
+                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
+                      std::vector <double> & output_depth_grad,
+                      std::vector <double> & output_intenstity_grad,
+                      std::vector<int> & semantic_out) {
 
     int beam_num = beam_number;
     std::vector<int> indices;
@@ -599,11 +600,11 @@ namespace cvo
       const auto& point_r = pc_in->points[i+1];
       
       double depth_grad = std::max((point_l.getVector3fMap()-point.getVector3fMap()).norm(),
-                      (point.getVector3fMap()-point_r.getVector3fMap()).norm());
+                                   (point.getVector3fMap()-point_r.getVector3fMap()).norm());
       
       double intenstity_grad = std::max(
-                              std::abs( point_l.intensity - point.intensity ),
-                              std::abs( point.intensity - point_r.intensity ));
+                                        std::abs( point_l.intensity - point.intensity ),
+                                        std::abs( point.intensity - point_r.intensity ));
 
 
       if( (intenstity_grad > intensity_bound || depth_grad > depth_bound)
@@ -612,12 +613,12 @@ namespace cvo
           &&  (point.x*point.x+point.y*point.y+point.z*point.z) < distance_bound * distance_bound){
         //&& std::fabs(point.x) < distance_bound && std::fabs(point.y) < distance_bound && std::fabs(point.z) < distance_bound) {
 
-          pc_out->push_back(pc_in->points[i]);
-          output_depth_grad.push_back(depth_grad);
-          output_intenstity_grad.push_back(intenstity_grad);
-          semantic_out.push_back(semantic_in[i]);
+        pc_out->push_back(pc_in->points[i]);
+        output_depth_grad.push_back(depth_grad);
+        output_intenstity_grad.push_back(intenstity_grad);
+        semantic_out.push_back(semantic_in[i]);
 
-          //std::cout<<" in edge detection , point "<<point.x<<", "<<point.y<<", "<<point.z<<", label "<<point.intensity<<std::endl;
+        //std::cout<<" in edge detection , point "<<point.x<<", "<<point.y<<", "<<point.z<<", label "<<point.intensity<<std::endl;
       }
 
       previous_quadrant = quadrant;      
@@ -625,32 +626,34 @@ namespace cvo
   }
 
   void laserCloudHandler(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
-                        int num_want,
-                        double intensity_bound, 
-                        double depth_bound,
-                        // output
-                        pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
-                        std::vector <double> & output_depth_grad,
-                        std::vector <double> & output_intenstity_grad)
-{
-  int N_SCANS = 64;
-  std::vector<int> scanStartInd(N_SCANS, 0);
-  std::vector<int> scanEndInd(N_SCANS, 0);
+                         int num_want,
+                         double intensity_bound, 
+                         double depth_bound,
+                         // output
+                         pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
+                         std::vector <double> & output_depth_grad,
+                         std::vector <double> & output_intenstity_grad)
+  {
+    int N_SCANS = 64;
+    std::vector<int> scanStartInd(N_SCANS, 0);
+    std::vector<int> scanEndInd(N_SCANS, 0);
   
-  // double timeScanCur = laserCloudMsg->header.stamp.toSec();
-  // pcl::PointCloud<pcl::PointXYZ> laserCloudIn;
-  // pcl::fromROSMsg(*laserCloudMsg, laserCloudIn);
-  std::vector<int> indices;
-  pcl::removeNaNFromPointCloud(*pc_in, *pc_in, indices);
-  int cloudSize = pc_in->points.size();
-  float startOri = -atan2(pc_in->points[0].y, pc_in->points[0].x);
-  float endOri = -atan2(pc_in->points[cloudSize - 1].y,
-                        pc_in->points[cloudSize - 1].x) + 2 * M_PI;
+    // double timeScanCur = laserCloudMsg->header.stamp.toSec();
+    // pcl::PointCloud<pcl::PointXYZ> laserCloudIn;
+    // pcl::fromROSMsg(*laserCloudMsg, laserCloudIn);
+    std::vector<int> indices;
+    pcl::removeNaNFromPointCloud(*pc_in, *pc_in, indices);
+    int cloudSize = pc_in->points.size();
+    float startOri = -atan2(pc_in->points[0].y, pc_in->points[0].x);
+    float endOri = -atan2(pc_in->points[cloudSize - 1].y,
+                          pc_in->points[cloudSize - 1].x) + 2 * M_PI;
 
 
 
 
-}
+  }
+
+
 
   int get_quadrant(pcl::PointXYZI point){
     int res = 0;
@@ -661,5 +664,6 @@ namespace cvo
     else if(x < 0 && y <= 0){res = 3;}
     else if(x >= 0 && y < 0){res = 4;}
     return res;
-    }
+  }
+
 }

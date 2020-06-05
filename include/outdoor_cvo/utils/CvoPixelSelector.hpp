@@ -34,12 +34,11 @@
 
 namespace cvo
 {
-
-
   void select_pixels(const RawImage & raw_image,
                      int num_want,
                      // output
                      std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv );
+
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
                      int num_want,
                      double intensity_bound, 
@@ -73,7 +72,7 @@ namespace cvo
                         std::vector <double> & output_intenstity_grad);
   int get_quadrant(pcl::PointXYZI point);
 
-  
+
   class PixelSelector
   {
   public:
@@ -95,11 +94,8 @@ namespace cvo
     ~PixelSelector();
     int currentPotential; // ????
 
-
     bool allowFastCornerSelector; //
     void makeHists(const RawImage & raw_image );
-
-    
     
   private:
 
@@ -110,7 +106,6 @@ namespace cvo
                            std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv
                            );
 
-
     std::vector<unsigned char> randomPattern;
 
     int w, h;
@@ -119,6 +114,6 @@ namespace cvo
     std::vector<float> thsSmoothed;
     int thsStep;
     const cvo::RawImage * gradHistFrame;
-  };
 
+  };
 }

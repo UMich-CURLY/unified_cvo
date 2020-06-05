@@ -12,6 +12,7 @@
 #include "utils/CvoPointCloud.hpp"
 #include "utils/StaticStereo.hpp"
 #include "utils/CvoPixelSelector.hpp"
+#include "utils/LidarPointSelector.hpp"
 //#include "mapping/bkioctomap.h"
 namespace cvo{
 
@@ -143,6 +144,7 @@ namespace cvo{
     select_pixels(left_image,
                   expected_points,
                   output_uv);
+
     // for (int h = 0; h < left_image.color().cols; h++){
     //   for (int w = 0; w < left_image.color().rows; w++){
     //     Vec2i uv;
@@ -219,21 +221,20 @@ namespace cvo{
   CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, int target_num_points, int beam_num) {
     int expected_points = target_num_points;
     double intensity_bound = 0.4;
+
+    
     double depth_bound = 4.0;
-
     double distance_bound = 75.0;
-
-    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
-    pcl::PointCloud<pcl::Normal>::Ptr normals_out (new pcl::PointCloud<pcl::Normal>);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);    
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
 
+#if  !defined(IS_USING_LOAM) 
+    pcl::PointCloud<pcl::Normal>::Ptr normals_out (new pcl::PointCloud<pcl::Normal>);
     std::cout<<"start edge detection\n";
  
     edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
                    pc_out, output_depth_grad, output_intenstity_grad, normals_out);
-
-     
     
     /*
       ----------visualize selected points and normals-----------
@@ -253,31 +254,63 @@ namespace cvo{
     // cloud_with_normals_ = cloud_with_normals_temp;
     // pcl::copyPointCloud(*pc_out, *cloud_with_normals_);
     // pcl::copyPointCloud(*normals_out, *cloud_with_normals_);
-    
     // pcl::io::savePCDFileASCII("test.pcd", *cloud_with_normals_);
+#endif    
+
+#if defined(IS_USING_LOAM) && !defined(IS_USING_NORMALS)
+    std::vector <float> edge_or_surface;
+    LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
+
+    // running edge detection by its own
+    // lps.edge_detection(pc, pc_out, output_depth_grad, output_intenstity_grad);
+
+    // running loam edge detection by its own
+    // lps.loam_point_selector(pc, pc_out, edge_or_surface);
+
+    // running lego loam point selection by its own
+    lps.legoloam_point_selector(pc, pc_out, edge_or_surface);
+
+    // ruunning edge detection + lego loam point selection
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
+    // lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad);    
+    // lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface);    
+    // *pc_out += *pc_out_edge;
+    // *pc_out += *pc_out_surface;
+#endif
 
     
     // fill in class members
     num_points_ = pc_out->size();
     num_classes_ = 0;
-
-    
     
     // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
     feature_dimensions_ = 1;
     features_.resize(num_points_, feature_dimensions_);
     normals_.resize(num_points_,3);
+    types_.resize(num_points_, 2);
 
     for (int i = 0; i < num_points_ ; i++) {
       Vec3f xyz;
       xyz << pc_out->points[i].x, pc_out->points[i].y, pc_out->points[i].z;
       positions_.push_back(xyz);
       features_(i, 0) = pc_out->points[i].intensity;
+
 #ifdef IS_USING_NORMALS      
       normals_(i,0) = normals_out->points[i].normal_x;
       normals_(i,1) = normals_out->points[i].normal_y;
       normals_(i,2) = normals_out->points[i].normal_z;
 #endif      
+
+      // if (edge_or_surface[i] == 0){
+      //   types_(i, 0) = 1;
+      //   types_(i, 1) = 0;
+      // }
+      // else if (edge_or_surface[i] == 1){
+      //   types_(i, 0) = 0;
+      //   types_(i, 1) = 1;
+      // }
+
     }
 
     write_to_intensity_pcd("kitti_lidar.pcd");
@@ -295,8 +328,9 @@ namespace cvo{
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
     std::vector <int> semantic_out;
-    edge_detection(pc, semantic, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
-                   pc_out, output_depth_grad, output_intenstity_grad, semantic_out);
+    LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
+    lps.edge_detection(pc, semantic, pc_out, output_depth_grad, output_intenstity_grad, semantic_out);
+
     // fill in class members
     num_points_ = pc_out->size();
 

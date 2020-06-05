@@ -27,6 +27,9 @@ set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -g  -msse -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 
 #set(BUILD_TYPE RelWithDebInfo)
+#set(CMAKE_CXX_STANDARD 14)
+#set(CMAKE_CXX_STANDARD_REQUIRED ON)
+#set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(EXECUTABLE_OUTPUT_PATH bin)
 set(LIBRARY_OUTPUT_PATH lib)
@@ -42,7 +45,7 @@ find_package(CUDA REQUIRED)
 #set(CUDA_SEPARABLE_COMPILATION ON)
 #$set(CUDA_PROPAGATE_HOST_FLAGS ON)
 #set(CUDA_HOST_COMPILER g++)
-#list( APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_61,code=sm_61;")
+#list( APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75;")
 
 
 #set(EIGEN_INCLUDE_DIR /usr/local/include/eigen3)
@@ -74,16 +77,16 @@ set(CMAKE_CXX_FLAGS
 
 find_package(CUDA)
 #SET(CUDA_SEPARABLE_COMPILATION ON)
-#set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++14; -Xcompiler -fPIC; -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -O2; -use_fast_math; --extended-lambda; -gencode arch=compute_61,code=sm_61;)
+#set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++14; -Xcompiler -fPIC; -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -O2; -use_fast_math; --extended-lambda; -gencode arch=compute_75,code=sm_75;)
 #list(APPEND CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS}  "-Xcompiler -std=c++14  -O3 -rdc=true -Wno-deprecated-gpu-targets -lgsl -lgslcblas -lm -use_fast_math"  )
-#list(APPEND CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-ccbin g++-8 --extended-lambda -gencode arch=compute_61,code=sm_61" )
-set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --extended-lambda  -gencode arch=compute_61,code=sm_61"  )
-foreach(flag IN LISTS " -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -use_fast_math; -fPIC"  )
+#list(APPEND CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-ccbin g++-8 --extended-lambda -gencode arch=compute_75,code=sm_75" )
+set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --extended-lambda  -gencode arch=compute_75,code=sm_75"  )
+foreach(flag IN LISTS " -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -use_fast_math"  )
   add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${flag}>")
 endforeach()
 
-#set (CUDA_NVCC_FLAGS "${CMAKE_CUDA_FLAGS}  --extended-lambda  -gencode arch=compute_61,code=sm_61"  )
-#set (CMAKE_CUDA_FLAGS "  --extended-lambda  -gencode arch=compute_61,code=sm_61"  )
+#set (CUDA_NVCC_FLAGS "${CMAKE_CUDA_FLAGS}  --extended-lambda  -gencode arch=compute_75,code=sm_75"  )
+#set (CMAKE_CUDA_FLAGS "  --extended-lambda  -gencode arch=compute_75,code=sm_75"  )
 
 # thirdparty elas
 set(ELAS_LIB_SOURCE
@@ -97,6 +100,9 @@ set(ELAS_LIB_SOURCE
 set(CVO_UTILS_SOURCE
   ${PROJECT_SOURCE_DIR}/src/StaticStereo.cpp
   ${PROJECT_SOURCE_DIR}/src/CvoPixelSelector.cpp
+  ${PROJECT_SOURCE_DIR}/src/LidarPointSelector.cpp
+  ${PROJECT_SOURCE_DIR}/src/LoamScanRegistration.cpp
+  ${PROJECT_SOURCE_DIR}/src/LeGoLoamPointSelection.cpp
   ${PROJECT_SOURCE_DIR}/src/RawImage.cpp
   ${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
   
@@ -174,25 +180,25 @@ add_library(elas SHARED ${ELAS_LIB_SOURCE})
 add_library(lie_group_utils SHARED ${LIE_GROUP_SOURCE})
 
 add_library(cvo_utils_lib SHARED ${CVO_UTILS_SOURCE})
+
 target_link_libraries(cvo_utils_lib opencv_core opencv_photo opencv_highgui elas opencv_imgcodecs pcl_filters pcl_io ${TBB_LIBRARIES})
 
 add_library(cvo_utils_normal_lib SHARED ${CVO_UTILS_SOURCE})
 target_compile_definitions(cvo_utils_normal_lib PRIVATE -DIS_USING_NORMALS )
 target_link_libraries(cvo_utils_normal_lib  opencv_core opencv_highgui opencv_photo elas opencv_imgcodecs pcl_filters pcl_features pcl_io ${TBB_LIBRARIES})
 
-
-
 add_library(bki_mapping_lib SHARED ${BKI_MAPPING_SOURCE})
-target_link_libraries(bki_mapping_lib cvo_utils_lib pcl_filters pcl_io  )
+target_link_libraries(bki_mapping_lib cvo_utils_lib pcl_filters pcl_io pcl_search pcl_visualization )
 
 #############################################
 # A-CVO cpu
 add_library(cvo_cpu_lib SHARED ${CVO_CPU_SOURCE} )
-target_link_libraries(cvo_cpu_lib PRIVATE  lie_group_utils ${TBB_LIBRARIES} pcl_io  cxsparse )
+
+target_link_libraries(cvo_cpu_lib PRIVATE  lie_group_utils ${TBB_LIBRARIES} pcl_io pcl_search pcl_visualization cxsparse)
 
 add_library(cvo_cpu_semantic_lib SHARED ${CVO_CPU_SOURCE} )
 target_compile_definitions(cvo_cpu_semantic_lib PRIVATE -DIS_USING_SEMANTICS)
-target_link_libraries(cvo_cpu_semantic_lib lie_group_utils ${TBB_LIBRARIES} pcl_io  cxsparse)
+target_link_libraries(cvo_cpu_semantic_lib lie_group_utils ${TBB_LIBRARIES} pcl_io pcl_search pcl_visualization cxsparse)
 
 add_library(acvo_cpu_lib SHARED ${ACVO_CPU_SOURCE} )
 target_link_libraries(acvo_cpu_lib PRIVATE  lie_group_utils ${TBB_LIBRARIES} pcl_io  cxsparse)
@@ -203,7 +209,7 @@ target_link_libraries(acvo_cpu_semantic_lib lie_group_utils ${TBB_LIBRARIES} pcl
 
 
 add_library(pose_graph_lib SHARED ${POSE_GRAPH_SOURCE})
-target_link_libraries(pose_graph_lib PRIVATE cvo_utils_lib bki_mapping_lib cvo_cpu_lib opencv_core opencv_imgcodecs boost_filesystem  gtsam gtsam_unstable pcl_io )
+target_link_libraries(pose_graph_lib PRIVATE cvo_utils_lib bki_mapping_lib cvo_cpu_lib opencv_core opencv_imgcodecs boost_filesystem  gtsam gtsam_unstable pcl_io pcl_search pcl_visualization)
 
 add_library(pose_graph_normal_lib SHARED ${POSE_GRAPH_SOURCE})
 target_link_libraries(pose_graph_normal_lib PRIVATE cvo_utils_normal_lib bki_mapping_lib cvo_cpu_lib opencv_core opencv_imgcodecs boost_filesystem  gtsam gtsam_unstable pcl_io )
@@ -225,7 +231,7 @@ set_target_properties(acvo_gpu_lib PROPERTIES
   CUDA_SEPERABLE_COMPILATION ON 
   COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 target_compile_definitions(acvo_gpu_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
-target_link_libraries(acvo_gpu_lib PRIVATE lie_group_utils cvo_utils_lib pcl_filters pcl_io)
+target_link_libraries(acvo_gpu_lib PRIVATE lie_group_utils cvo_utils_lib pcl_filters pcl_io pcl_search pcl_visualization)
 
 add_library(acvo_gpu_semantic_lib ${ACVO_GPU_SOURCE} )
 target_compile_definitions(acvo_gpu_semantic_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_USING_SEMANTICS)
