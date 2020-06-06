@@ -454,6 +454,15 @@ namespace cvo
 
   }
 
+
+  void compute_pcd_normals(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
+                           //output
+                           pcl::PointCloud<pcl::Normal>::Ptr normals_out
+                           ) {
+    
+    
+  }
+  
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
                       int num_want,
                       double intensity_bound, 
