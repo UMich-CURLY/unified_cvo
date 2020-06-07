@@ -32,7 +32,11 @@ namespace cvo {
     float eps_2;        // threshold for se3 distance
     float min_step;     // minimum step size for integration
     float step;         // integration step size
-    
+
+    float ell_decay_rate;
+    int ell_decay_start;
+    int indicator_window_size;
+    float indicator_stable_threshold;
   };
 
   inline void read_CvoParams_yaml(const char *filename, CvoParams * params) {
@@ -62,7 +66,12 @@ namespace cvo {
     params->eps_2 = (float) fs["eps_2"];
     params->min_step = (float) fs["min_step"];
 
-    std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<std::endl;
+    params->ell_decay_rate = (float) fs["ell_decay_rate"];
+    params->ell_decay_start = (int) fs["ell_decay_start"];
+    params->indicator_window_size = (int) fs["indicator_window_size"];
+    params->indicator_stable_threshold = (float) fs["indicator_stable_threshold"];
+
+    std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<", indicator window size is "<<params->indicator_window_size<<std::endl;
     fs.release();
     return;
   }

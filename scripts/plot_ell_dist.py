@@ -58,7 +58,7 @@ for i in range(ell.size):
     #    print(r_err[i])
     t_err[i] = LA.norm(t_i[:3, 3] - gt_curr[:3, 3])
 
-
+ 
     
 
 iters = np.arange(ell.size)

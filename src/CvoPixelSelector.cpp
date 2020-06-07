@@ -454,10 +454,8 @@ namespace cvo
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
                      int num_want,
                      double intensity_bound, 
-                     double depth_bound_horizontal,
-                     double depth_bound_vertical,
+                     double depth_bound,
                      double distance_bound,
-                     double distance_bound_vertical,
                      int beam_number,
                      // output
                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
@@ -495,31 +493,29 @@ namespace cvo
       double distance = sqrt(point.x*point.x + point.y*point.y + point.z*point.z);
 
       // horizontal
-      double depth_grad_horizontal = std::max((point_l.getVector3fMap()-point.getVector3fMap()).norm(), (point.getVector3fMap()-point_r.getVector3fMap()).norm());
+      double depth_grad = std::max((point_l.getVector3fMap()-point.getVector3fMap()).norm(), (point.getVector3fMap()-point_r.getVector3fMap()).norm());
       
       double intenstity_grad = std::max(
                               std::abs( point_l.intensity - point.intensity ),
                               std::abs( point.intensity - point_r.intensity ));
-      if( (intenstity_grad > intensity_bound || depth_grad_horizontal > depth_bound_horizontal)
+      if( (intenstity_grad > intensity_bound || depth_grad > depth_bound)
           && (point.intensity > 0.0)
           && ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0)) //){
           && (  point.x*point.x+point.y*point.y+point.z*point.z) < distance_bound * distance_bound  ) {
-          //&&  std::fabs(point.x) < distance_bound && std::fabs(point.y) < distance_bound && std::fabs(point.z) < distance_bound) {
 
-        if( 
-           (depth_grad_horizontal > depth_bound_horizontal) // for lyft dataset 
-           //  ((intenstity_grad > intensity_bound) || (depth_grad_horizontal > depth_bound_horizontal) || (depth_grad_vertical > depth_bound_vertical)) // for kitti dataset
-           //&& ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0))
-           //  && (point.intensity > 0)
-           //&& (distance < distance_bound)){
-            ) {
+        //&&  std::fabs(point.x) < distance_bound && std::fabs(point.y) < distance_bound && std::fabs(point.z) < distance_bound) {
+
+
+
+          // std::cout << "points: " << point.x << ", " << point.y << ", " << point.z << ", " << point.intensity << std::endl;
+
           pc_out->push_back(pc_in->points[i]);
-          output_depth_grad.push_back(depth_grad_horizontal);
+          output_depth_grad.push_back(depth_grad);
           output_intenstity_grad.push_back(intenstity_grad);
         }
 
       previous_quadrant = quadrant;      
-      }
+      
     }
 
     // visualize
@@ -537,17 +533,15 @@ namespace cvo
     // }
     
     // pcl::io::savePCDFile("input.pcd", *pc_in);
-    pcl::io::savePCDFile("output.pcd", *pc_out);
+    //pcl::io::savePCDFile("output.pcd", *pc_out);
   }
 
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
                      const std::vector<int> & semantic_in,
                      int num_want,
                      double intensity_bound, 
-                     double depth_bound_horizontal,
-                     double depth_bound_vertical,
+                     double depth_bound,
                      double distance_bound,
-                     double distance_bound_vertical,
                      int beam_number,
                      // output
                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
@@ -563,7 +557,6 @@ namespace cvo
     int ring_num = 0;
     int num_points_in_one_ring = 0;
     int num_points_counting = 1;
-    double depth_bound;
 
     for(int i = 1; i<num_points; i++) {      
       if(semantic_in[i]==-1){
@@ -599,20 +592,12 @@ namespace cvo
                               std::abs( point.intensity - point_r.intensity ));
 
 
-      if(ring_num > 0 && ring_num < beam_num-1 && distance < distance_bound_vertical){
-        const auto& point_down = pc_in->points[i-num_points_in_one_ring];
-        depth_grad = (point_down.getVector3fMap()-point.getVector3fMap()).norm(); 
-        intenstity_grad = std::abs( point_down.intensity - point.intensity );
-        depth_bound = depth_bound_vertical;
-      }
-      else{
-        depth_bound = depth_bound_horizontal;
-      }
 
-      if( (depth_grad > depth_bound) 
-           && ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0))
-           && (point.intensity > 0)
-           && (distance < distance_bound)){
+      if( (intenstity_grad > intensity_bound || depth_grad > depth_bound)
+          && (point.intensity > 0.0)
+          && ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0)) //){
+          &&  (point.x*point.x+point.y*point.y+point.z*point.z) < distance_bound * distance_bound){
+        //&& std::fabs(point.x) < distance_bound && std::fabs(point.y) < distance_bound && std::fabs(point.z) < distance_bound) {
 
           pc_out->push_back(pc_in->points[i]);
           output_depth_grad.push_back(depth_grad);

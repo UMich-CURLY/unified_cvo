@@ -41,10 +41,8 @@ namespace cvo
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
                      int num_want,
                      double intensity_bound, 
-                     double depth_bound_horizontal,
-                     double depth_bound_vertical,
+                     double depth_bound,
                      double distance_bound,
-                     double distance_bound_vertical,
                      int beam_number,
                      // output
                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
@@ -54,10 +52,8 @@ namespace cvo
                      const std::vector<int> & semantic_in,
                      int num_want,
                      double intensity_bound, 
-                     double depth_bound_horizontal,
-                     double depth_bound_vertical,
+                     double depth_bound,
                      double distance_bound,
-                     double distance_bound_vertical,
                      int beam_number,
                      // output
                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,

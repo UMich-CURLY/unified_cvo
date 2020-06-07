@@ -32,12 +32,13 @@ int main(int argc, char *argv[]) {
   kitti.set_start_index(start_frame);
   int max_num = std::stoi(argv[5]);
   
+  accum_output <<"1 0 0 0 0 1 0 0 0 0 1 0\n";
   
   cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();
   float ell_init = init_param.ell_init;
   float ell_max = init_param.ell_max;
-  init_param.ell_init = 0.7;
+  init_param.ell_init = 0.95;
   init_param.ell_max = 1.1;
   cvo_align.write_params(&init_param);
 

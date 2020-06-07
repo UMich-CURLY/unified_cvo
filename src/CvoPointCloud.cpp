@@ -214,16 +214,15 @@ namespace cvo{
   CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, int target_num_points, int beam_num) {
     int expected_points = target_num_points;
     double intensity_bound = 0.4;
-    double depth_bound_horizontal = 3.0;
-    double depth_bound_vertical = 2.0;
-    double distance_bound = 40.0;
-    double distance_bound_vertical = 15.0;
+
+    double depth_bound = 4.0;
+    double distance_bound = 75.0;
 
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
     
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
-    edge_detection(pc, expected_points, intensity_bound, depth_bound_horizontal, depth_bound_vertical, distance_bound, distance_bound_vertical, beam_num,
+    edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
                    pc_out, output_depth_grad, output_intenstity_grad);
      
     // fill in class members
@@ -250,21 +249,20 @@ namespace cvo{
     int expected_points = target_num_points;
     double intensity_bound = 0.4;
 
-    double depth_bound_horizontal = 3.0;
-    double depth_bound_vertical = 2.0;
-    double distance_bound = 40.0;
-    double distance_bound_vertical = 15.0;
+    double depth_bound = 4.0;
+    double distance_bound = 75.0;
 
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
     std::vector <int> semantic_out;
-    edge_detection(pc, semantic, expected_points, intensity_bound, depth_bound_horizontal, depth_bound_vertical, distance_bound, distance_bound_vertical, beam_num,
+    edge_detection(pc, semantic, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
                    pc_out, output_depth_grad, output_intenstity_grad, semantic_out);
     // fill in class members
     num_points_ = pc_out->size();
+
     num_classes_ = num_classes; //TODO: get it from input
-    
+
     feature_dimensions_ = 1;
     features_.resize(num_points_, feature_dimensions_);
     labels_.resize(num_points_, num_classes_);
