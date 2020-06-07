@@ -26,7 +26,7 @@
 #include <iostream>
 #include <cstring>
 #include <cmath>
-
+#include <cstdlib>
 #include <vector>
 #include <string>
 
@@ -532,10 +532,15 @@ namespace cvo
       double intenstity_grad = std::max(
                                         std::abs( point_l.intensity - point.intensity ),
                                         std::abs( point.intensity - point_r.intensity ));
-      if( (intenstity_grad > intensity_bound || depth_grad > depth_bound)
+      if( (intenstity_grad > intensity_bound || depth_grad > depth_bound
+#ifdef IS_USING_NORMALS
+           || (std::fabs(normals->points[i].normal_y) > 0.8 && std::fabs(normals->points[i].normal_x) < 0.1  && std::fabs(normals->points[i].normal_z) < 0.1  && std::rand() % 50 < 1 )
+#endif
+
+           )
           && (point.intensity > 0.0)
 #ifdef IS_USING_NORMALS
-          && (!isnan(normals->points[i].normal_x))
+          && (!isnan(normals->points[i].normal_x))          
 #endif
           && ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0)) //){
           && (  point.x*point.x+point.y*point.y+point.z*point.z) < distance_bound * distance_bound  ) {

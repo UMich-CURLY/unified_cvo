@@ -229,10 +229,8 @@ namespace cvo{
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
 
-#if  !defined(IS_USING_LOAM) 
+#if  !defined(IS_USING_LOAM)  && defined(IS_USING_NORMALS)
     pcl::PointCloud<pcl::Normal>::Ptr normals_out (new pcl::PointCloud<pcl::Normal>);
-    std::cout<<"start edge detection\n";
- 
     edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
                    pc_out, output_depth_grad, output_intenstity_grad, normals_out);
     
@@ -268,15 +266,15 @@ namespace cvo{
     // lps.loam_point_selector(pc, pc_out, edge_or_surface);
 
     // running lego loam point selection by its own
-    lps.legoloam_point_selector(pc, pc_out, edge_or_surface);
+    //lps.legoloam_point_selector(pc, pc_out, edge_or_surface);
 
     // ruunning edge detection + lego loam point selection
-    // pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
-    // pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
-    // lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad);    
-    // lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface);    
-    // *pc_out += *pc_out_edge;
-    // *pc_out += *pc_out_surface;
+     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
+     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
+     lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad);    
+     lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface);    
+     *pc_out += *pc_out_edge;
+     *pc_out += *pc_out_surface;
 #endif
 
 #if defined(IS_USING_LOAM) && defined(IS_USING_NORMALS)
@@ -292,7 +290,7 @@ namespace cvo{
 
 #endif    
 
-    
+
     // fill in class members
     num_points_ = pc_out->size();
     num_classes_ = 0;
@@ -301,7 +299,7 @@ namespace cvo{
     feature_dimensions_ = 1;
     features_.resize(num_points_, feature_dimensions_);
     normals_.resize(num_points_,3);
-    types_.resize(num_points_, 2);
+    //types_.resize(num_points_, 2);
 
     for (int i = 0; i < num_points_ ; i++) {
       Vec3f xyz;
@@ -315,17 +313,8 @@ namespace cvo{
       normals_(i,2) = normals_out->points[i].normal_z;
 #endif      
 
-      // if (edge_or_surface[i] == 0){
-      //   types_(i, 0) = 1;
-      //   types_(i, 1) = 0;
-      // }
-      // else if (edge_or_surface[i] == 1){
-      //   types_(i, 0) = 0;
-      //   types_(i, 1) = 1;
-      // }
-
     }
-
+    
     write_to_intensity_pcd("kitti_lidar.pcd");
 
   }
@@ -497,7 +486,7 @@ namespace cvo{
       pc.push_back(p);
     }
     pcl::io::savePCDFileASCII(name ,pc);  
-    std::cout << "Finished write to intensity pcd" << std::endl; 
+    std::cout << "Finished write to intensity pcd" << std::endl << std::flush; 
   }
   
 

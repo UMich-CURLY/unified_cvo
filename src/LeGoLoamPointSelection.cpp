@@ -36,6 +36,7 @@
 
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
+#include <cstdlib>
 
 namespace cvo{
 
@@ -327,7 +328,7 @@ namespace cvo{
                     }
                     // majority of ground points are skipped
                     if (groundMat.at<int8_t>(i,j) == 1){
-                        // if (j%40!=0)  // TODO: this should be tuned, skip more! original num = 5 (j%5!=0 && j>5 && j<Horizon_SCAN-5)
+                      if (std::rand() % 100 > 1 )  // TODO: this should be tuned, skip more! original num = 5 (j%5!=0 && j>5 && j<Horizon_SCAN-5)
                             continue;
                     }
                     // mark ground points so they will not be considered as edge features later
@@ -478,7 +479,7 @@ namespace cvo{
 
         cloudSmoothness.resize(N_SCAN*Horizon_SCAN);
 
-        downSizeFilter.setLeafSize(0.7, 0.2, 0.7);  // TODO: this should be tuned, original (0.2, 0.2, 0.2)
+        downSizeFilter.setLeafSize(0.7, 0.7, 0.7);  // TODO: this should be tuned, original (0.2, 0.2, 0.2)
 
         segmentedCloud.reset(new pcl::PointCloud<PointType>());
         outlierCloud.reset(new pcl::PointCloud<PointType>());
