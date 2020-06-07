@@ -476,7 +476,7 @@ bool eval (int seq, string gt_dir, string gt_file_name, string result_dir, strin
       char prefix[16];
       sprintf(prefix,"%02d",i);
       saveErrorPlots(seq_err,plot_error_dir,input_file_name.c_str());
-      plotErrorPlots(plot_error_dir,input_file_name.c_str());
+      //plotErrorPlots(plot_error_dir,input_file_name.c_str());
     }
   }
   
@@ -487,7 +487,7 @@ bool eval (int seq, string gt_dir, string gt_file_name, string result_dir, strin
     char prefix[16];
     sprintf(prefix,"avg");
     saveErrorPlots(total_err,plot_error_dir,avg_file_name.c_str());
-    plotErrorPlots(plot_error_dir,avg_file_name.c_str());
+    //plotErrorPlots(plot_error_dir,avg_file_name.c_str());
     saveStats(total_err,result_dir,avg_file_name.c_str());
   }
 
