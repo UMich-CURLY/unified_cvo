@@ -229,7 +229,7 @@ namespace cvo{
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
 
-#if  !defined(IS_USING_LOAM)  && defined(IS_USING_NORMALS)
+#if  !defined(IS_USING_LOAM) 
     pcl::PointCloud<pcl::Normal>::Ptr normals_out (new pcl::PointCloud<pcl::Normal>);
     edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
                    pc_out, output_depth_grad, output_intenstity_grad, normals_out);
@@ -311,6 +311,7 @@ namespace cvo{
       normals_(i,0) = normals_out->points[i].normal_x;
       normals_(i,1) = normals_out->points[i].normal_y;
       normals_(i,2) = normals_out->points[i].normal_z;
+      //printf("after normal selction, normal is %f,%f,%f\n", normals_(i,0),normals_(i,1), normals_(i,2));
 #endif      
 
     }

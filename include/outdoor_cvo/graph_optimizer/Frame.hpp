@@ -7,6 +7,7 @@
 #include <Eigen/Dense>
 
 #include "utils/data_type.hpp"
+#include "utils/LidarPointType.hpp"
 #include "utils/CvoPointCloud.hpp"
 #include "utils/RawImage.hpp"
 #include "utils/Calibration.hpp"
@@ -37,6 +38,15 @@ namespace cvo {
 
     Frame(int ind,
           pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
+          const std::vector<int> & semantics,
+          const Calibration & calib);
+    
+    Frame(int ind,
+          pcl::PointCloud<pcl::PointXYZIR>::Ptr pc,
+          const Calibration & calib);
+
+    Frame(int ind,
+          pcl::PointCloud<pcl::PointXYZIR>::Ptr pc,
           const std::vector<int> & semantics,
           const Calibration & calib);
 

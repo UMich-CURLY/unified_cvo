@@ -61,6 +61,7 @@ namespace cvo{
     int num_points = cvo_cloud.num_points();
     const ArrayVec3f & positions = cvo_cloud.positions();
     const Eigen::Matrix<float, Eigen::Dynamic, FEATURE_DIMENSIONS> & features = cvo_cloud.features();
+    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals = cvo_cloud.normals();
     // const Eigen::Matrix<float, Eigen::Dynamic, 2> & types = cvo_cloud.types();
 #ifdef IS_USING_SEMANTICS
     auto & labels = cvo_cloud.labels();
@@ -104,6 +105,10 @@ namespace cvo{
         host_cloud[i].label_distribution[j] = labels(i,j);
 
 #endif
+#ifdef IS_USING_NORMALS
+      for (int j = 0; j < 3; j++)
+        host_cloud[i].normal[j] = normals(i,j);
+#endif      
 
       //if (i == 1000) {
       //  printf("Total %d, Raw input from pcl at 1000th: \n", num_points);
@@ -214,6 +219,9 @@ namespace cvo{
       memcpy(result.features, p_init.features, FEATURE_DIMENSIONS * sizeof(float) );
       #ifdef IS_USING_SEMANTICS
       memcpy(result.label_distribution, p_init.label_distribution, NUM_CLASSES * sizeof(float) );
+      #endif
+      #ifdef IS_USING_NORMALS
+      memcpy(result.normal, p_init.normal, 3 * sizeof(float) );   
       #endif
       return result;
     }
@@ -327,12 +335,20 @@ namespace cvo{
       //#endif
       //A_mat->mat[i * A_mat->cols + ind_b] = 0;
       //A_mat->ind_row2col[i * A_mat->cols + ind_b] = -1;
-      
-      
+
+
       //float d2 = (cloud_y_gpu[ind_b] - cloud_x_gpu[i]).squaredNorm();
       // d2 = (x-y)^2
       CvoPoint * p_b = &points_b[ind_b];
       float d2 = (squared_dist( *p_b ,*p_a ));
+
+      float normal_ip = 1;
+#ifdef IS_USING_NORMALS
+      normal_ip = fabs(p_a->normal[0] * p_b->normal[0] +
+                       p_a->normal[1] * p_b->normal[1] +
+                       p_a->normal[2] * p_b->normal[2]);
+      //printf("normal ip is %f\n", normal_ip);
+#endif      
       /*
       if ( i == 1000 && j== 1074) {
         CvoPoint * pb = points_b + j;
@@ -344,7 +360,7 @@ namespace cvo{
       if(d2<d2_thres  ){
 
 #ifdef IS_GEOMETRIC_ONLY
-        float a = s2*exp(-d2/(2.0*l*l));
+        float a = s2*exp(-d2/(2.0*l*l)) * normal_ip;
         if (a > cvo_params->sp_thres){
           A_mat->mat[i * A_mat->cols + num_inds] = a;
           A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
@@ -387,7 +403,7 @@ namespace cvo{
 #else
           float sk = 1;
 #endif              
-          float a = ck*k*sk;
+          float a = ck*k*sk * normal_ip;
           //#endif          
 
           //if (i == 1000 && j == 51)
@@ -501,6 +517,16 @@ namespace cvo{
       // d2 = (x-y)^2
       CvoPoint * p_b = &points_b[ind_b];
       float d2 = (squared_dist( *p_b ,*p_a ));
+      float normal_ip = 1;
+#ifdef IS_USING_NORMALS
+      normal_ip = fabs(p_a->normal[0] * p_b->normal[0] +
+                       p_a->normal[1] * p_b->normal[1] +
+                       p_a->normal[2] * p_b->normal[2]) * 0.81 * 0.01;
+      //   printf("normal ip is %f between (%f,%f,%f) and (%f,%f,%f)\n", normal_ip,
+      //       p_a->normal[0], p_a->normal[1], p_a->normal[2],
+      //       p_b->normal[0], p_b->normal[1], p_b->normal[2]);
+#endif      
+        
 
       
       /*
@@ -509,12 +535,13 @@ namespace cvo{
         printf("gpu se_kernel: i==%d,j==%d: d2 is %f, d2_thres is %f, point_a (%f, %f, %f), point_b: (%f, %f, %f)\n", i, j,d2, d2_thres,
               p_a->x, p_a->y, p_a->z,
               pb->x, pb->y,  pb->z );
-              }*/
+      } */
       
       if(d2<d2_thres  ){
 
 #ifdef IS_GEOMETRIC_ONLY
-        float a = s2*exp(-d2/(2.0*l*l));
+        float a = s2*exp(-d2/(2.0*l*l)) * normal_ip;
+        //       printf("a is %f, normal_ip is %f, final_a is %f\n", s2*exp(-d2/(2.0*l*l)), normal_ip, a );
         if (a > cvo_params->sp_thres){
           A_mat->mat[i * A_mat->cols + num_inds] = a;
           A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
@@ -522,7 +549,6 @@ namespace cvo{
         }
 
 #else
-        
 
         //float feature_b[5] = {(float)p_a->r, (float)p_a->g, (float)p_a->b,  p_a->gradient[0], p_a->gradient[1]  };
         float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
@@ -557,7 +583,7 @@ namespace cvo{
 #else
           float sk = 1;
 #endif              
-          float a = ck*k*sk;
+          float a = ck*k*sk*normal_ip;
           //#endif          
 
           //if (i == 1000 && j == 51)

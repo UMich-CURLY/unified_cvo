@@ -8,7 +8,7 @@
 #include "utils/data_type.hpp"
 #include "utils/RawImage.hpp"
 #include "utils/Calibration.hpp"
-
+#include "utils/LidarPointType.hpp"
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
@@ -41,6 +41,17 @@ namespace cvo {
                   int target_num_points = 5000,
                   int beam_num =64);
 
+    CvoPointCloud(pcl::PointCloud<pcl::PointXYZIR>::Ptr pc,
+                  int target_num_points = 5000
+                  );
+
+    CvoPointCloud(pcl::PointCloud<pcl::PointXYZIR>::Ptr pc, 
+                  const std::vector<int> & semantics,
+                  int num_classes=19,
+                  int target_num_points = 5000
+                  );
+    
+    
     CvoPointCloud(const semantic_bki::SemanticBKIOctoMap * map,
                   int num_semantic_class);
 
@@ -66,6 +77,7 @@ namespace cvo {
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals() const {return normals_;}
     const pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals() const {return cloud_with_normals_;}
     const Eigen::Matrix<float, Eigen::Dynamic, 2> & types() const {return types_;}
+
 
 
     // for visualization via pcl_viewer

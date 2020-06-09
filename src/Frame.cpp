@@ -83,6 +83,7 @@ namespace cvo {
     // points_.write_to_intensity_pcd("lidar_pcd/edge_and_legoloam_surface/01/" + std::to_string(ind)+".pcd");
   }
 
+
   Frame::Frame(int ind,
                pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
                const std::vector<int> & semantics,
@@ -106,6 +107,7 @@ namespace cvo {
     // points_.write_to_txt("/home/cel/PERL/datasets/kitti_dataset/sequences/01/cvo_points/" +std::to_string(ind)+".txt");
     
   }
+
   
   Frame::~Frame() {
   }

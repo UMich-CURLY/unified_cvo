@@ -88,7 +88,7 @@ namespace cvo{
     void LeGoLoamPointSelection::allocateMemory(){
 
         laserCloudIn.reset(new pcl::PointCloud<PointType>());
-        laserCloudInRing.reset(new pcl::PointCloud<PointXYZIR>());
+        laserCloudInRing.reset(new pcl::PointCloud<pcl::PointXYZIR>());
 
         fullCloud.reset(new pcl::PointCloud<PointType>());
         fullInfoCloud.reset(new pcl::PointCloud<PointType>());
@@ -152,7 +152,7 @@ namespace cvo{
         if (useCloudRing == true){
             // initialize for XYZIR point cloud
             size_t cloudSize = laserCloudIn->size();
-            PointXYZIR point;
+            pcl::PointXYZIR point;
             int previous_quadrant = get_quadrant(laserCloudIn->points[0]);
             int quadrant = get_quadrant(laserCloudIn->points[0]);
             int scanID = 0;

@@ -17,6 +17,7 @@
 
 namespace pcl {
 
+
   template <unsigned int FEATURE_DIM, unsigned int NUM_CLASS>
   struct PointSegmentedDistribution
   {
@@ -25,6 +26,7 @@ namespace pcl {
     float features[FEATURE_DIM];
     int   label;
     float label_distribution[NUM_CLASS];   // templated on any number of classes. TODO
+    float normal[3];
     //float label_distribution[14];
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW   // make sure our new allocators are aligned
 
@@ -42,6 +44,7 @@ namespace pcl {
       this->b = 0;
       memset(features, 0, sizeof(float) * FEATURE_DIM);
       memset(label_distribution, 0, sizeof(float) * NUM_CLASS);
+      memset(normal, 0, sizeof(float)*3);
     }
     /*
     __host__ __device__ PointSegmentedDistribution(const PointSegmentedDistribution<FEATURE_DIM, NUM_CLASS>& p_init) {
@@ -68,6 +71,7 @@ namespace pcl {
       this->b = 0;
       memset(features, 0, sizeof(float) * FEATURE_DIM);
       memset(label_distribution, 0, sizeof(float) * NUM_CLASS);
+      memset(normal, 0, sizeof(float)*3);
     }
     
   } EIGEN_ALIGN16;                    // enforce SSE padding for correct memory alignment

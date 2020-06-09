@@ -419,6 +419,11 @@ target_compile_definitions(cvo_align_gpu_lidar_intensity_raw PRIVATE -DNUM_CLASS
 target_link_libraries(cvo_align_gpu_lidar_intensity_raw cvo_gpu_lidar_intensity_lib cvo_cpu_lib pose_graph_lib cvo_utils_lib boost_filesystem boost_system)
 
 
+add_executable(cvo_align_gpu_lidar_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_pcd.cpp)
+target_compile_definitions(cvo_align_gpu_lidar_pcd PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_LOAM)
+target_link_libraries(cvo_align_gpu_lidar_pcd cvo_gpu_lidar_loam_lib pose_graph_loam_lib cvo_utils_loam_lib boost_filesystem boost_system pcl_io)
+
+
 add_executable(cvo_align_gpu_lidar_semantic_raw ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_semantic.cpp)
 target_compile_definitions(cvo_align_gpu_lidar_semantic_raw PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_SEMANTICS)
 target_link_libraries(cvo_align_gpu_lidar_semantic_raw cvo_gpu_lidar_semantic_lib cvo_cpu_lib pose_graph_lib cvo_utils_lib boost_filesystem boost_system)
