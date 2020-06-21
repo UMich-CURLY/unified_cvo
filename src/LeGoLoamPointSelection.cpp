@@ -479,7 +479,7 @@ namespace cvo{
 
         cloudSmoothness.resize(N_SCAN*Horizon_SCAN);
 
-        downSizeFilter.setLeafSize(0.7, 0.7, 0.7);  // TODO: this should be tuned, original (0.2, 0.2, 0.2)
+        downSizeFilter.setLeafSize(0.5, 0.5, 0.5);  // TODO: this should be tuned, original (0.2, 0.2, 0.2)
 
         segmentedCloud.reset(new pcl::PointCloud<PointType>());
         outlierCloud.reset(new pcl::PointCloud<PointType>());

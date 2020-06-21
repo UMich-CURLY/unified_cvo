@@ -39,6 +39,9 @@ namespace cvo
                      // output
                      std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv );
 
+  pcl::PointCloud<pcl::Normal>::Ptr
+  compute_pcd_normals(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in, float radius);
+
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
                      int num_want,
                      double intensity_bound, 

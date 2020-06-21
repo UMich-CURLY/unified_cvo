@@ -181,15 +181,15 @@ add_library(lie_group_utils SHARED ${LIE_GROUP_SOURCE})
 
 add_library(cvo_utils_lib SHARED ${CVO_UTILS_SOURCE})
 
-target_link_libraries(cvo_utils_lib opencv_core opencv_photo opencv_highgui elas opencv_imgcodecs pcl_filters pcl_io ${TBB_LIBRARIES})
+target_link_libraries(cvo_utils_lib opencv_core opencv_photo opencv_highgui elas opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search ${TBB_LIBRARIES})
 
 add_library(cvo_utils_normal_lib SHARED ${CVO_UTILS_SOURCE})
 target_compile_definitions(cvo_utils_normal_lib PRIVATE -DIS_USING_NORMALS )
-target_link_libraries(cvo_utils_normal_lib  opencv_core opencv_highgui opencv_photo elas opencv_imgcodecs pcl_filters pcl_features pcl_io ${TBB_LIBRARIES})
+target_link_libraries(cvo_utils_normal_lib  opencv_core opencv_highgui opencv_photo elas opencv_imgcodecs pcl_filters pcl_features  pcl_io ${TBB_LIBRARIES})
 
 add_library(cvo_utils_loam_lib SHARED ${CVO_UTILS_SOURCE})
-target_compile_definitions(cvo_utils_loam_lib PRIVATE -DIS_USING_LOAM )
-target_link_libraries(cvo_utils_loam_lib  opencv_core opencv_highgui opencv_photo elas opencv_imgcodecs pcl_filters pcl_features pcl_io ${TBB_LIBRARIES})
+target_compile_definitions(cvo_utils_loam_lib PRIVATE -DIS_USING_LOAM -DIS_USING_NORMALS)
+target_link_libraries(cvo_utils_loam_lib  opencv_core opencv_highgui opencv_photo elas opencv_imgcodecs pcl_filters pcl_features pcl_search pcl_io ${TBB_LIBRARIES})
 
 
 add_library(bki_mapping_lib SHARED ${BKI_MAPPING_SOURCE})
@@ -227,6 +227,7 @@ add_library(pose_graph_normal_lib SHARED ${POSE_GRAPH_SOURCE})
 target_link_libraries(pose_graph_normal_lib PRIVATE cvo_utils_normal_lib bki_mapping_lib cvo_cpu_lib opencv_core opencv_imgcodecs boost_filesystem  gtsam gtsam_unstable pcl_io )
 
 add_library(pose_graph_loam_lib SHARED ${POSE_GRAPH_SOURCE})
+target_compile_definitions(pose_graph_loam_lib PRIVATE -DIS_USING_LOAM -DIS_USING_NORMALS)
 target_link_libraries(pose_graph_loam_lib PRIVATE cvo_utils_loam_lib bki_mapping_lib cvo_cpu_lib opencv_core opencv_imgcodecs boost_filesystem  gtsam gtsam_unstable pcl_io )
 
 
@@ -331,7 +332,7 @@ set_target_properties(cvo_gpu_lidar_normal_lib PROPERTIES
 
 
 add_library(cvo_gpu_lidar_loam_lib SHARED ${CVO_GPU_SOURCE})
-target_compile_definitions(cvo_gpu_lidar_loam_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_LOAM)
+target_compile_definitions(cvo_gpu_lidar_loam_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_LOAM -DIS_USING_NORMALS)
 target_link_libraries(cvo_gpu_lidar_loam_lib PRIVATE lie_group_utils cvo_utils_loam_lib )
 set_target_properties(cvo_gpu_lidar_loam_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON

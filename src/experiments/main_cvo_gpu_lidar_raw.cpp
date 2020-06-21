@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
   cvo::CvoParams & init_param = cvo_align.get_params();
   float ell_init = init_param.ell_init;
   float ell_max = init_param.ell_max;
-  init_param.ell_init = 0.65;//0.51;
+  init_param.ell_init = 0.5;//0.51;
   init_param.ell_max = 1.5;//0.75;
   cvo_align.write_params(&init_param);
   

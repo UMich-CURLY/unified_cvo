@@ -455,12 +455,27 @@ namespace cvo
   }
 
 
-  void compute_pcd_normals(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
-                           //output
-                           pcl::PointCloud<pcl::Normal>::Ptr normals_out
-                           ) {
+
+  
+  
+  
+  pcl::PointCloud<pcl::Normal>::Ptr
+  compute_pcd_normals(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in, float radius) {
     
+    pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal>);
+    pcl::NormalEstimationOMP<pcl::PointXYZI, pcl::Normal> ne;
+    ne.setInputCloud(pc_in);
+    // Create an empty kdtree representation, and pass it to the normal estimation object.
+    // Its content will be filled inside the object, based on the given input dataset (as no other search surface is given).
+    pcl::search::KdTree<pcl::PointXYZI>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZI> ());
+    ne.setSearchMethod(tree);
+    // Use all neighbors in a sphere of radius 50cm
+    ne.setRadiusSearch(radius);
+    // ne.setKSearch(30);
+    // ne.setInputCloud(pc_in);
+    ne.compute(*normals);
     
+    return normals;
   }
   
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,

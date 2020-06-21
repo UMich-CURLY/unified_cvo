@@ -275,18 +275,21 @@ namespace cvo{
      lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface);    
      *pc_out += *pc_out_edge;
      *pc_out += *pc_out_surface;
+     normals_out_ = compute_pcd_normals(pc_out, 1.0);
 #endif
 
 #if defined(IS_USING_LOAM) && defined(IS_USING_NORMALS)
-    std::vector <float> edge_or_surface;
-    LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
-    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
-    lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface);
-    
-    pcl::PointCloud<pcl::Normal>::Ptr normals_out (new pcl::PointCloud<pcl::Normal>);
-    edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
-                   pc_out, output_depth_grad, output_intenstity_grad, normals_out);
+     std::vector <float> edge_or_surface;
+     LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
+     pcl::PointCloud<pcl::Normal>::Ptr normals_out (new pcl::PointCloud<pcl::Normal>);
+     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
+     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
+     lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad);    
+     lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface);    
+     *pc_out += *pc_out_edge;
+     *pc_out += *pc_out_surface;
 
+     normals_out = compute_pcd_normals(pc_out, 1.0);
 
 #endif    
 

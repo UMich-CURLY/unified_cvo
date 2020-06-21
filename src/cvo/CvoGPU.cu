@@ -221,7 +221,12 @@ namespace cvo{
       memcpy(result.label_distribution, p_init.label_distribution, NUM_CLASSES * sizeof(float) );
       #endif
       #ifdef IS_USING_NORMALS
-      memcpy(result.normal, p_init.normal, 3 * sizeof(float) );   
+      Eigen::Vector3f input_normal;
+      input_normal << p_init.normal[0], p_init.normal[1], p_init.normal[2];
+      Eigen::Vector3f trans_normal = (*R) * input_normal + (*T);
+      result.normal[0] = trans_normal(0);
+      result.normal[1] = trans_normal(1);
+      result.normal[2] = trans_normal(2);
       #endif
       return result;
     }
