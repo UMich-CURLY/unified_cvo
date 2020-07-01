@@ -1,5 +1,5 @@
 
-cd build && make -j && cd .. && \
+cd build && make -j6 && cd .. && \
 for i in 05
 #for i in  00 01 02 03  06 07 08 09 10
 do

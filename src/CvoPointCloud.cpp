@@ -199,8 +199,6 @@ namespace cvo{
         labels_.row(i) = Eigen::Map<const VecXf_row>((left_image.semantic_image().data()+ (v * w + u)*num_classes_), num_classes_);
         int max_class = 0;
         labels_.row(i).maxCoeff(&max_class);
-        //float sum_row = labels_.row(i).sum();
-        //labels_.row(i) = (labels_.row(i) / sum_row).eval();
         /*
         if (i == 0 || i == 1) {
           std::cout<<"Raw: ";
@@ -229,7 +227,8 @@ namespace cvo{
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
 
-#if  !defined(IS_USING_LOAM) 
+#if  !defined(IS_USING_LOAM)  && defined(IS_USING_NORMALS)
+    std::cout<<"0\n";
     pcl::PointCloud<pcl::Normal>::Ptr normals_out (new pcl::PointCloud<pcl::Normal>);
     edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
                    pc_out, output_depth_grad, output_intenstity_grad, normals_out);
@@ -256,6 +255,7 @@ namespace cvo{
 #endif    
 
 #if defined(IS_USING_LOAM) && !defined(IS_USING_NORMALS)
+    std::cout<<"1\n";
     std::vector <float> edge_or_surface;
     LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
 
@@ -279,6 +279,7 @@ namespace cvo{
 #endif
 
 #if defined(IS_USING_LOAM) && defined(IS_USING_NORMALS)
+     std::cout<<"2\n";
      std::vector <float> edge_or_surface;
      LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
      pcl::PointCloud<pcl::Normal>::Ptr normals_out (new pcl::PointCloud<pcl::Normal>);
@@ -291,7 +292,14 @@ namespace cvo{
 
      normals_out = compute_pcd_normals(pc_out, 1.0);
 
-#endif    
+#endif
+
+#if !defined(IS_USING_LOAM) && !defined(IS_USING_NORMALS)
+     std::cout<<"3\n";
+    edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
+                   pc_out, output_depth_grad, output_intenstity_grad);
+
+#endif     
 
 
     // fill in class members
@@ -314,11 +322,10 @@ namespace cvo{
       normals_(i,0) = normals_out->points[i].normal_x;
       normals_(i,1) = normals_out->points[i].normal_y;
       normals_(i,2) = normals_out->points[i].normal_z;
-      //printf("after normal selction, normal is %f,%f,%f\n", normals_(i,0),normals_(i,1), normals_(i,2));
 #endif      
 
     }
-    
+    std::cout<<"Construct Cvo PointCloud, num of points is "<<num_points_<<" from "<<pc->size()<<" input points "<<std::endl;    
     write_to_intensity_pcd("kitti_lidar.pcd");
 
   }
