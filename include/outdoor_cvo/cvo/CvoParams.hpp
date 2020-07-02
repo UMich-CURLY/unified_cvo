@@ -12,7 +12,8 @@ namespace cvo {
   struct CvoParams {
     int gpu_thread_num;
     float kdtree_dist_threshold;
-    
+
+    float ell_init_first_frame;
     float ell_init;
     float ell_min;
     float ell_max;
@@ -47,7 +48,8 @@ namespace cvo {
       std::cerr << "Failed to open " << filename << std::endl;
       return;
     }
-    
+
+    params->ell_init_first_frame = (float) fs["ell_init_first_frame"];
     params->ell_init = (float) fs["ell_init"];
     params->ell_min = (float) fs["ell_min"];
     params->ell_max = (float) fs["ell_max"];
