@@ -257,6 +257,7 @@ namespace cvo{
 #if defined(IS_USING_LOAM) && !defined(IS_USING_NORMALS)
     std::cout<<"1\n";
     std::vector <float> edge_or_surface;
+    std::vector <int> selected_indexes;
     LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
 
     // running edge detection by its own
@@ -268,25 +269,40 @@ namespace cvo{
     // running lego loam point selection by its own
     //lps.legoloam_point_selector(pc, pc_out, edge_or_surface);
 
-    // ruunning edge detection + lego loam point selection
-     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
-     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
-     lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad);    
-     lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface);    
-     *pc_out += *pc_out_edge;
-     *pc_out += *pc_out_surface;
-     normals_out_ = compute_pcd_normals(pc_out, 1.0);
+    // running edge detection + lego loam point selection
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
+    lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad);    
+    lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface, selected_indexes);    
+    *pc_out += *pc_out_edge;
+    *pc_out += *pc_out_surface;
+    // std::cout << "\n===List of selected indexes==============" << std::endl;
+    // for(int i=0; i<pc_out->size(); i++){
+    //   std::cout << selected_indexes[i] << " ";
+    // }
+    // std::cout << "\n=================" << std::endl;
+    
+
+    // direct downsample using pcl
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr pc_randomground (new pcl::PointCloud<pcl::PointXYZI>);
+    // lps.legoloam_point_selector(pc, pc_randomground, edge_or_surface, selected_indexes);
+    // std::cout << "downsample using pcl voxel grid" << std::endl;
+    // pcl::VoxelGrid<PointType> downSizeFilter;
+    // downSizeFilter.setLeafSize(0.7, 0.7, 0.7);
+    // downSizeFilter.setInputCloud(pc_randomground);
+    // downSizeFilter.filter(*pc_out);
 #endif
 
 #if defined(IS_USING_LOAM) && defined(IS_USING_NORMALS)
      std::cout<<"2\n";
      std::vector <float> edge_or_surface;
+    std::vector <int> selected_indexes;
      LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
      pcl::PointCloud<pcl::Normal>::Ptr normals_out (new pcl::PointCloud<pcl::Normal>);
      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
      lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad);    
-     lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface);    
+     lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface, selected_indexes);    
      *pc_out += *pc_out_edge;
      *pc_out += *pc_out_surface;
 

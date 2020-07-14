@@ -52,7 +52,8 @@ public:
     
     void cloudHandler(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in, 
                       pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, 
-                      std::vector <float> & edge_or_surface);
+                      std::vector <float> & edge_or_surface,
+                      std::vector <int> & selected_indexes);
 
 private:
            
@@ -247,11 +248,11 @@ private:
     int frameCount;
 
     void initializationValue();
-    void runFeatureAssociation(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, std::vector <float> & edge_or_surface);
+    void runFeatureAssociation(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, std::vector <float> & edge_or_surface, std::vector <int> & selected_indexes);
     void adjustDistortion();
     void calculateSmoothness();
     void markOccludedPoints();
-    void extractFeatures(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, std::vector <float> & edge_or_surface);
+    void extractFeatures(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, std::vector <float> & edge_or_surface, std::vector <int> & selected_indexes);
 
 
     // From utility.h

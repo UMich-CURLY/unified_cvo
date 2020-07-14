@@ -161,11 +161,12 @@ namespace cvo
 
   void LidarPointSelector::legoloam_point_selector(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
                                                   pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
-                                                  std::vector <float> & edge_or_surface) {
+                                                  std::vector <float> & edge_or_surface,
+                                                  std::vector <int> & selected_indexes) {
     //using LeGO-LOAM's functions
 
     LeGoLoamPointSelection lego_loam;
-    lego_loam.cloudHandler(pc_in, pc_out, edge_or_surface);
+    lego_loam.cloudHandler(pc_in, pc_out, edge_or_surface, selected_indexes);
 
     // pcl::io::savePCDFile("raw_input.pcd", *laserCloudIn);
     // pcl::io::savePCDFile("loam_pointselection.pcd", *pc_out);
