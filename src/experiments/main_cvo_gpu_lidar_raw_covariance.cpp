@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
   pcl::PointCloud<pcl::PointXYZI>::Ptr source_pc(new pcl::PointCloud<pcl::PointXYZI>);
   kitti.read_next_lidar(source_pc);
   std::cout<<"read next lidar\n"; 
-  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(source_pc, 5000, 64));
+  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(source_pc, 64));
 
   double total_time = 0;
   int i = start_frame;
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
       std::cout<<"finish all files\n";
       break;
     }
-    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(target_pc, 5000, 64));
+    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(target_pc, 64));
 
     std::cout<<"NUm of source pts is "<<source->num_points()<<"\n";
     std::cout<<"NUm of target pts is "<<target->num_points()<<"\n";

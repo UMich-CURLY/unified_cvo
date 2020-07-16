@@ -13,8 +13,12 @@
 #include "utils/StaticStereo.hpp"
 #include "utils/CvoPixelSelector.hpp"
 #include "utils/LidarPointSelector.hpp"
+
+
 //#include "mapping/bkioctomap.h"
 namespace cvo{
+
+
 
   static bool is_good_point(const Vec3f & xyz, const Vec2i uv, int h, int w ) {
     int u = uv(0);
@@ -54,6 +58,7 @@ namespace cvo{
 
     return result_cv;
   }
+
 
   CvoPointCloud::CvoPointCloud(const std::string & filename) {
  
@@ -185,10 +190,6 @@ namespace cvo{
       int v = output_uv[good_point_ind[i]](1);
       cv::Vec3b avg_pixel = left_image.color().at<cv::Vec3b>(v,u);
       auto & gradient = left_image.gradient()[v * w + u];
-      //std::cout<<"\nopencv before pattern: "<<left_image.color().at<cv::Vec3b>(v,u)<<std::endl;
-      //cv::Vec3f avg_pixel = avg_pixel_color_pattern(left_image.color(), u, v, w);
-      //std::cout<<".  after pattern "<<avg_pixel.transpose()<<std::endl;
-      //features_.block(i, 0, 1, 3) = avg_pixel.transpose() / 255.0;
       features_(i,0) = ((float)(avg_pixel [0]) )/255.0;
       features_(i,1) = ((float)(avg_pixel[1]) )/255.0;
       features_(i,2) = ((float)(avg_pixel[2]) )/255.0;
@@ -199,28 +200,19 @@ namespace cvo{
         labels_.row(i) = Eigen::Map<const VecXf_row>((left_image.semantic_image().data()+ (v * w + u)*num_classes_), num_classes_);
         int max_class = 0;
         labels_.row(i).maxCoeff(&max_class);
-        /*
-        if (i == 0 || i == 1) {
-          std::cout<<"Raw: ";
-          for (int k = 0; k < num_classes_; k++)
-            std::cout<<left_image.semantic_image()[k+ num_classes_ * (v * w + u)]<<", ";
-          std::cout<<"\n";
-          std::cout<<"labels_() after copy: ";
-          std::cout<<labels_.row(i)<<"\n";
-        }
-        */
       }
 
     }
     //  write_to_label_pcd("labeled_input.pcd");
     // write_to_color_pcd("test.pcd");
   }
+  
 
   CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, int target_num_points, int beam_num) {
     int expected_points = target_num_points;
     double intensity_bound = 0.4;
 
-    
+    std::vector<int> selected_indexes;    
     double depth_bound = 4.0;
     double distance_bound = 75.0;
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);    
@@ -271,8 +263,8 @@ namespace cvo{
     // ruunning edge detection + lego loam point selection
      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
-     lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad);    
-     lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface);    
+     lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_indexes);    
+     lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface, selected_indexes);    
      *pc_out += *pc_out_edge;
      *pc_out += *pc_out_surface;
      normals_out_ = compute_pcd_normals(pc_out, 1.0);
@@ -285,8 +277,8 @@ namespace cvo{
      pcl::PointCloud<pcl::Normal>::Ptr normals_out (new pcl::PointCloud<pcl::Normal>);
      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
-     lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad);    
-     lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface);    
+     lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_indexes);    
+     lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface, selected_indexes);    
      *pc_out += *pc_out_edge;
      *pc_out += *pc_out_surface;
 
@@ -296,8 +288,9 @@ namespace cvo{
 
 #if !defined(IS_USING_LOAM) && !defined(IS_USING_NORMALS)
      std::cout<<"3\n";
+
     edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
-                   pc_out, output_depth_grad, output_intenstity_grad);
+                   pc_out, output_depth_grad, output_intenstity_grad, selected_indexes);
 
 #endif     
 
@@ -325,11 +318,19 @@ namespace cvo{
 #endif      
 
     }
+
+    //#if  defined(IS_USING_COVARIANCE)  && defined(__CUDACC__)
+    //std::cout<<"compute covariance\n";
+    //compute_covariance(*pc, selected_indexes);
+
+    
     std::cout<<"Construct Cvo PointCloud, num of points is "<<num_points_<<" from "<<pc->size()<<" input points "<<std::endl;    
     write_to_intensity_pcd("kitti_lidar.pcd");
 
   }
 
+
+  
   CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, const std::vector<int> & semantic ,
                                int num_classes,  int target_num_points , int beam_num) {
     int expected_points = target_num_points;

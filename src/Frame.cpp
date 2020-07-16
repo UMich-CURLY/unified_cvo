@@ -72,7 +72,7 @@ namespace cvo {
       w(0),
       calib(calib),
       raw_image_(),
-      points_(pc),
+      points_(pc, 5000, 64),
       local_map_(nullptr),
       is_keyframe_(false),
       tracking_pose_from_last_keyframe_(ind){

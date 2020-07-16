@@ -53,6 +53,10 @@ public:
     void cloudHandler(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in, 
                       pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, 
                       std::vector <float> & edge_or_surface);
+    void cloudHandler(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in, 
+                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
+                      std::vector <float> & edge_or_surface,
+                      std::vector <int> & selected_indexes);
 
 private:
            

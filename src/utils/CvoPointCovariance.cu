@@ -1,0 +1,240 @@
+#include "utils/CvoPointCloud.hpp"
+#include "utils/CvoPixelSelector.hpp"
+#include "utils/LidarPointSelector.hpp"
+#include "utils/LeGoLoamPointSelection.hpp"
+#include "cupointcloud/point_types.h"
+#include "cupointcloud/cupointcloud.h"
+#include "cukdtree/cukdtree.h"
+#include <chrono>
+#include <vector>
+#include <memory>
+#include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
+#include <pcl/point_types.h>
+#include <pcl/point_cloud.h>
+
+namespace cvo {
+  /*   helper functions  */
+  static
+  __global__
+  void init_covariance(perl_registration::cuPointXYZ * points, // mutate
+                       int num_points,
+                       int * neighbors,
+                       int num_neighbors_each_point,
+                       // outputs
+                       float  * covariance_out,
+                       float * eigenvalues_out
+                       ) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i > num_points - 1) {
+      return;
+    }
+    if (i == 0)
+      printf("i==0 start\n");
+    perl_registration::cuPointXYZ & curr_p = points[i];
+    if (i == 0)
+      printf("i==0: p is %f,%f,%f\n", curr_p.x, curr_p.y, curr_p.z);
+    
+    Eigen::Vector3f curr_p_vec (curr_p.x, curr_p.y, curr_p.z);
+    int * indices = neighbors + i * num_neighbors_each_point;
+    
+    Eigen::Vector3f mean(0, 0, 0);
+    int num_neighbors_in_range = 0;
+    for (int j = 0; j < num_neighbors_each_point; j++) {
+      auto & neighbor = points[indices[j]];
+      Eigen::Vector3f neighbor_vec(neighbor.x, neighbor.y, neighbor.z);
+      mean = (mean + neighbor_vec).eval();
+      num_neighbors_in_range += 1;
+    }
+    mean = mean * (1.0f / static_cast<float>(num_neighbors_in_range));
+    if (i == 0)
+      printf("i==0: mean is %f,%f,%f\n", mean(0),mean(1), mean(2));
+
+    Eigen::Matrix3f covariance = Eigen::Matrix3f::Zero();
+    for (int j = 0; j < num_neighbors_each_point; j++) {
+      auto & neighbor = points[indices[j]];
+      Eigen::Vector3f neighbor_vec(neighbor.x, neighbor.y, neighbor.z);
+      Eigen::Vector3f x_minis_mean = neighbor_vec - mean;
+      Eigen::Matrix3f temp_cov = x_minis_mean * x_minis_mean.transpose();
+      covariance = covariance + temp_cov;
+      if (i == 0) {
+        //printf("i==0: x_minis_mean is %.3f,%.3f,%.3f\n", x_minis_mean(0),
+        //       x_minis_mean(1), x_minis_mean(2));
+        printf("i==0: neighbor (%f, %f, %f)\n", neighbor.x, neighbor.y, neighbor.z);
+      }
+    }
+    float * cov_curr = covariance_out + i * 9;
+    for (int j = 0; j < 9; j++)
+      cov_curr[j] = covariance(j/3, j%3);
+
+    //Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> es(covariance);
+    if (i == 0) {
+      printf("covariance is\n %f %f %f\n %f %f %f\n %f %f %f\n",
+             covariance(0,0), covariance(0,1), covariance(0,2),
+             covariance(1,0), covariance(1,1), covariance(1,2),
+             covariance(2,0), covariance(2,1), covariance(2,2));
+      //if (es.info() != Eigen::Success) {
+      //   printf("covariance eigendecomposition not successful\n");
+      //}
+    }
+    //Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> es(covariance);
+    //auto e_values = es.eigenvalues();
+    //float * e_values_curr = eigenvalues_out + i * 3;
+    //for (int j = 0;j<3; j++) e_values_curr[j] = e_values(j);
+    //es.computeDirect(covariance);
+    /*
+      if (i==0) printf("1\n");
+      es.computeDirect(covariance);
+      if (i==0) printf("2\n");
+      Eigen::Vector3f e_values = es.eigenvalues();
+      if (i==0) printf("3\n");
+    
+    
+      if (i==0) printf("4\n");*/
+    /*
+      for (int j = 0; j < 3; j++)
+      curr_p.cov_eigenvalues[j] = e_values(j);
+
+      if (i == 0) {
+      printf("i==0: cov_eigenvalue is %.3f,%.3f,%.3f\n", curr_p.cov_eigenvalues[0],
+      curr_p.cov_eigenvalues[1], curr_p.cov_eigenvalues[2]);
+      }*/
+
+    /* 
+    //PCA in GICP 
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> es(3);
+    es.computeDirect(covariance);
+    // Eigen values are sorted
+    Eigen::Matrix3f eigen_value_replacement = Eigen::Matrix3f::Zero();
+    eigen_value_replacement(0, 0) = 1e-3;
+    eigen_value_replacement(1, 1) = 1.0;
+    eigen_value_replacement(2, 2) = 1.0;
+    covariances.data[pos] = es.eigenvectors() * eigen_value_replacement *
+    es.eigenvectors().transpose();
+    covariance = covariances.data[pos];
+    */
+  }
+
+  static
+  void fill_in_pointcloud_covariance(perl_registration::cuPointCloud<perl_registration::cuPointXYZ>::SharedPtr pointcloud_gpu, thrust::device_vector<float> & covariance, thrust::device_vector<float> & eigenvalues ) {
+    auto start = std::chrono::system_clock::now();
+    perl_registration::cuKdTree<perl_registration::cuPointXYZ> kdtree;
+    kdtree.SetInputCloud(pointcloud_gpu);
+    const int num_wanted_points = KDTREE_K_SIZE;
+    thrust::device_vector<int> indices;
+
+    kdtree.NearestKSearch(pointcloud_gpu, num_wanted_points, indices );
+    cudaDeviceSynchronize();
+
+    std::cout<<"Init cov, point size is "<<pointcloud_gpu->size()<<std::endl<<std::flush;
+
+    /*
+      thrust::host_vector<int> indices_host = indices;
+      for(int i = 0; i < num_wanted_points; i++) {
+      std::cout<<indices_host[i+num_wanted_points * (pointcloud_gpu->size()-1)]<<",";
+      
+      }
+      std::cout<<"\n";
+    */
+
+    covariance.resize(pointcloud_gpu->size()*9);
+    eigenvalues.resize(pointcloud_gpu->size()*3);
+    init_covariance<<<(pointcloud_gpu->size() / 32 + 1), 32>>>(
+                                                                 thrust::raw_pointer_cast(pointcloud_gpu->points.data()), // mutate
+                                                                 pointcloud_gpu->size(),
+                                                                 thrust::raw_pointer_cast(indices.data() ),
+                                                                 num_wanted_points,
+                                                                 thrust::raw_pointer_cast(covariance.data()),
+                                                                 thrust::raw_pointer_cast(eigenvalues.data()));
+    cudaDeviceSynchronize();
+    
+    auto end = std::chrono::system_clock::now();
+    std::chrono::duration<double> t_kdtree_search = end-start;
+    std::cout<<"kdtree construction and  nn search time is "<<t_kdtree_search.count()<<std::endl;
+  }
+     
+  void CvoPointCloud::compute_covariance(const pcl::PointCloud<pcl::PointXYZI> & pc_raw,
+                                         const std::vector<int> & selected_indexes) {
+
+
+    int num_points = selected_indexes.size();
+
+    // set basic informations for pcl_cloud
+    //thrust::host_vector<perl_registration::cuPointXYZ> host_cloud;
+    pcl::PointCloud<perl_registration::cuPointXYZ> host_cloud;
+    host_cloud.resize(num_points);
+
+    for(int i=0; i<num_points; ++i){
+      auto & curr_p = pc_raw[selected_indexes[i]];
+      (host_cloud)[i].x = curr_p.x;
+      (host_cloud)[i].y = curr_p.y;
+      (host_cloud)[i].z = curr_p.z;
+    }
+   
+    //gpu_cloud->points = host_cloud;
+    //auto pc_gpu = std::make_shared<perl_registration::cuPointCloud<perl_registration::cuPointXYZ>>(new perl_registration::cuPointCloud<perl_registration::cuPointXYZ>>);
+    perl_registration::cuPointCloud<perl_registration::cuPointXYZ>::SharedPtr pc_gpu (new perl_registration::cuPointCloud<perl_registration::cuPointXYZ>(host_cloud) );
+    //pc_gpu->points = host_cloud;
+
+    fill_in_pointcloud_covariance(pc_gpu, covariance_, eigenvalues_);
+
+    return;
+  }
+
+
+  CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc,  int beam_num) {
+    double intensity_bound = 0.4;
+    double depth_bound = 4.0;
+    double distance_bound = 75.0;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);    
+    std::vector <double> output_depth_grad;
+    std::vector <double> output_intenstity_grad;
+    std::vector<int> selected_indexes;
+
+    
+    int expected_points = 5000;
+
+    /*
+    std::vector <float> edge_or_surface;
+    LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
+    lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_indexes);    
+    lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface, selected_indexes);    
+    *pc_out += *pc_out_edge;
+    *pc_out += *pc_out_surface;
+    */
+    random_surface_with_edges(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
+                              pc_out, output_depth_grad, output_intenstity_grad, selected_indexes);
+
+    // fill in class members
+    num_points_ = pc_out->size();
+    num_classes_ = 0;
+    
+    // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
+    feature_dimensions_ = 1;
+    features_.resize(num_points_, feature_dimensions_);
+    normals_.resize(num_points_,3);
+    //types_.resize(num_points_, 2);
+
+    for (int i = 0; i < num_points_ ; i++) {
+      Vec3f xyz;
+      xyz << pc_out->points[i].x, pc_out->points[i].y, pc_out->points[i].z;
+      positions_.push_back(xyz);
+      features_(i, 0) = pc_out->points[i].intensity;
+    }
+
+    //#if  defined(IS_USING_COVARIANCE)  && defined(__CUDACC__)
+
+    std::cout<<"compute covariance\n";
+    compute_covariance(*pc, selected_indexes);
+
+    
+    std::cout<<"Construct Cvo PointCloud, num of points is "<<num_points_<<" from "<<pc->size()<<" input points "<<std::endl;    
+    write_to_intensity_pcd("kitti_lidar.pcd");
+
+  }
+
+  
+
+}

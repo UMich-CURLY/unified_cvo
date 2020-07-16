@@ -97,6 +97,10 @@ set(ELAS_LIB_SOURCE
   ${PROJECT_SOURCE_DIR}/thirdparty/libelas/libelas/triangle.cpp
   )
 
+set(CUKDTREE_LIB_SOURCE
+  ${PROJECT_SOURCE_DIR}/thirdparty/cugicp/cukdtree/cukdtree.cuh
+  )
+
 set(CVO_UTILS_SOURCE
   ${PROJECT_SOURCE_DIR}/src/StaticStereo.cpp
   ${PROJECT_SOURCE_DIR}/src/CvoPixelSelector.cpp
@@ -107,6 +111,19 @@ set(CVO_UTILS_SOURCE
   ${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
   
   )
+
+set(CVO_UTILS_COVARIANCE_SOURCE
+  ${PROJECT_SOURCE_DIR}/src/StaticStereo.cpp
+  ${PROJECT_SOURCE_DIR}/src/CvoPixelSelector.cpp
+  ${PROJECT_SOURCE_DIR}/src/LidarPointSelector.cpp
+  ${PROJECT_SOURCE_DIR}/src/LoamScanRegistration.cpp
+  ${PROJECT_SOURCE_DIR}/src/LeGoLoamPointSelection.cpp
+  ${PROJECT_SOURCE_DIR}/src/RawImage.cpp
+  ${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
+  ${PROJECT_SOURCE_DIR}/src/utils/CvoPointCovariance.cu
+  )
+
+
 set(BKI_MAPPING_SOURCE
   ${PROJECT_SOURCE_DIR}/src/mapping/point3f.cpp
   ${PROJECT_SOURCE_DIR}/src/mapping/bkiblock.cpp
@@ -115,31 +132,23 @@ set(BKI_MAPPING_SOURCE
   ${PROJECT_SOURCE_DIR}/src/mapping/bkioctree.cpp
   )
 
+set(KITTI_HANDLER_SOURCE
+  ${PROJECT_SOURCE_DIR}/src/KittiHandler.cpp  
+  )
+
 # Sources files
 set(POSE_GRAPH_SOURCE
-
   ${PROJECT_SOURCE_DIR}/src/Frame.cpp
-  ${PROJECT_SOURCE_DIR}/src/KittiHandler.cpp
   ${PROJECT_SOURCE_DIR}/src/PoseGraph.cpp
-#  ${PROJECT_SOURCE_DIR}/src/StaticStereo.cpp
-#  ${PROJECT_SOURCE_DIR}/src/CvoPixelSelector.cpp
-#  ${PROJECT_SOURCE_DIR}/src/RawImage.cpp
-#  ${PROJECT_SOURCE_DIR}/src/mapping/bkiblock.cpp
-#  ${PROJECT_SOURCE_DIR}/src/mapping/bkioctomap.cpp
-#  ${PROJECT_SOURCE_DIR}/src/mapping/bkioctree_node.cpp
-#  ${PROJECT_SOURCE_DIR}/src/mapping/bkioctree.cpp
-#  ${PROJECT_SOURCE_DIR}/src/mapping/point3f.cpp
-#  ${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
-
   )
 
 set(LIE_GROUP_SOURCE
-  ${PROJECT_SOURCE_DIR}/include/outdoor_cvo/cvo/LieGroup.cpp
+  ${PROJECT_SOURCE_DIR}/src/cvo/LieGroup.cpp
   )
 
 set (ACVO_GPU_SOURCE
   ${PROJECT_SOURCE_DIR}/src/cvo/AdaptiveCvoGPU.cu
-  #${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
+  ${PROJECT_SOURCE_DIR}/src/cvo/CvoState.cu
   )
 
 set (ACVO_CPU_SOURCE
@@ -148,12 +157,11 @@ set (ACVO_CPU_SOURCE
 
 set (CVO_GPU_SOURCE
   ${PROJECT_SOURCE_DIR}/src/cvo/CvoGPU.cu
-  #${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
+  ${PROJECT_SOURCE_DIR}/src/cvo/CvoState.cu
   )
 
 set (CVO_CPU_SOURCE
   ${PROJECT_SOURCE_DIR}/src/Cvo.cpp
-  #${PROJECT_SOURCE_DIR}/src/CvoPointCloud.cpp
   )
 
 
@@ -177,11 +185,27 @@ message("CUDA_NVCC_FLAGS are ${CUDA_NVCC_FLAGS}")
 
 add_library(elas SHARED ${ELAS_LIB_SOURCE})
 
+add_library(kitti SHARED ${KITTI_HANDLER_SOURCE})
+
+if (${PROJECT_NAME}_ENABLE_CUDA)
+  add_library(cukdtree_lib SHARED ${CUKDTREE_LIB_SOURCE})
+  set_target_properties(cukdtree_lib PROPERTIES LINKER_LANGUAGE CUDA  CUDA_SOURCE_PROPERTY_FORMAT OBJ ) 
+endif()  
+
 add_library(lie_group_utils SHARED ${LIE_GROUP_SOURCE})
 
 add_library(cvo_utils_lib SHARED ${CVO_UTILS_SOURCE})
-
+target_compile_definitions(cvo_utils_lib PRIVATE -DIS_USING_RANGE_ELL)
 target_link_libraries(cvo_utils_lib opencv_core opencv_photo opencv_highgui elas opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search ${TBB_LIBRARIES})
+
+if (${PROJECT_NAME}_ENABLE_CUDA)
+add_library(cvo_utils_cov_lib SHARED ${CVO_UTILS_COVARIANCE_SOURCE})
+target_compile_definitions(cvo_utils_cov_lib PRIVATE -DIS_USING_COVARIANCE)
+set_target_properties(cvo_utils_cov_lib PROPERTIES
+  LANGUAGE CUDA
+  CUDA_SOURCE_PROPERTY_FORMAT OBJ)
+target_link_libraries(cvo_utils_cov_lib cukdtree_lib opencv_core opencv_photo opencv_highgui elas opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search ${TBB_LIBRARIES})
+endif()
 
 add_library(cvo_utils_normal_lib SHARED ${CVO_UTILS_SOURCE})
 target_compile_definitions(cvo_utils_normal_lib PRIVATE -DIS_USING_NORMALS )
@@ -191,9 +215,13 @@ add_library(cvo_utils_loam_lib SHARED ${CVO_UTILS_SOURCE})
 target_compile_definitions(cvo_utils_loam_lib PRIVATE -DIS_USING_LOAM -DIS_USING_NORMALS)
 target_link_libraries(cvo_utils_loam_lib  opencv_core opencv_highgui opencv_photo elas opencv_imgcodecs pcl_filters pcl_features pcl_search pcl_io ${TBB_LIBRARIES})
 
-
 add_library(bki_mapping_lib SHARED ${BKI_MAPPING_SOURCE})
 target_link_libraries(bki_mapping_lib cvo_utils_lib pcl_filters pcl_io pcl_search pcl_visualization )
+
+#if (${PROJECT_NAME}_ENABLE_CUDA)
+#add_library(bki_mapping_cov_lib SHARED ${BKI_MAPPING_SOURCE})
+#target_link_libraries(bki_mapping_lib cvo_utils_cov_lib pcl_filters pcl_io pcl_search pcl_visualization )
+#endif()
 
 #############################################
 # CVO and Adaptive-CVO cpu
@@ -221,7 +249,14 @@ target_link_libraries(acvo_cpu_semantic_lib lie_group_utils ${TBB_LIBRARIES} pcl
 
 
 add_library(pose_graph_lib SHARED ${POSE_GRAPH_SOURCE})
+target_compile_definitions(pose_graph_lib PRIVATE -DIS_USING_RANGE_ELL)
 target_link_libraries(pose_graph_lib PRIVATE cvo_utils_lib bki_mapping_lib cvo_cpu_lib opencv_core opencv_imgcodecs boost_filesystem  gtsam gtsam_unstable pcl_io pcl_search pcl_visualization)
+
+
+#add_library(pose_graph_cov_lib SHARED ${POSE_GRAPH_SOURCE})
+#target_compile_definitions(pose_graph_cov_lib PRIVATE -DIS_USING_COVARIANCE)
+#target_link_libraries(pose_graph_cov_lib PRIVATE cvo_utils_cov_lib bki_mapping_cov_lib cvo_cpu_lib  opencv_core opencv_imgcodecs boost_filesystem  gtsam gtsam_unstable pcl_io pcl_search pcl_visualization)
+
 
 add_library(pose_graph_normal_lib SHARED ${POSE_GRAPH_SOURCE})
 target_link_libraries(pose_graph_normal_lib PRIVATE cvo_utils_normal_lib bki_mapping_lib cvo_cpu_lib opencv_core opencv_imgcodecs boost_filesystem  gtsam gtsam_unstable pcl_io )
@@ -232,19 +267,19 @@ target_link_libraries(pose_graph_loam_lib PRIVATE cvo_utils_loam_lib bki_mapping
 
 
 add_executable(cvo_f2f ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_align_f2f.cpp )
-target_link_libraries(cvo_f2f cvo_cpu_lib boost_system pose_graph_lib cvo_utils_lib boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(cvo_f2f cvo_cpu_lib boost_system pose_graph_lib cvo_utils_lib kitti boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(cvo_align ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_align.cpp )
-target_link_libraries(cvo_align cvo_cpu_lib cvo_utils_lib boost_system boost_thread pose_graph_lib cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(cvo_align cvo_cpu_lib cvo_utils_lib boost_system boost_thread kitti pose_graph_lib cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(cvo_align_normal ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_align.cpp )
 target_compile_definitions(cvo_align_normal PRIVATE -DIS_USING_NORMALS)
-target_link_libraries(cvo_align_normal cvo_cpu_normal_lib cvo_utils_normal_lib boost_system boost_thread pose_graph_normal_lib cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(cvo_align_normal cvo_cpu_normal_lib cvo_utils_normal_lib boost_system kitti boost_thread pose_graph_normal_lib cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
 
 
 add_executable(cvo_align_loam ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_align.cpp )
 target_compile_definitions(cvo_align_loam PRIVATE -DIS_USING_LOAM)
-target_link_libraries(cvo_align_loam cvo_cpu_loam_lib boost_system  cvo_utils_loam_lib boost_thread pose_graph_loam_lib cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(cvo_align_loam cvo_cpu_loam_lib boost_system  cvo_utils_loam_lib boost_thread  kitti pose_graph_loam_lib cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
 
 
 
@@ -262,7 +297,7 @@ target_link_libraries(acvo_gpu_lib PRIVATE lie_group_utils cvo_utils_lib pcl_fil
 
 add_library(acvo_gpu_semantic_lib ${ACVO_GPU_SOURCE} )
 target_compile_definitions(acvo_gpu_semantic_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_USING_SEMANTICS)
-target_link_libraries(acvo_gpu_semantic_lib PRIVATE lie_group_utils cvo_utils_lib)
+target_link_libraries(acvo_gpu_semantic_lib PRIVATE  lie_group_utils cvo_utils_lib)
 set_target_properties(acvo_gpu_semantic_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   CUDA_SEPERABLE_COMPILATION ON
@@ -270,7 +305,7 @@ set_target_properties(acvo_gpu_semantic_lib PROPERTIES
 
 add_library(acvo_gpu_lidar_lib ${ACVO_GPU_SOURCE})
 target_compile_definitions(acvo_gpu_lidar_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1)
-target_link_libraries(acvo_gpu_lidar_lib PRIVATE lie_group_utils cvo_utils_lib )
+target_link_libraries(acvo_gpu_lidar_lib PRIVATE  lie_group_utils cvo_utils_lib )
 set_target_properties(acvo_gpu_lidar_lib PROPERTIES POSITION_INDEPENDENT_CODE ON
   CUDA_SEPERABLE_COMPILATION ON
   COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
@@ -278,7 +313,7 @@ set_target_properties(acvo_gpu_lidar_lib PROPERTIES POSITION_INDEPENDENT_CODE ON
 
 add_library(acvo_gpu_semantic_lidar_lib ${ACVO_GPU_SOURCE})
 target_compile_definitions(acvo_gpu_semantic_lidar_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_SEMANTICS)
-target_link_libraries(acvo_gpu_semantic_lidar_lib PRIVATE lie_group_utils cvo_utils_lib)
+target_link_libraries(acvo_gpu_semantic_lidar_lib PRIVATE  lie_group_utils cvo_utils_lib)
 set_target_properties(acvo_gpu_semantic_lidar_lib PROPERTIES POSITION_INDEPENDENT_CODE ON
   CUDA_SEPERABLE_COMPILATION ON
   COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
@@ -291,8 +326,6 @@ set_target_properties(acvo_gpu_geometric_lib PROPERTIES POSITION_INDEPENDENT_COD
   CUDA_SEPERABLE_COMPILATION ON
   COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 
-
-
 endif()
 
 
@@ -301,7 +334,7 @@ endif()
 ## Non-Adaptive CVO GPU
 if (${PROJECT_NAME}_ENABLE_CUDA)
 add_library(cvo_gpu_lib ${CVO_GPU_SOURCE})
-target_link_libraries(cvo_gpu_lib PRIVATE lie_group_utils cvo_utils_lib )
+target_link_libraries(cvo_gpu_lib PRIVATE lie_group_utils cvo_utils_lib  )
 target_compile_definitions(cvo_gpu_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
 set_target_properties(cvo_gpu_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
@@ -314,13 +347,22 @@ set_target_properties(cvo_gpu_lib PROPERTIES
 #target_link_libraries(cvo_gpu_exec  elas cvo_gpu_lib ${Boost_LIBRARIES} ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARIES}  ${OpenCV_LIBS} ${TBB_LIBRARIES} gtsam  gtsam_unstable )
 
 add_library(cvo_gpu_lidar_lib SHARED ${CVO_GPU_SOURCE})
-target_compile_definitions(cvo_gpu_lidar_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY)
+target_compile_definitions(cvo_gpu_lidar_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_RANGE_ELL)
 target_link_libraries(cvo_gpu_lidar_lib PRIVATE lie_group_utils cvo_utils_lib)
 set_target_properties(cvo_gpu_lidar_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
     CUDA_SEPERABLE_COMPILATION ON
     COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 
+  
+add_library(cvo_gpu_lidar_cov_lib SHARED ${CVO_GPU_SOURCE})
+target_compile_definitions(cvo_gpu_lidar_cov_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_COVARIANCE)
+target_link_libraries(cvo_gpu_lidar_cov_lib PRIVATE lie_group_utils cvo_utils_cov_lib cukdtree_lib)
+set_target_properties(cvo_gpu_lidar_cov_lib PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+  CUDA_SEPERABLE_COMPILATION ON
+  COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
+  
 
 add_library(cvo_gpu_lidar_normal_lib SHARED ${CVO_GPU_SOURCE})
 target_compile_definitions(cvo_gpu_lidar_normal_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_NORMALS)
@@ -342,7 +384,7 @@ set_target_properties(cvo_gpu_lidar_loam_lib PROPERTIES
   
 
 add_library(cvo_gpu_lidar_intensity_lib ${CVO_GPU_SOURCE})
-target_compile_definitions(cvo_gpu_lidar_intensity_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 )
+target_compile_definitions(cvo_gpu_lidar_intensity_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_RANGE_ELL)
 target_link_libraries(cvo_gpu_lidar_intensity_lib PRIVATE lie_group_utils cvo_utils_lib)
 set_target_properties(cvo_gpu_lidar_intensity_lib PROPERTIES POSITION_INDEPENDENT_CODE ON
     CUDA_SEPERABLE_COMPILATION ON
@@ -367,72 +409,76 @@ if (${PROJECT_NAME}_ENABLE_CUDA)
 
 add_executable(acvo_align_gpu ${PROJECT_SOURCE_DIR}/src/experiments/main_acvo_gpu_align.cpp)
 target_compile_definitions(acvo_align_gpu PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
-target_link_libraries(acvo_align_gpu acvo_gpu_lib cvo_cpu_lib cvo_utils_lib boost_filesystem boost_system)
+target_link_libraries(acvo_align_gpu acvo_gpu_lib cvo_cpu_lib cvo_utils_lib boost_filesystem kitti boost_system)
 
 add_executable(acvo_align_semantic_gpu ${PROJECT_SOURCE_DIR}/src/experiments/main_acvo_gpu_align.cpp)
 target_compile_definitions(acvo_align_semantic_gpu PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_USING_SEMANTICS)
-target_link_libraries(acvo_align_semantic_gpu acvo_gpu_semantic_lib cvo_cpu_lib cvo_utils_lib boost_filesystem boost_system)
+target_link_libraries(acvo_align_semantic_gpu acvo_gpu_semantic_lib  cvo_utils_lib kitti boost_filesystem cvo_cpu_lib boost_system)
 
 
 add_executable(acvo_align_gpu_raw_img ${PROJECT_SOURCE_DIR}/src/experiments/main_acvo_gpu_align_raw_image.cpp)
 target_compile_definitions(acvo_align_gpu_raw_img PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
-target_link_libraries(acvo_align_gpu_raw_img acvo_gpu_lib cvo_utils_lib pose_graph_lib  boost_filesystem boost_system)
+target_link_libraries(acvo_align_gpu_raw_img acvo_gpu_lib cvo_utils_lib pose_graph_lib kitti  boost_filesystem boost_system)
 
 add_executable(acvo_align_semantic_gpu_raw_img ${PROJECT_SOURCE_DIR}/src/experiments/main_acvo_semantic_gpu_align_raw_image.cpp)
 target_compile_definitions(acvo_align_semantic_gpu_raw_img PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_USING_SEMANTICS)
-target_link_libraries(acvo_align_semantic_gpu_raw_img acvo_gpu_semantic_lib cvo_utils_lib pose_graph_lib  boost_filesystem boost_system)
+target_link_libraries(acvo_align_semantic_gpu_raw_img acvo_gpu_semantic_lib cvo_utils_lib kitti pose_graph_lib  boost_filesystem boost_system)
  
 add_executable(acvo_align_semantic_gpu_raw_lidar ${PROJECT_SOURCE_DIR}/src/experiments/main_semantic_acvo_gpu_lidar_align_raw.cpp)
 target_compile_definitions(acvo_align_semantic_gpu_raw_lidar PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_SEMANTICS)
-target_link_libraries(acvo_align_semantic_gpu_raw_lidar acvo_gpu_semantic_lidar_lib cvo_utils_lib pose_graph_lib  boost_filesystem boost_system)
+target_link_libraries(acvo_align_semantic_gpu_raw_lidar acvo_gpu_semantic_lidar_lib kitti cvo_utils_lib pose_graph_lib  boost_filesystem boost_system)
  
 
 add_executable(acvo_geometric_gpu_raw_lidar ${PROJECT_SOURCE_DIR}/src/experiments/main_semantic_acvo_gpu_lidar_align_raw.cpp)
 target_compile_definitions(acvo_geometric_gpu_raw_lidar PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY)
-target_link_libraries(acvo_geometric_gpu_raw_lidar acvo_gpu_geometric_lib cvo_utils_lib pose_graph_lib  boost_filesystem boost_system)
+target_link_libraries(acvo_geometric_gpu_raw_lidar acvo_gpu_geometric_lib kitti cvo_utils_lib pose_graph_lib  boost_filesystem boost_system)
 
 add_executable(acvo_intensity_gpu_raw_lidar ${PROJECT_SOURCE_DIR}/src/experiments/main_semantic_acvo_gpu_lidar_align_raw.cpp)
 target_compile_definitions(acvo_intensity_gpu_raw_lidar PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 )
-target_link_libraries(acvo_intensity_gpu_raw_lidar acvo_gpu_lidar_lib cvo_utils_lib pose_graph_lib  boost_filesystem boost_system)
+target_link_libraries(acvo_intensity_gpu_raw_lidar acvo_gpu_lidar_lib kitti cvo_utils_lib pose_graph_lib  boost_filesystem boost_system)
 
 
 add_executable(cvo_align_gpu ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align.cpp)
 target_compile_definitions(cvo_align_gpu PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
-target_link_libraries(cvo_align_gpu cvo_gpu_lib cvo_cpu_lib cvo_utils_lib boost_filesystem boost_system)
+target_link_libraries(cvo_align_gpu cvo_gpu_lib cvo_cpu_lib kitti cvo_utils_lib boost_filesystem boost_system)
 
 add_executable(cvo_align_gpu_lidar_raw ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_geometric.cpp)
 target_compile_definitions(cvo_align_gpu_lidar_raw PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY)
-target_link_libraries(cvo_align_gpu_lidar_raw cvo_gpu_lidar_lib cvo_cpu_lib pose_graph_lib cvo_utils_lib boost_filesystem boost_system)
+target_link_libraries(cvo_align_gpu_lidar_raw cvo_gpu_lidar_lib kitti cvo_utils_lib boost_filesystem boost_system)
+
+add_executable(cvo_align_gpu_lidar_raw_cov ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_covariance.cpp)
+target_compile_definitions(cvo_align_gpu_lidar_raw_cov PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_COVARIANCE)
+target_link_libraries(cvo_align_gpu_lidar_raw_cov cvo_gpu_lidar_cov_lib kitti cvo_utils_cov_lib boost_filesystem boost_system)
 
 
 add_executable(cvo_align_gpu_lidar_normal ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw.cpp)
 target_compile_definitions(cvo_align_gpu_lidar_normal PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_NORMALS)
-target_link_libraries(cvo_align_gpu_lidar_normal cvo_gpu_lidar_normal_lib pose_graph_normal_lib cvo_utils_normal_lib boost_filesystem boost_system)
+target_link_libraries(cvo_align_gpu_lidar_normal cvo_gpu_lidar_normal_lib pose_graph_normal_lib cvo_utils_normal_lib boost_filesystem boost_system kitti)
 
 
 add_executable(cvo_align_gpu_lidar_loam ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw.cpp)
 target_compile_definitions(cvo_align_gpu_lidar_loam PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_LOAM)
-target_link_libraries(cvo_align_gpu_lidar_loam cvo_gpu_lidar_normal_lib pose_graph_loam_lib cvo_utils_loam_lib boost_filesystem boost_system)
+target_link_libraries(cvo_align_gpu_lidar_loam cvo_gpu_lidar_normal_lib pose_graph_loam_lib cvo_utils_loam_lib boost_filesystem boost_system kitti)
 
 
 add_executable(cvo_align_gpu_lidar_intensity_raw ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_intensity.cpp)
 target_compile_definitions(cvo_align_gpu_lidar_intensity_raw PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1)
-target_link_libraries(cvo_align_gpu_lidar_intensity_raw cvo_gpu_lidar_intensity_lib cvo_cpu_lib pose_graph_lib cvo_utils_lib boost_filesystem boost_system)
+target_link_libraries(cvo_align_gpu_lidar_intensity_raw cvo_gpu_lidar_intensity_lib cvo_cpu_lib pose_graph_lib cvo_utils_lib boost_filesystem boost_system kitti)
 
 
 add_executable(cvo_align_gpu_lidar_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_pcd.cpp)
 target_compile_definitions(cvo_align_gpu_lidar_pcd PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_LOAM)
-target_link_libraries(cvo_align_gpu_lidar_pcd cvo_gpu_lidar_loam_lib pose_graph_loam_lib cvo_utils_loam_lib boost_filesystem boost_system pcl_io)
+target_link_libraries(cvo_align_gpu_lidar_pcd cvo_gpu_lidar_loam_lib pose_graph_loam_lib cvo_utils_loam_lib boost_filesystem boost_system pcl_io kitti)
 
 
 add_executable(cvo_align_gpu_lidar_semantic_raw ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_semantic.cpp)
 target_compile_definitions(cvo_align_gpu_lidar_semantic_raw PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_SEMANTICS)
-target_link_libraries(cvo_align_gpu_lidar_semantic_raw cvo_gpu_lidar_semantic_lib cvo_cpu_lib pose_graph_lib cvo_utils_lib boost_filesystem boost_system)
+target_link_libraries(cvo_align_gpu_lidar_semantic_raw cvo_gpu_lidar_semantic_lib cvo_cpu_lib pose_graph_lib cvo_utils_lib boost_filesystem boost_system kitti)
 
 
 add_executable(acvo_semantic_lidar_align_gpu ${PROJECT_SOURCE_DIR}/src/experiments/main_acvo_gpu_lidar_align.cpp)
 target_compile_definitions(acvo_semantic_lidar_align_gpu PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_SEMANTICS)
-target_link_libraries(acvo_semantic_lidar_align_gpu  acvo_gpu_semantic_lidar_lib cvo_cpu_semantic_lib cvo_utils_lib boost_filesystem boost_system)
+target_link_libraries(acvo_semantic_lidar_align_gpu  acvo_gpu_semantic_lidar_lib cvo_cpu_semantic_lib cvo_utils_lib boost_filesystem boost_system kitti)
 
 endif()
 
@@ -457,5 +503,3 @@ set_target_properties(cvo_cpu_lib PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LI
 # Configure config file for local build tree
 configure_file(${PROJECT_SOURCE_DIR}/cmake/cvoConfig.cmake.in
   "${PROJECT_BINARY_DIR}/cvoConfig.cmake" @ONLY)
-
-message("PROJECT_BINARY_DIR: " ${PROJECT_BINARY_DIR})

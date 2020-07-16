@@ -7,6 +7,7 @@
 #include <string>
 
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/filter_indices.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 
@@ -37,25 +38,25 @@ namespace cvo
   void LidarPointSelector::edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
                                           pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
                                           std::vector <double> & output_depth_grad,
-                                          std::vector <double> & output_intenstity_grad) {
+                                          std::vector <double> & output_intenstity_grad,
+                                          std::vector <int> & selected_indexes) {
 
     std::vector<int> indices;
-    pcl::removeNaNFromPointCloud(*pc_in, *pc_in, indices);
-    int num_points = pc_in->points.size();
-    int previous_quadrant = get_quadrant(pc_in->points[0]);
+    pcl::removeNaNFromPointCloud(*pc_in, indices);
+    int num_points = indices.size();
+    int previous_quadrant = get_quadrant(pc_in->points[indices[0]]);
     int ring_num = 0;
-
     for(int i = 1; i<num_points; i++) {      
-      int quadrant = get_quadrant(pc_in->points[i]);
+      int quadrant = get_quadrant(pc_in->points[indices[i]]);
       if(quadrant == 1 && previous_quadrant == 4 && ring_num < _num_beams-1){
         ring_num += 1;
         continue;
       }
 
       // select points
-      const auto& point_l = pc_in->points[i-1];
-      const auto& point = pc_in->points[i];
-      const auto& point_r = pc_in->points[i+1];
+      const auto& point_l = pc_in->points[indices[i-1]];
+      const auto& point = pc_in->points[indices[i]];
+      const auto& point_r = pc_in->points[indices[i+1]];
       
       double depth_grad = std::max((point_l.getVector3fMap()-point.getVector3fMap()).norm(),
                       (point.getVector3fMap()-point_r.getVector3fMap()).norm());
@@ -69,30 +70,14 @@ namespace cvo
            && ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0)) //){
            && (sqrt(point.x*point.x + point.y*point.y + point.z*point.z) < _distance_bound)){
           // std::cout << "points: " << point.x << ", " << point.y << ", " << point.z << ", " << point.intensity << std::endl;
-          pc_out->push_back(pc_in->points[i]);
+          pc_out->push_back(pc_in->points[indices[i]]);
           output_depth_grad.push_back(depth_grad);
           output_intenstity_grad.push_back(intenstity_grad);
+          selected_indexes.push_back(indices[i]);
       }
 
       previous_quadrant = quadrant;      
     }
-
-    // visualize
-    // pcl::visualization::PCLVisualizer input_viewer ("Input Point Cloud Viewer");
-    // input_viewer.addPointCloud<pcl::PointXYZI> (pc_in, "frame0");
-    // while (!input_viewer.wasStopped ())
-    // {
-    //     input_viewer.spinOnce ();
-    // }
-    // pcl::visualization::PCLVisualizer output_viewer ("Output Point Cloud Viewer");
-    // output_viewer.addPointCloud<pcl::PointXYZI> (pc_out, "frame0");
-    // while (!output_viewer.wasStopped ())
-    // {
-    //     output_viewer.spinOnce ();
-    // }
-    
-    // pcl::io::savePCDFile("raw_input.pcd", *pc_in);
-    // pcl::io::savePCDFile("edge_detection.pcd", *pc_out);
   }
 
   void LidarPointSelector::edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
@@ -171,6 +156,20 @@ namespace cvo
     // pcl::io::savePCDFile("loam_pointselection.pcd", *pc_out);
   }
 
+  void LidarPointSelector::legoloam_point_selector(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
+                                                   pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
+                                                   std::vector <float> & edge_or_surface,
+                                                   std::vector<int> & selected_indexes) {
+    //using LeGO-LOAM's functions
+
+    LeGoLoamPointSelection lego_loam;
+    lego_loam.cloudHandler(pc_in, pc_out, edge_or_surface, selected_indexes);
+
+    // pcl::io::savePCDFile("raw_input.pcd", *laserCloudIn);
+    // pcl::io::savePCDFile("loam_pointselection.pcd", *pc_out);
+  }
+
+  
   int LidarPointSelector::get_quadrant(pcl::PointXYZI point){
     int res = 0;
     /* because for kitti dataset lidar, we changed the coordinate...

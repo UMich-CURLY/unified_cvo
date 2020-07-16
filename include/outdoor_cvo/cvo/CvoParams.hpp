@@ -38,6 +38,9 @@ namespace cvo {
     int ell_decay_start;
     int indicator_window_size;
     float indicator_stable_threshold;
+
+    bool is_ell_adaptive;
+    bool is_dense_kernel;
   };
 
   inline void read_CvoParams_yaml(const char *filename, CvoParams * params) {

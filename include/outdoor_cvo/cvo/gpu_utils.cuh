@@ -5,8 +5,9 @@
 #include <thrust/device_vector.h>
 namespace cvo {
 
+  inline
   __device__
-  void skew(Eigen::Vector3f * v, Eigen::Matrix3f * M) {
+  void skew_gpu(Eigen::Vector3f * v, Eigen::Matrix3f * M) {
     // Convert vector to skew-symmetric matrix
     (*M) << 0, -(*v)[2], (*v)[1],
       (*v)[2], 0, -(*v)[0], 

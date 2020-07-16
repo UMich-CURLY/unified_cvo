@@ -22,3 +22,4 @@ ell_decay_rate: 0.9
 ell_decay_start: 30
 indicator_window_size: 15
 indicator_stable_threshold: 0.02
+is_ell_adaptive: False

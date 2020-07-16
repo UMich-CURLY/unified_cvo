@@ -10,9 +10,9 @@
  *  @brief  Header file for various Lie Group functions 
  *  @date   September 18, 2018
  **/
+#ifndef __LIEGROUP_H__
+#define __LIEGROUP_H__
 
-#ifndef LIEGROUP_H
-#define LIEGROUP_H 
 #include <Eigen/Dense>
 #include <unsupported/Eigen/MatrixFunctions>
 #include <iostream>
@@ -41,4 +41,4 @@ Eigen::MatrixXf Adjoint_SEK3(const Eigen::MatrixXf& X);
 Eigen::VectorXcf poly_solver(const Eigen::VectorXf& coef);
 float dist_se3(const Eigen::Matrix3f& R, const Eigen::Vector3f& T);
 Eigen::Vector3cf poly_solver_order3(const Eigen::Vector4f& coef);
-#endif 
+#endif

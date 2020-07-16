@@ -11,7 +11,7 @@
  *  @date   September 12, 2019
  **/
 
-#include "LieGroup.h"
+#include "cvo/LieGroup.h"
 
 using namespace std;
 
