@@ -30,11 +30,24 @@ class LidarPointSelector{
                         std::vector<int> & semantic_out);
     void loam_point_selector(pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudIn,
                             pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
-                            std::vector <float> & edge_or_surface);
+                            std::vector <float> & edge_or_surface,
+                            std::vector <int> & selected_indexes);
+    void loam_point_selector(pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudIn,
+                            const std::vector<int> & semantic_in,
+                            pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
+                            std::vector <float> & edge_or_surface,
+                            std::vector <int> & selected_indexes,
+                            std::vector<int> & semantic_out);
     void legoloam_point_selector(pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudIn,
                                 pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
                                 std::vector <float> & edge_or_surface,
                                 std::vector <int> & selected_indexes);
+    void legoloam_point_selector(pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudIn,
+                                const std::vector<int> & semantic_in,
+                                pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
+                                std::vector <float> & edge_or_surface,
+                                std::vector <int> & selected_indexes,
+                                std::vector<int> & semantic_out);
 
   private:
     int get_quadrant(pcl::PointXYZI point);

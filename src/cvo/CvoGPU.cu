@@ -1190,12 +1190,12 @@ namespace cvo{
          indicator_end_sum / indicator_start_sum  < 1 + params.indicator_stable_threshold){
         decrease = true;
         std::queue<float> empty;
-        std::swap( indicator_start_queue, indicator_end_queue );
-
-        std::swap( indicator_end_queue, empty );
+        std::swap( indicator_start_queue, empty );
+        // std::swap( indicator_start_queue, indicator_end_queue );
+        // std::swap( indicator_end_queue, empty );
         
         std::queue<float> empty2;
-        std::swap( indicator_start_queue, empty2 );
+        std::swap( indicator_end_queue, empty2 );
         indicator_start_sum = 0;
         //indicator_start_sum = indicator_end_sum;
         indicator_end_sum = 0;
@@ -1443,7 +1443,7 @@ namespace cvo{
       }
       
       if(debug_print) printf("end of iteration \n\n\n");
-      
+
       // std::cout<<"iter: "<<k<<std::endl;
       // if(debug_print){
       // std::cout<<"num non zeros in A: "<<A.nonZeros()<<std::endl;
