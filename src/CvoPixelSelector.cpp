@@ -639,7 +639,6 @@ namespace cvo
                                  double distance_bound,
                                  int num_beams,
                                  // output
-                                 pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
                                  std::vector <double> & output_depth_grad,
                                  std::vector <double> & output_intenstity_grad,
                                  std::vector <int> & selected_indexes) {
@@ -677,10 +676,10 @@ namespace cvo
 
         if ((intenstity_grad > intensity_bound || depth_grad > depth_bound) ||
             ((float)((rand()% pc_in->size()) / (float) pc_in->size())  < 0.02    )  ) {
-        pc_out->push_back(pc_in->points[i]);
-        output_depth_grad.push_back(depth_grad);
-        output_intenstity_grad.push_back(intenstity_grad);
-        selected_indexes.push_back(i);
+          //pc_out.push_back(pc_in->points[i]);
+          output_depth_grad.push_back(depth_grad);
+          output_intenstity_grad.push_back(intenstity_grad);
+          selected_indexes.push_back(i);
         }
       } 
       previous_quadrant = quadrant;      

@@ -60,7 +60,6 @@ namespace cvo
                                  double distance_bound,
                                  int num_beams,
                                  // output
-                                 pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
                                  std::vector <double> & output_depth_grad,
                                  std::vector <double> & output_intenstity_grad,
                                  std::vector <int> & selected_indexes);

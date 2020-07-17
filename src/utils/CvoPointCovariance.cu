@@ -8,8 +8,10 @@
 #include <chrono>
 #include <vector>
 #include <memory>
+#include <iostream>
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
+#include <thrust/copy.h>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
@@ -67,37 +69,24 @@ namespace cvo {
     for (int j = 0; j < 9; j++)
       cov_curr[j] = covariance(j/3, j%3);
 
-    //Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> es(covariance);
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> es(3);
+    //es.compute(covariance);
     if (i == 0) {
       printf("covariance is\n %f %f %f\n %f %f %f\n %f %f %f\n",
              covariance(0,0), covariance(0,1), covariance(0,2),
              covariance(1,0), covariance(1,1), covariance(1,2),
              covariance(2,0), covariance(2,1), covariance(2,2));
-      //if (es.info() != Eigen::Success) {
-      //   printf("covariance eigendecomposition not successful\n");
-      //}
-    }
-    //Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> es(covariance);
-    //auto e_values = es.eigenvalues();
-    //float * e_values_curr = eigenvalues_out + i * 3;
-    //for (int j = 0;j<3; j++) e_values_curr[j] = e_values(j);
-    //es.computeDirect(covariance);
-    /*
-      if (i==0) printf("1\n");
-      es.computeDirect(covariance);
-      if (i==0) printf("2\n");
-      Eigen::Vector3f e_values = es.eigenvalues();
-      if (i==0) printf("3\n");
-    
-    
-      if (i==0) printf("4\n");*/
-    /*
-      for (int j = 0; j < 3; j++)
-      curr_p.cov_eigenvalues[j] = e_values(j);
 
+    }
+    /* 
+    //auto e_values = es.eigenvalues();
+    for (int j = 0; j < 3; j++) {
+      eigenvalues_out[j+3*i] = e_values(j);
+      
       if (i == 0) {
-      printf("i==0: cov_eigenvalue is %.3f,%.3f,%.3f\n", curr_p.cov_eigenvalues[0],
-      curr_p.cov_eigenvalues[1], curr_p.cov_eigenvalues[2]);
+        printf("i==0: cov_eigenvalue is %.3f,%.3f,%.3f\n", eigenvalues_out[3*i],
+               eigenvalues_out[1+3*i], eigenvalues_out[2+3*i]);
+      }
       }*/
 
     /* 
@@ -139,7 +128,7 @@ namespace cvo {
 
     covariance.resize(pointcloud_gpu->size()*9);
     eigenvalues.resize(pointcloud_gpu->size()*3);
-    init_covariance<<<(pointcloud_gpu->size() / 32 + 1), 32>>>(
+    init_covariance<<<(pointcloud_gpu->size() / 512 + 1), 512>>>(
                                                                  thrust::raw_pointer_cast(pointcloud_gpu->points.data()), // mutate
                                                                  pointcloud_gpu->size(),
                                                                  thrust::raw_pointer_cast(indices.data() ),
@@ -152,20 +141,25 @@ namespace cvo {
     std::chrono::duration<double> t_kdtree_search = end-start;
     std::cout<<"kdtree construction and  nn search time is "<<t_kdtree_search.count()<<std::endl;
   }
-     
-  void CvoPointCloud::compute_covariance(const pcl::PointCloud<pcl::PointXYZI> & pc_raw,
-                                         const std::vector<int> & selected_indexes) {
+
+  static
+  void compute_covariance(const pcl::PointCloud<pcl::PointXYZI> & pc_raw,
+                          thrust::device_vector<float> & covariance_all,
+                          thrust::device_vector<float> & eigenvalues_all
+                          )   {
 
 
-    int num_points = selected_indexes.size();
+    //int num_points = selected_indexes.size();
+    int num_points = pc_raw.size();
 
     // set basic informations for pcl_cloud
-    //thrust::host_vector<perl_registration::cuPointXYZ> host_cloud;
-    pcl::PointCloud<perl_registration::cuPointXYZ> host_cloud;
+    thrust::host_vector<perl_registration::cuPointXYZ> host_cloud;
+    //pcl::PointCloud<perl_registration::cuPointXYZ> host_cloud;
     host_cloud.resize(num_points);
 
     for(int i=0; i<num_points; ++i){
-      auto & curr_p = pc_raw[selected_indexes[i]];
+      //auto & curr_p = pc_raw[selected_indexes[i]];
+      auto & curr_p = pc_raw[i];
       (host_cloud)[i].x = curr_p.x;
       (host_cloud)[i].y = curr_p.y;
       (host_cloud)[i].z = curr_p.z;
@@ -173,23 +167,26 @@ namespace cvo {
    
     //gpu_cloud->points = host_cloud;
     //auto pc_gpu = std::make_shared<perl_registration::cuPointCloud<perl_registration::cuPointXYZ>>(new perl_registration::cuPointCloud<perl_registration::cuPointXYZ>>);
-    perl_registration::cuPointCloud<perl_registration::cuPointXYZ>::SharedPtr pc_gpu (new perl_registration::cuPointCloud<perl_registration::cuPointXYZ>(host_cloud) );
-    //pc_gpu->points = host_cloud;
+    perl_registration::cuPointCloud<perl_registration::cuPointXYZ>::SharedPtr pc_gpu (new perl_registration::cuPointCloud<perl_registration::cuPointXYZ>);
+    pc_gpu->points = host_cloud;
 
-    fill_in_pointcloud_covariance(pc_gpu, covariance_, eigenvalues_);
+    fill_in_pointcloud_covariance(pc_gpu, covariance_all, eigenvalues_all);
 
     return;
   }
 
 
+  
   CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc,  int beam_num) {
     double intensity_bound = 0.4;
     double depth_bound = 4.0;
     double distance_bound = 75.0;
-    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);    
+    //pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
+    //std::unique_ptr<pcl::PointCloud<pcl::PointXYZI>> pc_out = std::make_unique<pcl::PointCloud<pcl::PointXYZI>>();
+    //pcl::PointCloud<pcl::PointXYZI> pc_out;
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
-    std::vector<int> selected_indexes;
+    std::vector <int> selected_indexes;
 
     
     int expected_points = 5000;
@@ -204,35 +201,48 @@ namespace cvo {
     *pc_out += *pc_out_edge;
     *pc_out += *pc_out_surface;
     */
+
+    
     random_surface_with_edges(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
-                              pc_out, output_depth_grad, output_intenstity_grad, selected_indexes);
+                              output_depth_grad, output_intenstity_grad, selected_indexes);
+    std::cout<<"compute covariance\n";
+    thrust::device_vector<float> cov_all, eig_all;
+    compute_covariance(*pc, cov_all, eig_all);
+    std::unique_ptr<thrust::host_vector<float>> cov(new thrust::host_vector<float>(cov_all));
+    std::unique_ptr<thrust::host_vector<float>> eig(new thrust::host_vector<float>(eig_all));
 
     // fill in class members
-    num_points_ = pc_out->size();
+    num_points_ = selected_indexes.size();
     num_classes_ = 0;
     
     // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
     feature_dimensions_ = 1;
     features_.resize(num_points_, feature_dimensions_);
     normals_.resize(num_points_,3);
+    covariance_.resize(num_points_ * 9);
+    eigenvalues_.resize(num_points_*3);
+    //eigenvalues_.resize(num_points_ * 3);
     //types_.resize(num_points_, 2);
 
+    assert(num_points_ == selected_indexes.size());
     for (int i = 0; i < num_points_ ; i++) {
+      int id_pc_in = selected_indexes[i];
       Vec3f xyz;
-      xyz << pc_out->points[i].x, pc_out->points[i].y, pc_out->points[i].z;
+      //xyz << pc_out->points[i].x, pc_out->points[i].y, pc_out->points[i].z;
+      xyz << pc->points[id_pc_in].x, pc->points[id_pc_in].y, pc->points[id_pc_in].z;
       positions_.push_back(xyz);
-      features_(i, 0) = pc_out->points[i].intensity;
+      features_(i, 0) = pc->points[id_pc_in].intensity;
+      memcpy(covariance_.data() + i * 9, cov->data() + id_pc_in * 9, sizeof(float)*9);
+      memcpy(eigenvalues_.data() + i * 3, eig->data() + id_pc_in * 3, sizeof(float)*3);
+      if (i == num_points_-1) {
+        std::cout<<"copy thrust::host_vector[1][0]: "<<(*cov)[id_pc_in*9]<<","<<(*cov)[1+id_pc_in*9]<<std::endl;
+        std::cout<<"and get: "<<covariance_[9*i]<<","<<covariance_[1+9*i]<<std::endl;
+      }
     }
 
-    //#if  defined(IS_USING_COVARIANCE)  && defined(__CUDACC__)
-
-    std::cout<<"compute covariance\n";
-    compute_covariance(*pc, selected_indexes);
-
-    
     std::cout<<"Construct Cvo PointCloud, num of points is "<<num_points_<<" from "<<pc->size()<<" input points "<<std::endl;    
-    write_to_intensity_pcd("kitti_lidar.pcd");
-
+    //write_to_intensity_pcd("kitti_lidar.pcd");
+    
   }
 
   

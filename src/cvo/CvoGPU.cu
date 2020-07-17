@@ -102,6 +102,18 @@ namespace cvo{
         host_cloud[i].normal[j] = normals(i,j);
 #endif
 
+#ifdef IS_USING_COVARIANCE
+      if(i==0) std::cout<<"CvoPointCloud_to_gpu: converting covariance and e-values\n"<<std::flush;
+      const Eigen::Matrix3f cov_curr = Eigen::Map<const Eigen::Matrix3f>(&cvo_cloud.covariance()[i*9]);
+      if(i==0) std::cout<<"compute evalues;\n";
+      Eigen::SelfAdjointEigenSolver<const Eigen::Matrix3f> es(cov_curr);
+      Eigen::Vector3f e_values = es.eigenvalues();
+      if (i==0) std::cout<<"e-values is "<<e_values<<std::endl;
+      memcpy(host_cloud[i].covariance, &cvo_cloud.covariance()[i*9], sizeof(float)*9);
+      for (int j = 0; j < 3; j++)
+        host_cloud[i].cov_eigenvalues[j] = e_values(j);
+#endif      
+
       //if (i == 1000) {
       //  printf("Total %d, Raw input from pcl at 1000th: \n", num_points);
       //  print_point(host_cloud[i]);
@@ -112,16 +124,18 @@ namespace cvo{
     //gpu_cloud->points = host_cloud;
     CvoPointCloudGPU::SharedPtr gpu_cloud(new CvoPointCloudGPU);
     gpu_cloud->points = host_cloud;
-
+    /*
 #ifdef IS_USING_COVARIANCE    
     auto covariance = &cvo_cloud.covariance();
-    auto eigenvalues = &cvo_cloud.eigenvalues();    
-    copy_covariances<<<host_cloud.size()/256 +1, 256>>>(thrust::raw_pointer_cast(covariance->data()),
-                                                        thrust::raw_pointer_cast(eigenvalues->data()),
+    auto eigenvalues = &cvo_cloud.eigenvalues();
+    thrust::device_vector<float> cov_gpu(cvo_cloud.covariance());
+    thrust::device_vector<float> eig_gpu(cvo_cloud.eigenvalues());
+    copy_covariances<<<host_cloud.size()/256 +1, 256>>>(thrust::raw_pointer_cast(cov_gpu.data()),
+                                                        thrust::raw_pointer_cast(eig_gpu.data()),
                                                         host_cloud.size(),
                                                         thrust::raw_pointer_cast(gpu_cloud->points.data()));
 #endif    
-
+    */
     return gpu_cloud;
   }
 
@@ -1250,7 +1264,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     std::ofstream step_file("step_history.txt");
     std::ofstream inner_product_file("inner_product_history.txt");
     
-    std::cout<<"[align] convert points to gpu\n";
+    std::cout<<"[align] convert points to gpu\n"<<std::flush;
     CvoPointCloudGPU::SharedPtr source_gpu = CvoPointCloud_to_gpu(source_points);
     CvoPointCloudGPU::SharedPtr target_gpu = CvoPointCloud_to_gpu(target_points);
 
