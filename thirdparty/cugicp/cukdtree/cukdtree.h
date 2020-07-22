@@ -5,7 +5,7 @@
 
 #include <chrono>
 
-#define KDTREE_K_SIZE 20
+#define KDTREE_K_SIZE 12
 
 namespace perl_registration {
 

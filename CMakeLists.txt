@@ -20,11 +20,11 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 #set (CMAKE_POSITION_INDEPENDENT_CODE FALSE)
 add_compile_options(-std=c++14)
 # Release Mode
-#set(CMAKE_BUILD_TYPE Release)
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -O3 -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
+set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -O3 -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -lmkl_intel_lp64 -lmkl_core -lmkl -liomp -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
-set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -g  -msse -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
+#set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -g  -msse -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 
 #set(BUILD_TYPE RelWithDebInfo)
 #set(CMAKE_CXX_STANDARD 14)
@@ -56,8 +56,8 @@ find_package(PCL REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(GTSAM REQUIRED)
 find_package(OpenMP)
-#find_package(VTK REQUIRED)
-#include(${VTK_USE_FILE})
+find_package(VTK REQUIRED)
+include(${VTK_USE_FILE})
 
 find_package(OpenMP)
 if (OPENMP_FOUND)
@@ -448,7 +448,7 @@ target_link_libraries(cvo_align_gpu_lidar_raw cvo_gpu_lidar_lib kitti cvo_utils_
 
 add_executable(cvo_align_gpu_lidar_raw_cov ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_covariance.cpp)
 target_compile_definitions(cvo_align_gpu_lidar_raw_cov PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_COVARIANCE)
-target_link_libraries(cvo_align_gpu_lidar_raw_cov cvo_gpu_lidar_cov_lib kitti cvo_utils_cov_lib boost_filesystem boost_system)
+target_link_libraries(cvo_align_gpu_lidar_raw_cov cvo_gpu_lidar_cov_lib kitti cvo_utils_cov_lib boost_filesystem boost_system pcl_visualization ${VTK_LIBRARIES})
 
 
 add_executable(cvo_align_gpu_lidar_normal ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw.cpp)

@@ -9,7 +9,8 @@
 //#include <opencv2/opencv.hpp>
 #include "dataset_handler/KittiHandler.hpp"
 #include "graph_optimizer/Frame.hpp"
-
+#include "utils/PointSegmentedDistribution.hpp"
+#include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include "utils/CvoPointCloud.hpp"
@@ -17,6 +18,75 @@
 //#include "cvo/Cvo.hpp"
 using namespace std;
 using namespace boost::filesystem;
+
+
+
+pcl::visualization::PCLVisualizer::Ptr covariance_visualizer (const pcl::PointCloud<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS, NUM_CLASSES> > & cloud)
+{
+  // --------------------------------------------
+  // -----Open 3D viewer and add point cloud-----
+  // --------------------------------------------
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_xyz (new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PointSeg_to_PointXYZ(cloud, *cloud_xyz);
+
+  std::cout<<"construct new viewer...\n"<<std::flush;
+  pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("PointCloud Covariance Viewer"));
+
+  std::cout<<" add points and  configs to viewer\n"<<std::flush;
+  viewer->setBackgroundColor (0, 0, 0);
+  viewer->addPointCloud<pcl::PointXYZ> (cloud_xyz, "sample cloud");
+  viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "sample cloud");
+
+  std::cout<<"add covarainces to viewer\n"<<std::flush;
+  for (int i = 0; i < cloud_xyz->size(); i++) {
+    float radius = cloud[i].cov_eigenvalues[0] ;
+    if (radius > 2) radius = 2;
+    if (radius < 0.05) radius = 0.05;
+    
+    if (i < 100) std::cout<<"sphere radius is "<<radius<<std::endl;
+    viewer->addSphere (cloud_xyz->points[i] ,  radius , 20, 20, 10, "sphere"+std::to_string(i));      
+  }
+  viewer->addCoordinateSystem (1.0);
+  viewer->initCameraParameters ();
+  std::cout<<" return\n"<<std::flush;
+  return (viewer);
+}  
+
+
+
+void convert_to_pcl(const cvo::CvoPointCloud & cvo_cloud,
+                    pcl::PointCloud<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS, NUM_CLASSES> > & pcl_cloud) {
+  int num_points = cvo_cloud.num_points();
+  auto & positions = cvo_cloud.positions();
+  const Eigen::Matrix<float, Eigen::Dynamic, FEATURE_DIMENSIONS> & features = cvo_cloud.features();
+  //auto & features = this->features_;
+  auto & labels = cvo_cloud.labels();
+  auto & covariance = cvo_cloud.covariance();
+  auto & eigenvalues = cvo_cloud.eigenvalues();
+    
+  pcl_cloud.points.resize(num_points);
+  pcl_cloud.width = num_points;
+  pcl_cloud.height = 1;
+  std::cout<<"start converting to pcl\n";
+  for(int i=0; i<num_points; ++i){
+    // set positions
+    pcl_cloud.points[i].x = positions[i](0);
+    pcl_cloud.points[i].y = positions[i](1);
+    pcl_cloud.points[i].z = positions[i](2);
+    pcl_cloud.points[i].r = (uint8_t)std::min(255.0, (features(i,0) * 255.0));
+    pcl_cloud.points[i].g = (uint8_t)std::min(255.0, (features(i,1) * 255.0)) ;
+    pcl_cloud.points[i].b = (uint8_t)std::min(255.0, (features(i,2) * 255.0));
+    for (int j = 0; j < FEATURE_DIMENSIONS; j++)
+      pcl_cloud[i].features[j] = features(i,j);
+
+    memcpy(pcl_cloud.points[i].covariance, covariance.data() + i*9, sizeof(float)*9);
+    memcpy(pcl_cloud.points[i].cov_eigenvalues, eigenvalues.data() +i*3, sizeof(float)*3);
+    if (i < 3 )std::cout<<"copied pcl cov is "<<pcl_cloud.points[i].cov_eigenvalues[0]<<", "<<pcl_cloud.points[i].cov_eigenvalues[2]<<std::endl;
+  }
+  //pcl::io::savePCDFileASCII<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES>>(pcl_filename ,pcl_cloud);
+  std::cout<<" Finish converting to pcl\n";
+    
+}
 
 
 int main(int argc, char *argv[]) {
@@ -57,6 +127,21 @@ int main(int argc, char *argv[]) {
   std::cout<<"[main]read next lidar\n"; 
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(source_pc, 64));
   std::cout<<"[main] read complete\n"<<std::flush;
+
+  //write_to_pcl(cvo_cloud, "lidar_pcl.pcd");
+  if (init_param.is_pcl_visualization_on == 1) {
+    pcl::PointCloud<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES>> pcl_cloud;
+    convert_to_pcl(*source, pcl_cloud);
+    std::cout<<"converted to pcl!\n";
+    pcl::visualization::PCLVisualizer::Ptr viewer;
+    viewer =  covariance_visualizer(pcl_cloud);
+    while (!viewer->wasStopped ()) {
+      viewer->spinOnce (100);
+      std::this_thread::sleep_for(100ms);
+    }
+  }
+
+
 
   double total_time = 0;
   int i = start_frame;

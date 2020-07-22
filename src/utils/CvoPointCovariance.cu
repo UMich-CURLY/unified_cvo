@@ -224,6 +224,10 @@ namespace cvo {
     //eigenvalues_.resize(num_points_ * 3);
     //types_.resize(num_points_, 2);
 
+
+    std::ofstream e_value_max("e_value_max.txt");
+    std::ofstream e_value_min("e_value_min.txt");
+    
     assert(num_points_ == selected_indexes.size());
     for (int i = 0; i < num_points_ ; i++) {
       int id_pc_in = selected_indexes[i];
@@ -232,17 +236,43 @@ namespace cvo {
       xyz << pc->points[id_pc_in].x, pc->points[id_pc_in].y, pc->points[id_pc_in].z;
       positions_.push_back(xyz);
       features_(i, 0) = pc->points[id_pc_in].intensity;
+      
       memcpy(covariance_.data() + i * 9, cov->data() + id_pc_in * 9, sizeof(float)*9);
-      memcpy(eigenvalues_.data() + i * 3, eig->data() + id_pc_in * 3, sizeof(float)*3);
-      if (i == num_points_-1) {
-        std::cout<<"copy thrust::host_vector[1][0]: "<<(*cov)[id_pc_in*9]<<","<<(*cov)[1+id_pc_in*9]<<std::endl;
-        std::cout<<"and get: "<<covariance_[9*i]<<","<<covariance_[1+9*i]<<std::endl;
+      
+      Eigen::Matrix3f cov_curr = Eigen::Map<Eigen::Matrix3f>(&covariance_.data()[i*9]);
+      Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> es(cov_curr);
+      Eigen::Vector3f e_values = es.eigenvalues();
+      for (int j = 0; j < 3; j++) {
+        eigenvalues_[j+i*3] = e_values(j);
       }
+
+      /*
+      Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> es(3);
+      es.computeDirect(cov_curr);
+      Eigen::Matrix3f eigen_value_replacement = Eigen::Matrix3f::Zero();
+      eigen_value_replacement(0, 0) = 1e-3;
+      eigen_value_replacement(1, 1) = 1.0;
+      eigen_value_replacement(2, 2) = 1.0;
+      cov_curr = es.eigenvectors() * eigen_value_replacement *
+        es.eigenvectors().transpose();
+      //covariance = covariances.data[pos];
+      eigenvalues_[i*3]=1e-3;
+      eigenvalues_[i*3+1]=1.0;
+      eigenvalues_[i*3+2]=1.0;
+      */
+
+      e_value_max << e_values(2) << std::endl;
+      e_value_min << e_values(0) << std::endl;
+      
+      //memcpy(eigenvalues_.data() + i * 3, eig->data() + id_pc_in * 3, sizeof(float)*3);
     }
 
+    e_value_min.close();
+    e_value_max.close();
+    
     std::cout<<"Construct Cvo PointCloud, num of points is "<<num_points_<<" from "<<pc->size()<<" input points "<<std::endl;    
     //write_to_intensity_pcd("kitti_lidar.pcd");
-    
+
   }
 
   

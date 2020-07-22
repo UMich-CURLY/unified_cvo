@@ -38,7 +38,7 @@ namespace cvo {
     int ell_decay_start;
     int indicator_window_size;
     float indicator_stable_threshold;
-
+    int is_pcl_visualization_on;
     bool is_ell_adaptive;
     bool is_dense_kernel;
   };
@@ -75,7 +75,7 @@ namespace cvo {
     params->ell_decay_start = (int) fs["ell_decay_start"];
     params->indicator_window_size = (int) fs["indicator_window_size"];
     params->indicator_stable_threshold = (float) fs["indicator_stable_threshold"];
-
+    params->is_pcl_visualization_on = (int) fs["is_pcl_visualization_on"];
     std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<", indicator window size is "<<params->indicator_window_size<<std::endl;
     fs.release();
     return;
