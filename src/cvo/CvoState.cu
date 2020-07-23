@@ -11,8 +11,10 @@
 #include <thrust/copy.h>
 
 
-namespace cvo {
+// explicit template instantiation
+template struct pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS, NUM_CLASSES>;
 
+namespace cvo {
 
 
   /*   class member functions  */

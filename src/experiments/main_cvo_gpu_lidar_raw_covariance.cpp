@@ -20,7 +20,6 @@ using namespace std;
 using namespace boost::filesystem;
 
 
-
 pcl::visualization::PCLVisualizer::Ptr covariance_visualizer (const pcl::PointCloud<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS, NUM_CLASSES> > & cloud)
 {
   // --------------------------------------------
@@ -39,7 +38,7 @@ pcl::visualization::PCLVisualizer::Ptr covariance_visualizer (const pcl::PointCl
 
   std::cout<<"add covarainces to viewer\n"<<std::flush;
   for (int i = 0; i < cloud_xyz->size(); i++) {
-    float radius = cloud[i].cov_eigenvalues[0] ;
+    float radius = cloud[i].cov_eigenvalues[2] ;
     if (radius > 2) radius = 2;
     if (radius < 0.05) radius = 0.05;
     
@@ -83,8 +82,9 @@ void convert_to_pcl(const cvo::CvoPointCloud & cvo_cloud,
     memcpy(pcl_cloud.points[i].cov_eigenvalues, eigenvalues.data() +i*3, sizeof(float)*3);
     if (i < 3 )std::cout<<"copied pcl cov is "<<pcl_cloud.points[i].cov_eigenvalues[0]<<", "<<pcl_cloud.points[i].cov_eigenvalues[2]<<std::endl;
   }
-  //pcl::io::savePCDFileASCII<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES>>(pcl_filename ,pcl_cloud);
+  pcl::io::savePCDFileASCII<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES>>("cvo_pointcloud.pcd" ,pcl_cloud);
   std::cout<<" Finish converting to pcl\n";
+  
     
 }
 
@@ -129,9 +129,9 @@ int main(int argc, char *argv[]) {
   std::cout<<"[main] read complete\n"<<std::flush;
 
   //write_to_pcl(cvo_cloud, "lidar_pcl.pcd");
+  pcl::PointCloud<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES>> pcl_cloud;
+  convert_to_pcl(*source, pcl_cloud);
   if (init_param.is_pcl_visualization_on == 1) {
-    pcl::PointCloud<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES>> pcl_cloud;
-    convert_to_pcl(*source, pcl_cloud);
     std::cout<<"converted to pcl!\n";
     pcl::visualization::PCLVisualizer::Ptr viewer;
     viewer =  covariance_visualizer(pcl_cloud);

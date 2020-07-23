@@ -5,6 +5,7 @@
 #include "cupointcloud/point_types.h"
 #include "cupointcloud/cupointcloud.h"
 #include "cukdtree/cukdtree.h"
+#include "cvo/gpu_utils.cuh"
 #include <chrono>
 #include <vector>
 #include <memory>
@@ -25,7 +26,8 @@ namespace cvo {
                        int num_neighbors_each_point,
                        // outputs
                        float  * covariance_out,
-                       float * eigenvalues_out
+                       float * eigenvalues_out,
+                       bool * is_cov_degenerate
                        ) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i > num_points - 1) {
@@ -43,11 +45,21 @@ namespace cvo {
     Eigen::Vector3f mean(0, 0, 0);
     int num_neighbors_in_range = 0;
     for (int j = 0; j < num_neighbors_each_point; j++) {
-      auto & neighbor = points[indices[j]];
+      auto & neighbor = points[indices[j]]; 
+      if (squared_dist(neighbor, curr_p) > 1.0)
+        continue;
+     
       Eigen::Vector3f neighbor_vec(neighbor.x, neighbor.y, neighbor.z);
       mean = (mean + neighbor_vec).eval();
       num_neighbors_in_range += 1;
     }
+
+    if (num_neighbors_in_range < 8) {
+      is_cov_degenerate[i] = true;
+      return;
+    } else
+      is_cov_degenerate[i] = false;
+    
     mean = mean * (1.0f / static_cast<float>(num_neighbors_in_range));
     if (i == 0)
       printf("i==0: mean is %f,%f,%f\n", mean(0),mean(1), mean(2));
@@ -105,7 +117,7 @@ namespace cvo {
   }
 
   static
-  void fill_in_pointcloud_covariance(perl_registration::cuPointCloud<perl_registration::cuPointXYZ>::SharedPtr pointcloud_gpu, thrust::device_vector<float> & covariance, thrust::device_vector<float> & eigenvalues ) {
+  void fill_in_pointcloud_covariance(perl_registration::cuPointCloud<perl_registration::cuPointXYZ>::SharedPtr pointcloud_gpu, thrust::device_vector<float> & covariance, thrust::device_vector<float> & eigenvalues, thrust::device_vector<bool> & is_cov_degenerate ) {
     auto start = std::chrono::system_clock::now();
     perl_registration::cuKdTree<perl_registration::cuPointXYZ> kdtree;
     kdtree.SetInputCloud(pointcloud_gpu);
@@ -128,13 +140,15 @@ namespace cvo {
 
     covariance.resize(pointcloud_gpu->size()*9);
     eigenvalues.resize(pointcloud_gpu->size()*3);
+    is_cov_degenerate.resize(pointcloud_gpu->size());
     init_covariance<<<(pointcloud_gpu->size() / 512 + 1), 512>>>(
                                                                  thrust::raw_pointer_cast(pointcloud_gpu->points.data()), // mutate
                                                                  pointcloud_gpu->size(),
                                                                  thrust::raw_pointer_cast(indices.data() ),
                                                                  num_wanted_points,
                                                                  thrust::raw_pointer_cast(covariance.data()),
-                                                                 thrust::raw_pointer_cast(eigenvalues.data()));
+                                                                 thrust::raw_pointer_cast(eigenvalues.data()),
+                                                                 thrust::raw_pointer_cast(is_cov_degenerate.data()));
     cudaDeviceSynchronize();
     
     auto end = std::chrono::system_clock::now();
@@ -145,7 +159,8 @@ namespace cvo {
   static
   void compute_covariance(const pcl::PointCloud<pcl::PointXYZI> & pc_raw,
                           thrust::device_vector<float> & covariance_all,
-                          thrust::device_vector<float> & eigenvalues_all
+                          thrust::device_vector<float> & eigenvalues_all,
+                          thrust::device_vector<bool> & is_cov_degenerate
                           )   {
 
 
@@ -170,7 +185,7 @@ namespace cvo {
     perl_registration::cuPointCloud<perl_registration::cuPointXYZ>::SharedPtr pc_gpu (new perl_registration::cuPointCloud<perl_registration::cuPointXYZ>);
     pc_gpu->points = host_cloud;
 
-    fill_in_pointcloud_covariance(pc_gpu, covariance_all, eigenvalues_all);
+    fill_in_pointcloud_covariance(pc_gpu, covariance_all, eigenvalues_all, is_cov_degenerate);
 
     return;
   }
@@ -207,12 +222,19 @@ namespace cvo {
                               output_depth_grad, output_intenstity_grad, selected_indexes);
     std::cout<<"compute covariance\n";
     thrust::device_vector<float> cov_all, eig_all;
-    compute_covariance(*pc, cov_all, eig_all);
+    thrust::device_vector<bool> is_cov_degenerate_gpu;
+    compute_covariance(*pc, cov_all, eig_all, is_cov_degenerate_gpu);
     std::unique_ptr<thrust::host_vector<float>> cov(new thrust::host_vector<float>(cov_all));
     std::unique_ptr<thrust::host_vector<float>> eig(new thrust::host_vector<float>(eig_all));
+    std::unique_ptr<thrust::host_vector<bool>> is_cov_degenerate_host(new thrust::host_vector<bool>(is_cov_degenerate_gpu));
+
+    num_points_ = 0;
+    for (int j = 0; j < selected_indexes.size(); j++){
+      if((*is_cov_degenerate_host)[selected_indexes[j]] == false)
+        num_points_+=1;
+    }
 
     // fill in class members
-    num_points_ = selected_indexes.size();
     num_classes_ = 0;
     
     // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
@@ -227,23 +249,25 @@ namespace cvo {
 
     std::ofstream e_value_max("e_value_max.txt");
     std::ofstream e_value_min("e_value_min.txt");
-    
-    assert(num_points_ == selected_indexes.size());
-    for (int i = 0; i < num_points_ ; i++) {
+
+    int actual_i = 0;
+    for (int i = 0; i < selected_indexes.size() ; i++) {
+      if ((*is_cov_degenerate_host)[selected_indexes[i]]) continue;
+      
       int id_pc_in = selected_indexes[i];
       Vec3f xyz;
       //xyz << pc_out->points[i].x, pc_out->points[i].y, pc_out->points[i].z;
       xyz << pc->points[id_pc_in].x, pc->points[id_pc_in].y, pc->points[id_pc_in].z;
       positions_.push_back(xyz);
-      features_(i, 0) = pc->points[id_pc_in].intensity;
+      features_(actual_i, 0) = pc->points[id_pc_in].intensity;
       
-      memcpy(covariance_.data() + i * 9, cov->data() + id_pc_in * 9, sizeof(float)*9);
+      memcpy(covariance_.data() + actual_i * 9, cov->data() + id_pc_in * 9, sizeof(float)*9);
       
-      Eigen::Matrix3f cov_curr = Eigen::Map<Eigen::Matrix3f>(&covariance_.data()[i*9]);
+      Eigen::Matrix3f cov_curr = Eigen::Map<Eigen::Matrix3f>(&covariance_.data()[actual_i*9]);
       Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> es(cov_curr);
       Eigen::Vector3f e_values = es.eigenvalues();
       for (int j = 0; j < 3; j++) {
-        eigenvalues_[j+i*3] = e_values(j);
+        eigenvalues_[j+actual_i*3] = e_values(j);
       }
 
       /*
@@ -264,6 +288,7 @@ namespace cvo {
       e_value_max << e_values(2) << std::endl;
       e_value_min << e_values(0) << std::endl;
       
+      actual_i++;
       //memcpy(eigenvalues_.data() + i * 3, eig->data() + id_pc_in * 3, sizeof(float)*3);
     }
 

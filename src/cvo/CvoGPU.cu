@@ -16,7 +16,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/transforms.h>
-
+#include <pcl/impl/instantiate.hpp>
 
 #include <thrust/functional.h>
 #include <thrust/transform.h>
@@ -39,6 +39,9 @@
 using namespace std;
 using namespace nanoflann;
 
+
+extern template struct pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS, NUM_CLASSES>;
+
 namespace cvo{
   
   typedef Eigen::Triplet<float> Trip_t;
@@ -47,6 +50,7 @@ namespace cvo{
   static bool debug_print =true;
 
 
+  
 
   
   __global__
