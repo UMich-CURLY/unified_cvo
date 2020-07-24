@@ -267,7 +267,7 @@ namespace cvo {
       Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> es(cov_curr);
       Eigen::Vector3f e_values = es.eigenvalues();
       for (int j = 0; j < 3; j++) {
-        eigenvalues_[j+actual_i*3] = e_values(j);
+        eigenvalues_[j+actual_i*3] = sqrt(e_values(j));
       }
 
       /*

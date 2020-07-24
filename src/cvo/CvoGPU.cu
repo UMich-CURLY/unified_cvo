@@ -1047,7 +1047,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       int idx = A->ind_row2col[i * A_cols + j];
       if (idx == -1) break;
 #ifdef IS_USING_COVARIANCE
-      temp_ell = (cloud_x[i].cov_eigenvalues[0] + cloud_y[idx].cov_eigenvalues[0])/10 ;
+      temp_ell = (cloud_x[i].cov_eigenvalues[0] + cloud_y[idx].cov_eigenvalues[0])/2.0 ;
       if (temp_ell > 1.0) temp_ell = 1.0;
       if (temp_ell < 0.1) temp_ell = 0.1;
       if (i == 0) printf("temp ell in step size is %f, e_value_a is %f, e_value_b is %f\n", temp_ell, cloud_x[i].cov_eigenvalues[2], cloud_y[idx].cov_eigenvalues[2]  );
