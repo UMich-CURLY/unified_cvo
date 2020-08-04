@@ -244,10 +244,10 @@ namespace cvo{
     // pcl::copyPointCloud(*pc_out, *cloud_with_normals_);
     // pcl::copyPointCloud(*normals_out, *cloud_with_normals_);
     // pcl::io::savePCDFileASCII("test.pcd", *cloud_with_normals_);
+    num_points_ = pc_out->size();    
 #endif    
 
 #if defined(IS_USING_LOAM) && !defined(IS_USING_NORMALS)
-    std::cout<<"1\n";
     std::vector <float> edge_or_surface;
     LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
 
@@ -268,6 +268,7 @@ namespace cvo{
      *pc_out += *pc_out_edge;
      *pc_out += *pc_out_surface;
      normals_out_ = compute_pcd_normals(pc_out, 1.0);
+     num_points_ = pc_out->size();
 #endif
 
 #if defined(IS_USING_LOAM) && defined(IS_USING_NORMALS)
@@ -284,19 +285,24 @@ namespace cvo{
 
      normals_out = compute_pcd_normals(pc_out, 1.0);
 
+    num_points_ = pc_out->size();
 #endif
 
+
+     
 #if !defined(IS_USING_LOAM) && !defined(IS_USING_NORMALS)
      std::cout<<"3\n";
 
-    edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
-                   pc_out, output_depth_grad, output_intenstity_grad, selected_indexes);
+     //edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
+     //              pc_out, output_depth_grad, output_intenstity_grad, selected_indexes);
+     random_surface_with_edges(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
+                               output_depth_grad, output_intenstity_grad, selected_indexes);
+     num_points_ = selected_indexes.size();
 
 #endif     
 
-
     // fill in class members
-    num_points_ = pc_out->size();
+
     num_classes_ = 0;
     
     // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
@@ -307,9 +313,10 @@ namespace cvo{
 
     for (int i = 0; i < num_points_ ; i++) {
       Vec3f xyz;
-      xyz << pc_out->points[i].x, pc_out->points[i].y, pc_out->points[i].z;
+      int idx = selected_indexes[i];
+      xyz << pc->points[idx].x, pc->points[idx].y, pc->points[idx].z;
       positions_.push_back(xyz);
-      features_(i, 0) = pc_out->points[i].intensity;
+      features_(i, 0) = pc->points[idx].intensity;
 
 #ifdef IS_USING_NORMALS      
       normals_(i,0) = normals_out->points[i].normal_x;
@@ -375,7 +382,7 @@ namespace cvo{
 
   CvoPointCloud::CvoPointCloud(){}
   CvoPointCloud::~CvoPointCloud() {
-    
+    std::cout<<"Destruct CvoPointCloud..\n"<<std::flush;
     
   }
 

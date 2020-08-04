@@ -36,8 +36,8 @@ namespace cvo {
     if (i == 0)
       printf("i==0 start\n");
     perl_registration::cuPointXYZ & curr_p = points[i];
-    if (i == 0)
-      printf("i==0: p is %f,%f,%f\n", curr_p.x, curr_p.y, curr_p.z);
+    if (i == 1000)
+      printf("i==1000: p is %f,%f,%f\n", curr_p.x, curr_p.y, curr_p.z);
     
     Eigen::Vector3f curr_p_vec (curr_p.x, curr_p.y, curr_p.z);
     int * indices = neighbors + i * num_neighbors_each_point;
@@ -46,7 +46,7 @@ namespace cvo {
     int num_neighbors_in_range = 0;
     for (int j = 0; j < num_neighbors_each_point; j++) {
       auto & neighbor = points[indices[j]]; 
-      if (squared_dist(neighbor, curr_p) > 1.0)
+      if (squared_dist(neighbor, curr_p) > 0.25)
         continue;
      
       Eigen::Vector3f neighbor_vec(neighbor.x, neighbor.y, neighbor.z);
@@ -54,15 +54,13 @@ namespace cvo {
       num_neighbors_in_range += 1;
     }
 
-    if (num_neighbors_in_range < 8) {
+    if (num_neighbors_in_range < 10) {
       is_cov_degenerate[i] = true;
       return;
     } else
       is_cov_degenerate[i] = false;
     
     mean = mean * (1.0f / static_cast<float>(num_neighbors_in_range));
-    if (i == 0)
-      printf("i==0: mean is %f,%f,%f\n", mean(0),mean(1), mean(2));
 
     Eigen::Matrix3f covariance = Eigen::Matrix3f::Zero();
     for (int j = 0; j < num_neighbors_each_point; j++) {
@@ -71,20 +69,21 @@ namespace cvo {
       Eigen::Vector3f x_minis_mean = neighbor_vec - mean;
       Eigen::Matrix3f temp_cov = x_minis_mean * x_minis_mean.transpose();
       covariance = covariance + temp_cov;
-      if (i == 0) {
+      if (i == 1000) {
         //printf("i==0: x_minis_mean is %.3f,%.3f,%.3f\n", x_minis_mean(0),
         //       x_minis_mean(1), x_minis_mean(2));
-        printf("i==0: neighbor (%f, %f, %f)\n", neighbor.x, neighbor.y, neighbor.z);
+        printf("i==1000: neighbor (%f, %f, %f)\n", neighbor.x, neighbor.y, neighbor.z);
       }
     }
+    covariance = (covariance / (float)(num_neighbors_in_range-1)).eval();
     float * cov_curr = covariance_out + i * 9;
     for (int j = 0; j < 9; j++)
       cov_curr[j] = covariance(j/3, j%3);
 
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> es(3);
     //es.compute(covariance);
-    if (i == 0) {
-      printf("covariance is\n %f %f %f\n %f %f %f\n %f %f %f\n",
+    if (i == 1000) {
+      printf("i=%d, covariance is\n %f %f %f\n %f %f %f\n %f %f %f\n",i,
              covariance(0,0), covariance(0,1), covariance(0,2),
              covariance(1,0), covariance(1,1), covariance(1,2),
              covariance(2,0), covariance(2,1), covariance(2,2));
@@ -108,7 +107,7 @@ namespace cvo {
     // Eigen values are sorted
     Eigen::Matrix3f eigen_value_replacement = Eigen::Matrix3f::Zero();
     eigen_value_replacement(0, 0) = 1e-3;
-    eigen_value_replacement(1, 1) = 1.0;
+    eizgen_value_replacement(1, 1) = 1.0;
     eigen_value_replacement(2, 2) = 1.0;
     covariances.data[pos] = es.eigenvectors() * eigen_value_replacement *
     es.eigenvectors().transpose();
@@ -260,33 +259,37 @@ namespace cvo {
       xyz << pc->points[id_pc_in].x, pc->points[id_pc_in].y, pc->points[id_pc_in].z;
       positions_.push_back(xyz);
       features_(actual_i, 0) = pc->points[id_pc_in].intensity;
-      
+     
       memcpy(covariance_.data() + actual_i * 9, cov->data() + id_pc_in * 9, sizeof(float)*9);
-      
-      Eigen::Matrix3f cov_curr = Eigen::Map<Eigen::Matrix3f>(&covariance_.data()[actual_i*9]);
-      Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> es(cov_curr);
-      Eigen::Vector3f e_values = es.eigenvalues();
+      Eigen::Map<Eigen::Matrix3f> cov_curr(&covariance_.data()[actual_i*9]);
+      Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> ev(cov_curr);
+      Eigen::Vector3f e_values = ev.eigenvalues();
       for (int j = 0; j < 3; j++) {
         eigenvalues_[j+actual_i*3] = sqrt(e_values(j));
       }
-
-      /*
+      //std::cout<<"i=="<<i<<":e_values are "<<e_values.transpose()<<", e_vectors are \n"<<ev.eigenvectors()<<std::endl;
+      
+      Eigen::Matrix3f tmp = cov_curr;
       Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> es(3);
       es.computeDirect(cov_curr);
       Eigen::Matrix3f eigen_value_replacement = Eigen::Matrix3f::Zero();
-      eigen_value_replacement(0, 0) = 1e-3;
-      eigen_value_replacement(1, 1) = 1.0;
-      eigen_value_replacement(2, 2) = 1.0;
+      eigen_value_replacement(0, 0) = 0.001;//e_values(0) < 0.5 ? e_values(0) : 0.5;
+      eigen_value_replacement(1, 1) = e_values(1) < 0.5 ? e_values(1) : 0.5;
+      eigen_value_replacement(2, 2) = e_values(2) < 0.5 ? e_values(2) : 0.5;
       cov_curr = es.eigenvectors() * eigen_value_replacement *
         es.eigenvectors().transpose();
       //covariance = covariances.data[pos];
-      eigenvalues_[i*3]=1e-3;
-      eigenvalues_[i*3+1]=1.0;
-      eigenvalues_[i*3+2]=1.0;
-      */
+      eigenvalues_[actual_i*3]= sqrt(eigen_value_replacement(0,0));
+      eigenvalues_[actual_i*3+1]=sqrt(eigen_value_replacement(1,1));
+      eigenvalues_[actual_i*3+2]=sqrt(eigen_value_replacement(2,2));
+      if (actual_i == 1) {
+        std::cout<<"selected_indexes[i] is "<<id_pc_in<<", actual_i is "<<actual_i<<", cov_before is "<<tmp<<", cov_after is "<<cov_curr<<"andd\n"<<covariance_[actual_i*9]<<covariance_[actual_i*9+1]<<std::endl<<" eigenvalues_[actual_i] is "<<eigenvalues_[actual_i*3]<<", "<<eigenvalues_[actual_i*3+1]<<std::endl;
+        
+      } 
+      
 
-      e_value_max << e_values(2) << std::endl;
-      e_value_min << e_values(0) << std::endl;
+      // e_value_max << e_values(2) << std::endl;
+      //e_value_min << e_values(0) << std::endl;
       
       actual_i++;
       //memcpy(eigenvalues_.data() + i * 3, eig->data() + id_pc_in * 3, sizeof(float)*3);

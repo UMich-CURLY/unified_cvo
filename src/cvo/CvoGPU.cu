@@ -46,8 +46,8 @@ namespace cvo{
   
   typedef Eigen::Triplet<float> Trip_t;
 
-  static bool is_logging = true;
-  static bool debug_print =true;
+  static bool is_logging = false;
+  static bool debug_print =false;
 
 
   
@@ -833,6 +833,9 @@ namespace cvo{
     float px_arr[3] = {px->x, px->y, px->z};
     Eigen::Vector3f omega_i = Eigen::Vector3f::Zero();
     Eigen::Vector3f v_i = Eigen::Vector3f::Zero();
+#ifdef IS_USING_COVARIANCE
+    Eigen::Matrix3f cov_i = Eigen::Map<Eigen::Matrix3f>(px->covariance);
+#endif    
     float dl_i = 0;
     for (int j = 0; j < A_cols; j++) {
       int idx = A->ind_row2col[i*A_cols+j];
@@ -846,9 +849,20 @@ namespace cvo{
       Eigen::Vector3f cross_xy_j = px_eig.cross(py_eig) ;
       Eigen::Vector3f diff_yx_j = py_eig - px_eig;
       float sum_diff_yx_2_j = diff_yx_j.squaredNorm();
+
+#ifdef IS_USING_COVARIANCE      
+      Eigen::Matrix3f cov_j = Eigen::Map<Eigen::Matrix3f>(py->covariance);
+      omega_i = omega_i + cov_j * cross_xy_j *  *(Ai + j );
+      v_i = v_i + cov_j * diff_yx_j *  *(Ai + j);
+      //float eigenvalue_sum = px->cov_eigenvalues(0)
+
+      //omega_i = omega_i +  cross_xy_j *  *(Ai + j );
+      // v_i = v_i + diff_yx_j *  *(Ai + j);      
       
+#else      
       omega_i = omega_i + cross_xy_j *  *(Ai + j );
       v_i = v_i + diff_yx_j *  *(Ai + j);
+#endif      
     }
 
     Eigen::Vector3d & omega_i_eig = omega_all_gpu[i];
@@ -1047,11 +1061,13 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       int idx = A->ind_row2col[i * A_cols + j];
       if (idx == -1) break;
 #ifdef IS_USING_COVARIANCE
-      temp_ell = (cloud_x[i].cov_eigenvalues[0] + cloud_y[idx].cov_eigenvalues[0])/2.0 ;
+      //temp_ell = (cloud_x[i].cov_eigenvalues[2] + cloud_y[idx].cov_eigenvalues[2] + cloud_x[i].cov_eigenvalues[0] + cloud_y[idx].cov_eigenvalues[0])/4.0 ;
+      temp_ell = ( cloud_x[i].cov_eigenvalues[0] + cloud_y[idx].cov_eigenvalues[0])/2.0 ;
       if (temp_ell > 1.0) temp_ell = 1.0;
-      if (temp_ell < 0.1) temp_ell = 0.1;
-      if (i == 0) printf("temp ell in step size is %f, e_value_a is %f, e_value_b is %f\n", temp_ell, cloud_x[i].cov_eigenvalues[2], cloud_y[idx].cov_eigenvalues[2]  );
+      if (temp_ell < 0.05) temp_ell =0.05;
+      //if (i == 0) printf("temp ell in step size is %f, e_value_a is %f, e_value_b is %f\n", temp_ell, cloud_x[i].cov_eigenvalues[2], cloud_y[idx].cov_eigenvalues[2]  );
       //temp_ell = compute_range_ell(ell,d2_sqrt, 1, 80 );
+      //temp_ell = 0.5;
 #endif      
       float temp_coef = 1/(2.0*temp_ell*temp_ell);   // 1/(2*l^2)       
       
@@ -1146,6 +1162,8 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     cvo_state->step = cvo_state->step>0.8 ? 0.8:cvo_state->step;
     //step *= 10;
     //step = step>0.001 ? 0.001:step;
+
+    //cvo_state->step = 0.005;
     if (debug_print) 
       std::cout<<"step size "<<cvo_state->step<<"\n";
         
@@ -1393,7 +1411,13 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
 
       // reduce ell, if the se3 distance is smaller than eps2, break
       float dist_this_iter = dist_se3(dR.cast<float>(),dT.cast<float>());
-      if (debug_print)  std::cout<<"dist: "<<dist_this_iter <<std::endl<<"check bounds....\n";
+      if (debug_print)  {
+        std::cout<<"just computed distk. dR "<<dR<<"\n dt is "<<dT<<std::endl;
+	std::cout<<"dist: "<<dist_this_iter <<std::endl<<"check bounds....\n";
+	if (std::isnan(dist_this_iter)) {
+          break; 
+	}
+      }
       float ip_curr = (float)((double)cvo_state.A_host.nonzero_sum / (double)source_points.num_points() / (double) target_points.num_points());
       //float ip_curr = (float) this->inner_product(source_points, target_points, transform);
       bool need_decay_ell = A_sparsity_indicator_ell_update( indicator_start_queue,
@@ -1423,7 +1447,9 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
           cvo_state.ell = params.ell_min;
       }
       
-      if(debug_print) printf("end of iteration \n\n\n");
+      if(debug_print) {
+        printf("end of iteration \n\n\n");
+      }
 
     }
     auto end_all = chrono::system_clock::now();
