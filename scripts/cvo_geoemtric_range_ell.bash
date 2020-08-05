@@ -8,6 +8,6 @@ do
 
     #gdb -ex run --args \
 	    ./build/bin/cvo_align_gpu_lidar_raw /home/rayzhang/data/kitti_lidar/dataset/sequences/$i cvo_params/cvo_geometric_params_gpu.yaml \
-                                       cvo_geometric_$i.txt 0 20000
+                                       cvo_geometric_range_ell_$i.txt 0 20000
     
 done

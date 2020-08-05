@@ -8,7 +8,7 @@
 #include <boost/filesystem.hpp>
 //#include <opencv2/opencv.hpp>
 #include "dataset_handler/KittiHandler.hpp"
-#include "graph_optimizer/Frame.hpp"
+//#include "graph_optimizer/Frame.hpp"
 #include "utils/PointSegmentedDistribution.hpp"
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/point_cloud.h>
@@ -119,25 +119,25 @@ int main(int argc, char *argv[]) {
   cvo_align.write_params(&init_param);
   
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
-  init_guess(2,3)=0.0;
+  init_guess(2,3) = 0;
   
   Eigen::Affine3f init_guess_cpu = Eigen::Affine3f::Identity();
   init_guess_cpu.matrix()(2,3)=0;
   Eigen::Matrix4f accum_mat = Eigen::Matrix4f::Identity();
   // start the iteration
-  /*
+
   pcl::PointCloud<pcl::PointXYZI>::Ptr source_pc(new pcl::PointCloud<pcl::PointXYZI>);
   kitti.read_next_lidar(source_pc);
   std::cout<<"[main]read next lidar\n"; 
-  //std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(source_pc, 64));
-  cvo::CvoPointCloud * source = new cvo::CvoPointCloud(source_pc, 64);
+  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(source_pc, 64));
+  //cvo::CvoPointCloud * source = new cvo::CvoPointCloud(source_pc, 64);
   std::cout<<"[main] read complete\n"<<std::flush;
-  */
+
   //write_to_pcl(cvo_cloud, "lidar_pcl.pcd");
   pcl::PointCloud<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES>> pcl_cloud;
-  //convert_to_pcl(*source, pcl_cloud);
+  convert_to_pcl(*source, pcl_cloud);
   //source->write_to_intensity_pcd("kitti_pcl/"+std::to_string(start_frame)+".pcd" );
-  //pcl::io::savePCDFileASCII<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES>>("kitti_pcl/"+std::to_string(start_frame)+".pcd" ,pcl_cloud);
+  pcl::io::savePCDFileASCII<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES>>("kitti_pcl/"+std::to_string(start_frame)+".pcd" ,pcl_cloud);
   
   if (init_param.is_pcl_visualization_on == 1) {
     std::cout<<"converted to pcl!\n";
@@ -159,12 +159,12 @@ int main(int argc, char *argv[]) {
     std::cout<<"\n\n\n\n============================================="<<std::endl;
     std::cout<<"Aligning "<<i<<" and "<<i+1<<" with GPU "<<std::endl;
     
-    pcl::PointCloud<pcl::PointXYZI>::Ptr source_pc(new pcl::PointCloud<pcl::PointXYZI>);
-    kitti.read_next_lidar(source_pc);
-    std::cout<<"[main]read next lidar\n"; 
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr source_pc(new pcl::PointCloud<pcl::PointXYZI>);
+    //kitti.read_next_lidar(source_pc);
+    //std::cout<<"[main]read next lidar\n"; 
     //std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(source_pc, 64));
-    cvo::CvoPointCloud source(source_pc, 64);
-    std::cout<<"[main] read complete\n"<<std::flush;
+    //cvo::CvoPointCloud source(source_pc, 64);
+    //std::cout<<"[main] read complete\n"<<std::flush;
 
     kitti.next_frame_index();
     pcl::PointCloud<pcl::PointXYZI>::Ptr target_pc(new pcl::PointCloud<pcl::PointXYZI>);
@@ -172,27 +172,27 @@ int main(int argc, char *argv[]) {
       std::cout<<"finish all files\n";
       break;
     }
-    //std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(target_pc, 64));
+    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(target_pc, 64));
     //cvo::CvoPointCloud * target = new cvo::CvoPointCloud(target_pc, 64);
-    cvo::CvoPointCloud target (target_pc, 64);
+    //cvo::CvoPointCloud target (target_pc, 64);
     //pcl::PointCloud<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES>> pcl_target;
     //convert_to_pcl(*target, pcl_target);
     //pcl::io::savePCDFileASCII<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES>>("kitti_pcl/"+std::to_string(i+1)+".pcd" ,pcl_target);  
     //target->write_to_intensity_pcd("kitti_pcl/"+std::to_string(i+1)+".pcd"); 
-    std::cout<<"NUm of source pts is "<<source.num_points()<<"\n";
-    std::cout<<"NUm of target pts is "<<target.num_points()<<"\n";
+    std::cout<<"NUm of source pts is "<<source->num_points()<<"\n";
+    std::cout<<"NUm of target pts is "<<target->num_points()<<"\n";
 
     
     Eigen::Matrix4f result, init_guess_inv;
     init_guess_inv = init_guess.inverse();
-    printf("Start align... num_fixed is %d, num_moving is %d\n", source.num_points(), target.num_points());
+    printf("Start align... num_fixed is %d, num_moving is %d\n", source->num_points(), target->num_points());
     std::cout<<std::flush;
     double this_time = 0;
-    cvo_align.align(source, target, init_guess_inv, result, &this_time);
+    cvo_align.align(*source, *target, init_guess_inv, result, &this_time);
     total_time += this_time;
     
     // get tf and inner product from cvo getter
-    double in_product = cvo_align.inner_product(source, target, result);
+    double in_product = cvo_align.inner_product(*source, *target, result);
 
     //double in_product_normalized = cvo_align.inner_product_normalized();
     //int non_zeros_in_A = cvo_align.number_of_non_zeros_in_A();
@@ -218,7 +218,7 @@ int main(int argc, char *argv[]) {
     std::cout<<"\n\n===========next frame=============\n\n";
     //delete source;
     std::cout<<"just swtich source and target\n"<<std::flush;
-    //source = target;
+    source = target;
     if (i == start_frame) {
       init_param.ell_init = ell_init;
       init_param.ell_max = ell_max;

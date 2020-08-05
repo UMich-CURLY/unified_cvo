@@ -270,7 +270,7 @@ Eigen::VectorXcf poly_solver(const Eigen::VectorXf& coef){
 }
 
 __attribute__((force_align_arg_pointer))
-float dist_se3(const Eigen::Matrix3f& R, const Eigen::Vector3f& T)  {
+double dist_se3(const Eigen::Matrix3f& R, const Eigen::Vector3f& T)  {
   // create transformation matrix
   //printf("Size of matrix4f is %d\n", sizeof(Eigen::Matrix4f));
   Eigen::Matrix4f temp_transform ;
@@ -280,9 +280,27 @@ float dist_se3(const Eigen::Matrix3f& R, const Eigen::Vector3f& T)  {
   (temp_transform)(3,3) = 1.0;
   // distance = frobenius_norm(logm(trans))
   auto lie_alg_v = temp_transform.cast<double>().log().cast<float>();
-  float d = (float)(temp_transform.log().cast<double>().norm());
-  //printf("Transform is %f, %f, %f, %f, %f, %f, %f, %f...\n,", temp_transform(0,0), temp_transform(0,1), temp_transform(0,2), temp_transform(0,3),
-  //		  temp_transform(1,0), temp_transform(1,1), temp_transform(1,2), temp_transform(1,3));
-  //printf("R.log() is  %.4f,%.4f,%.4f\n", lie_alg_v(1,1), lie_alg_v(1,2), lie_alg_v(2,2) );
+  double d = (temp_transform.log().cast<double>().norm());
+  printf("Transform is %f, %f, %f, %f, %f, %f, %f, %f...\n,", temp_transform(0,0), temp_transform(0,1), temp_transform(0,2), temp_transform(0,3),
+  		  temp_transform(1,0), temp_transform(1,1), temp_transform(1,2), temp_transform(1,3));
+  printf("R.log() is  %.4f,%.4f,%.4f\n", lie_alg_v(1,1), lie_alg_v(1,2), lie_alg_v(2,2) );
+  return d;
+}
+
+__attribute__((force_align_arg_pointer))
+double dist_se3(const Eigen::Matrix3d& R, const Eigen::Vector3d& T)  {
+  // create transformation matrix
+  //printf("Size of matrix4f is %d\n", sizeof(Eigen::Matrix4f));
+  Eigen::Matrix4d temp_transform ;
+  //Eigen::Matrix4f temp_transform;// = Eigen::Matrix4f::Identity();
+  temp_transform.block<3,3>(0,0)=R;
+  temp_transform.block<3,1>(0,3)=T;
+  (temp_transform)(3,3) = 1.0;
+  // distance = frobenius_norm(logm(trans))
+  auto lie_alg_v = temp_transform.log();
+  double d = (temp_transform.log().norm());
+  printf("Transform is %f, %f, %f, %f, %f, %f, %f, %f...\n,", temp_transform(0,0), temp_transform(0,1), temp_transform(0,2), temp_transform(0,3),
+  		  temp_transform(1,0), temp_transform(1,1), temp_transform(1,2), temp_transform(1,3));
+  printf("R.log() is  %.4lf,%.4lf,%.4lf\n", lie_alg_v(1,1), lie_alg_v(1,2), lie_alg_v(2,2) );
   return d;
 }

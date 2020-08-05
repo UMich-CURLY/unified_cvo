@@ -39,6 +39,7 @@ Eigen::Matrix<float,3,4> Exp_SEK3(const Eigen::Matrix<float, 6,1>& v, float dt);
 
 Eigen::MatrixXf Adjoint_SEK3(const Eigen::MatrixXf& X);
 Eigen::VectorXcf poly_solver(const Eigen::VectorXf& coef);
-float dist_se3(const Eigen::Matrix3f& R, const Eigen::Vector3f& T);
+double dist_se3(const Eigen::Matrix3f& R, const Eigen::Vector3f& T);
+double dist_se3(const Eigen::Matrix3d& R, const Eigen::Vector3d& T);
 Eigen::Vector3cf poly_solver_order3(const Eigen::Vector4f& coef);
 #endif

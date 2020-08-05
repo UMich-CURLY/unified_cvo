@@ -47,7 +47,7 @@ namespace cvo{
   typedef Eigen::Triplet<float> Trip_t;
 
   static bool is_logging = false;
-  static bool debug_print =false;
+  static bool debug_print =true;
 
 
   
@@ -1163,7 +1163,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     //step *= 10;
     //step = step>0.001 ? 0.001:step;
 
-    //cvo_state->step = 0.005;
+    cvo_state->step  = 0.005;
     if (debug_print) 
       std::cout<<"step size "<<cvo_state->step<<"\n";
         
@@ -1410,7 +1410,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       R = R_angle.toRotationMatrix().cast<float>(); // re-orthogonalization
 
       // reduce ell, if the se3 distance is smaller than eps2, break
-      float dist_this_iter = dist_se3(dR.cast<float>(),dT.cast<float>());
+      double dist_this_iter = dist_se3(dR,dT);
       if (debug_print)  {
         std::cout<<"just computed distk. dR "<<dR<<"\n dt is "<<dT<<std::endl;
 	std::cout<<"dist: "<<dist_this_iter <<std::endl<<"check bounds....\n";
