@@ -26,13 +26,15 @@
 #include <iostream>
 #include <cstring>
 #include <cmath>
-
+#include <cstdlib>
 #include <vector>
 #include <string>
 
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
+#include <pcl/impl/point_types.hpp>
+#include <pcl/features/normal_3d_omp.h>
 //#include <pcl/visualization/cloud_viewer.h>
 
 #include "utils/CvoPixelSelector.hpp"
@@ -446,21 +448,32 @@ namespace cvo
       }
       //cv::imshow("heat map", heatmap);
       //cv::waitKey(200);
-      cv::imwrite("heatmap.png", heatmap);
+      //cv::imwrite("heatmap.png", heatmap);
       
     }
+
   }
 
+
+  void compute_pcd_normals(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
+                           //output
+                           pcl::PointCloud<pcl::Normal>::Ptr normals_out
+                           ) {
+    
+    
+  }
+  
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
-                     int num_want,
-                     double intensity_bound, 
-                     double depth_bound,
-                     double distance_bound,
-                     int beam_number,
-                     // output
-                     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
-                     std::vector <double> & output_depth_grad,
-                     std::vector <double> & output_intenstity_grad) {
+                      int num_want,
+                      double intensity_bound, 
+                      double depth_bound,
+                      double distance_bound,
+                      int beam_number,
+                      // output
+                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
+                      std::vector <double> & output_depth_grad,
+                      std::vector <double> & output_intenstity_grad,
+                      pcl::PointCloud<pcl::Normal>::Ptr normals_out) {
 
     int beam_num = beam_number;
     std::vector<int> indices;
@@ -468,52 +481,91 @@ namespace cvo
     int num_points = pc_in->points.size();
     int previous_quadrant = get_quadrant(pc_in->points[0]);
     int ring_num = 0;
-    int num_points_in_one_ring = 0;
-    int num_points_counting = 1;
+    // int num_points_in_one_ring = 0;
+    //int num_points_counting = 1;
 
-    for(int i = 1; i<num_points; i++) {  
-      const auto& point = pc_in->points[i];    
-      int quadrant = get_quadrant(point);      
+#ifdef IS_USING_NORMALS 
+    //std::cout<<"calculate surface normals\n";
+    pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal>);
+    pcl::NormalEstimationOMP<pcl::PointXYZI, pcl::Normal> ne;
+    ne.setInputCloud(pc_in);
+    // Create an empty kdtree representation, and pass it to the normal estimation object.
+    // Its content will be filled inside the object, based on the given input dataset (as no other search surface is given).
+    pcl::search::KdTree<pcl::PointXYZI>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZI> ());
+    ne.setSearchMethod(tree);
+    // Use all neighbors in a sphere of radius 50cm
+    ne.setRadiusSearch(1);
+    // ne.setKSearch(30);
+    // ne.setInputCloud(pc_in);
+    ne.compute(*normals);
+    //std::cout<<"get noramls\n";
 
+    /*
+      ----------visualize normals----------
+    */
+    // pcl::visualization::PCLVisualizer viewer("PCL Viewer");
+    // viewer.addPointCloudNormals<pcl::PointXYZI,pcl::Normal>(pc_in, normals,10,0.1, "normals1");
+    // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 1.0, 0.0, 0.0, "normals1");
+    // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 3, "normals1");
+    // pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZI> rgb2 (pc_in, 0, 255, 0); //This will display the point cloud in green (R,G,B)
+    // viewer.addPointCloud<pcl::PointXYZI> (pc_in, rgb2, "cloud_RGB2");
+    // // viewer.addPointCloud<pcl::PointXYZI>(pc_in, "original_cloud");
+    // while (!viewer.wasStopped ())
+    // {
+    //   viewer.spinOnce ();
+    // }
+#endif
+
+    for(int i = 1; i<num_points; i++) {      
+      int quadrant = get_quadrant(pc_in->points[i]);
       if(quadrant == 1 && previous_quadrant == 4 && ring_num < beam_num-1){
         ring_num += 1;
-        num_points_in_one_ring = num_points_counting;
-        num_points_counting = 1;
-        previous_quadrant = quadrant;
+        //num_points_in_one_ring = num_points_counting;
+        //num_points_counting = 1;
+        //previous_quadrant = quadrant;
         continue;
       }
-      else{
-        num_points_counting += 1;
-      }
+      // else{
+      //  num_points_counting += 1;
+      // }
 
       // select points
-      const auto& point_l = pc_in->points[i-1];      
+      const auto& point_l = pc_in->points[i-1];
+      const auto & point = pc_in->points[i];
       const auto& point_r = pc_in->points[i+1];
 
       double distance = sqrt(point.x*point.x + point.y*point.y + point.z*point.z);
 
       // horizontal
-      double depth_grad = std::max((point_l.getVector3fMap()-point.getVector3fMap()).norm(), (point.getVector3fMap()-point_r.getVector3fMap()).norm());
+      double depth_grad = std::max((point_l.getVector3fMap()-point.getVector3fMap()).norm(),
+                                   (point.getVector3fMap()-point_r.getVector3fMap()).norm());
       
       double intenstity_grad = std::max(
-                              std::abs( point_l.intensity - point.intensity ),
-                              std::abs( point.intensity - point_r.intensity ));
-      if( (intenstity_grad > intensity_bound || depth_grad > depth_bound)
+                                        std::abs( point_l.intensity - point.intensity ),
+                                        std::abs( point.intensity - point_r.intensity ));
+      if( (intenstity_grad > intensity_bound || depth_grad > depth_bound
+#ifdef IS_USING_NORMALS
+           || (std::fabs(normals->points[i].normal_y) > 0.8 && std::fabs(normals->points[i].normal_x) < 0.1  && std::fabs(normals->points[i].normal_z) < 0.1  && std::rand() % 50 < 1 )
+#endif
+
+           )
           && (point.intensity > 0.0)
+#ifdef IS_USING_NORMALS
+          && (!isnan(normals->points[i].normal_x))          
+#endif
           && ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0)) //){
           && (  point.x*point.x+point.y*point.y+point.z*point.z) < distance_bound * distance_bound  ) {
 
         //&&  std::fabs(point.x) < distance_bound && std::fabs(point.y) < distance_bound && std::fabs(point.z) < distance_bound) {
 
-
-
-          // std::cout << "points: " << point.x << ", " << point.y << ", " << point.z << ", " << point.intensity << std::endl;
-
-          pc_out->push_back(pc_in->points[i]);
-          output_depth_grad.push_back(depth_grad);
-          output_intenstity_grad.push_back(intenstity_grad);
-        }
-
+        // std::cout << "points: " << point.x << ", " << point.y << ", " << point.z << ", " << point.intensity << std::endl;
+        pc_out->push_back(pc_in->points[i]);
+        output_depth_grad.push_back(depth_grad);
+        output_intenstity_grad.push_back(intenstity_grad);
+#ifdef IS_USING_NORMALS          
+        normals_out->push_back(normals->points[i]);
+#endif
+      }
       previous_quadrant = quadrant;      
       
     }
@@ -537,18 +589,18 @@ namespace cvo
   }
 
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
-                     const std::vector<int> & semantic_in,
-                     int num_want,
-                     double intensity_bound, 
-                     double depth_bound,
-                     double distance_bound,
-                     int beam_number,
-                     // output
-                     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
-                     std::vector <double> & output_depth_grad,
-                     std::vector <double> & output_intenstity_grad,
-                     std::vector<int> & semantic_out) {
-    
+                      const std::vector<int> & semantic_in,
+                      int num_want,
+                      double intensity_bound, 
+                      double depth_bound,
+                      double distance_bound,
+                      int beam_number,
+                      // output
+                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
+                      std::vector <double> & output_depth_grad,
+                      std::vector <double> & output_intenstity_grad,
+                      std::vector<int> & semantic_out) {
+
     int beam_num = beam_number;
     std::vector<int> indices;
     pcl::removeNaNFromPointCloud(*pc_in, *pc_in, indices);
@@ -585,11 +637,11 @@ namespace cvo
       
       // horizontal
       double depth_grad = std::max((point_l.getVector3fMap()-point.getVector3fMap()).norm(),
-                      (point.getVector3fMap()-point_r.getVector3fMap()).norm());
+                                   (point.getVector3fMap()-point_r.getVector3fMap()).norm());
       
       double intenstity_grad = std::max(
-                              std::abs( point_l.intensity - point.intensity ),
-                              std::abs( point.intensity - point_r.intensity ));
+                                        std::abs( point_l.intensity - point.intensity ),
+                                        std::abs( point.intensity - point_r.intensity ));
 
 
 
@@ -599,15 +651,46 @@ namespace cvo
           &&  (point.x*point.x+point.y*point.y+point.z*point.z) < distance_bound * distance_bound){
         //&& std::fabs(point.x) < distance_bound && std::fabs(point.y) < distance_bound && std::fabs(point.z) < distance_bound) {
 
-          pc_out->push_back(pc_in->points[i]);
-          output_depth_grad.push_back(depth_grad);
-          output_intenstity_grad.push_back(intenstity_grad);
-          semantic_out.push_back(semantic_in[i]);
+        pc_out->push_back(pc_in->points[i]);
+        output_depth_grad.push_back(depth_grad);
+        output_intenstity_grad.push_back(intenstity_grad);
+        semantic_out.push_back(semantic_in[i]);
+
+        //std::cout<<" in edge detection , point "<<point.x<<", "<<point.y<<", "<<point.z<<", label "<<point.intensity<<std::endl;
       }
 
       previous_quadrant = quadrant;      
     }
   }
+
+  void laserCloudHandler(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
+                         int num_want,
+                         double intensity_bound, 
+                         double depth_bound,
+                         // output
+                         pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
+                         std::vector <double> & output_depth_grad,
+                         std::vector <double> & output_intenstity_grad)
+  {
+    int N_SCANS = 64;
+    std::vector<int> scanStartInd(N_SCANS, 0);
+    std::vector<int> scanEndInd(N_SCANS, 0);
+  
+    // double timeScanCur = laserCloudMsg->header.stamp.toSec();
+    // pcl::PointCloud<pcl::PointXYZ> laserCloudIn;
+    // pcl::fromROSMsg(*laserCloudMsg, laserCloudIn);
+    std::vector<int> indices;
+    pcl::removeNaNFromPointCloud(*pc_in, *pc_in, indices);
+    int cloudSize = pc_in->points.size();
+    float startOri = -atan2(pc_in->points[0].y, pc_in->points[0].x);
+    float endOri = -atan2(pc_in->points[cloudSize - 1].y,
+                          pc_in->points[cloudSize - 1].x) + 2 * M_PI;
+
+
+
+
+  }
+
 
   int get_quadrant(pcl::PointXYZI point){
     int res = 0;
@@ -625,5 +708,6 @@ namespace cvo
     else if(x >= 0 && y < 0){res = 4;}   
 
     return res;
-    }
+  }
+
 }

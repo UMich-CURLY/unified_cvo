@@ -31,7 +31,7 @@ namespace cvo {
 
       } else {
         std::cerr<<" calibration file "<<file<<" not found!\n";
-        assert(0);
+        //assert(0);
         
       }
 

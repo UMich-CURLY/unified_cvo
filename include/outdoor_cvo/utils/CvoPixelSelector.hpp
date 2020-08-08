@@ -29,15 +29,16 @@
 #include "utils/data_type.hpp"
 #include "utils/RawImage.hpp"
 
+#include <pcl/features/normal_3d_omp.h>
+#include <pcl/search/impl/search.hpp>
 
 namespace cvo
 {
-
-
   void select_pixels(const RawImage & raw_image,
                      int num_want,
                      // output
                      std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv );
+
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
                      int num_want,
                      double intensity_bound, 
@@ -47,7 +48,8 @@ namespace cvo
                      // output
                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
                      std::vector <double> & output_depth_grad,
-                     std::vector <double> & output_intenstity_grad);
+                     std::vector <double> & output_intenstity_grad,
+                     pcl::PointCloud<pcl::Normal>::Ptr normals_out);
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
                      const std::vector<int> & semantic_in,
                      int num_want,
@@ -59,10 +61,18 @@ namespace cvo
                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
                      std::vector <double> & output_depth_grad,
                      std::vector <double> & output_intenstity_grad,
-                     std::vector<int> & semantic_out);
+                     std::vector<int> & semantic_out); 
+  void laserCloudHandler(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
+                        int num_want,
+                        double intensity_bound, 
+                        double depth_bound,
+                        // output
+                        pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
+                        std::vector <double> & output_depth_grad,
+                        std::vector <double> & output_intenstity_grad);
   int get_quadrant(pcl::PointXYZI point);
 
-  
+
   class PixelSelector
   {
   public:
@@ -84,11 +94,8 @@ namespace cvo
     ~PixelSelector();
     int currentPotential; // ????
 
-
     bool allowFastCornerSelector; //
     void makeHists(const RawImage & raw_image );
-
-    
     
   private:
 
@@ -99,7 +106,6 @@ namespace cvo
                            std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv
                            );
 
-
     std::vector<unsigned char> randomPattern;
 
     int w, h;
@@ -108,6 +114,6 @@ namespace cvo
     std::vector<float> thsSmoothed;
     int thsStep;
     const cvo::RawImage * gradHistFrame;
-  };
 
+  };
 }

@@ -7,7 +7,6 @@
 
 #include "utils/data_type.hpp"
 #include "utils/RawImage.hpp"
-
 #include "utils/Calibration.hpp"
 
 #include <pcl/point_types.h>
@@ -64,6 +63,10 @@ namespace cvo {
     const ArrayVec3f & positions() const {return positions_;}
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & labels() const { return labels_;}
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & features() const {return features_;}
+    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals() const {return normals_;}
+    const pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals() const {return cloud_with_normals_;}
+    const Eigen::Matrix<float, Eigen::Dynamic, 2> & types() const {return types_;}
+
 
     // for visualization via pcl_viewer
     void write_to_color_pcd(const std::string & name) const;
@@ -78,7 +81,11 @@ namespace cvo {
     
     ArrayVec3f positions_;  // points position. x,y,z
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> features_;   // rgb, gradient in [0,1]
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> normals_;  // surface normals
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> labels_; // number of points by number of classes
+
+    pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals_;
+    Eigen::Matrix<float, Eigen::Dynamic, 2> types_; // type of the point using loam point selector, edge=(1,0), surface=(0,1)
 
     cv::Vec3f avg_pixel_color_pattern(const cv::Mat & raw, int u, int v, int w);
 

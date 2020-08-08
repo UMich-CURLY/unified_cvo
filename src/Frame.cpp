@@ -80,7 +80,7 @@ namespace cvo {
     Eigen::Affine3f eye = Eigen::Affine3f::Identity();
     tracking_pose_from_last_keyframe_.set_relative_transform(ind, eye, 1.0 );
 
-    // points_.write_to_intensity_pcd("lidar_pcd/" + std::to_string(ind)+".pcd");
+    // points_.write_to_intensity_pcd("lidar_pcd/edge_and_legoloam_surface/01/" + std::to_string(ind)+".pcd");
   }
 
   Frame::Frame(int ind,
