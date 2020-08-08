@@ -32,6 +32,7 @@ namespace cvo {
     float eps;          // the program stops if norm(omega)+norm(v) < eps
     float eps_2;        // threshold for se3 distance
     float min_step;     // minimum step size for integration
+    float max_step;
     float step;         // integration step size
 
     float ell_decay_rate;
@@ -70,6 +71,7 @@ namespace cvo {
     params->eps = (float) fs["eps"];
     params->eps_2 = (float) fs["eps_2"];
     params->min_step = (float) fs["min_step"];
+    params->max_step = (float) fs["max_step"];
 
     params->ell_decay_rate = (float) fs["ell_decay_rate"];
     params->ell_decay_start = (int) fs["ell_decay_start"];

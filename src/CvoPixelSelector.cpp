@@ -675,7 +675,7 @@ namespace cvo
           && (  point.x*point.x+point.y*point.y+point.z*point.z) < distance_bound * distance_bound ) {
 
         if ((intenstity_grad > intensity_bound || depth_grad > depth_bound) ||
-            ((float)((rand()% pc_in->size()) / (float) pc_in->size())  < 0.02    )  ) {
+            ((float)((rand()% pc_in->size()) / (float) pc_in->size())  < 0.025    )  ) {
           //pc_out.push_back(pc_in->points[i]);
           output_depth_grad.push_back(depth_grad);
           output_intenstity_grad.push_back(intenstity_grad);

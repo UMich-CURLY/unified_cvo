@@ -46,8 +46,8 @@ namespace cvo{
   
   typedef Eigen::Triplet<float> Trip_t;
 
-  static bool is_logging = false;
-  static bool debug_print =true;
+  static bool is_logging = true;
+  static bool debug_print = false;
 
 
   
@@ -786,17 +786,7 @@ namespace cvo{
     CvoPoint * points_fixed_raw = thrust::raw_pointer_cast (  points_fixed->points.data() );
     CvoPoint * points_moving_raw = thrust::raw_pointer_cast( points_moving->points.data() );
     
-#ifdef IS_USING_RANGE_ELL    
-    fill_in_A_mat_gpu_range_ell<<<(points_moving->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(params_gpu,
-                                                                                                    points_fixed_raw,
-                                                                                                    fixed_size,
-                                                                                                    points_moving_raw,
-                                                                                                    points_moving->points.size(),
-                                                                                                    ell,
-                                                                                                    // output
-                                                                                                    A_mat_gpu // the kernel matrix!
-                                                                                                    );
-#elif IS_USING_COVARIANCE
+#ifdef IS_USING_COVARIANCE
     fill_in_A_mat_gpu_dense_mat_kernel<<<(points_moving->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(// input
                                                                                                            params_gpu,
                                                                                                            points_fixed_raw,
@@ -807,7 +797,16 @@ namespace cvo{
                                                                                                            // output
                                                                                                            A_mat_gpu // the inner product matrix!
                                                                                                            );
-    
+#else
+    fill_in_A_mat_gpu_range_ell<<<(points_moving->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(params_gpu,
+                                                                                                    points_fixed_raw,
+                                                                                                    fixed_size,
+                                                                                                    points_moving_raw,
+                                                                                                    points_moving->points.size(),
+                                                                                                    ell,
+                                                                                                    // output
+                                                                                                    A_mat_gpu // the kernel matrix!
+                                                                                                    );
 #endif    
     compute_nonzeros(A_mat);
   }
@@ -900,10 +899,15 @@ namespace cvo{
     thrust::plus<Eigen::Vector3d> plus_vector;
     *omega = (thrust::reduce(cvo_state->omega_gpu.begin(), cvo_state->omega_gpu.end())).cast<float>();
     *v = (thrust::reduce(cvo_state->v_gpu.begin(), cvo_state->v_gpu.end())).cast<float>();
+    // normalize the gradient
+    //omega->normalize();
+    //v->normalize();
 
     // Eigen::Vector3d::Zero(), plus_vector)).cast<float>();
     cudaMemcpy(cvo_state->omega, omega, sizeof(Eigen::Vector3f), cudaMemcpyHostToDevice );
     cudaMemcpy(cvo_state->v, v, sizeof(Eigen::Vector3f), cudaMemcpyHostToDevice );
+
+    
     end = chrono::system_clock::now();
     //std::cout<<"time for thrust_reduce is "<<std::chrono::duration_cast<std::chrono::milliseconds>((end- start)).count()<<std::endl;
     start = chrono::system_clock::now();
@@ -943,7 +947,7 @@ namespace cvo{
     xiz_dot_xi2z[j]  = (-xiz[j] .dot(xi2z[j]));
     epsil_const[j] = xi2z[j].squaredNorm()+2*xiz[j].dot(xi3z[j]);
     /*
-    if (j == 1000) {
+    if ( j == 1000) {
       printf("j==1000, cloud+yi is (%f,%f,%f), xiz=(%f %f %f), xi2z=(%f %f %f), xi3z=(%f %f %f), xi4z=(%f %f %f), normxiz2=%f, xiz_dot_xi2z=%f, epsil_const=%f\n ",
             cloud_y[j].x , cloud_y[j].y, cloud_y[j].z,
             xiz[j](0), xiz[j](1), xiz[j](2),
@@ -955,6 +959,7 @@ namespace cvo{
       
     }
     */
+    
   }
   __global__ void compute_step_size_poly_coeff(float temp_coef,
                                               int num_moving,
@@ -1010,12 +1015,12 @@ namespace cvo{
       D[i] += double(A_ij * (delta_ij+beta_ij*gamma_ij + beta_ij*beta_ij*beta_ij/6.0));
       E[i] += double(A_ij * (epsil_ij+beta_ij*delta_ij+1/2.0*beta_ij*beta_ij*gamma_ij \
                              + 1/2.0*gamma_ij*gamma_ij + 1/24.0*beta_ij*beta_ij*beta_ij*beta_ij));
-      /*
-        if (i == 1074 && j == 1000) {
-        printf("x==1000, y==1074, Aij=%f, beta_ij=%f, gamma_ij=%f, delta_ij=%f, epsil_ij=%f\n",
-        A_ij, beta_ij, gamma_ij, delta_ij, epsil_ij);
+     
+      //if ( i == 1000) {
+      //  printf("x==1000,  Aij=%f, beta_ij=%f, gamma_ij=%f, delta_ij=%f, epsil_ij=%f\n",
+      //         A_ij, beta_ij, gamma_ij, delta_ij, epsil_ij);
         
-        }*/
+      //}
     }
     
   }
@@ -1089,17 +1094,25 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
 
       float A_ij = A->mat[i * A_cols + j];
       // eq (34)
-      B[i] += double(A_ij * beta_ij);
-      C[i] += double(A_ij * (gamma_ij+beta_ij*beta_ij/2.0));
-      D[i] += double(A_ij * (delta_ij+beta_ij*gamma_ij + beta_ij*beta_ij*beta_ij/6.0));
-      E[i] += double(A_ij * (epsil_ij+beta_ij*delta_ij+1/2.0*beta_ij*beta_ij*gamma_ij\
-                          + 1/2.0*gamma_ij*gamma_ij + 1/24.0*beta_ij*beta_ij*beta_ij*beta_ij));
+      double bi = double(A_ij * beta_ij);
+      B[i] += bi;
+      double ci = double(A_ij * (gamma_ij+beta_ij*beta_ij/2.0));
+      C[i] += ci;
+      double di = double(A_ij * (delta_ij+beta_ij*gamma_ij + beta_ij*beta_ij*beta_ij/6.0));
+      D[i] += di;
+      double ei = double(A_ij * (epsil_ij+beta_ij*delta_ij+1/2.0*beta_ij*beta_ij*gamma_ij\
+                                 + 1/2.0*gamma_ij*gamma_ij + 1/24.0*beta_ij*beta_ij*beta_ij*beta_ij));
+      E[i] += ei;
+
       /*
-    if (i == 1074 && j == 1000) {
-        printf("x==1000, y==1074, Aij=%f, beta_ij=%f, gamma_ij=%f, delta_ij=%f, epsil_ij=%f\n",
-              A_ij, beta_ij, gamma_ij, delta_ij, epsil_ij);
+      if ( i == 1000) {
+        printf("x==1000,temp_ell is %f, normxiz2[idx]=%f,xiz_dot_xi2z[idx]=%f, xiz[idx]=(%f,%f,%f), xi2z[idx]=(%f,%f,%f),xi3z[idx]=(%f,%f,%f),  diff_xy=(%f,%f,%f), bi=%lf, ci=%lf, di=%lf, ei=%lf, Aij=%f, beta_ij=%f, gamma_ij=%f, delta_ij=%f, epsil_ij=%f\n",
+               temp_ell, normxiz2[idx], xiz_dot_xi2z[idx],  xiz[idx](0), xiz[idx](1), xiz[idx](2),
+               xi2z[idx](0), xi2z[idx](1), xi2z[idx](2),  xi3z[idx](0), xi3z[idx](1), xi3z[idx](2),
+               bi, ci, di, ei,
+               A_ij, beta_ij, gamma_ij, delta_ij, epsil_ij);
         
-              }*/
+               }*/
     }
     
   }
@@ -1140,30 +1153,39 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     double C = thrust::reduce(cvo_state->C.begin(), cvo_state->C.end(), 0.0, plus_double);
     double D = thrust::reduce(cvo_state->D.begin(), cvo_state->D.end(), 0.0, plus_double);
     double E = thrust::reduce(cvo_state->E.begin(), cvo_state->E.end(), 0.0, plus_double);
-    Eigen::Vector4f p_coef(4);
-    p_coef << 4.0*float(E),3.0*float(D),2.0*float(C),float(B);
+    //Eigen::Vector4f p_coef(4);
+    //p_coef << 4.0*float(E),3.0*float(D),2.0*float(C),float(B);
+    Eigen::Vector4d p_coef(4);
+    p_coef << 4.0*(E),3.0*(D),2.0*(C),(B);
     if (debug_print)
       std::cout<<"BCDE is "<<p_coef.transpose()<<std::endl;
     
     // solve polynomial roots
     //Eigen::VectorXcf rc = poly_solver(p_coef);
-    Eigen::Vector3cf rc = poly_solver_order3(p_coef);
+    Eigen::Vector3cd rc = poly_solver_order3(p_coef);
     
     
     // find usable step size
-    float temp_step = numeric_limits<float>::max();
-    for(int i=0;i<rc.real().size();i++)
-      if(rc(i,0).real()>0 && rc(i,0).real()<temp_step && rc(i,0).imag()==0)
+    //float temp_step = numeric_limits<float>::max();
+    double temp_step = numeric_limits<double>::max();
+    for(int i=0;i<rc.real().size();i++) {
+      if(rc(i,0).real()>0 && rc(i,0).real()<temp_step && std::fabs(rc(i,0).imag())<1e-5) {
+
         temp_step = rc(i,0).real();
+      }
+    }
+    if (debug_print)
+      std::cout<<"step size "<<temp_step<<"\n original_rc is \n"<< rc<<std::endl;
     
     // if none of the roots are suitable, use min_step
-    cvo_state->step = temp_step==numeric_limits<float>::max()? params->min_step:temp_step;
+    //cvo_state->step = temp_step==numeric_limits<float>::max()? params->min_step:temp_step;
     // if step>0.8, just use 0.8 as step
-    cvo_state->step = cvo_state->step>0.8 ? 0.8:cvo_state->step;
+    cvo_state->step = cvo_state->step > params->max_step ? params->max_step:cvo_state->step;
+    cvo_state->step = cvo_state->step < params->min_step? params->min_step : cvo_state->step;
     //step *= 10;
-    //step = step>0.001 ? 0.001:step;
+    
 
-    cvo_state->step  = 0.005;
+    //cvo_state->step  = 0.005;
     if (debug_print) 
       std::cout<<"step size "<<cvo_state->step<<"\n";
         

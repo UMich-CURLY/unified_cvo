@@ -46,8 +46,10 @@ namespace cvo {
     int num_neighbors_in_range = 0;
     for (int j = 0; j < num_neighbors_each_point; j++) {
       auto & neighbor = points[indices[j]]; 
-      if (squared_dist(neighbor, curr_p) > 0.55 * 0.55)
+      if (squared_dist(neighbor, curr_p) > 0.65 * 0.65) {
+        indices[j] = -1;
         continue;
+      }
      
       Eigen::Vector3f neighbor_vec(neighbor.x, neighbor.y, neighbor.z);
       mean = (mean + neighbor_vec).eval();
@@ -65,6 +67,7 @@ namespace cvo {
     Eigen::Matrix3f covariance = Eigen::Matrix3f::Zero();
     for (int j = 0; j < num_neighbors_each_point; j++) {
       auto & neighbor = points[indices[j]];
+      if (indices[j] == -1) continue;
       Eigen::Vector3f neighbor_vec(neighbor.x, neighbor.y, neighbor.z);
       Eigen::Vector3f x_minis_mean = neighbor_vec - mean;
       Eigen::Matrix3f temp_cov = x_minis_mean * x_minis_mean.transpose();
@@ -273,7 +276,7 @@ namespace cvo {
       Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> es(3);
       es.computeDirect(cov_curr);
       Eigen::Matrix3f eigen_value_replacement = Eigen::Matrix3f::Zero();
-      eigen_value_replacement(0, 0) = e_values(0) < 1 ? e_values(0) : 1;
+      eigen_value_replacement(0, 0) = e_values(0) < 0.001 ? e_values(0) : 0.001;
       eigen_value_replacement(1, 1) = e_values(1) < 1 ? e_values(1) : 1;
       eigen_value_replacement(2, 2) = e_values(2) < 1  ? e_values(2) : 1;
       cov_curr = es.eigenvectors() * eigen_value_replacement *

@@ -5,7 +5,7 @@ ell_min: 0.05
 ell_max: 0.9
 dl: 0.0
 dl_step: 0.3
-sigma: 0.2
+sigma: 0.5
 sp_thres: 0.0006
 c: 7.0
 d: 7.0
@@ -13,8 +13,9 @@ c_ell: 0.15
 c_sigma: 0.6
 s_ell: 0.1
 s_sigma: 0.8
-MAX_ITER: 5000
-min_step: 0.05
+MAX_ITER: 1000
+min_step: 0.005
+max_step: 0.01
 eps: 0.00005
 eps_2: 0.000012
 ell_decay_rate: 0.9

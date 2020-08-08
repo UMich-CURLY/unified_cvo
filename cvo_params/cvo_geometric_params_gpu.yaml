@@ -1,7 +1,7 @@
 %YAML:1.0
 ---
-ell_init_first_frame: 0.4
-ell_init: 0.25
+ell_init_first_frame: 0.65
+ell_init: 0.35
 ell_min: 0.05
 ell_max: 0.9
 dl: 0.0
@@ -14,12 +14,12 @@ c_ell: 0.15
 c_sigma: 0.6
 s_ell: 0.1
 s_sigma: 0.8
-MAX_ITER: 1500
-min_step: 0.2
+MAX_ITER: 2000
+min_step: 0.0001
 eps: 0.00005
 eps_2: 0.000012
-ell_decay_rate: 0.9
-ell_decay_start: 30
+ell_decay_rate: 0.99
+ell_decay_start: 400
 indicator_window_size: 15
 indicator_stable_threshold: 0.02
 is_ell_adaptive: False
