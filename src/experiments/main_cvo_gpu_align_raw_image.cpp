@@ -11,9 +11,7 @@
 #include "graph_optimizer/Frame.hpp"
 #include "utils/Calibration.hpp"
 #include "utils/CvoPointCloud.hpp"
-#include "cvo/AdaptiveCvoGPU.hpp"
-#include "cvo/Cvo.hpp"
-#include "cvo/CvoParams.hpp"
+#include "cvo/CvoGPU.hpp"
 using namespace std;
 using namespace boost::filesystem;
 
@@ -33,16 +31,12 @@ int main(int argc, char *argv[]) {
   int max_num = std::stoi(argv[5]);
   
   
-  cvo::AdaptiveCvoGPU cvo_align(cvo_param_file );
-  cvo::CvoParams init_param = cvo_align.get_params();
-  cvo::CvoParams first_frame_param = init_param;
-  first_frame_param.ell_init = 0.95;
-  first_frame_param.ell_max = 1.0;
-  cvo_align.write_params(&first_frame_param);
-
-  std::cout<<"write ell! ell init is "<<cvo_align.get_params().ell_init<<std::endl;
-
-  //cvo::cvo cvo_align_cpu("/home/rayzhang/outdoor_cvo/cvo_params/cvo_params.txt");
+  cvo::CvoGPU cvo_align(cvo_param_file );
+  cvo::CvoParams & init_param = cvo_align.get_params();
+  float ell_init = init_param.ell_init;
+  float ell_max = init_param.ell_max;
+  cvo_align.write_params(&init_param);
+  
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
   init_guess(2,3)=0;
   Eigen::Affine3f init_guess_cpu = Eigen::Affine3f::Identity();
@@ -67,13 +61,12 @@ int main(int argc, char *argv[]) {
 
     kitti.next_frame_index();
     cv::Mat left, right;
-    //sdt::vector<float> semantics_target;
+    //vector<float> semantics_target;
+    //if (kitti.read_next_stereo(left, right, 19, semantics_target) != 0) {
     if (kitti.read_next_stereo(left, right) != 0) {
       std::cout<<"finish all files\n";
       break;
     }
-
-
     std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, left, right, calib));
 
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
@@ -112,10 +105,9 @@ int main(int argc, char *argv[]) {
    
     source = target;
     if (i == start_frame) {
+      init_param.ell_init = ell_init;
       cvo_align.write_params(&init_param);
-      
     }
-
 
   }
 
