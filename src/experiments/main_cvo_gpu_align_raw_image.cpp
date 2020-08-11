@@ -13,6 +13,7 @@
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/CvoGPU.hpp"
 #include "cvo/CvoParams.hpp"
+
 using namespace std;
 using namespace boost::filesystem;
 
@@ -36,12 +37,14 @@ int main(int argc, char *argv[]) {
   cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();
   float ell_init = init_param.ell_init;
+
   init_param.ell_init = init_param.ell_init_first_frame;
   cvo_align.write_params(&init_param);
 
   std::cout<<"write ell! ell init is "<<cvo_align.get_params().ell_init<<std::endl;
 
   //cvo::cvo cvo_align_cpu("/home/rayzhang/outdoor_cvo/cvo_params/cvo_params.txt");
+
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
   init_guess(2,3)=0;
   Eigen::Affine3f init_guess_cpu = Eigen::Affine3f::Identity();
@@ -66,13 +69,12 @@ int main(int argc, char *argv[]) {
 
     kitti.next_frame_index();
     cv::Mat left, right;
-    //sdt::vector<float> semantics_target;
+    //vector<float> semantics_target;
+    //if (kitti.read_next_stereo(left, right, 19, semantics_target) != 0) {
     if (kitti.read_next_stereo(left, right) != 0) {
       std::cout<<"finish all files\n";
       break;
     }
-
-
     std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, left, right, calib));
 
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
@@ -113,9 +115,7 @@ int main(int argc, char *argv[]) {
     if (i == start_frame) {
       init_param.ell_init = ell_init;
       cvo_align.write_params(&init_param);
-      
     }
-
 
   }
 

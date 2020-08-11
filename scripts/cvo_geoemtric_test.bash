@@ -1,5 +1,5 @@
 
-cd build && make -j && cd .. 
+cd build && make -j6 && cd .. 
 export CUDA_VISIBLE_DEVICES=0
 for i in 05
 #for i in 00 01 02 03 04 05 07 08 09 10

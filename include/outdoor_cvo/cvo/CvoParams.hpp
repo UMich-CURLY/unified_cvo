@@ -36,7 +36,10 @@ namespace cvo {
     float step;         // integration step size
 
     float ell_decay_rate;
+    float ell_decay_rate_first_frame;
     int ell_decay_start;
+    int ell_decay_start_first_frame;
+    
     int indicator_window_size;
     float indicator_stable_threshold;
     int is_pcl_visualization_on;
@@ -74,7 +77,11 @@ namespace cvo {
     params->max_step = (float) fs["max_step"];
 
     params->ell_decay_rate = (float) fs["ell_decay_rate"];
+    params->ell_decay_rate_first_frame = (float) fs["ell_decay_rate_first_frame"];
+    
     params->ell_decay_start = (int) fs["ell_decay_start"];
+    params->ell_decay_start_first_frame = (int) fs["ell_decay_start_first_frame"];
+    
     params->indicator_window_size = (int) fs["indicator_window_size"];
     params->indicator_stable_threshold = (float) fs["indicator_stable_threshold"];
     params->is_pcl_visualization_on = (int) fs["is_pcl_visualization_on"];
