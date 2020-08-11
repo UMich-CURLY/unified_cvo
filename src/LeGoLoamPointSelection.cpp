@@ -81,14 +81,42 @@ namespace cvo{
         // Running Feature Association
         runFeatureAssociation(pc_out, edge_or_surface);
     }
+
+    void LeGoLoamPointSelection::cloudHandler(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in, 
+                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
+                                              std::vector <float> & edge_or_surface,
+                      std::vector <int> & selected_indexes){
+
+        pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_segmented (new pcl::PointCloud<pcl::PointXYZI>);
+
+        // Running imageProjection
+
+        // 1. Convert ros message to pcl point cloud
+        copyPointCloud(pc_in);
+        // 2. Start and end angle of a scan
+        // findStartEndAngle();
+        // 3. Range image projection
+        projectPointCloud();
+        // 4. Mark ground points
+        groundRemoval();
+        // 5. Point cloud segmentation
+        cloudSegmentation(pc_out_segmented);
+        // 6. Reset parameters for next iteration
+        // resetParameters();
+
+        // Running Feature Association
+        runFeatureAssociation(pc_out, edge_or_surface);
+    }
            
-    // ImageProjection from LeGO-LOAM
+  
+
+  // ImageProjection from LeGO-LOAM
 
     // moved from public to private
     void LeGoLoamPointSelection::allocateMemory(){
 
         laserCloudIn.reset(new pcl::PointCloud<PointType>());
-        laserCloudInRing.reset(new pcl::PointCloud<PointXYZIR>());
+        laserCloudInRing.reset(new pcl::PointCloud<pcl::PointXYZIR>());
 
         fullCloud.reset(new pcl::PointCloud<PointType>());
         fullInfoCloud.reset(new pcl::PointCloud<PointType>());
@@ -152,7 +180,7 @@ namespace cvo{
         if (useCloudRing == true){
             // initialize for XYZIR point cloud
             size_t cloudSize = laserCloudIn->size();
-            PointXYZIR point;
+            pcl::PointXYZIR point;
             int previous_quadrant = get_quadrant(laserCloudIn->points[0]);
             int quadrant = get_quadrant(laserCloudIn->points[0]);
             int scanID = 0;
@@ -479,7 +507,7 @@ namespace cvo{
 
         cloudSmoothness.resize(N_SCAN*Horizon_SCAN);
 
-        downSizeFilter.setLeafSize(0.7, 0.7, 0.7);  // TODO: this should be tuned, original (0.2, 0.2, 0.2)
+        downSizeFilter.setLeafSize(0.5, 0.5, 0.5);  // TODO: this should be tuned, original (0.2, 0.2, 0.2)
 
         segmentedCloud.reset(new pcl::PointCloud<PointType>());
         outlierCloud.reset(new pcl::PointCloud<PointType>());

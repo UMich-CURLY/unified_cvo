@@ -32,8 +32,7 @@
 //   T. Shan and B. Englot. LeGO-LOAM: Lightweight and Ground-Optimized Lidar Odometry and Mapping on Variable Terrain
 //      IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS). October 2018.
 
-#ifndef _UTILITY_LIDAR_ODOMETRY_H_
-#define _UTILITY_LIDAR_ODOMETRY_H_
+#pragma once
 
 // #include <sensor_msgs/Imu.h>
 // #include <sensor_msgs/PointCloud2.h>
@@ -75,17 +74,18 @@
 #include <thread>
 #include <mutex>
 
-#define PI 3.14159265
 
-using namespace std;
+
 
 typedef pcl::PointXYZI  PointType;
 
-extern const string pointCloudTopic;
-extern const string imuTopic;
+//#define PI 3.14159265
+
+extern const std::string pointCloudTopic;
+extern const std::string imuTopic;
 
 // Save pcd
-extern const string fileDirectory;
+extern const std::string fileDirectory;
 
 // Using velodyne cloud "ring" channel for image projection (other lidar may have different name for this channel, change "PointXYZIR" below)
 extern const bool useCloudRing; // if true, ang_res_y and ang_bottom are not used
@@ -186,6 +186,8 @@ struct by_value{
     }
 };
 
+#define PCL_NO_PRECOMPILE
+namespace pcl {
 /*
     * A point cloud type that has "ring" channel
     */
@@ -196,7 +198,7 @@ struct PointXYZIR
     uint16_t ring;
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 } EIGEN_ALIGN16;
-
+}
 POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZIR,  
                                    (float, x, x) (float, y, y)
                                    (float, z, z) (float, intensity, intensity)
@@ -206,6 +208,7 @@ POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZIR,
 /*
     * A point cloud type that has 6D pose info ([x,y,z,roll,pitch,yaw] intensity is time stamp)
     */
+namespace pcl {
 struct PointXYZIRPYT
 {
     PCL_ADD_POINT4D
@@ -216,7 +219,7 @@ struct PointXYZIRPYT
     double time;
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 } EIGEN_ALIGN16;
-
+}
 POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZIRPYT,
                                    (float, x, x) (float, y, y)
                                    (float, z, z) (float, intensity, intensity)
@@ -224,6 +227,6 @@ POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZIRPYT,
                                    (double, time, time)
 )
 
-typedef PointXYZIRPYT  PointTypePose;
+typedef pcl::PointXYZIRPYT  PointTypePose;
 
-#endif
+

@@ -12,7 +12,8 @@ namespace cvo {
   struct CvoParams {
     int gpu_thread_num;
     float kdtree_dist_threshold;
-    
+
+    float ell_init_first_frame;
     float ell_init;
     float ell_min;
     float ell_max;
@@ -31,12 +32,16 @@ namespace cvo {
     float eps;          // the program stops if norm(omega)+norm(v) < eps
     float eps_2;        // threshold for se3 distance
     float min_step;     // minimum step size for integration
+    float max_step;
     float step;         // integration step size
 
     float ell_decay_rate;
     int ell_decay_start;
     int indicator_window_size;
     float indicator_stable_threshold;
+    int is_pcl_visualization_on;
+    bool is_ell_adaptive;
+    bool is_dense_kernel;
   };
 
   inline void read_CvoParams_yaml(const char *filename, CvoParams * params) {
@@ -47,7 +52,8 @@ namespace cvo {
       std::cerr << "Failed to open " << filename << std::endl;
       return;
     }
-    
+
+    params->ell_init_first_frame = (float) fs["ell_init_first_frame"];
     params->ell_init = (float) fs["ell_init"];
     params->ell_min = (float) fs["ell_min"];
     params->ell_max = (float) fs["ell_max"];
@@ -65,12 +71,13 @@ namespace cvo {
     params->eps = (float) fs["eps"];
     params->eps_2 = (float) fs["eps_2"];
     params->min_step = (float) fs["min_step"];
+    params->max_step = (float) fs["max_step"];
 
     params->ell_decay_rate = (float) fs["ell_decay_rate"];
     params->ell_decay_start = (int) fs["ell_decay_start"];
     params->indicator_window_size = (int) fs["indicator_window_size"];
     params->indicator_stable_threshold = (float) fs["indicator_stable_threshold"];
-
+    params->is_pcl_visualization_on = (int) fs["is_pcl_visualization_on"];
     std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<", indicator window size is "<<params->indicator_window_size<<std::endl;
     fs.release();
     return;

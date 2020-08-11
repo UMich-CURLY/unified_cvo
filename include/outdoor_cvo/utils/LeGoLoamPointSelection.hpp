@@ -37,7 +37,7 @@
 #define LEGOLOAMSCANREGISTRATION_HPP
 
 #pragma once
-#include "utility.h"
+#include "LidarPointType.hpp"
 
 namespace cvo
 {
@@ -53,13 +53,17 @@ public:
     void cloudHandler(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in, 
                       pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, 
                       std::vector <float> & edge_or_surface);
+    void cloudHandler(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in, 
+                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
+                      std::vector <float> & edge_or_surface,
+                      std::vector <int> & selected_indexes);
 
 private:
            
     // ImageProjection from LeGO-LOAM
 
     pcl::PointCloud<PointType>::Ptr laserCloudIn;
-    pcl::PointCloud<PointXYZIR>::Ptr laserCloudInRing;
+  pcl::PointCloud<pcl::PointXYZIR>::Ptr laserCloudInRing;
 
     pcl::PointCloud<PointType>::Ptr fullCloud; // projected velodyne raw cloud, but saved in the form of 1-D matrix
     pcl::PointCloud<PointType>::Ptr fullInfoCloud; // same as fullCloud, but with intensity - range
@@ -256,11 +260,11 @@ private:
 
     // From utility.h
 
-    const string pointCloudTopic = "/kitti/velo/pointcloud";
-    const string imuTopic = "/imu/data";
+  const std::string pointCloudTopic = "/kitti/velo/pointcloud";
+  const std::string imuTopic = "/imu/data";
 
     // Save pcd
-    const string fileDirectory = "/tmp/";
+  const std::string fileDirectory = "/tmp/";
 
     // Using velodyne cloud "ring" channel for image projection (other lidar may have different name for this channel, change "PointXYZIR" below)
     const bool useCloudRing = true; // if true, ang_res_y and ang_bottom are not used

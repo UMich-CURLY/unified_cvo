@@ -12,7 +12,6 @@
 #include "utils/Calibration.hpp"
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/CvoGPU.hpp"
-#include "cvo/Cvo.hpp"
 #include "cvo/CvoParams.hpp"
 using namespace std;
 using namespace boost::filesystem;
@@ -37,9 +36,7 @@ int main(int argc, char *argv[]) {
   cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();
   float ell_init = init_param.ell_init;
-  float ell_max = init_param.ell_max;
-  init_param.ell_init = 0.95;
-  init_param.ell_max = 1.1;
+  init_param.ell_init = init_param.ell_init_first_frame;
   cvo_align.write_params(&init_param);
 
   std::cout<<"write ell! ell init is "<<cvo_align.get_params().ell_init<<std::endl;
@@ -115,8 +112,6 @@ int main(int argc, char *argv[]) {
     source = target;
     if (i == start_frame) {
       init_param.ell_init = ell_init;
-      init_param.ell_max = ell_max;
-
       cvo_align.write_params(&init_param);
       
     }

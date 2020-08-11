@@ -72,7 +72,7 @@ namespace cvo {
       w(0),
       calib(calib),
       raw_image_(),
-      points_(pc),
+      points_(pc, 5000, 64),
       local_map_(nullptr),
       is_keyframe_(false),
       tracking_pose_from_last_keyframe_(ind){
@@ -82,6 +82,7 @@ namespace cvo {
 
     // points_.write_to_intensity_pcd("lidar_pcd/edge_and_legoloam_surface/01/" + std::to_string(ind)+".pcd");
   }
+
 
   Frame::Frame(int ind,
                pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
@@ -106,6 +107,7 @@ namespace cvo {
     // points_.write_to_txt("/home/cel/PERL/datasets/kitti_dataset/sequences/01/cvo_points/" +std::to_string(ind)+".txt");
     
   }
+
   
   Frame::~Frame() {
   }
