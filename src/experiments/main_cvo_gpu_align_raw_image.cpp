@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
     source = target;
     if (i == start_frame) {
       init_param.ell_init = ell_init;
-      init_param.ell_decay_start = ell_decay_rate;
+      init_param.ell_decay_rate = ell_decay_rate;
       init_param.ell_decay_start = ell_decay_start;
       cvo_align.write_params(&init_param);
     }
