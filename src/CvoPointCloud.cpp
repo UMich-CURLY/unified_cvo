@@ -267,7 +267,7 @@ namespace cvo{
      lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface, selected_indexes);    
      *pc_out += *pc_out_edge;
      *pc_out += *pc_out_surface;
-     normals_out_ = compute_pcd_normals(pc_out, 1.0);
+     //normals_out_ = compute_pcd_normals(pc_out, 1.0);
      num_points_ = pc_out->size();
 #endif
 

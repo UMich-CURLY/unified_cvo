@@ -1399,7 +1399,9 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       start = chrono::system_clock::now();
       compute_flow(&cvo_state, params_gpu, &omega, &v);
       if (debug_print) std::cout<<"iter "<<k<< "omega: \n"<<omega.transpose()<<"\nv: \n"<<v.transpose()<<std::endl;
-      if (k == 0) printf("nonzeros in A is %d\n", cvo_state.A_host.nonzero_sum);
+      if (k == 0) {
+        printf("iter=0: nonzeros in A is %d\n", cvo_state.A_host.nonzero_sum);
+      }
       end = std::chrono::system_clock::now();
       t_compute_flow += (end - start);
 

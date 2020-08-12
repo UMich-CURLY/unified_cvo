@@ -83,9 +83,9 @@ namespace cvo{
     }
 
     void LeGoLoamPointSelection::cloudHandler(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in, 
-                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
+                                              pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
                                               std::vector <float> & edge_or_surface,
-                      std::vector <int> & selected_indexes){
+                                              std::vector <int> & selected_indexes){
 
         pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_segmented (new pcl::PointCloud<pcl::PointXYZI>);
 
