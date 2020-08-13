@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
 
   //kitti.read_next_stereo(source_left, source_right);
   std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_pc,
-                                                     semantics_source, 
+                                                    semantics_source, 
                                                     calib));
   //0.2));
   double total_time = 0;

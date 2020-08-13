@@ -642,6 +642,7 @@ namespace cvo
                                  std::vector <double> & output_depth_grad,
                                  std::vector <double> & output_intenstity_grad,
                                  std::vector <int> & selected_indexes) {
+
     int beam_num = num_beams;
     std::vector<int> indices;
     pcl::removeNaNFromPointCloud(*pc_in, *pc_in, indices);
@@ -650,10 +651,11 @@ namespace cvo
     int ring_num = 0;
 
     int rand_selector_counter = 0;
-    selected_indexes.clear();
+    selected_indexes.clear();    
     
-    for(int i = 1; i<num_points; i++) {      
-      int quadrant = get_quadrant(pc_in->points[i]);
+    for(int i = 1; i<num_points-1; i++) {
+
+    int quadrant = get_quadrant(pc_in->points[i]);
       if(quadrant == 1 && previous_quadrant == 4 && ring_num < beam_num-1){
         ring_num += 1;
         continue;
@@ -670,6 +672,7 @@ namespace cvo
       double intenstity_grad = std::max(
                                         std::abs( point_l.intensity - point.intensity ),
                                         std::abs( point.intensity - point_r.intensity ));
+      
       if( (point.intensity > 0.0)
           && ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0)) //){
           && (  point.x*point.x+point.y*point.y+point.z*point.z) < distance_bound * distance_bound ) {
@@ -687,7 +690,121 @@ namespace cvo
     
     
   }
+      
+
   
+
+  void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
+                      const std::vector<int> & semantic_in,
+                      int num_want,
+                      double intensity_bound, 
+                      double depth_bound,
+                      double distance_bound,
+                      int beam_number,
+                      // output
+                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
+                      std::vector <double> & output_depth_grad,
+                      std::vector <double> & output_intenstity_grad,
+                      pcl::PointCloud<pcl::Normal>::Ptr normals_out,
+                      std::vector<int> & semantic_out) {
+
+    int beam_num = beam_number;
+    std::vector<int> indices;
+    pcl::removeNaNFromPointCloud(*pc_in, *pc_in, indices);
+    int num_points = pc_in->points.size();
+    int previous_quadrant = get_quadrant(pc_in->points[0]);
+    int ring_num = 0;
+
+    //std::cout<<"calculate surface normals\n";
+    pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal>);
+    pcl::NormalEstimationOMP<pcl::PointXYZI, pcl::Normal> ne;
+    ne.setInputCloud(pc_in);
+    // Create an empty kdtree representation, and pass it to the normal estimation object.
+    // Its content will be filled inside the object, based on the given input dataset (as no other search surface is given).
+    pcl::search::KdTree<pcl::PointXYZI>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZI> ());
+    ne.setSearchMethod(tree);
+    // Use all neighbors in a sphere of radius 50cm
+    ne.setRadiusSearch(1);
+    // ne.setKSearch(30);
+    // ne.setInputCloud(pc_in);
+    ne.compute(*normals);
+    //std::cout<<"get noramls\n";
+
+    /*
+      ----------visualize normals----------
+    */
+    // pcl::visualization::PCLVisualizer viewer("PCL Viewer");
+    // viewer.addPointCloudNormals<pcl::PointXYZI,pcl::Normal>(pc_in, normals,10,0.1, "normals1");
+    // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 1.0, 0.0, 0.0, "normals1");
+    // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 3, "normals1");
+    // pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZI> rgb2 (pc_in, 0, 255, 0); //This will display the point cloud in green (R,G,B)
+    // viewer.addPointCloud<pcl::PointXYZI> (pc_in, rgb2, "cloud_RGB2");
+    // // viewer.addPointCloud<pcl::PointXYZI>(pc_in, "original_cloud");
+    // while (!viewer.wasStopped ())
+    // {
+    //   viewer.spinOnce ();
+    // }
+
+    for(int i = 1; i<num_points; i++) {  
+      if(semantic_in[i]==-1){	
+        // exclude unlabeled points	
+        continue;	
+      }       
+      int quadrant = get_quadrant(pc_in->points[i]);
+      if(quadrant == 1 && previous_quadrant == 4 && ring_num < beam_num-1){
+        ring_num += 1;
+        continue;
+      }
+
+      // select points
+      const auto& point_l = pc_in->points[i-1];
+      const auto& point = pc_in->points[i];
+      const auto& point_r = pc_in->points[i+1];
+      
+      double depth_grad = std::max((point_l.getVector3fMap()-point.getVector3fMap()).norm(),
+                                   (point.getVector3fMap()-point_r.getVector3fMap()).norm());
+      
+      double intenstity_grad = std::max(
+                                        std::abs( point_l.intensity - point.intensity ),
+                                        std::abs( point.intensity - point_r.intensity ));
+      if( (intenstity_grad > intensity_bound || depth_grad > depth_bound
+           || (std::fabs(normals->points[i].normal_y) > 0.8 && std::fabs(normals->points[i].normal_x) < 0.1  && std::fabs(normals->points[i].normal_z) < 0.1  && std::rand() % 50 < 1 )
+
+           )
+          && (point.intensity > 0.0)
+          && (!isnan(normals->points[i].normal_x))          
+          && ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0)) //){
+          && (  point.x*point.x+point.y*point.y+point.z*point.z) < distance_bound * distance_bound  ) {
+        //&&  std::fabs(point.x) < distance_bound && std::fabs(point.y) < distance_bound && std::fabs(point.z) < distance_bound) {
+
+        // std::cout << "points: " << point.x << ", " << point.y << ", " << point.z << ", " << point.intensity << std::endl;
+        pc_out->push_back(pc_in->points[i]);
+        output_depth_grad.push_back(depth_grad);
+        output_intenstity_grad.push_back(intenstity_grad);
+        semantic_out.push_back(semantic_in[i]);
+        normals_out->push_back(normals->points[i]);
+      }
+
+      previous_quadrant = quadrant;      
+    }
+
+    // visualize
+    // pcl::visualization::PCLVisualizer input_viewer ("Input Point Cloud Viewer");
+    // input_viewer.addPointCloud<pcl::PointXYZI> (pc_in, "frame0");
+    // while (!input_viewer.wasStopped ())
+    // {
+    //     input_viewer.spinOnce ();
+    // }
+    // pcl::visualization::PCLVisualizer output_viewer ("Output Point Cloud Viewer");
+    // output_viewer.addPointCloud<pcl::PointXYZI> (pc_out, "frame0");
+    // while (!output_viewer.wasStopped ())
+    // {
+    //     output_viewer.spinOnce ();
+    // }
+    
+    // pcl::io::savePCDFile("input.pcd", *pc_in);
+    // pcl::io::savePCDFile("output.pcd", *pc_out);
+  }
 
   
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,

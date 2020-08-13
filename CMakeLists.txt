@@ -216,7 +216,7 @@ target_compile_definitions(cvo_utils_normal_lib PRIVATE -DIS_USING_NORMALS )
 target_link_libraries(cvo_utils_normal_lib  opencv_core opencv_highgui opencv_photo elas opencv_imgcodecs pcl_filters pcl_features  pcl_io ${TBB_LIBRARIES})
 
 add_library(cvo_utils_loam_lib SHARED ${CVO_UTILS_SOURCE})
-target_compile_definitions(cvo_utils_loam_lib PRIVATE -DIS_USING_LOAM -DIS_USING_NORMALS)
+target_compile_definitions(cvo_utils_loam_lib PRIVATE -DIS_USING_LOAM)
 target_link_libraries(cvo_utils_loam_lib  opencv_core opencv_highgui opencv_photo elas opencv_imgcodecs pcl_filters pcl_features pcl_search pcl_io ${TBB_LIBRARIES})
 
 add_library(bki_mapping_lib SHARED ${BKI_MAPPING_SOURCE})
@@ -344,7 +344,6 @@ set_target_properties(cvo_gpu_lib PROPERTIES
   CUDA_SEPERABLE_COMPILATION ON
   COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 
-
 #add_library(cvo_gpu_exec ${CVO_LIB_SOURCE})
 #target_compile_definitions(cvo_gpu_exec PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
 #target_link_libraries(cvo_gpu_exec  elas cvo_gpu_lib ${Boost_LIBRARIES} ${TBB_LIBRARIES}  ${Sophus_LIBRARIES} ${PCL_LIBRARIES}  ${OpenCV_LIBS} ${TBB_LIBRARIES} gtsam  gtsam_unstable )
@@ -367,13 +366,13 @@ set_target_properties(cvo_gpu_lidar_cov_lib PROPERTIES
   COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
   
 
-add_library(cvo_gpu_lidar_normal_lib SHARED ${CVO_GPU_SOURCE})
-target_compile_definitions(cvo_gpu_lidar_normal_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_NORMALS)
-target_link_libraries(cvo_gpu_lidar_normal_lib PRIVATE lie_group_utils cvo_utils_normal_lib )
-set_target_properties(cvo_gpu_lidar_normal_lib PROPERTIES
-  POSITION_INDEPENDENT_CODE ON
-    CUDA_SEPERABLE_COMPILATION ON
-    COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
+#add_library(cvo_gpu_lidar_normal_lib SHARED ${CVO_GPU_SOURCE})
+#target_compile_definitions(cvo_gpu_lidar_normal_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_NORMALS)
+#target_link_libraries(cvo_gpu_lidar_normal_lib PRIVATE lie_group_utils cvo_utils_normal_lib )
+#set_target_properties(cvo_gpu_lidar_normal_lib PROPERTIES
+#  POSITION_INDEPENDENT_CODE ON
+#    CUDA_SEPERABLE_COMPILATION ON
+#    COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 
 add_library(cvo_gpu_lidar_range_ell_lib SHARED ${CVO_GPU_SOURCE})
 target_compile_definitions(cvo_gpu_lidar_range_ell_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_RANGE_ELL)
@@ -386,7 +385,7 @@ set_target_properties(cvo_gpu_lidar_range_ell_lib PROPERTIES
   
 
 add_library(cvo_gpu_lidar_loam_lib SHARED ${CVO_GPU_SOURCE})
-target_compile_definitions(cvo_gpu_lidar_loam_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_LOAM -DIS_USING_NORMALS)
+target_compile_definitions(cvo_gpu_lidar_loam_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_LOAM )
 target_link_libraries(cvo_gpu_lidar_loam_lib PRIVATE lie_group_utils cvo_utils_loam_lib )
 set_target_properties(cvo_gpu_lidar_loam_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
@@ -471,9 +470,9 @@ target_compile_definitions(cvo_align_gpu_lidar_range_ell PRIVATE -DNUM_CLASSES=1
 target_link_libraries(cvo_align_gpu_lidar_range_ell cvo_gpu_lidar_range_ell_lib cvo_utils_range_ell_lib boost_filesystem boost_system kitti)
 
 
-add_executable(cvo_align_gpu_lidar_loam ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw.cpp)
+add_executable(cvo_align_gpu_lidar_loam ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_geometric.cpp)
 target_compile_definitions(cvo_align_gpu_lidar_loam PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_LOAM)
-target_link_libraries(cvo_align_gpu_lidar_loam cvo_gpu_lidar_normal_lib  cvo_utils_loam_lib boost_filesystem boost_system kitti)
+target_link_libraries(cvo_align_gpu_lidar_loam cvo_gpu_lidar_loam_lib cvo_utils_loam_lib boost_filesystem boost_system kitti)
 
 
 add_executable(cvo_align_gpu_lidar_intensity_raw ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_intensity.cpp)
