@@ -334,7 +334,7 @@ namespace cvo{
                     }
                     // majority of ground points are skipped
                     if (groundMat.at<int8_t>(i,j) == 1){
-                    //   if (std::rand() % 100 > 1 )  // TODO: this should be tuned, skip more! original num = 5 (j%5!=0 && j>5 && j<Horizon_SCAN-5)
+                         //if (  std::rand() % 1000 > 5 )  // TODO: this should be tuned, skip more! original num = 5 (j%5!=0 && j>5 && j<Horizon_SCAN-5)
                             continue;
                     }
                     // mark ground points so they will not be considered as edge features later
