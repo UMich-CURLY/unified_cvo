@@ -1501,6 +1501,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       }
 
       if (k>params.ell_decay_start && need_decay_ell  ) {
+      //if (k>params.ell_decay_start && k % params.ell_decay_start == 0  ) {
         cvo_state.ell = cvo_state.ell * params.ell_decay_rate;
         if (cvo_state.ell < params.ell_min)
           cvo_state.ell = params.ell_min;
