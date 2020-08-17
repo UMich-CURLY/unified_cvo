@@ -58,34 +58,9 @@ namespace cvo{
     LeGoLoamPointSelection::~LeGoLoamPointSelection(){}
     
     void LeGoLoamPointSelection::cloudHandler(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in, 
-                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, 
-                      std::vector <float> & edge_or_surface){
-
-        pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_segmented (new pcl::PointCloud<pcl::PointXYZI>);
-
-        // Running imageProjection
-
-        // 1. Convert ros message to pcl point cloud
-        copyPointCloud(pc_in);
-        // 2. Start and end angle of a scan
-        // findStartEndAngle();
-        // 3. Range image projection
-        projectPointCloud();
-        // 4. Mark ground points
-        groundRemoval();
-        // 5. Point cloud segmentation
-        cloudSegmentation(pc_out_segmented);
-        // 6. Reset parameters for next iteration
-        // resetParameters();
-
-        // Running Feature Association
-        runFeatureAssociation(pc_out, edge_or_surface);
-    }
-
-    void LeGoLoamPointSelection::cloudHandler(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in, 
-                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
+                                              pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, 
                                               std::vector <float> & edge_or_surface,
-                      std::vector <int> & selected_indexes){
+                                              std::vector <int> & selected_indexes){
 
         pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_segmented (new pcl::PointCloud<pcl::PointXYZI>);
 
@@ -105,10 +80,9 @@ namespace cvo{
         // resetParameters();
 
         // Running Feature Association
-        runFeatureAssociation(pc_out, edge_or_surface);
+        runFeatureAssociation(pc_out, edge_or_surface, selected_indexes);
     }
-           
-  
+
 
   // ImageProjection from LeGO-LOAM
 
@@ -195,7 +169,9 @@ namespace cvo{
                 point.x = laserCloudIn->points[i].x;
                 point.y = laserCloudIn->points[i].y;
                 point.z = laserCloudIn->points[i].z;
-                point.intensity = laserCloudIn->points[i].intensity;
+                // instead of keeping the intensity information, we would like to keep track of the indexes of the point, so we can add back the information after point selection.
+                // point.intensity = laserCloudIn->points[i].intensity;
+                point.intensity = i;
                 point.ring = scanID;
                 laserCloudInRing->push_back(point);
             }
@@ -261,13 +237,15 @@ namespace cvo{
             
             rangeMat.at<float>(rowIdn, columnIdn) = range;
 
+            // instead of keeping the intensity information, we would like to keep track of the indexes of the point, so we can add back the information after point selection.
+            thisPoint.intensity = i;
             // thisPoint.intensity = (float)rowIdn + (float)columnIdn / 10000.0;
-            thisPoint.intensity = laserCloudIn->points[i].intensity;
+            // thisPoint.intensity = laserCloudIn->points[i].intensity;
 
             index = columnIdn + rowIdn * Horizon_SCAN;
             fullCloud->points[index] = thisPoint;
             fullInfoCloud->points[index] = thisPoint;
-            fullInfoCloud->points[index].intensity = range; // the corresponding range of a point is saved as "intensity"
+            // fullInfoCloud->points[index].intensity = range; // the corresponding range of a point is saved as "intensity"
             // fullInfoCloud->points[index].intensity = laserCloudIn->points[i].intensity;
         }
     }
@@ -303,7 +281,7 @@ namespace cvo{
                 thispoint_angle = atan2(fullCloud->points[lowerInd].y, sqrt(fullCloud->points[lowerInd].x*fullCloud->points[lowerInd].x + fullCloud->points[lowerInd].z*fullCloud->points[lowerInd].z) ) * 180 / M_PI;
 
 
-                if ((abs(angle - sensorMountAngle) <= 2) && (abs(thispoint_angle - sensorMountAngle) > 4)){  // TODO: this angle should be tuned, original 10
+                if ((abs(angle - sensorMountAngle) <= 10) && (abs(thispoint_angle - sensorMountAngle) > 3)){  // TODO: this angle should be tuned, original 10
                     groundMat.at<int8_t>(i,j) = 1;
                     groundMat.at<int8_t>(i+1,j) = 1;
                 }
@@ -356,7 +334,7 @@ namespace cvo{
                     }
                     // majority of ground points are skipped
                     if (groundMat.at<int8_t>(i,j) == 1){
-                      if (std::rand() % 100 > 1 )  // TODO: this should be tuned, skip more! original num = 5 (j%5!=0 && j>5 && j<Horizon_SCAN-5)
+                         //if (  std::rand() % 1000 > 5 )  // TODO: this should be tuned, skip more! original num = 5 (j%5!=0 && j>5 && j<Horizon_SCAN-5)
                             continue;
                     }
                     // mark ground points so they will not be considered as edge features later
@@ -507,7 +485,7 @@ namespace cvo{
 
         cloudSmoothness.resize(N_SCAN*Horizon_SCAN);
 
-        downSizeFilter.setLeafSize(0.5, 0.5, 0.5);  // TODO: this should be tuned, original (0.2, 0.2, 0.2)
+        downSizeFilter.setLeafSize(0.7, 0.7, 0.7);  // TODO: this should be tuned, original (0.2, 0.2, 0.2)
 
         segmentedCloud.reset(new pcl::PointCloud<PointType>());
         outlierCloud.reset(new pcl::PointCloud<PointType>());
@@ -600,7 +578,8 @@ namespace cvo{
     }
 
     void LeGoLoamPointSelection::runFeatureAssociation(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, 
-                                                        std::vector <float> & edge_or_surface)
+                                                        std::vector <float> & edge_or_surface, 
+                                                        std::vector <int> & selected_indexes)
     {
 
         /**
@@ -612,7 +591,7 @@ namespace cvo{
 
         markOccludedPoints();
 
-        extractFeatures(pc_out, edge_or_surface);
+        extractFeatures(pc_out, edge_or_surface, selected_indexes);
 
         // publishCloud(); // cloud for visualization
 	
@@ -695,8 +674,10 @@ namespace cvo{
     }
 
     void LeGoLoamPointSelection::extractFeatures(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, 
-                                                 std::vector <float> & edge_or_surface)
+                                                 std::vector <float> & edge_or_surface,
+                                                 std::vector <int> & selected_indexes)
     {
+        pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_temp (new pcl::PointCloud<pcl::PointXYZI>);
         cornerPointsSharp->clear();
         cornerPointsLessSharp->clear();
         surfPointsFlat->clear();
@@ -730,14 +711,14 @@ namespace cvo{
                             cloudLabel[ind] = 2;
                             cornerPointsSharp->push_back(segmentedCloud->points[ind]);
                             cornerPointsLessSharp->push_back(segmentedCloud->points[ind]);
-                            // output to CvoPointCloud
-                            pc_out->push_back(segmentedCloud->points[ind]);
+                            // output edges to CvoPointCloud
+                            pc_out_temp->push_back(segmentedCloud->points[ind]);
                             // edge_or_surface.push_back(0);
                         } else if (largestPickedNum <= 20) {
                             cloudLabel[ind] = 1;
                             cornerPointsLessSharp->push_back(segmentedCloud->points[ind]);
-                            // output to CvoPointCloud
-                            pc_out->push_back(segmentedCloud->points[ind]);
+                            // output edges to CvoPointCloud
+                            pc_out_temp->push_back(segmentedCloud->points[ind]);
                             // edge_or_surface.push_back(0);
                         } else {
                             break;
@@ -769,8 +750,8 @@ namespace cvo{
                         cloudLabel[ind] = -1;
                         surfPointsFlat->push_back(segmentedCloud->points[ind]);
                         
-                        // output to CvoPointCloud
-                        // pc_out->push_back(segmentedCloud->points[ind]);
+                        // output surface points to CvoPointCloud
+                        // pc_out_temp->push_back(segmentedCloud->points[ind]);
                         // edge_or_surface.push_back(1);
 
                         smallestPickedNum++;
@@ -824,7 +805,7 @@ namespace cvo{
 
             *surfPointsLessFlat += *surfPointsLessFlatScanDS;
             // output to CvoPointCloud
-            *pc_out += *surfPointsLessFlatScanDS;
+            *pc_out_temp += *surfPointsLessFlatScanDS;
 
             // if (cornerPointsLessSharp->size() > 0)
             //     pcl::io::savePCDFile("legoloam_cornerPointsLessSharp_final.pcd", *cornerPointsLessSharp);
@@ -834,6 +815,19 @@ namespace cvo{
             //     pcl::io::savePCDFile("legoloam_surfPointsFlat_final.pcd", *surfPointsFlat);
             // if (surfPointsLessFlat->size() > 0)
             //     pcl::io::savePCDFile("legoloam_surfPointsLessFlat_final.pcd", *surfPointsLessFlat);
+        }
+
+        // add back the intensity information and selected_indexes
+        size_t output_cloud_size = pc_out_temp->size();
+        pcl::PointXYZI temp_point;
+        for (int n = 0; n < output_cloud_size; n++) {
+            temp_point.x = pc_out_temp->points[n].x;
+            temp_point.y = pc_out_temp->points[n].y;
+            temp_point.z = pc_out_temp->points[n].z;
+            // the intensity of pc_out_temp is the index of that point in the input cloud
+            temp_point.intensity = laserCloudIn->points[pc_out_temp->points[n].intensity].intensity;;
+            pc_out->push_back(temp_point);
+            selected_indexes.push_back(pc_out_temp->points[n].intensity);            
         }
     }
 

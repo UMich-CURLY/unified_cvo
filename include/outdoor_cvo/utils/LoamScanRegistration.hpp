@@ -171,7 +171,7 @@ class LoamScanRegistration{
     * @param laserCloudIn the new input cloud to process
     * @param scanTime the scan (message) timestamp
     */
-    void process(const pcl::PointCloud<pcl::PointXYZI>& laserCloudIn, pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, std::vector <float> & edge_or_surface);
+    void process(const pcl::PointCloud<pcl::PointXYZI>& laserCloudIn, pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, std::vector <float> & edge_or_surface, std::vector <int> & selected_indexes);
 
   private:
     // from loam_velodyne
@@ -181,7 +181,7 @@ class LoamScanRegistration{
     *
     * @param relTime the time relative to the scan time
     */
-    void processScanlines(std::vector<pcl::PointCloud<pcl::PointXYZI>> const& laserCloudScans, pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, std::vector <float> & edge_or_surface);
+    void processScanlines(const pcl::PointCloud<pcl::PointXYZI>& laserCloudIn, std::vector<pcl::PointCloud<pcl::PointXYZI>> const& laserCloudScans, pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, std::vector <float> & edge_or_surface, std::vector <int> & selected_indexes);
 
     /** \brief Update new IMU state. NOTE: MUTATES ARGS! */
     void updateIMUData(Vector3& acc, IMUState& newState);
@@ -219,7 +219,7 @@ class LoamScanRegistration{
      *
      * @param beginIdx the index of the first scan to extract features from
      */
-    void extractFeatures(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, std::vector <float> & edge_or_surface);
+    void extractFeatures(const pcl::PointCloud<pcl::PointXYZI>& laserCloudIn, pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, std::vector <float> & edge_or_surface, std::vector <int> & selected_indexes);
 
     /** \brief Set up region buffers for the specified point range.
      *

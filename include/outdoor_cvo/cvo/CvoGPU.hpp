@@ -28,8 +28,6 @@
 
 extern template struct pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS, NUM_CLASSES>;
 
-
-
 namespace cvo{
   typedef pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS, NUM_CLASSES> CvoPoint;
   

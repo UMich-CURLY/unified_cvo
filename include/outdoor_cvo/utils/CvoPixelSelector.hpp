@@ -41,6 +41,18 @@ namespace cvo
 
   pcl::PointCloud<pcl::Normal>::Ptr
   compute_pcd_normals(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in, float radius);
+
+  void random_surface_with_edges(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
+                                 int num_want,
+                                 double intensity_bound, 
+                                 double depth_bound,
+                                 double distance_bound,
+                                 int num_beams,
+                                 // output
+                                 std::vector <double> & output_depth_grad,
+                                 std::vector <double> & output_intenstity_grad,
+                                 std::vector <int> & selected_indexes);
+
   
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
                       int num_want,
@@ -53,16 +65,6 @@ namespace cvo
                       std::vector <double> & output_depth_grad,
                       std::vector <double> & output_intenstity_grad,
                       std::vector <int> & selected_indexes);
-  void random_surface_with_edges(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
-                                 int num_want,
-                                 double intensity_bound, 
-                                 double depth_bound,
-                                 double distance_bound,
-                                 int num_beams,
-                                 // output
-                                 std::vector <double> & output_depth_grad,
-                                 std::vector <double> & output_intenstity_grad,
-                                 std::vector <int> & selected_indexes);
 
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
                      int num_want,
@@ -86,6 +88,19 @@ namespace cvo
                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
                      std::vector <double> & output_depth_grad,
                      std::vector <double> & output_intenstity_grad,
+                     std::vector<int> & semantic_out); 
+  void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
+                     const std::vector<int> & semantic_in,
+                     int num_want,
+                     double intensity_bound, 
+                     double depth_bound,
+                     double distance_bound,
+                      int num_beams,
+                     // output
+                     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
+                     std::vector <double> & output_depth_grad,
+                     std::vector <double> & output_intenstity_grad,
+                     pcl::PointCloud<pcl::Normal>::Ptr normals_out,
                      std::vector<int> & semantic_out); 
   void laserCloudHandler(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
                         int num_want,

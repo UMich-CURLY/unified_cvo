@@ -73,7 +73,8 @@ namespace cvo
 
   void LoamScanRegistration::process(const pcl::PointCloud<pcl::PointXYZI>& laserCloudIn, 
                                       pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, 
-                                      std::vector <float> & edge_or_surface)
+                                      std::vector <float> & edge_or_surface,
+                                      std::vector <int> & selected_indexes)
   {
     reset();
     size_t cloudSize = laserCloudIn.size();
@@ -102,7 +103,8 @@ namespace cvo
       point.x = laserCloudIn[i].x;
       point.y = laserCloudIn[i].y;
       point.z = laserCloudIn[i].z;
-      point.intensity = laserCloudIn[i].intensity;
+      point.intensity = i;
+      // point.intensity = laserCloudIn[i].intensity;
       // point.x = laserCloudIn[i].y;
       // point.y = laserCloudIn[i].z;
       // point.z = laserCloudIn[i].x;
@@ -167,12 +169,14 @@ namespace cvo
 
     }
 
-    processScanlines(_laserCloudScans, pc_out, edge_or_surface);
+    processScanlines(laserCloudIn, _laserCloudScans, pc_out, edge_or_surface, selected_indexes);
   }
 
-  void LoamScanRegistration::processScanlines(std::vector<pcl::PointCloud<pcl::PointXYZI>> const& laserCloudScans, 
+  void LoamScanRegistration::processScanlines(const pcl::PointCloud<pcl::PointXYZI>& laserCloudIn,
+                                              std::vector<pcl::PointCloud<pcl::PointXYZI>> const& laserCloudScans, 
                                               pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, 
-                                              std::vector <float> & edge_or_surface)
+                                              std::vector <float> & edge_or_surface,
+                                              std::vector <int> & selected_indexes)
   {
     // reset internal buffers and set IMU start state based on current scan time
     reset();
@@ -188,7 +192,7 @@ namespace cvo
       _scanIndices.push_back(range);
     }
 
-    extractFeatures(pc_out, edge_or_surface);
+    extractFeatures(laserCloudIn, pc_out, edge_or_surface, selected_indexes);
   }
 
   void LoamScanRegistration::reset()
@@ -205,8 +209,10 @@ namespace cvo
   }
 
 
-  void LoamScanRegistration::extractFeatures(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, 
-                                              std::vector <float> & edge_or_surface)
+  void LoamScanRegistration::extractFeatures(const pcl::PointCloud<pcl::PointXYZI>& laserCloudIn,
+                                              pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, 
+                                              std::vector <float> & edge_or_surface,
+                                              std::vector <int> & selected_indexes)
   {
     // extract features from individual scans
     size_t nScans = _scanIndices.size();
@@ -265,8 +271,14 @@ namespace cvo
               _regionLabel[regionIdx] = CORNER_LESS_SHARP;
             }
             _cornerPointsLessSharp.push_back(_laserCloud[idx]);
-            pc_out->push_back(_laserCloud[idx]);
+            pcl::PointXYZI point;
+            point.x = _laserCloud[idx].x;
+            point.y = _laserCloud[idx].y;
+            point.z = _laserCloud[idx].z;
+            point.intensity = laserCloudIn[_laserCloud[idx].intensity].intensity;
+            pc_out->push_back(point);
             edge_or_surface.push_back(0);
+            selected_indexes.push_back(_laserCloud[idx].intensity);
 
             markAsPicked(idx, scanIdx);
           }
@@ -285,8 +297,14 @@ namespace cvo
             smallestPickedNum++;
             _regionLabel[regionIdx] = SURFACE_FLAT;
             _surfacePointsFlat.push_back(_laserCloud[idx]);
-            pc_out->push_back(_laserCloud[idx]);
+            pcl::PointXYZI point;
+            point.x = _laserCloud[idx].x;
+            point.y = _laserCloud[idx].y;
+            point.z = _laserCloud[idx].z;
+            point.intensity = laserCloudIn[_laserCloud[idx].intensity].intensity;
+            pc_out->push_back(point);
             edge_or_surface.push_back(1);
+            selected_indexes.push_back(_laserCloud[idx].intensity);
 
             markAsPicked(idx, scanIdx);
           }

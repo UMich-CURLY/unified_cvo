@@ -1246,12 +1246,12 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
          indicator_end_sum / indicator_start_sum  < 1 + params.indicator_stable_threshold){
         decrease = true;
         std::queue<float> empty;
-        std::swap( indicator_start_queue, indicator_end_queue );
-
-        std::swap( indicator_end_queue, empty );
+        std::swap( indicator_start_queue, empty );
+        // std::swap( indicator_start_queue, indicator_end_queue );
+        // std::swap( indicator_end_queue, empty );
         
         std::queue<float> empty2;
-        std::swap( indicator_start_queue, empty2 );
+        std::swap( indicator_end_queue, empty2 );
         indicator_start_sum = 0;
         //indicator_start_sum = indicator_end_sum;
         indicator_end_sum = 0;
@@ -1421,7 +1421,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       compute_flow(&cvo_state, params_gpu, &omega, &v);
       if (debug_print) std::cout<<"iter "<<k<< "omega: \n"<<omega.transpose()<<"\nv: \n"<<v.transpose()<<std::endl;
       if (k == 0) {
-        printf("k=0: nonzeros in A is %d\n", cvo_state.A_host.nonzero_sum);
+        printf("iter=0: nonzeros in A is %d\n", cvo_state.A_host.nonzero_sum);
       }
       end = std::chrono::system_clock::now();
       t_compute_flow += (end - start);
@@ -1507,10 +1507,18 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
           cvo_state.ell = params.ell_min;
       }
       
-      if(debug_print) {
-        printf("end of iteration \n\n\n");
-      }
+      if(debug_print) printf("end of iteration \n\n\n");
 
+      // std::cout<<"iter: "<<k<<std::endl;
+      // if(debug_print){
+      // std::cout<<"num non zeros in A: "<<A.nonZeros()<<std::endl;
+      // std::cout<<"inner product before normalized: "<<A.sum()<<std::endl;
+      // std::cout<<"inner product after normalized: "<<A.sum()/num_fixed/num_moving*1e6<<std::endl; 
+      // std::cout<<transform.matrix()<<std::endl;
+      // }
+
+      //inner_product_file << A.sum()<<"\n";
+      //inner_product_file << std::flush;
     }
     auto end_all = chrono::system_clock::now();
     chrono::duration<double> t_all = chrono::duration<double>::zero();

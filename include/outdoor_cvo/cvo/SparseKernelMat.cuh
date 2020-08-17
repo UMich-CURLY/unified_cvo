@@ -28,35 +28,37 @@ namespace cvo {
 
   inline unsigned int nonzeros(SparseKernelMat * A_host ) {
     /*
-     thrust::device_ptr<float> A_ptr = thrust::device_pointer_cast(A_host->mat);
-     thrust::device_vector<float> v(A_ptr, A_ptr + A_host->rows * A_host->cols );
+      thrust::device_ptr<float> A_ptr = thrust::device_pointer_cast(A_host->mat);
+      thrust::device_vector<float> v(A_ptr, A_ptr + A_host->rows * A_host->cols );
 
-     thrust::plus<float> binary_add;
-     return (int)thrust::transform_reduce(v.begin(), v.end(),
-                                          []__host__ __device__(float x) { return fabs(x) > 0.0 ? 1.0f : 0.0f; },
-                                          0,
-                                          binary_add);  
+      thrust::plus<float> binary_add;
+      return (int)thrust::transform_reduce(v.begin(), v.end(),
+      []__host__ __device__(float x) { return fabs(x) > 0.0 ? 1.0f : 0.0f; },
+      0,
+      binary_add);  
     */
     return A_host->nonzero_sum;
   }
 
   inline void compute_nonzeros(SparseKernelMat * A_host) {
-     thrust::device_ptr<unsigned int> A_ptr = thrust::device_pointer_cast(A_host->nonzeros);
-     thrust::device_vector<unsigned int> v(A_ptr, A_ptr + A_host->rows  );
-     A_host->nonzero_sum = thrust::reduce(v.begin(), v.end());
-     
-    // thrust::plus<int> binary_add;
-    // A_host->nonzero_sum = (unsigned int) thrust::transform_reduce(v.begin(), v.end(),
-    //                                                 []__host__ __device__(int x) { return x > 0? x : 0; },
-    //                                                               0,
-    //                                                               binary_add);  
+    A_host->nonzero_sum = 0;
+    thrust::device_ptr<unsigned int> A_ptr = thrust::device_pointer_cast(A_host->nonzeros);
+    thrust::device_vector<unsigned int> v(A_ptr, A_ptr + A_host->rows  );
+    A_host->nonzero_sum = thrust::reduce(v.begin(), v.end());
+    /*
+      thrust::plus<int> binary_add;
+      A_host->nonzero_sum =  thrust::transform_reduce(v.begin(), v.end(),
+      []__host__ __device__(int x) { return x > 0; },
+      0,
+      binary_add);  
+    */
     
   }
 
   inline float A_sum(SparseKernelMat * A_host) {
-     thrust::device_ptr<float> A_ptr = thrust::device_pointer_cast(A_host->mat);
-     thrust::device_vector<float> v(A_ptr, A_ptr + A_host->rows * A_host->cols );
-     return thrust::reduce(v.begin(), v.end());
+    thrust::device_ptr<float> A_ptr = thrust::device_pointer_cast(A_host->mat);
+    thrust::device_vector<float> v(A_ptr, A_ptr + A_host->rows * A_host->cols );
+    return thrust::reduce(v.begin(), v.end());
     
     
   }
