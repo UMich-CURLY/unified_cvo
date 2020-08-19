@@ -1,7 +1,7 @@
 %YAML:1.0
 ---
 ell_init_first_frame: 0.55
-ell_init: 0.35
+ell_init: 0.3
 ell_min: 0.025
 ell_max: 0.9
 dl: 0.0
@@ -18,7 +18,7 @@ MAX_ITER: 10000
 min_step: 0.001
 eps: 0.00005
 eps_2: 0.000012
-ell_decay_rate: 0.9
+ell_decay_rate: 0.95
 ell_decay_rate_first_frame: 0.99
 ell_decay_start: 30
 ell_decay_start_first_frame: 600

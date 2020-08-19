@@ -515,9 +515,9 @@ target_link_libraries(cvo_align_gpu_lidar_intensity_raw cvo_gpu_lidar_intensity_
 #target_link_libraries(cvo_align_gpu_lidar_pcd cvo_gpu_lidar_loam_lib pose_graph_loam_lib cvo_utils_loam_lib boost_filesystem boost_system pcl_io kitti)
 
 
-add_executable(cvo_align_gpu_lidar_semantic_loam ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_semantic.cpp)
-target_compile_definitions(cvo_align_gpu_lidar_semantic_loam PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_SEMANTICS -DIS_USING_LOAM)
-target_link_libraries(cvo_align_gpu_lidar_semantic_loam cvo_gpu_lidar_semantic_loam_lib cvo_utils_loam_lib boost_filesystem boost_system kitti)
+#add_executable(cvo_align_gpu_lidar_semantic_loam ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_semantic.cpp)
+#target_compile_definitions(cvo_align_gpu_lidar_semantic_loam PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_SEMANTICS -DIS_USING_LOAM)
+#target_link_libraries(cvo_align_gpu_lidar_semantic_loam cvo_gpu_lidar_semantic_loam_lib cvo_utils_loam_lib boost_filesystem boost_system kitti)
 
 
 add_executable(acvo_semantic_lidar_align_gpu ${PROJECT_SOURCE_DIR}/src/experiments/main_acvo_gpu_lidar_align.cpp)
