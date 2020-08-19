@@ -488,6 +488,7 @@ namespace cvo
                       pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
                       std::vector <double> & output_depth_grad,
                       std::vector <double> & output_intenstity_grad,
+                      std::vector <int> & selected_indexes,
                       pcl::PointCloud<pcl::Normal>::Ptr normals_out) {
 
     int beam_num = beam_number;
@@ -553,6 +554,7 @@ namespace cvo
         pc_out->push_back(pc_in->points[i]);
         output_depth_grad.push_back(depth_grad);
         output_intenstity_grad.push_back(intenstity_grad);
+        selected_indexes.push_back(i);
 #ifdef IS_USING_NORMALS          
         normals_out->push_back(normals->points[i]);
 #endif
@@ -705,6 +707,7 @@ namespace cvo
                       pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
                       std::vector <double> & output_depth_grad,
                       std::vector <double> & output_intenstity_grad,
+                      std::vector<int> & selected_indexes,                      
                       pcl::PointCloud<pcl::Normal>::Ptr normals_out,
                       std::vector<int> & semantic_out) {
 
@@ -782,6 +785,7 @@ namespace cvo
         output_depth_grad.push_back(depth_grad);
         output_intenstity_grad.push_back(intenstity_grad);
         semantic_out.push_back(semantic_in[i]);
+        selected_indexes.push_back(i);
         normals_out->push_back(normals->points[i]);
       }
 
@@ -818,6 +822,7 @@ namespace cvo
                       pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out,
                       std::vector <double> & output_depth_grad,
                       std::vector <double> & output_intenstity_grad,
+                      std::vector<int> & selected_indexes,
                       std::vector<int> & semantic_out) {
 
     int beam_num = beam_number;
@@ -862,7 +867,7 @@ namespace cvo
         output_depth_grad.push_back(depth_grad);
         output_intenstity_grad.push_back(intenstity_grad);
         semantic_out.push_back(semantic_in[i]);
-
+        selected_indexes.push_back(i);
         //std::cout<<" in edge detection , point "<<point.x<<", "<<point.y<<", "<<point.z<<", label "<<point.intensity<<std::endl;
       }
 

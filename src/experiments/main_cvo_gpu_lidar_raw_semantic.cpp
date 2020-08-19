@@ -8,13 +8,13 @@
 #include <boost/filesystem.hpp>
 //#include <opencv2/opencv.hpp>
 #include "dataset_handler/KittiHandler.hpp"
-#include "graph_optimizer/Frame.hpp"
+//#include "graph_optimizer/Frame.hpp"
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/CvoGPU.hpp"
-#include "cvo/Cvo.hpp"
+//#include "cvo/Cvo.hpp"
 using namespace std;
 using namespace boost::filesystem;
 
@@ -39,9 +39,11 @@ int main(int argc, char *argv[]) {
   cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();
   float ell_init = init_param.ell_init;
-  float ell_max = init_param.ell_max;
-  init_param.ell_init = 0.51;//0.7;
-  init_param.ell_max = 2.2;//0.75;
+  float ell_decay_rate = init_param.ell_decay_rate;
+  int ell_decay_start = init_param.ell_decay_start;
+  init_param.ell_init = init_param.ell_init_first_frame;
+  init_param.ell_decay_rate = init_param.ell_decay_rate_first_frame;
+  init_param.ell_decay_start  = init_param.ell_decay_start_first_frame;  
   cvo_align.write_params(&init_param);
   
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
@@ -55,10 +57,12 @@ int main(int argc, char *argv[]) {
   std::vector<int> semantics_source;
   kitti.read_next_lidar(source_pc,  semantics_source);
 
+  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(source_pc, semantics_source, 19, 5000, 64)); 
+  
   //kitti.read_next_stereo(source_left, source_right);
-  std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_pc,
-                                                    semantics_source, 
-                                                    calib));
+  //std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_pc,
+  //                                                  semantics_source, 
+  //                                                 calib));
   //0.2));
   double total_time = 0;
   int i = start_frame;
@@ -76,24 +80,21 @@ int main(int argc, char *argv[]) {
       break;
     }
 
-    std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, target_pc, semantics_target, calib));
+    //std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, target_pc, semantics_target, calib));
+    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(target_pc, semantics_target, 19, 5000, 64));
 
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
-    auto source_fr = source->points();
-    std::cout<<"NUm of source pts is "<<source->points().num_points()<<"\n";
-    auto target_fr = target->points();
-    std::cout<<"NUm of target pts is "<<target->points().num_points()<<"\n";
+    std::cout<<"NUm of source pts is "<<source->num_points()<<"\n";
+    std::cout<<"NUm of target pts is "<<target->num_points()<<"\n";
 
     Eigen::Matrix4f result, init_guess_inv;
     init_guess_inv = init_guess.inverse();
-    printf("Start align... num_fixed is %d, num_moving is %d\n", source_fr.num_points(), target_fr.num_points());
-    std::cout<<std::flush;
     double this_time = 0;
-    cvo_align.align(source_fr, target_fr, init_guess_inv, result, &this_time);
+    cvo_align.align(*source, *target, init_guess_inv, result, &this_time);
     total_time += this_time;
     
     // get tf and inner product from cvo getter
-    double in_product = cvo_align.inner_product(source_fr, target_fr, result);
+    double in_product = cvo_align.inner_product(*source, *target, result);
     //double in_product_normalized = cvo_align.inner_product_normalized();
     //int non_zeros_in_A = cvo_align.number_of_non_zeros_in_A();
     std::cout<<"The gpu inner product between "<<i-1 <<" and "<< i <<" is "<<in_product<<"\n";
@@ -119,7 +120,8 @@ int main(int argc, char *argv[]) {
     source = target;
     if (i == start_frame) {
       init_param.ell_init = ell_init;
-      init_param.ell_max = ell_max;
+      init_param.ell_decay_start = ell_decay_rate;
+      init_param.ell_decay_start = ell_decay_start;            
       cvo_align.write_params(&init_param);
       
     } //else if (i < start_frame + 20)  {
