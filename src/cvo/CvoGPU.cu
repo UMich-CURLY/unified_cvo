@@ -44,7 +44,7 @@ namespace cvo{
   typedef Eigen::Triplet<float> Trip_t;
 
   static bool is_logging = true;
-  static bool debug_print =true;
+  static bool debug_print =false;
 
 
 
@@ -782,27 +782,27 @@ namespace cvo{
     CvoPoint * points_fixed_raw = thrust::raw_pointer_cast (  points_fixed->points.data() );
     CvoPoint * points_moving_raw = thrust::raw_pointer_cast( points_moving->points.data() );
     
-#ifdef IS_USING_RANGE_ELL    
-    fill_in_A_mat_gpu_range_ell<<<(points_moving->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(params_gpu,
-                                                                                                    points_fixed_raw,
-                                                                                                    fixed_size,
-                                                                                                    points_moving_raw,
-                                                                                                    points_moving->points.size(),
-                                                                                                    ell,
-                                                                                                    // output
-                                                                                                    A_mat_gpu // the kernel matrix!
-                                                                                                    );
-#elif IS_USING_COVARIANCE
+#ifdef IS_USING_COVARIANCE   
     fill_in_A_mat_gpu_dense_mat_kernel<<<(points_moving->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(// input
-                                                                                                           params_gpu,
-                                                                                                           points_fixed_raw,
-                                                                                                           fixed_size,
-                                                                                                           points_moving_raw,
-                                                                                                           points_moving->points.size(),
-                                                                                                           ell,
-                                                                                                           // output
-                                                                                                           A_mat_gpu // the inner product matrix!
-                                                                                                           );
+      params_gpu,
+      points_fixed_raw,
+      fixed_size,
+      points_moving_raw,
+      points_moving->points.size(),
+      ell,
+      // output
+      A_mat_gpu // the inner product matrix!
+      );
+#else 
+    fill_in_A_mat_gpu_range_ell<<<(points_moving->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(params_gpu,
+      points_fixed_raw,
+      fixed_size,
+      points_moving_raw,
+      points_moving->points.size(),
+      ell,
+      // output
+      A_mat_gpu // the kernel matrix!
+      );
     
 #endif    
     compute_nonzeros(A_mat);
@@ -1349,6 +1349,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
         std::cout<<"nonzeros in A "<<nonzeros(&cvo_state.A_host)<<std::endl;
         std::cout<<"time for se_kernel is "<<std::chrono::duration_cast<std::chrono::milliseconds>((end- start)).count()<<std::endl;
         std::cout<<"A rows is "<<cvo_state.A_host.rows<<", A cols is "<<cvo_state.A_host.cols<<std::endl;
+        
       }
 
       // compute omega and v

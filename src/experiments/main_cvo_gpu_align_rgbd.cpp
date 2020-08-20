@@ -7,7 +7,7 @@
 #include <cmath>
 #include <boost/filesystem.hpp>
 //#include <opencv2/opencv.hpp>
-#include "dataset_handler/KittiHandler.hpp"
+#include "dataset_handler/TumHandler.hpp"
 #include "graph_optimizer/Frame.hpp"
 #include "utils/Calibration.hpp"
 #include "utils/CvoPointCloud.hpp"
@@ -21,23 +21,24 @@ using namespace boost::filesystem;
 int main(int argc, char *argv[]) {
   // list all files in current directory.
   //You could put any file path in here, e.g. "/home/me/mwah" to list that directory
-  cvo::KittiHandler kitti(argv[1], 0);
-  int total_iters = kitti.get_total_number();
+  cvo::TumHandler tum(argv[1]);
+  int total_iters = tum.get_total_number();
+  vector<string> vstrRGBName = tum.get_rgb_name_list();
   string cvo_param_file(argv[2]);
   string calib_file;
   calib_file = string(argv[1] ) +"/cvo_calib.txt"; 
-  cvo::Calibration calib(calib_file);
+  cvo::Calibration calib(calib_file,1);
   std::ofstream accum_output(argv[3]);
   int start_frame = std::stoi(argv[4]);
-  kitti.set_start_index(start_frame);
+  tum.set_start_index(start_frame);
   int max_num = std::stoi(argv[5]);
   
   
   cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams init_param = cvo_align.get_params();
   cvo::CvoParams first_frame_param = init_param;
-  first_frame_param.ell_init = 0.95;
-  first_frame_param.ell_max = 1.0;
+  first_frame_param.ell_init = 0.25;
+  first_frame_param.ell_max = 0.6;
   cvo_align.write_params(&first_frame_param);
 
   std::cout<<"write ell! ell init is "<<cvo_align.get_params().ell_init<<std::endl;
@@ -50,13 +51,11 @@ int main(int argc, char *argv[]) {
   Eigen::Matrix4f accum_mat = Eigen::Matrix4f::Identity();
   // start the iteration
 
-  cv::Mat source_left, source_right;
-  //std::vector<float> semantics_source;
-  //kitti.read_next_stereo(source_left, source_right, 19, semantics_source);
-  kitti.read_next_stereo(source_left, source_right);
-  std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_left, source_right,
+  cv::Mat source_rgb, source_dep;
+  tum.read_next_rgbd(source_rgb, source_dep);
+  std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_rgb, source_dep,
                                                     //19, semantics_source, 
-                                                    calib));
+                                                    calib, 1));
   //0.2));
   
   for (int i = start_frame; i<min(total_iters, start_frame+max_num)-1 ; i++) {
@@ -65,16 +64,16 @@ int main(int argc, char *argv[]) {
     std::cout<<"\n\n\n\n============================================="<<std::endl;
     std::cout<<"Aligning "<<i<<" and "<<i+1<<" with GPU "<<std::endl;
 
-    kitti.next_frame_index();
-    cv::Mat left, right;
+    tum.next_frame_index();
+    cv::Mat rgb, dep;
     //sdt::vector<float> semantics_target;
-    if (kitti.read_next_stereo(left, right) != 0) {
+    if (tum.read_next_rgbd(rgb, dep) != 0) {
       std::cout<<"finish all files\n";
       break;
     }
 
 
-    std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, left, right, calib));
+    std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, rgb, dep, calib,1));
 
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
     auto source_fr = source->points();
@@ -102,12 +101,18 @@ int main(int argc, char *argv[]) {
     
     // log accumulated pose
 
-    accum_output << accum_mat(0,0)<<" "<<accum_mat(0,1)<<" "<<accum_mat(0,2)<<" "<<accum_mat(0,3)<<" "
-                <<accum_mat(1,0)<<" " <<accum_mat(1,1)<<" "<<accum_mat(1,2)<<" "<<accum_mat(1,3)<<" "
-                <<accum_mat(2,0)<<" " <<accum_mat(2,1)<<" "<<accum_mat(2,2)<<" "<<accum_mat(2,3);
-    accum_output<<"\n";
-    accum_output<<std::flush;
+    // accum_output << accum_mat(0,0)<<" "<<accum_mat(0,1)<<" "<<accum_mat(0,2)<<" "<<accum_mat(0,3)<<" "
+    //             <<accum_mat(1,0)<<" " <<accum_mat(1,1)<<" "<<accum_mat(1,2)<<" "<<accum_mat(1,3)<<" "
+    //             <<accum_mat(2,0)<<" " <<accum_mat(2,1)<<" "<<accum_mat(2,2)<<" "<<accum_mat(2,3);
+    // accum_output<<"\n";
+    // accum_output<<std::flush;
     
+    Eigen::Quaternionf q(accum_mat.block<3,3>(0,0));
+    accum_output<<vstrRGBName[i]<<" ";
+    accum_output<<accum_mat(0,3)<<" "<<accum_mat(1,3)<<" "<<accum_mat(2,3)<<" "; 
+    accum_output<<q.x()<<" "<<q.y()<<" "<<q.z()<<" "<<q.w()<<"\n";
+    accum_output.flush();
+
     std::cout<<"\n\n===========next frame=============\n\n";
    
     source = target;
