@@ -123,4 +123,8 @@ namespace cvo {
   // for historical reasons
   typedef CvoPointCloud point_cloud;
 
+  void write_all_to_label_pcd(const std::string name,
+                          const pcl::PointCloud<pcl::PointXYZI> & pc,
+                          int num_class,
+                          const std::vector<int> & semantic);
 }

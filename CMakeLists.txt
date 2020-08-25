@@ -20,11 +20,11 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 #set (CMAKE_POSITION_INDEPENDENT_CODE FALSE)
 add_compile_options(-std=c++14)
 # Release Mode
-set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -O3 -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
+#set(CMAKE_BUILD_TYPE Release)
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -O3 -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -lmkl_intel_lp64 -lmkl_core -lmkl -liomp -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
-#set(CMAKE_BUILD_TYPE Debug)
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -g  -msse -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
+set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -g  -msse -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 
 #set(BUILD_TYPE RelWithDebInfo)
 #set(CMAKE_CXX_STANDARD 14)
@@ -412,10 +412,20 @@ set_target_properties(cvo_gpu_lidar_intensity_loam_lib PROPERTIES
   
 add_library(cvo_gpu_lidar_semantic_lib ${CVO_GPU_SOURCE})
 target_compile_definitions(cvo_gpu_lidar_semantic_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_SEMANTICS)
-target_link_libraries(cvo_gpu_lidar_semantic_lib PRIVATE lie_group_utils cvo_utils_lib)
+target_link_libraries(cvo_gpu_lidar_semantic_lib PRIVATE lie_group_utils cvo_utils_loam_lib)
 set_target_properties(cvo_gpu_lidar_semantic_lib PROPERTIES POSITION_INDEPENDENT_CODE ON
     CUDA_SEPERABLE_COMPILATION ON
     COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
+
+
+add_library(cvo_gpu_lidar_semantic_loam_lib SHARED ${CVO_GPU_SOURCE})
+target_compile_definitions(cvo_gpu_lidar_semantic_loam_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_LOAM -DIS_USING_SEMANTICS)
+target_link_libraries(cvo_gpu_lidar_semantic_loam_lib PRIVATE lie_group_utils cvo_utils_loam_lib )
+set_target_properties(cvo_gpu_lidar_semantic_loam_lib PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+    CUDA_SEPERABLE_COMPILATION ON
+    COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
+  
 
   
 endif()
@@ -497,7 +507,7 @@ target_link_libraries(cvo_align_gpu_lidar_intensity_loam_raw cvo_gpu_lidar_inten
 
 add_executable(cvo_align_gpu_lidar_semantic_loam ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_semantic.cpp)
 target_compile_definitions(cvo_align_gpu_lidar_semantic_loam PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_SEMANTICS)
-target_link_libraries(cvo_align_gpu_lidar_semantic_loam cvo_gpu_lidar_semantic_lib  cvo_utils_loam_lib boost_filesystem boost_system kitti)
+target_link_libraries(cvo_align_gpu_lidar_semantic_loam cvo_gpu_lidar_semantic_loam_lib  cvo_utils_loam_lib boost_filesystem boost_system kitti)
 
 
 add_executable(acvo_semantic_lidar_align_gpu ${PROJECT_SOURCE_DIR}/src/experiments/main_acvo_gpu_lidar_align.cpp)

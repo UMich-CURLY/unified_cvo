@@ -94,7 +94,8 @@ namespace cvo
     int previous_quadrant = get_quadrant(pc_in->points[0]);
     int ring_num = 0;
 
-    for(int i = 1; i<num_points; i++) {   
+    //for(int i = 1; i<num_points; i++) {
+    for (auto i : indices) {
       if(semantic_in[i]==-1){
         // exclude unlabeled points
 

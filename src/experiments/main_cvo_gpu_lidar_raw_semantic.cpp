@@ -94,10 +94,10 @@ int main(int argc, char *argv[]) {
     total_time += this_time;
     
     // get tf and inner product from cvo getter
-    double in_product = cvo_align.inner_product(*source, *target, result);
+    //double in_product = cvo_align.inner_product(*source, *target, result);
     //double in_product_normalized = cvo_align.inner_product_normalized();
     //int non_zeros_in_A = cvo_align.number_of_non_zeros_in_A();
-    std::cout<<"The gpu inner product between "<<i-1 <<" and "<< i <<" is "<<in_product<<"\n";
+    //std::cout<<"The gpu inner product between "<<i-1 <<" and "<< i <<" is "<<in_product<<"\n";
     //std::cout<<"The normalized inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_normalized<<"\n";
     std::cout<<"Transform is "<<result <<"\n\n";
 

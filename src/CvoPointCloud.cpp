@@ -42,6 +42,24 @@ namespace cvo{
     return true;
   }
 
+  void write_all_to_label_pcd(const std::string name,
+                                 const pcl::PointCloud<pcl::PointXYZI> & pc,
+                                 int num_class,
+                                 const std::vector<int> & semantic)  {
+    pcl::PointCloud<pcl::PointXYZL> pc_label;
+    for (int i = 0; i < pc.size(); i++) {
+      pcl::PointXYZL p;
+      p.x = pc[i].x;
+      p.y = pc[i].y;
+      p.z = pc[i].z;
+      p.label = semantic[i];
+      pc_label.push_back(p);
+    }
+    pcl::io::savePCDFileASCII(name ,pc_label); 
+    std::cout << "Finished write to label pcd" << std::endl; 
+  }
+
+  
   
   cv::Vec3f CvoPointCloud::avg_pixel_color_pattern(const cv::Mat & raw_buffer, int u, int v, int w){
     cv::Vec3f result_cv;
@@ -257,7 +275,7 @@ namespace cvo{
       }
 
     }
-    //  write_to_label_pcd("labeled_input.pcd");
+    //write_to_label_pcd("labeled_input.pcd");
     write_to_color_pcd("color_stereo.pcd");
   }
   
@@ -383,15 +401,19 @@ namespace cvo{
   CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, const std::vector<int> & semantic,
                                int num_classes, int target_num_points, int beam_num) {
 
+    write_all_to_label_pcd("kitti_semanitc_lidar_pre.pcd", *pc, num_classes, semantic);
+
     int expected_points = target_num_points;
     double intensity_bound = 0.4;
     double depth_bound = 4.0;
     std::vector<int> selected_indexes;
-    double distance_bound = 75.0;
+    double distance_bound = 40.0;
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
     std::vector <int> semantic_out;
+
+    std::cout<<"construct semantic lidar CvoPointCloud...\n";
 
 #if  !defined(IS_USING_LOAM)  && defined(IS_USING_NORMALS)
     pcl::PointCloud<pcl::Normal>::Ptr normals_out (new pcl::PointCloud<pcl::Normal>);
@@ -401,16 +423,19 @@ namespace cvo{
 #endif    
 
 #if defined(IS_USING_LOAM) && !defined(IS_USING_NORMALS)
+
     std::vector <float> edge_or_surface;
     LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
 
     // running edge detection + lego loam point selection
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
-    lps.edge_detection(pc, semantic, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_indexes,  semantic_out);    
+    lps.edge_detection(pc, semantic, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_indexes, semantic_out);   
     lps.legoloam_point_selector(pc, semantic, pc_out_surface, edge_or_surface, selected_indexes, semantic_out);    
     *pc_out += *pc_out_edge;
     *pc_out += *pc_out_surface;
+    num_points_ = pc_out->size();
+    assert(num_points_ == selected_indexes.size());
     
 #endif
 
@@ -428,6 +453,7 @@ namespace cvo{
     *pc_out += *pc_out_surface;
 
     normals_out = compute_pcd_normals(pc_out, 1.0);
+    
 
 #endif
 
@@ -449,25 +475,28 @@ namespace cvo{
     feature_dimensions_ = 1;
     features_.resize(num_points_, feature_dimensions_);
     labels_.resize(num_points_, num_classes_);
+#ifdef IS_USING_NORMALS    
     normals_.resize(num_points_,3);
-
+#endif
     for (int i = 0; i < num_points_ ; i++) {
       Vec3f xyz;
       int idx = selected_indexes[i];
-      xyz << pc_out->points[idx].x, pc_out->points[idx].y, pc_out->points[idx].z;
-      positions_.push_back(xyz);
-      features_(i, 0) = pc_out->points[idx].intensity;
-      
 
+      if (semantic_out[i] == -1)
+        continue;
+      
+      xyz << pc->points[idx].x, pc->points[idx].y, pc->points[idx].z;
+      positions_.push_back(xyz);
+      features_(i, 0) = pc->points[idx].intensity;
 
       // add one-hot semantic labels
       VecXf_row one_hot_label;
       one_hot_label = VecXf_row::Zero(1,num_classes_);
       one_hot_label[semantic_out[i]] = 1;
 
-      //labels_.row(i) = one_hot_label;
-      //int max_class = 0;
-      //labels_.row(i).maxCoeff(&max_class);
+      labels_.row(i) = one_hot_label;
+      int max_class = 0;
+      labels_.row(i).maxCoeff(&max_class);
 
 #ifdef IS_USING_NORMALS      
       normals_(i,0) = normals_out->points[i].normal_x;
@@ -476,8 +505,9 @@ namespace cvo{
 #endif      
 
     }
-    std::cout<<"Construct Cvo PointCloud, num of points is "<<num_points_<<" from "<<pc->size()<<" input points "<<std::endl;  
-    write_to_intensity_pcd("kitti_lidar.pcd");
+    std::cout<<"Construct Cvo PointCloud, num of points is "<<num_points_<<" from "<<pc->size()<<" input points "<<std::endl;
+    write_to_label_pcd("kitti_semantic_lidar.pcd");
+      //write_to_intensity_pcd("kitti_lidar.pcd");
   }
 
   CvoPointCloud::CvoPointCloud(){}
