@@ -171,11 +171,13 @@ namespace cvo
                                                   std::vector <int> & selected_indexes_out) {
     //using LeGO-LOAM's functions
 
-    LeGoLoamPointSelection lego_loam;
-    lego_loam.cloudHandler(pc_in, pc_out, edge_or_surface, selected_indexes_out);
+    const pcl::PointCloud<pcl::PointXYZI>::ConstPtr pc_in_const = pc_in;
 
-     pcl::io::savePCDFile("raw_input.pcd", *pc_in);
-     pcl::io::savePCDFile("loam_pointselection.pcd", *pc_out);
+    LeGoLoamPointSelection lego_loam;
+    lego_loam.cloudHandler(pc_in_const, pc_out, edge_or_surface, selected_indexes_out);
+
+    pcl::io::savePCDFile("raw_input.pcd", *pc_in);
+    pcl::io::savePCDFile("loam_pointselection.pcd", *pc_out);
   }
 
   void LidarPointSelector::legoloam_point_selector(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
@@ -185,18 +187,24 @@ namespace cvo
                                                   std::vector <int> & selected_indexes_out,
                                                   std::vector<int> & semantic_out) {
     //using LeGO-LOAM's functions
+
+    const pcl::PointCloud<pcl::PointXYZI>::ConstPtr pc_in_const = pc_in;
     
     std::vector<int> selected_indexes;
     LeGoLoamPointSelection lego_loam;
-    lego_loam.cloudHandler(pc_in, pc_out, edge_or_surface, selected_indexes);
+    lego_loam.cloudHandler(pc_in_const, pc_out, edge_or_surface, selected_indexes);
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr pc_selected (new pcl::PointCloud<pcl::PointXYZI>);
+
 
     for(int i = 0; i< selected_indexes.size(); i++) {
       semantic_out.push_back(semantic_in[selected_indexes[i]]);
       selected_indexes_out.push_back(selected_indexes[i]);
+      // pc_selected->push_back(pc_in->points[selected_indexes[i]]);
     }
 
     // pcl::io::savePCDFile("raw_input.pcd", *laserCloudIn);
     // pcl::io::savePCDFile("loam_pointselection.pcd", *pc_out);
+    // pcl::io::savePCDFile("pc_selected.pcd", *pc_selected);
   }
 
   int LidarPointSelector::get_quadrant(pcl::PointXYZI point){

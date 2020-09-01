@@ -401,7 +401,7 @@ namespace cvo{
   CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, const std::vector<int> & semantic,
                                int num_classes, int target_num_points, int beam_num) {
 
-    write_all_to_label_pcd("kitti_semanitc_lidar_pre.pcd", *pc, num_classes, semantic);
+    write_all_to_label_pcd("kitti_semantic_lidar_pre.pcd", *pc, num_classes, semantic);
 
     int expected_points = target_num_points;
     double intensity_bound = 0.4;
@@ -416,6 +416,7 @@ namespace cvo{
     std::cout<<"construct semantic lidar CvoPointCloud...\n";
 
 #if  !defined(IS_USING_LOAM)  && defined(IS_USING_NORMALS)
+    std::cout<<"not using loam, using normals"<<std::endl;
     pcl::PointCloud<pcl::Normal>::Ptr normals_out (new pcl::PointCloud<pcl::Normal>);
     edge_detection(pc, semantic, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
                    pc_out, output_depth_grad, output_intenstity_grad, selected_indexes, normals_out, semantic_out);
@@ -423,7 +424,7 @@ namespace cvo{
 #endif    
 
 #if defined(IS_USING_LOAM) && !defined(IS_USING_NORMALS)
-
+    std::cout<<"using loam, not using normals"<<std::endl;
     std::vector <float> edge_or_surface;
     LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
 
@@ -436,13 +437,20 @@ namespace cvo{
     *pc_out += *pc_out_surface;
     num_points_ = pc_out->size();
     assert(num_points_ == selected_indexes.size());
+
+    //for (int i = 0; i < pc_out_surface->size() ; i++) {
+    //    std::cout<<"pc_out_surface pointcloud (index,x,y,z,i)=("<<i<<", "<<pc_out_surface->points[i].x<<", "<<pc_out_surface->points[i].y<<", "<<pc_out_surface->points[i].z<<", "<<pc_out_surface->points[i].intensity<<")"<<std::endl;
+    //}
+
+
+    pcl::io::savePCDFileASCII("pc_out_edge.pcd", *pc_out_edge);
+    pcl::io::savePCDFileASCII("pc_out_legoloam.pcd", *pc_out_surface);
     
 #endif
 
 #if defined(IS_USING_LOAM) && defined(IS_USING_NORMALS)
-    std::cout<<"semantic 2\n";
+    std::cout<<"using loam and normals\n";
     std::vector <float> edge_or_surface;
-    std::vector <int> selected_indexes;
     LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
     pcl::PointCloud<pcl::Normal>::Ptr normals_out (new pcl::PointCloud<pcl::Normal>);
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
@@ -454,11 +462,12 @@ namespace cvo{
 
     normals_out = compute_pcd_normals(pc_out, 1.0);
     
+       
 
 #endif
 
 #if !defined(IS_USING_LOAM) && !defined(IS_USING_NORMALS)
-    std::cout<<"semantic 3\n";
+    std::cout<<"not using loam and not using normals\n";
     // LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);	
     // lps.edge_detection(pc, semantic, pc_out, output_depth_grad, output_intenstity_grad, semantic_out);
     edge_detection(pc, semantic, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
@@ -484,6 +493,9 @@ namespace cvo{
 
       if (semantic_out[i] == -1)
         continue;
+
+      // std::cout<<"pc_out (x,y,z,i)=("<<pc_out->points[i].x<<","<<pc_out->points[i].y<<","<<pc_out->points[i].z<<","<<pc_out->points[i].intensity<<"; output pointcloud (index,x,y,z,i)=("<<idx<<", "<<pc->points[idx].x<<","<<pc->points[idx].y<<","<<pc->points[idx].z<<","<<pc->points[idx].intensity<<")"<<std::endl;
+      
       
       xyz << pc->points[idx].x, pc->points[idx].y, pc->points[idx].z;
       positions_.push_back(xyz);
@@ -507,7 +519,7 @@ namespace cvo{
     }
     std::cout<<"Construct Cvo PointCloud, num of points is "<<num_points_<<" from "<<pc->size()<<" input points "<<std::endl;
     write_to_label_pcd("kitti_semantic_lidar.pcd");
-      //write_to_intensity_pcd("kitti_lidar.pcd");
+    write_to_intensity_pcd("kitti_intensity_lidar.pcd");
   }
 
   CvoPointCloud::CvoPointCloud(){}

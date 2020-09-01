@@ -57,7 +57,7 @@ namespace cvo{
 
     LeGoLoamPointSelection::~LeGoLoamPointSelection(){}
     
-    void LeGoLoamPointSelection::cloudHandler(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in, 
+    void LeGoLoamPointSelection::cloudHandler(const pcl::PointCloud<pcl::PointXYZI>::ConstPtr pc_in, 
                                               pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, 
                                               std::vector <float> & edge_or_surface,
                                               std::vector <int> & selected_indexes){
@@ -89,7 +89,7 @@ namespace cvo{
     // moved from public to private
     void LeGoLoamPointSelection::allocateMemory(){
 
-        laserCloudIn.reset(new pcl::PointCloud<PointType>());
+        //laserCloudIn.reset(new pcl::PointCloud<PointType>());
         laserCloudInRing.reset(new pcl::PointCloud<pcl::PointXYZIR>());
 
         fullCloud.reset(new pcl::PointCloud<PointType>());
@@ -124,7 +124,8 @@ namespace cvo{
     }
 
     void LeGoLoamPointSelection::resetParameters(){
-        laserCloudIn->clear();
+        //laserCloudIn->clear();
+        laserCloudIn.clear();
         groundCloud->clear();
         segmentedCloud->clear();
         segmentedCloudPure->clear();
@@ -139,13 +140,20 @@ namespace cvo{
         std::fill(fullInfoCloud->points.begin(), fullInfoCloud->points.end(), nanPoint);
     }
 
-    void LeGoLoamPointSelection::copyPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in){
+    void LeGoLoamPointSelection::copyPointCloud(const pcl::PointCloud<pcl::PointXYZI>::ConstPtr pc_in){
 
         // Remove Nan points
-        laserCloudIn = pc_in;
-        std::vector<int> indices;
-        pcl::removeNaNFromPointCloud(*laserCloudIn, *laserCloudIn, indices);
+        //laserCloudIn = pc_in;
+	laserCloudIn = *pc_in;
+        //std::cout<<"input size: "<<laserCloudIn->size()<<std::endl;
+        //std::vector<int> indices;
+        //pcl::removeNaNFromPointCloud(laserCloudIn, laserCloudIn, indices);
         
+	//std::cout<<"output size: "<<laserCloudIn->size()<<std::endl;
+        //for(int a=0; a<indices.size(); ++a)
+        //    std::cout << indices[a] << ' ';
+        //std::cout<<std::endl;
+
         // if (laserCloudIn->size() > 0)
         //     pcl::io::savePCDFile("legoloam_laserCloudIn.pcd", *laserCloudIn);
 
@@ -153,25 +161,32 @@ namespace cvo{
         // have "ring" channel in the cloud
         if (useCloudRing == true){
             // initialize for XYZIR point cloud
-            size_t cloudSize = laserCloudIn->size();
+            size_t cloudSize = laserCloudIn.size();
             pcl::PointXYZIR point;
-            int previous_quadrant = get_quadrant(laserCloudIn->points[0]);
-            int quadrant = get_quadrant(laserCloudIn->points[0]);
+            int previous_quadrant = get_quadrant(laserCloudIn.points[0]);
+            int quadrant = get_quadrant(laserCloudIn.points[0]);
             int scanID = 0;
             for (int i = 0; i < cloudSize; i++) {
-                // change scanID to be determined by quadrant
+                //skip is a NaN point
+		if(laserCloudIn.points[i].x != laserCloudIn.points[i].x){
+		    std::cout<<"Found a NaN point"<<std::endl;
+		    continue;
+		}
+		// change scanID to be determined by quadrant
                 previous_quadrant = quadrant;
-                quadrant = get_quadrant(laserCloudIn->points[i]);
+                quadrant = get_quadrant(laserCloudIn.points[i]);
                 if(quadrant == 1 && previous_quadrant == 4){
                     scanID += 1;
                 }
 
-                point.x = laserCloudIn->points[i].x;
-                point.y = laserCloudIn->points[i].y;
-                point.z = laserCloudIn->points[i].z;
+                point.x = laserCloudIn.points[i].x;
+                point.y = laserCloudIn.points[i].y;
+                point.z = laserCloudIn.points[i].z;
                 // instead of keeping the intensity information, we would like to keep track of the indexes of the point, so we can add back the information after point selection.
                 // point.intensity = laserCloudIn->points[i].intensity;
                 point.intensity = i;
+                //std::cout<<"index for point "<<i<<" is "<<point.intensity<<std::endl;
+                
                 point.ring = scanID;
                 laserCloudInRing->push_back(point);
             }
@@ -184,9 +199,9 @@ namespace cvo{
 
     void LeGoLoamPointSelection::findStartEndAngle(){
         // start and end orientation of this cloud
-        startOrientation = -atan2(laserCloudIn->points[0].y, laserCloudIn->points[0].x);
-        endOrientation   = -atan2(laserCloudIn->points[laserCloudIn->points.size() - 1].y,
-                                                     laserCloudIn->points[laserCloudIn->points.size() - 1].x) + 2 * M_PI;
+        startOrientation = -atan2(laserCloudIn.points[0].y, laserCloudIn.points[0].x);
+        endOrientation   = -atan2(laserCloudIn.points[laserCloudIn.points.size() - 1].y,
+                                                     laserCloudIn.points[laserCloudIn.points.size() - 1].x) + 2 * M_PI;
         if (endOrientation - startOrientation > 3 * M_PI) {
             endOrientation -= 2 * M_PI;
         } else if (endOrientation - startOrientation < M_PI)
@@ -200,13 +215,18 @@ namespace cvo{
         size_t rowIdn, columnIdn, index, cloudSize; 
         PointType thisPoint;
 
-        cloudSize = laserCloudIn->points.size();
+        cloudSize = laserCloudIn.points.size();
 
         for (size_t i = 0; i < cloudSize; ++i){
 
-            thisPoint.x = laserCloudIn->points[i].x;
-            thisPoint.y = laserCloudIn->points[i].y;
-            thisPoint.z = laserCloudIn->points[i].z;
+            if(laserCloudIn.points[i].x != laserCloudIn.points[i].x){
+                std::cout<<"Found a NaN point"<<std::endl;
+                continue;
+            }
+
+            thisPoint.x = laserCloudIn.points[i].x;
+            thisPoint.y = laserCloudIn.points[i].y;
+            thisPoint.z = laserCloudIn.points[i].z;
             // find the row and column index in the iamge for this point
             if (useCloudRing == true){
                 rowIdn = laserCloudInRing->points[i].ring;
@@ -245,6 +265,9 @@ namespace cvo{
             index = columnIdn + rowIdn * Horizon_SCAN;
             fullCloud->points[index] = thisPoint;
             fullInfoCloud->points[index] = thisPoint;
+            
+            //std::cout<<"index for point "<<i<<" is "<<thisPoint.intensity<<std::endl;
+
             // fullInfoCloud->points[index].intensity = range; // the corresponding range of a point is saved as "intensity"
             // fullInfoCloud->points[index].intensity = laserCloudIn->points[i].intensity;
         }
@@ -357,14 +380,14 @@ namespace cvo{
         
         
         // extract segmented cloud for visualization
-        for (size_t i = 0; i < N_SCAN; ++i){
-            for (size_t j = 0; j < Horizon_SCAN; ++j){
-                if (labelMat.at<int>(i,j) > 0 && labelMat.at<int>(i,j) != 999999){
-                    segmentedCloudPure->push_back(fullCloud->points[j + i*Horizon_SCAN]);
-                    segmentedCloudPure->points.back().intensity = labelMat.at<int>(i,j);
-                }
-            }
-        }
+        //for (size_t i = 0; i < N_SCAN; ++i){
+        //    for (size_t j = 0; j < Horizon_SCAN; ++j){
+        //        if (labelMat.at<int>(i,j) > 0 && labelMat.at<int>(i,j) != 999999){
+        //            segmentedCloudPure->push_back(fullCloud->points[j + i*Horizon_SCAN]);
+        //            segmentedCloudPure->points.back().intensity = labelMat.at<int>(i,j);
+        //        }
+        //    }
+        //}
 
         // if (segmentedCloud->size() > 0)
         //     pcl::io::savePCDFile("legoloam_segmentedCloud_final.pcd", *segmentedCloud);
@@ -713,12 +736,14 @@ namespace cvo{
                             cornerPointsLessSharp->push_back(segmentedCloud->points[ind]);
                             // output edges to CvoPointCloud
                             pc_out_temp->push_back(segmentedCloud->points[ind]);
+                            //std::cout<<"index for point("<<i<<","<<j<<") is "<<segmentedCloud->points[ind].intensity<<std::endl;
                             // edge_or_surface.push_back(0);
                         } else if (largestPickedNum <= 20) {
                             cloudLabel[ind] = 1;
                             cornerPointsLessSharp->push_back(segmentedCloud->points[ind]);
                             // output edges to CvoPointCloud
                             pc_out_temp->push_back(segmentedCloud->points[ind]);
+                            //std::cout<<"index for point("<<i<<","<<j<<") is "<<segmentedCloud->points[ind].intensity<<std::endl;
                             // edge_or_surface.push_back(0);
                         } else {
                             break;
@@ -749,7 +774,7 @@ namespace cvo{
 
                         cloudLabel[ind] = -1;
                         surfPointsFlat->push_back(segmentedCloud->points[ind]);
-                        
+                        //std::cout<<"index for point["<<ind<<"] is "<<segmentedCloud->points[ind].intensity<<std::endl;
                         // output surface points to CvoPointCloud
                         // pc_out_temp->push_back(segmentedCloud->points[ind]);
                         // edge_or_surface.push_back(1);
@@ -781,15 +806,27 @@ namespace cvo{
 
                 for (int k = sp; k <= ep; k++) {
                     if (cloudLabel[k] <= 0) {
-                        surfPointsLessFlatScan->push_back(segmentedCloud->points[k]);
+                          if (std::rand() % 4 == 0){
+                              pc_out_temp->push_back(segmentedCloud->points[k]);
+                          }
+//                        surfPointsLessFlatScan->push_back(segmentedCloud->points[k]);
+                        //std::cout<<"index for point["<<k<<"] is "<<segmentedCloud->points[k].intensity<<std::endl;
+
                     }
                 }
             }
 
             surfPointsLessFlatScanDS->clear();
-            downSizeFilter.setInputCloud(surfPointsLessFlatScan);
-            downSizeFilter.filter(*surfPointsLessFlatScanDS);
+            //downSizeFilter.setInputCloud(surfPointsLessFlatScan);
+            //downSizeFilter.filter(*surfPointsLessFlatScanDS);
             // std::cout << "before = " << surfPointsLessFlatScan->size() << ", after = " << surfPointsLessFlatScanDS->size() << std::endl;
+
+            // instead of using voxel grid filter, we randomly choose points
+//            for(int p=0; p<surfPointsLessFlatScan->size(); p++){
+//                if (std::rand() % 4 == 0){
+//                    surfPointsLessFlatScanDS->push_back(surfPointsLessFlatScan->points[p]);
+//                }
+//            }
 
             // set downSizeFilter depend on the number of surface points
             // if (surfPointsLessFlatScan->size() <= 300){
@@ -803,9 +840,10 @@ namespace cvo{
             //     downSizeFilter.filter(*surfPointsLessFlatScanDS);
             // }
 
-            *surfPointsLessFlat += *surfPointsLessFlatScanDS;
+//            *surfPointsLessFlat += *surfPointsLessFlatScanDS;
             // output to CvoPointCloud
-            *pc_out_temp += *surfPointsLessFlatScanDS;
+//            *pc_out_temp += *surfPointsLessFlatScanDS;
+            //*pc_out_temp += *surfPointsFlat;
 
             // if (cornerPointsLessSharp->size() > 0)
             //     pcl::io::savePCDFile("legoloam_cornerPointsLessSharp_final.pcd", *cornerPointsLessSharp);
@@ -819,17 +857,20 @@ namespace cvo{
 
         // add back the intensity information and selected_indexes
         size_t output_cloud_size = pc_out_temp->size();
-        pcl::PointXYZI temp_point;
         for (int n = 0; n < output_cloud_size; n++) {
+            pcl::PointXYZI temp_point;
             temp_point.x = pc_out_temp->points[n].x;
             temp_point.y = pc_out_temp->points[n].y;
             temp_point.z = pc_out_temp->points[n].z;
             // the intensity of pc_out_temp is the index of that point in the input cloud
-            temp_point.intensity = laserCloudIn->points[pc_out_temp->points[n].intensity].intensity;
-	    //if (rand() % 4 == 0) {
-            pc_out->push_back(temp_point);
-            selected_indexes.push_back(pc_out_temp->points[n].intensity);
-                //}	    
+            int index = pc_out_temp->points[n].intensity;
+            temp_point.intensity = laserCloudIn.points[index].intensity;
+	    pc_out->push_back(temp_point);
+            // std::cout<<"index for point "<<n<<" is "<<round(pc_out_temp->points[n].intensity)<<std::endl;
+            selected_indexes.push_back(index);
+   
+            // check if it is the same
+//            std::cout<<"pc_out (x,y,z,i) = "<<temp_point.x<<","<<temp_point.y<<","<<temp_point.z<<","<<temp_point.intensity<<"; selected_indexes (x,y,z,i) = "<<laserCloudIn.points[index].x<<","<<laserCloudIn.points[index].y<<","<<laserCloudIn.points[index].z<<","<<laserCloudIn.points[index].intensity<<")"<<std::endl; 
         }
     }
 
