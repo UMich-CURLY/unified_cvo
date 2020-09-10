@@ -35,11 +35,14 @@ int main(int argc, char *argv[]) {
   
   
   cvo::CvoGPU cvo_align(cvo_param_file );
-  cvo::CvoParams init_param = cvo_align.get_params();
-  cvo::CvoParams first_frame_param = init_param;
-  first_frame_param.ell_init = 0.25;
-  first_frame_param.ell_max = 0.6;
-  cvo_align.write_params(&first_frame_param);
+  cvo::CvoParams & init_param = cvo_align.get_params();
+  float ell_init = init_param.ell_init;
+  float ell_decay_rate = init_param.ell_decay_rate;
+  int ell_decay_start = init_param.ell_decay_start;
+  init_param.ell_init = init_param.ell_init_first_frame;
+  init_param.ell_decay_rate = init_param.ell_decay_rate_first_frame;
+  init_param.ell_decay_start  = init_param.ell_decay_start_first_frame;
+  cvo_align.write_params(&init_param);
 
   std::cout<<"write ell! ell init is "<<cvo_align.get_params().ell_init<<std::endl;
 

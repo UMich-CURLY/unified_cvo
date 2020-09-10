@@ -11,8 +11,10 @@
 #include <thrust/copy.h>
 
 
-namespace cvo {
+// explicit template instantiation
+template struct pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS, NUM_CLASSES>;
 
+namespace cvo {
 
 
   /*   class member functions  */
@@ -27,10 +29,10 @@ namespace cvo {
     num_moving (target_points->size()),
     ell (cvo_params.ell_init),
     ell_max (cvo_params.ell_max),
-    partial_dl_gradient(cvo_params.is_ell_adaptive?num_fixed:1),
-    partial_dl_Ayy(cvo_params.is_ell_adaptive?num_moving:1),
-    omega_gpu(num_fixed),
-    v_gpu(num_fixed),
+    partial_dl_gradient(cvo_params.is_ell_adaptive?num_fixed:1, 0),
+    partial_dl_Ayy(cvo_params.is_ell_adaptive?num_moving:1, 0),
+    omega_gpu(num_fixed, Eigen::Vector3d::Zero()),
+    v_gpu(num_fixed,Eigen::Vector3d::Zero()),
     //omega_gpu(is_adaptive?num_fixed :num_moving),
     //v_gpu(is_adaptive?num_fixed :num_moving),
     /*
@@ -42,17 +44,17 @@ namespace cvo {
     sum_diff_xx_2(),
     sum_diff_yy_2(),
     */
-    xiz(num_moving),
-    xi2z(num_moving),
-    xi3z(num_moving),
-    xi4z(num_moving),
-    normxiz2(num_moving),
-    xiz_dot_xi2z(num_moving),
-    epsil_const(num_moving),
-    B(num_fixed),
-    C(num_fixed),
-    D(num_fixed),
-    E(num_fixed),
+    xiz(num_moving, Eigen::Vector3f_row::Zero()),
+    xi2z(num_moving, Eigen::Vector3f_row::Zero()),
+    xi3z(num_moving, Eigen::Vector3f_row::Zero()),
+    xi4z(num_moving, Eigen::Vector3f_row::Zero()),
+    normxiz2(num_moving, 0),
+    xiz_dot_xi2z(num_moving, 0),
+    epsil_const(num_moving, 0),
+    B(num_fixed, 0),
+    C(num_fixed, 0),
+    D(num_fixed, 0),
+    E(num_fixed, 0),
 
     //B(is_adaptive?num_fixed:num_moving),
     //C(is_adaptive?num_fixed:num_moving),

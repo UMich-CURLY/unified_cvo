@@ -6,14 +6,11 @@
 #include <fstream>
 #include <cmath>
 #include <boost/filesystem.hpp>
-//#include <opencv2/opencv.hpp>
 #include "dataset_handler/KittiHandler.hpp"
-#include "graph_optimizer/Frame.hpp"
+#include "utils/RawImage.hpp"
 #include "utils/Calibration.hpp"
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/CvoGPU.hpp"
-#include "cvo/Cvo.hpp"
-#include "cvo/CvoParams.hpp"
 using namespace std;
 using namespace boost::filesystem;
 
@@ -34,15 +31,15 @@ int main(int argc, char *argv[]) {
   
   
   cvo::CvoGPU cvo_align(cvo_param_file );
-  cvo::CvoParams init_param = cvo_align.get_params();
-  cvo::CvoParams first_frame_param = init_param;
-  first_frame_param.ell_init = 0.95;
-  first_frame_param.ell_max = 1.0;
-  cvo_align.write_params(&first_frame_param);
-
-  std::cout<<"write ell! ell init is "<<cvo_align.get_params().ell_init<<std::endl;
-
-  //cvo::cvo cvo_align_cpu("/home/rayzhang/outdoor_cvo/cvo_params/cvo_params.txt");
+  cvo::CvoParams & init_param = cvo_align.get_params();
+  float ell_init = init_param.ell_init;
+  float ell_decay_rate = init_param.ell_decay_rate;
+  int ell_decay_start = init_param.ell_decay_start;
+  init_param.ell_init = init_param.ell_init_first_frame;
+  init_param.ell_decay_rate = init_param.ell_decay_rate_first_frame;
+  init_param.ell_decay_start  = init_param.ell_decay_start_first_frame;
+  cvo_align.write_params(&init_param);
+  
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
   init_guess(2,3)=0;
   Eigen::Affine3f init_guess_cpu = Eigen::Affine3f::Identity();
@@ -54,10 +51,8 @@ int main(int argc, char *argv[]) {
   //std::vector<float> semantics_source;
   //kitti.read_next_stereo(source_left, source_right, 19, semantics_source);
   kitti.read_next_stereo(source_left, source_right);
-  std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_left, source_right,
-                                                    //19, semantics_source, 
-                                                    calib));
-  //0.2));
+  std::shared_ptr<cvo::RawImage> source_raw(new cvo::RawImage(source_left));
+  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw, source_right, calib));
   
   for (int i = start_frame; i<min(total_iters, start_frame+max_num)-1 ; i++) {
     
@@ -67,27 +62,23 @@ int main(int argc, char *argv[]) {
 
     kitti.next_frame_index();
     cv::Mat left, right;
-    //sdt::vector<float> semantics_target;
+    //vector<float> semantics_target;
+    //if (kitti.read_next_stereo(left, right, 19, semantics_target) != 0) {
     if (kitti.read_next_stereo(left, right) != 0) {
       std::cout<<"finish all files\n";
       break;
     }
-
-
-    std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, left, right, calib));
-
-    // std::cout<<"reading "<<files[cur_kf]<<std::endl;
-    auto source_fr = source->points();
-    auto target_fr = target->points();
+    std::shared_ptr<cvo::RawImage> target_raw(new cvo::RawImage(left));
+    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, right, calib));
 
     Eigen::Matrix4f result, init_guess_inv;
     init_guess_inv = init_guess.inverse();
-    printf("Start align... num_fixed is %d, num_moving is %d\n", source_fr.num_points(), target_fr.num_points());
+    printf("Start align... num_fixed is %d, num_moving is %d\n", source->num_points(), target->num_points());
     std::cout<<std::flush;
-    cvo_align.align(source_fr, target_fr, init_guess_inv, result);
+    cvo_align.align(*source, *target, init_guess_inv, result);
     
     // get tf and inner product from cvo getter
-    double in_product = cvo_align.inner_product(source_fr, target_fr, result);
+    double in_product = cvo_align.inner_product(*source, *target, result);
     //double in_product_normalized = cvo_align.inner_product_normalized();
     //int non_zeros_in_A = cvo_align.number_of_non_zeros_in_A();
     std::cout<<"The gpu inner product between "<<i-1 <<" and "<< i <<" is "<<in_product<<"\n";
@@ -112,10 +103,11 @@ int main(int argc, char *argv[]) {
    
     source = target;
     if (i == start_frame) {
+      init_param.ell_init = ell_init;
+      init_param.ell_decay_start = ell_decay_rate;
+      init_param.ell_decay_start = ell_decay_start;
       cvo_align.write_params(&init_param);
-      
     }
-
 
   }
 

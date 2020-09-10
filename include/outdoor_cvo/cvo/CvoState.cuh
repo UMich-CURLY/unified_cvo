@@ -12,12 +12,18 @@ namespace Eigen {
   typedef Matrix<float,1,3> Vector3f_row;                 
 }
 
+
+
 namespace cvo {
 
   const int CVO_POINT_NEIGHBORS = 400;  
   typedef pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES> CvoPoint;
   typedef perl_registration::cuPointCloud<CvoPoint> CvoPointCloudGPU;
-  
+}
+
+
+
+namespace cvo {
   // all the GPU memory are allocated when construction CvoState, and deleted in CvoState's destructor
   struct CvoState {
     CvoState(std::shared_ptr<CvoPointCloudGPU> source_points, // ownership: user

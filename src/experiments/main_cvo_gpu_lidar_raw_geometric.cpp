@@ -40,9 +40,11 @@ int main(int argc, char *argv[]) {
   cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();
   float ell_init = init_param.ell_init;
-  float ell_max = init_param.ell_max;
+  float ell_decay_rate = init_param.ell_decay_rate;
+  int ell_decay_start = init_param.ell_decay_start;
   init_param.ell_init = init_param.ell_init_first_frame;
-  init_param.ell_max = init_param.ell_max;
+  init_param.ell_decay_rate = init_param.ell_decay_rate_first_frame;
+  init_param.ell_decay_start  = init_param.ell_decay_start_first_frame;
   cvo_align.write_params(&init_param);
   
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
@@ -95,6 +97,7 @@ int main(int argc, char *argv[]) {
 
     // append accum_tf_list for future initialization
     init_guess = result;
+    //init_guess = Eigen::Matrix4f::Identity();
     accum_mat = accum_mat * result;
     std::cout<<"accum tf: \n"<<accum_mat<<std::endl;
     
@@ -112,7 +115,8 @@ int main(int argc, char *argv[]) {
     source = target;
     if (i == start_frame) {
       init_param.ell_init = ell_init;
-      init_param.ell_max = ell_max;
+      init_param.ell_decay_start = ell_decay_rate;
+      init_param.ell_decay_start = ell_decay_start;
       cvo_align.write_params(&init_param);
       
     } //else if (i < start_frame + 20)  {

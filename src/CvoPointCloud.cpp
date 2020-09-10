@@ -5,10 +5,13 @@
 #include <cstdio>
 #include <iostream>
 #include <algorithm>
+#include <vector>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl/io/pcd_io.h>
 #include <tbb/tbb.h>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 #include "utils/CvoPointCloud.hpp"
 #include "utils/StaticStereo.hpp"
 #include "utils/CvoPixelSelector.hpp"
@@ -39,6 +42,24 @@ namespace cvo{
     return true;
   }
 
+  void write_all_to_label_pcd(const std::string name,
+                                 const pcl::PointCloud<pcl::PointXYZI> & pc,
+                                 int num_class,
+                                 const std::vector<int> & semantic)  {
+    pcl::PointCloud<pcl::PointXYZL> pc_label;
+    for (int i = 0; i < pc.size(); i++) {
+      pcl::PointXYZL p;
+      p.x = pc[i].x;
+      p.y = pc[i].y;
+      p.z = pc[i].z;
+      p.label = semantic[i];
+      pc_label.push_back(p);
+    }
+    pcl::io::savePCDFileASCII(name ,pc_label); 
+    std::cout << "Finished write to label pcd" << std::endl; 
+  }
+
+  
   
   cv::Vec3f CvoPointCloud::avg_pixel_color_pattern(const cv::Mat & raw_buffer, int u, int v, int w){
     cv::Vec3f result_cv;
@@ -213,6 +234,48 @@ namespace cvo{
   }
 
 
+
+  static void stereo_surface_sampling(const cv::Mat & left_gray,
+                                      const std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & dso_selected_uv,
+                                      bool is_using_canny,
+                                      bool is_using_uniform_rand,
+                                      // output
+                                      std::vector<bool> & selected_inds_map,
+                                      std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & final_selected_uv                   
+                                      ) {
+    selected_inds_map.resize(left_gray.total(), false);    
+    for (auto && uv : dso_selected_uv) {
+      int u = uv(0);
+      int v = uv(1);
+      selected_inds_map[v * left_gray.cols + u]  = true;
+    }
+    // canny
+    cv::Mat detected_edges;
+    if (is_using_canny)
+      cv::Canny( left_gray, detected_edges, 50, 50*3, 3 );
+
+    if (is_using_canny || is_using_uniform_rand) {
+      for (int r = 0 ; r < left_gray.rows; r++) {
+        for (int c = 0; c < left_gray.cols; c++) {
+          // using Canny
+          if (is_using_canny && detected_edges.at<uint8_t>(r, c) > 0) 
+            selected_inds_map[r * left_gray.cols + c] = true;
+
+          // using uniform sampling
+          if (is_using_uniform_rand && rand() % 100 == 0) 
+            selected_inds_map[r * left_gray.cols + c] = true;
+
+          if (selected_inds_map[r * left_gray.cols + c])
+            final_selected_uv.push_back(Vec2i(c, r));                    
+        }
+      
+      }
+    }
+
+    
+    
+  }
+  
   CvoPointCloud::CvoPointCloud(const RawImage & left_image,
                                const cv::Mat & right_image,
                                const Calibration & calib ) {
@@ -230,6 +293,14 @@ namespace cvo{
                   expected_points,
                   output_uv);
 
+    //******************************************/
+    std::vector<bool> selected_inds_map;
+    std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> final_selected_uv;
+    stereo_surface_sampling(left_gray, output_uv, true, true,
+                            selected_inds_map, final_selected_uv);
+    /********************************************/
+    
+
     // for (int h = 0; h < left_image.color().cols; h++){
     //   for (int w = 0; w < left_image.color().rows; w++){
     //     Vec2i uv;
@@ -238,12 +309,14 @@ namespace cvo{
     //   }
     // }
     
+    auto & pre_depth_selected_ind = final_selected_uv;
+    //auto & pre_depth_selected_ind = output_uv;
 
     std::vector<int> good_point_ind;
     int h = left_image.color().rows;
     int w = left_image.color().cols;
-    for (int i = 0; i < output_uv.size(); i++) {
-      auto uv = output_uv[i];
+    for (int i = 0; i < pre_depth_selected_ind.size(); i++) {
+      auto uv = pre_depth_selected_ind[i];
       Vec3f xyz;
 
       StaticStereo::TraceStatus trace_status = StaticStereo::pt_depth_from_disparity(left_image,
@@ -266,8 +339,8 @@ namespace cvo{
     feature_dimensions_ = 5;
     features_.resize(num_points_, feature_dimensions_);
     for (int i = 0; i < num_points_ ; i++) {
-      int u = output_uv[good_point_ind[i]](0);
-      int v = output_uv[good_point_ind[i]](1);
+      int u = pre_depth_selected_ind[good_point_ind[i]](0);
+      int v = pre_depth_selected_ind[good_point_ind[i]](1);
       cv::Vec3b avg_pixel = left_image.color().at<cv::Vec3b>(v,u);
       auto & gradient = left_image.gradient()[v * w + u];
       features_(i,0) = ((float)(avg_pixel [0]) )/255.0;
@@ -283,100 +356,93 @@ namespace cvo{
       }
 
     }
-    //  write_to_label_pcd("labeled_input.pcd");
-    // write_to_color_pcd("test.pcd");
+    //write_to_label_pcd("labeled_input.pcd");
+    write_to_color_pcd("color_stereo.pcd");
   }
   
 
   CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, int target_num_points, int beam_num) {
     int expected_points = target_num_points;
     double intensity_bound = 0.4;
-
-    std::vector<int> selected_indexes;    
     double depth_bound = 4.0;
     double distance_bound = 75.0;
+    std::vector <int> selected_indexes;
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);    
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
 
 #if  !defined(IS_USING_LOAM)  && defined(IS_USING_NORMALS)
-    std::cout<<"0\n";
     pcl::PointCloud<pcl::Normal>::Ptr normals_out (new pcl::PointCloud<pcl::Normal>);
     edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
-                   pc_out, output_depth_grad, output_intenstity_grad, normals_out);
+                   // output
+                   pc_out, output_depth_grad, output_intenstity_grad, selected_indexes, normals_out);
     
-    /*
-      ----------visualize selected points and normals-----------
-    */
-    // pcl::visualization::PCLVisualizer viewer("PCL Viewer");
-    // viewer.addPointCloudNormals<pcl::PointXYZI,pcl::Normal>(pc_out, normals_out,1,0.1, "normals1");
-    // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 1.0, 0.0, 0.0, "normals1");
-    // viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 3, "normals1");
-    // pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZI> rgb2 (pc_out, 0, 255, 0); //This will display the point cloud in green (R,G,B)
-    // viewer.addPointCloud<pcl::PointXYZI> (pc_out, rgb2, "cloud_RGB2");
-    // while (!viewer.wasStopped ())
-    // {
-    //   viewer.spinOnce ();
-    // }
-
-    // pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals_temp(new pcl::PointCloud<pcl::PointNormal>);
-    // cloud_with_normals_ = cloud_with_normals_temp;
-    // pcl::copyPointCloud(*pc_out, *cloud_with_normals_);
-    // pcl::copyPointCloud(*normals_out, *cloud_with_normals_);
-    // pcl::io::savePCDFileASCII("test.pcd", *cloud_with_normals_);
+    num_points_ = pc_out->size();    
 #endif    
 
 #if defined(IS_USING_LOAM) && !defined(IS_USING_NORMALS)
-    std::cout<<"1\n";
     std::vector <float> edge_or_surface;
     LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
 
-    // running edge detection by its own
-    // lps.edge_detection(pc, pc_out, output_depth_grad, output_intenstity_grad);
+    // running edge detection + lego loam point selection
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
+    lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_indexes);   
+    std::cout<<"Number edge selection result is "<<selected_indexes.size()<<std::endl; 
+    std::cout << "\nList of selected edge indexes: " << std::endl;
+    for(int i=0; i<10; i++)
+      std::cout << selected_indexes[i] << " ";
+    lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface, selected_indexes);    
+    *pc_out += *pc_out_edge;
+    *pc_out += *pc_out_surface;
+    num_points_ = pc_out->size();
+    assert(num_points_ == selected_indexes.size());
+    std::cout << "\nList of selected lego indexes" << std::endl;
+    for(int i=0; i<10; i++){
+      std::cout << selected_indexes[i] << " ";
+    }
+    // std::cout << "\n=================" << std::endl;
+    // direct downsample using pcl
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr pc_randomground (new pcl::PointCloud<pcl::PointXYZI>);
+    // lps.legoloam_point_selector(pc, pc_randomground, edge_or_surface, selected_indexes);
+    // std::cout << "downsample using pcl voxel grid" << std::endl;
+    // pcl::VoxelGrid<PointType> downSizeFilter;
+    // downSizeFilter.setLeafSize(0.7, 0.7, 0.7);
+    // downSizeFilter.setInputCloud(pc_randomground);
+    // downSizeFilter.filter(*pc_out);
 
-    // running loam edge detection by its own
-    // lps.loam_point_selector(pc, pc_out, edge_or_surface);
-
-    // running lego loam point selection by its own
-    //lps.legoloam_point_selector(pc, pc_out, edge_or_surface);
-
-    // ruunning edge detection + lego loam point selection
-     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
-     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
-     lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_indexes);    
-     lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface, selected_indexes);    
-     *pc_out += *pc_out_edge;
-     *pc_out += *pc_out_surface;
-     normals_out_ = compute_pcd_normals(pc_out, 1.0);
 #endif
 
 #if defined(IS_USING_LOAM) && defined(IS_USING_NORMALS)
      std::cout<<"2\n";
      std::vector <float> edge_or_surface;
+    std::vector <int> selected_indexes;
      LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
      pcl::PointCloud<pcl::Normal>::Ptr normals_out (new pcl::PointCloud<pcl::Normal>);
      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
      lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_indexes);    
+     //lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad);    
      lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface, selected_indexes);    
      *pc_out += *pc_out_edge;
      *pc_out += *pc_out_surface;
 
      normals_out = compute_pcd_normals(pc_out, 1.0);
 
+    num_points_ = pc_out->size();
 #endif
 
-#if !defined(IS_USING_LOAM) && !defined(IS_USING_NORMALS)
-     std::cout<<"3\n";
 
-    edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
-                   pc_out, output_depth_grad, output_intenstity_grad, selected_indexes);
+     
+#if !defined(IS_USING_LOAM) && !defined(IS_USING_NORMALS)
+     random_surface_with_edges(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
+                               output_depth_grad, output_intenstity_grad, selected_indexes);
+     num_points_ = selected_indexes.size();
 
 #endif     
 
-
     // fill in class members
-    num_points_ = pc_out->size();
+
     num_classes_ = 0;
     
     // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
@@ -387,9 +453,12 @@ namespace cvo{
 
     for (int i = 0; i < num_points_ ; i++) {
       Vec3f xyz;
-      xyz << pc_out->points[i].x, pc_out->points[i].y, pc_out->points[i].z;
+      int idx = selected_indexes[i];
+      xyz << pc->points[idx].x, pc->points[idx].y, pc->points[idx].z;
       positions_.push_back(xyz);
-      features_(i, 0) = pc_out->points[i].intensity;
+      features_(i, 0) = pc->points[idx].intensity;
+
+      // if (i < 100) std::cout<<"intensity is "<< pc_out->points[i].intensity<<std::endl;
 
 #ifdef IS_USING_NORMALS      
       normals_(i,0) = normals_out->points[i].normal_x;
@@ -410,37 +479,108 @@ namespace cvo{
   }
 
 
-  
-  CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, const std::vector<int> & semantic ,
-                               int num_classes,  int target_num_points , int beam_num) {
+  CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, const std::vector<int> & semantic,
+                               int num_classes, int target_num_points, int beam_num) {
+
+    write_all_to_label_pcd("kitti_semantic_lidar_pre.pcd", *pc, num_classes, semantic);
+
     int expected_points = target_num_points;
     double intensity_bound = 0.4;
     double depth_bound = 4.0;
-
-    double distance_bound = 75.0;
+    std::vector<int> selected_indexes;
+    double distance_bound = 40.0;
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
     std::vector <int> semantic_out;
+
+    std::cout<<"construct semantic lidar CvoPointCloud...\n";
+
+#if  !defined(IS_USING_LOAM)  && defined(IS_USING_NORMALS)
+    std::cout<<"not using loam, using normals"<<std::endl;
+    pcl::PointCloud<pcl::Normal>::Ptr normals_out (new pcl::PointCloud<pcl::Normal>);
+    edge_detection(pc, semantic, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
+                   pc_out, output_depth_grad, output_intenstity_grad, selected_indexes, normals_out, semantic_out);
+    
+#endif    
+
+#if defined(IS_USING_LOAM) && !defined(IS_USING_NORMALS)
+    std::cout<<"using loam, not using normals"<<std::endl;
+    std::vector <float> edge_or_surface;
     LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
-    lps.edge_detection(pc, semantic, pc_out, output_depth_grad, output_intenstity_grad, semantic_out);
+
+    // running edge detection + lego loam point selection
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
+    lps.edge_detection(pc, semantic, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_indexes, semantic_out);   
+    lps.legoloam_point_selector(pc, semantic, pc_out_surface, edge_or_surface, selected_indexes, semantic_out);    
+    *pc_out += *pc_out_edge;
+    *pc_out += *pc_out_surface;
+    num_points_ = pc_out->size();
+    assert(num_points_ == selected_indexes.size());
+
+    //for (int i = 0; i < pc_out_surface->size() ; i++) {
+    //    std::cout<<"pc_out_surface pointcloud (index,x,y,z,i)=("<<i<<", "<<pc_out_surface->points[i].x<<", "<<pc_out_surface->points[i].y<<", "<<pc_out_surface->points[i].z<<", "<<pc_out_surface->points[i].intensity<<")"<<std::endl;
+    //}
+
+
+    pcl::io::savePCDFileASCII("pc_out_edge.pcd", *pc_out_edge);
+    pcl::io::savePCDFileASCII("pc_out_legoloam.pcd", *pc_out_surface);
+    
+#endif
+
+#if defined(IS_USING_LOAM) && defined(IS_USING_NORMALS)
+    std::cout<<"using loam and normals\n";
+    std::vector <float> edge_or_surface;
+    LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
+    pcl::PointCloud<pcl::Normal>::Ptr normals_out (new pcl::PointCloud<pcl::Normal>);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
+    lps.edge_detection(pc, semantic, pc_out_edge, output_depth_grad, output_intenstity_grad, semantic_out);    
+    lps.legoloam_point_selector(pc, semantic, pc_out_surface, edge_or_surface, selected_indexes, semantic_out);    
+    *pc_out += *pc_out_edge;
+    *pc_out += *pc_out_surface;
+
+    normals_out = compute_pcd_normals(pc_out, 1.0);
+    
+       
+
+#endif
+
+#if !defined(IS_USING_LOAM) && !defined(IS_USING_NORMALS)
+    std::cout<<"not using loam and not using normals\n";
+    // LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);	
+    // lps.edge_detection(pc, semantic, pc_out, output_depth_grad, output_intenstity_grad, semantic_out);
+    edge_detection(pc, semantic, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
+                   pc_out, output_depth_grad, output_intenstity_grad, selected_indexes, semantic_out);
+
+#endif     
+
 
     // fill in class members
-    num_points_ = pc_out->size();
-
-    num_classes_ = num_classes; //TODO: get it from input
-
+    num_points_ = selected_indexes.size();
+    num_classes_ = num_classes;
+    
+    // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
     feature_dimensions_ = 1;
     features_.resize(num_points_, feature_dimensions_);
     labels_.resize(num_points_, num_classes_);
-
-    std::cout<<"Construct CvoPointCloud with "<<num_points_<<" points  from "<<pc->size()<<" points\n";
-
+#ifdef IS_USING_NORMALS    
+    normals_.resize(num_points_,3);
+#endif
     for (int i = 0; i < num_points_ ; i++) {
       Vec3f xyz;
-      xyz << pc_out->points[i].x, pc_out->points[i].y, pc_out->points[i].z;
+      int idx = selected_indexes[i];
+
+      if (semantic_out[i] == -1)
+        continue;
+
+      // std::cout<<"pc_out (x,y,z,i)=("<<pc_out->points[i].x<<","<<pc_out->points[i].y<<","<<pc_out->points[i].z<<","<<pc_out->points[i].intensity<<"; output pointcloud (index,x,y,z,i)=("<<idx<<", "<<pc->points[idx].x<<","<<pc->points[idx].y<<","<<pc->points[idx].z<<","<<pc->points[idx].intensity<<")"<<std::endl;
+      
+      
+      xyz << pc->points[idx].x, pc->points[idx].y, pc->points[idx].z;
       positions_.push_back(xyz);
-      features_(i, 0) = pc_out->points[i].intensity; 
+      features_(i, 0) = pc->points[idx].intensity;
 
       // add one-hot semantic labels
       VecXf_row one_hot_label;
@@ -450,12 +590,22 @@ namespace cvo{
       labels_.row(i) = one_hot_label;
       int max_class = 0;
       labels_.row(i).maxCoeff(&max_class);
+
+#ifdef IS_USING_NORMALS      
+      normals_(i,0) = normals_out->points[i].normal_x;
+      normals_(i,1) = normals_out->points[i].normal_y;
+      normals_(i,2) = normals_out->points[i].normal_z;
+#endif      
+
     }
+    std::cout<<"Construct Cvo PointCloud, num of points is "<<num_points_<<" from "<<pc->size()<<" input points "<<std::endl;
+    write_to_label_pcd("kitti_semantic_lidar.pcd");
+    write_to_intensity_pcd("kitti_intensity_lidar.pcd");
   }
 
   CvoPointCloud::CvoPointCloud(){}
   CvoPointCloud::~CvoPointCloud() {
-    
+    std::cout<<"Destruct CvoPointCloud..\n"<<std::flush;
     
   }
 
