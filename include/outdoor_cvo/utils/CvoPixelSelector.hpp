@@ -53,6 +53,17 @@ namespace cvo
                                  std::vector <double> & output_intenstity_grad,
                                  std::vector <int> & selected_indexes);
 
+  void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
+                      int num_want,
+                      double intensity_bound, 
+                      double depth_bound,
+                      double distance_bound,
+                      int beam_number,
+                      // output
+                      std::vector <double> & output_depth_grad,
+                      std::vector <double> & output_intenstity_grad,
+                      std::vector <int> & selected_indexes
+                      );
   
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
                       int num_want,

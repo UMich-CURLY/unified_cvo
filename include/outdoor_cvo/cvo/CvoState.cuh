@@ -76,6 +76,10 @@ namespace cvo {
 
     bool is_ell_adaptive;
 
+    //thrust::device_vector<Eigen::Vector3f> residual; // for least square
+    //thrust::device_vector<Eigen::Matrix<float, 3, 6>> jacobian; // for least square
+    thrust::device_vector<Eigen::Matrix<float, 6,6>> least_square_LHS; // for least square
+    thrust::device_vector<Eigen::Matrix<float, 6,1>> least_square_RHS;
   };
 
 }

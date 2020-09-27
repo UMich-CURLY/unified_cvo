@@ -197,16 +197,20 @@ namespace cvo {
   CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc,  int beam_num) {
     double intensity_bound = 0.4;
     double depth_bound = 4.0;
-    double distance_bound = 75.0;
+    double distance_bound = 55.0;
     //pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);
     //std::unique_ptr<pcl::PointCloud<pcl::PointXYZI>> pc_out = std::make_unique<pcl::PointCloud<pcl::PointXYZI>>();
-    //pcl::PointCloud<pcl::PointXYZI> pc_out;
+ 
     std::vector <double> output_depth_grad;
     std::vector <double> output_intenstity_grad;
     std::vector <int> selected_indexes;
 
     
     int expected_points = 5000;
+    std::vector <float> edge_or_surface;
+    
+    edge_detection(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
+                   output_depth_grad, output_intenstity_grad, selected_indexes);
 
     /*
     std::vector <float> edge_or_surface;
@@ -220,8 +224,9 @@ namespace cvo {
     */
 
     
-    random_surface_with_edges(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
-                              output_depth_grad, output_intenstity_grad, selected_indexes);
+    // random_surface_with_edges(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
+    //                          output_depth_grad, output_intenstity_grad, selected_indexes);
+
     std::cout<<"compute covariance\n";
     thrust::device_vector<float> cov_all, eig_all;
     thrust::device_vector<bool> is_cov_degenerate_gpu;
@@ -276,9 +281,9 @@ namespace cvo {
       Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> es(3);
       es.computeDirect(cov_curr);
       Eigen::Matrix3f eigen_value_replacement = Eigen::Matrix3f::Zero();
-      eigen_value_replacement(0, 0) = e_values(0) < 0.001 ? e_values(0) : 0.001;
-      eigen_value_replacement(1, 1) = e_values(1) < 1 ? e_values(1) : 1;
-      eigen_value_replacement(2, 2) = e_values(2) < 1  ? e_values(2) : 1;
+      eigen_value_replacement(0, 0) = e_values(0) < 0.65 ? e_values(0) : 0.65;
+      eigen_value_replacement(1, 1) = e_values(1) < 0.65 ? e_values(1) : 0.65;
+      eigen_value_replacement(2, 2) = e_values(2) < 0.65  ? e_values(2) : 0.65;
       cov_curr = es.eigenvectors() * eigen_value_replacement *
         es.eigenvectors().transpose();
       //covariance = covariances.data[pos];

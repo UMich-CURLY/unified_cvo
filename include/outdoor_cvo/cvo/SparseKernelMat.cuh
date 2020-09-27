@@ -13,6 +13,7 @@ namespace cvo {
     float * mat;
     int * ind_row2col;
     unsigned int * nonzeros;
+    int * max_index; // for least square implementation
   };
 
   // square<T> computes the square of a number f(x) -> x*x
@@ -70,6 +71,7 @@ namespace cvo {
     cudaMemset(A_host->mat, 0, A_host->rows * A_host->cols * sizeof(float));
     cudaMemset(A_host->ind_row2col, -1, A_host->rows * A_host->cols * sizeof(int));
     cudaMemset(A_host->nonzeros, 0, A_host->rows * sizeof(unsigned int));
+    cudaMemset(A_host->max_index, -1, A_host->rows * sizeof(int));
   }
 
   inline SparseKernelMat * init_SparseKernelMat_gpu(int row, int col, SparseKernelMat & A_host) {
@@ -85,6 +87,7 @@ namespace cvo {
     cudaMalloc((void**)&A_host.mat, sizeof(float) * row *col);
     cudaMalloc((void**)&A_host.ind_row2col, sizeof(int)*row*col);
     cudaMalloc((void**)&A_host.nonzeros, sizeof(unsigned int)*row);
+    cudaMalloc((void**)&A_host.max_index, sizeof(int)*row);
     //cudaMemcpy( &A->mat, &mat, sizeof(float*), cudaMemcpyHostToDevice   );
     //cudaMemcpy( &A->ind_row2col , &ind , sizeof(int *), cudaMemcpyHostToDevice   );
 
@@ -98,7 +101,9 @@ namespace cvo {
     cudaFree(A_host->mat);
     cudaFree(A_host->ind_row2col );
     cudaFree(A_host->nonzeros);
+    cudaFree(A_host->max_index);
     cudaFree(A_gpu);
+    
   }
 
   

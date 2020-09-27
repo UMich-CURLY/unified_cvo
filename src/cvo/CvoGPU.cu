@@ -456,12 +456,12 @@ namespace cvo{
 
 
 
-    return (dist.transpose() * cov_curr_inv * dist).value();
+    return (dist.transpose() * cov_curr_inv * dist).value()/100;
 
     
   }
   __device__
-  float eigenvalue_distance( const CvoPoint & p_a,const  CvoPoint &p_b) {
+  float eigenvalue_distance( const CvoPoint & p_a,const  CvoPoint &p_b, float ell_shrink_ratio) {
     //const Eigen::Matrix3f cov_a = Eigen::Map<const Eigen::Matrix3f>(p_a.covariance);
     //const Eigen::Matrix3f cov_b = Eigen::Map<const Eigen::Matrix3f>(p_b.covariance);
     auto e_values_a = p_a.cov_eigenvalues;
@@ -480,12 +480,12 @@ namespace cvo{
     float e_value_max_sum = e_values_a[2] + e_values_b[2];
     float e_value_min_sum = e_values_a[0] + e_values_b[0];
 
-    float e_value = e_value_min_sum;
+    float e_value = (e_value_max_sum )/2 * ell_shrink_ratio;
 
-    if (e_value > 4.0) e_value = 4.0;
-    if (e_value < 0.1) e_value = 0.1;
+    if (e_value > 4.0) e_value = 1.0;
+    if (e_value < 0.01) e_value = 0.01;
 
-    return squared_dist(p_a, p_b) / e_value;
+    return squared_dist(p_a, p_b) / e_value / e_value;
     //return (dist.transpose() * cov_curr_inv * dist).value();
 
     
@@ -498,7 +498,7 @@ namespace cvo{
                                           int a_size,
                                           CvoPoint * points_b,
                                           int b_size,
-                                          float ell_config,
+                                          float ell_curr,
                                           // output
                                           SparseKernelMat * A_mat // the inner product matrix!
                                           ) {
@@ -516,7 +516,10 @@ namespace cvo{
 
     // point a in the first point cloud
     CvoPoint * p_a =  &points_a[i];
-       
+
+    A_mat->max_index[i] = -1;
+    float curr_max_ip = cvo_params->sp_thres;
+    
     float d2_thres = -2.0*log(sp_thres/sigma_square);
     float d2_c_thres = -2.0*c_ell_square*log(sp_thres/c_sigma_square);
 
@@ -530,12 +533,19 @@ namespace cvo{
       if (num_inds == CVO_POINT_NEIGHBORS) break;
       CvoPoint * p_b = &points_b[ind_b];
       float d2 = mahananobis_distance(*p_a, *p_b);
-      //float d2 = eigenvalue_distance(*p_a, *p_b);
-      //if (i < 100) {
-      //  float d2_l2 = squared_dist(*p_a, *p_b) / 0.09;
-      ///  printf("i==%d, ell is %f, mahananobis_distance is %f, while l2_dist is %f\n", i,ell_config, d2, d2_l2 );
-      //}
 
+      float ell_shrink_ratio = ell_curr / cvo_params->ell_init;
+      
+      //float d2 = eigenvalue_distance(*p_a, *p_b, ell_shrink_ratio)  ;
+      //if (i == 0 && j == 0) {
+      //  float d2_l2 = squared_dist(*p_a, *p_b) / 0.25;
+      //  printf("i==%d, ell is %f, mahananobis_distance is %f, while d2_l2 is %f\n", i,ell_curr, d2, d2_l2);
+      //}
+      
+
+      float d2_iso =  squared_dist(*p_a, *p_b) / ell_curr / ell_curr;
+      //float d2_iso =  squared_dist(*p_a, *p_b) / cvo_params->ell_init / cvo_params->ell_init;
+      //d2 = d2 < d2_iso ? d2 : d2_iso;
 
       
       if(d2<d2_thres){
@@ -545,6 +555,12 @@ namespace cvo{
         if (a > cvo_params->sp_thres){
           A_mat->mat[i * A_mat->cols + num_inds] = a;
           A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
+
+          if (a > curr_max_ip) {
+            curr_max_ip = a;
+            A_mat->max_index[i] = ind_b;
+          }
+          
           num_inds++;
         }
 
@@ -569,6 +585,10 @@ namespace cvo{
 
             A_mat->mat[i * A_mat->cols + num_inds] = a;
             A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
+            if (a > curr_max_ip) {
+              curr_max_ip = a;
+              A_mat->max_index[i] = ind_b;
+            }
             num_inds++;
           }
         }
@@ -596,13 +616,15 @@ namespace cvo{
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i > a_size - 1)
       return;
+    
+    A_mat->max_index[i] = -1;
+    float curr_max_ip = cvo_params->sp_thres;
 
     float sigma2= cvo_params->sigma * cvo_params->sigma;
     float c2 = cvo_params->c_ell * cvo_params->c_ell;
     float c_sigma2 = cvo_params->c_sigma * cvo_params->c_sigma;
     float s_ell = cvo_params->s_ell;
 
-    //Eigen::VectorXf feature_a = feature_a_gpu->row(i).transpose();
     CvoPoint * p_a =  &points_a[i];
     float a_to_sensor = sqrtf(p_a->x * p_a->x + p_a->y * p_a->y + p_a->z * p_a->z);
     float l = compute_range_ell(ell, a_to_sensor , 1, 80 );
@@ -611,30 +633,22 @@ namespace cvo{
       
     }
        
-    // convert k threshold to d2 threshold (so that we only need to calculate k when needed)
+
     float d2_thres = -2.0*l*l*log(cvo_params->sp_thres/sigma2);
     float d2_c_thres = -2.0*c2*log(cvo_params->sp_thres/cvo_params->c_sigma/cvo_params->c_sigma);
 
-    //float feature_a[5] = {(float)p_a->r, (float)p_a->g, (float)p_a->b,  p_a->gradient[0], p_a->gradient[1]  };
+
 #ifdef IS_USING_SEMANTICS
     float * label_a = p_a ->label_distribution;
 #endif
 
-    //int * mat_inds = new int [kd_tree_max_leafIf they all have the same size, tha];
+
     unsigned int num_inds = 0;
-    //#ifdef IS_USING_KDTREE
-    //for (int j = 0; j < CVO_POINT_NEIGHBORS ; j++) {
-      //int ind_b = kdtree_inds[i * CVO_POINT_NEIGHBORS  + j];
-      //#else      
+
     for (int j = 0; j < b_size ; j++) {
       int ind_b = j;
       if (num_inds == CVO_POINT_NEIGHBORS) break;
-      //#endif
-      //A_mat->mat[i * A_mat->cols + ind_b] = 0;
-      //A_mat->ind_row2col[i * A_mat->cols + ind_b] = -1;
 
-      //float d2 = (cloud_y_gpu[ind_b] - cloud_x_gpu[i]).squaredNorm();
-      // d2 = (x-y)^2
       CvoPoint * p_b = &points_b[ind_b];
       float d2 = (squared_dist( *p_b ,*p_a ));
       float normal_ip = 1;
@@ -642,9 +656,6 @@ namespace cvo{
       normal_ip = fabs(p_a->normal[0] * p_b->normal[0] +
                        p_a->normal[1] * p_b->normal[1] +
                        p_a->normal[2] * p_b->normal[2]) * 0.81 * 0.01;
-      //   printf("normal ip is %f between (%f,%f,%f) and (%f,%f,%f)\n", normal_ip,
-      //       p_a->normal[0], p_a->normal[1], p_a->normal[2],
-      //       p_b->normal[0], p_b->normal[1], p_b->normal[2]);
 #endif      
         
 
@@ -665,12 +676,16 @@ namespace cvo{
         if (a > cvo_params->sp_thres){
           A_mat->mat[i * A_mat->cols + num_inds] = a;
           A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
+          if (a > curr_max_ip) {
+            curr_max_ip = a;
+            A_mat->max_index[i] = ind_b;
+          }
+
           num_inds++;
         }
 
 #else
 
-        //float feature_b[5] = {(float)p_a->r, (float)p_a->g, (float)p_a->b,  p_a->gradient[0], p_a->gradient[1]  };
         float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
 
 #ifdef IS_USING_SEMANTICS            
@@ -719,6 +734,11 @@ namespace cvo{
             //A_mat->mat[i * A_mat->cols + j] = a;
             A_mat->mat[i * A_mat->cols + num_inds] = a;
             A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
+            if (a > curr_max_ip) {
+              curr_max_ip = a;
+              A_mat->max_index[i] = ind_b;
+            }
+            
             num_inds++;
             /*
             if (i == 1000) {
@@ -900,8 +920,8 @@ namespace cvo{
     *omega = (thrust::reduce(cvo_state->omega_gpu.begin(), cvo_state->omega_gpu.end())).cast<float>();
     *v = (thrust::reduce(cvo_state->v_gpu.begin(), cvo_state->v_gpu.end())).cast<float>();
     // normalize the gradient
-    //omega->normalize();
-    //v->normalize();
+    omega->normalize();
+    v->normalize();
 
     // Eigen::Vector3d::Zero(), plus_vector)).cast<float>();
     cudaMemcpy(cvo_state->omega, omega, sizeof(Eigen::Vector3f), cudaMemcpyHostToDevice );
@@ -916,6 +936,110 @@ namespace cvo{
     end = chrono::system_clock::now();
     //std::cout<<"time for nonzeros "<<std::chrono::duration_cast<std::chrono::milliseconds>((end- start)).count()<<std::endl;
   }
+
+
+  __global__ void fill_in_residual_and_jacobian(float ell,
+                                                CvoPoint * cloud_x, CvoPoint * cloud_y,
+                                                SparseKernelMat * A,
+                                                // output
+                                                Eigen::Matrix<float, 6,6> * ls_lhs,
+                                                Eigen::Matrix<float, 6,1> * ls_rhs
+                                                ) {
+
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i > A->rows - 1)
+      return;
+
+    ls_lhs[i] = Eigen::Matrix<float, 6,6>::Zero();
+    ls_rhs[i] = Eigen::Matrix<float, 6,1>::Zero();
+    Eigen::Vector3f x(cloud_x[i].x, cloud_x[i].y, cloud_x[i].z);
+
+    int cloud_x_size = A->rows;
+    int cloud_y_size = A->cols;
+    
+    //if (A->max_index[i] == -1) {
+    //  return;
+    //}
+
+    for (int j = 0; j < A->cols; j++) {
+      //int id_y_closest = A->max_index[i];
+      int id_y = A->ind_row2col[i*A->cols+j];
+     if (id_y == -1) break;
+     float w_ij = A->mat[i*A->cols+j];
+
+     //int id_y = A->max_index[i];
+     //if (id_y == -1) return;
+     //float w_ij = 1;    
+
+
+      Eigen::Vector3f y(cloud_y[id_y].x, cloud_y[id_y].y, cloud_y[id_y].z);
+
+      Eigen::Vector3f r_ij = (x-y) / ell;
+
+      float dist = sqrtf(r_ij(0)*r_ij(0) + r_ij(1) *r_ij(1) + r_ij(2)*r_ij(2) ) * ell ;
+      if (dist > 0.2) return;
+
+    
+      Eigen::Matrix<float, 3, 6> J_i;
+
+      Eigen::Matrix3f skew_y = Eigen::Matrix3f::Zero();
+      skew_gpu( &y, &skew_y);
+      J_i.block<3,3>(0,0) = -1 * skew_y;
+      J_i.block<3,3>(0,3) = Eigen::Matrix3f::Identity().eval();
+      J_i = (J_i / ell).eval();
+
+      //Eigen::Matrix<float, 3,3> weight =
+      ls_lhs[i] += J_i.transpose() * J_i * w_ij;
+      ls_rhs[i] += J_i.transpose() * r_ij * w_ij;
+    }
+    if (i < 100)  {
+
+      //printf("fill-in-least-square: i=%d, j=%d, x=(%f,%f,%f), y=(%f,%f,%f), |x-y| is %f, J_i(3,3) is \n%f, %f, %f\n %f, %f, %f\n %f,%f,%f\n", i,x(0),x(1),x(2), y(0),y(1),y(2),  dist , J_i(0,0), J_i(0,1), J_i(0,2), J_i(1,0), J_i(1,1), J_i(1,2), J_i(2,0), J_i(2,1), J_i(2,2)  );
+      
+    }
+    
+  }
+
+  void compute_flow_least_square(CvoState * cvo_state, const CvoParams * params_gpu,
+                                 Eigen::Vector3f * omega, Eigen::Vector3f * v) {
+
+    fill_in_residual_and_jacobian<<< cvo_state->A_host.rows / CUDA_BLOCK_SIZE + 1, CUDA_BLOCK_SIZE >>> (cvo_state->ell,
+                                                                                                    thrust::raw_pointer_cast(cvo_state->cloud_x_gpu->points.data()),
+                                                                                                    thrust::raw_pointer_cast(cvo_state->cloud_y_gpu->points.data()),
+                                                                                                    cvo_state->A,
+
+                                                                                                    thrust::raw_pointer_cast(cvo_state->least_square_LHS.data()),
+                                                                                                    thrust::raw_pointer_cast(cvo_state->least_square_RHS.data())
+                                                                                                    );
+
+    thrust::plus<Eigen::Matrix<float,6,6>> plus_mat66;
+
+    Eigen::Matrix<float, 6,6> zero_66;
+    zero_66 = Eigen::Matrix<float, 6,6>::Zero().eval();
+    auto ls_lhs = thrust::reduce(cvo_state->least_square_LHS.begin(),
+                                 cvo_state->least_square_LHS.end(),
+                                 zero_66
+                                 );
+
+    Eigen::Matrix<float, 6,1> zero_61;
+    zero_61 = Eigen::Matrix<float, 6,1>::Zero().eval();
+    Eigen::Matrix<float, 6,1> ls_rhs = thrust::reduce(cvo_state->least_square_RHS.begin(),
+                                                      cvo_state->least_square_RHS.end(),
+                                                      zero_61
+                                                      );
+    Eigen::Matrix<float, 6,1> epsilon = - ls_lhs.inverse() * ls_rhs;
+    
+    *omega = epsilon.block<3,1>(0,0);
+    *v = epsilon.block<3,1>(3,0);
+
+    if (debug_print)
+      std::cout<<"using least square, omega is "<<omega->transpose()
+               <<", v is "<<v->transpose()
+               <<"\n ls_lhs is \n"<<ls_lhs
+               <<"\n ls_rhs is \n"<<ls_rhs
+               <<std::endl;
+  }
+  
   __global__ void compute_step_size_xi(Eigen::Vector3f * omega ,
                                       Eigen::Vector3f * v,
                                       CvoPoint * cloud_y,
@@ -957,8 +1081,8 @@ namespace cvo{
             normxiz2[j], xiz_dot_xi2z[j], epsil_const[j]
             );
       
-    }
-    */
+            }*/
+
     
   }
   __global__ void compute_step_size_poly_coeff(float temp_coef,
@@ -1010,22 +1134,40 @@ namespace cvo{
                                       + (2.0*xi4z[idx]*diff_xy).value()  ));
       float A_ij = A->mat[i * A_cols + j];
       // eq (34)
-      B[i] += double(A_ij * beta_ij);
+      /*B[i] += double(A_ij * beta_ij);
       C[i] += double(A_ij * (gamma_ij+beta_ij*beta_ij/2.0));
       D[i] += double(A_ij * (delta_ij+beta_ij*gamma_ij + beta_ij*beta_ij*beta_ij/6.0));
       E[i] += double(A_ij * (epsil_ij+beta_ij*delta_ij+1/2.0*beta_ij*beta_ij*gamma_ij \
                              + 1/2.0*gamma_ij*gamma_ij + 1/24.0*beta_ij*beta_ij*beta_ij*beta_ij));
-     
-      //if ( i == 1000) {
-      //  printf("x==1000,  Aij=%f, beta_ij=%f, gamma_ij=%f, delta_ij=%f, epsil_ij=%f\n",
-      //         A_ij, beta_ij, gamma_ij, delta_ij, epsil_ij);
+      */
+      double bi = double(A_ij * beta_ij);
+      B[i] += bi;
+      double ci = double(A_ij * (gamma_ij+beta_ij*beta_ij/2.0));
+      C[i] += ci;
+      double di = double(A_ij * (delta_ij+beta_ij*gamma_ij + beta_ij*beta_ij*beta_ij/6.0));
+      D[i] += di;
+      double ei = double(A_ij * (epsil_ij+beta_ij*delta_ij+1/2.0*beta_ij*beta_ij*gamma_ij\
+                                 + 1/2.0*gamma_ij*gamma_ij + 1/24.0*beta_ij*beta_ij*beta_ij*beta_ij));
+      E[i] += ei;
+      
+      /*
+      if ( idx == 1000) {
+        printf("px is (%f,%f,%f), py is (%f,%f,%f)\n", px(0), px(1), px(2), py(0), py(1), py(2));
+        printf("i=%d, idx==1000, normxiz2[idx]=%f,xiz_dot_xi2z[idx]=%f, xiz[idx]=(%f,%f,%f), xi2z[idx]=(%f,%f,%f),xi3z[idx]=(%f,%f,%f),  diff_xy=(%f,%f,%f), bi=%lf, ci=%lf, di=%lf, ei=%lf, Aij=%f, beta_ij=%f, gamma_ij=%f, delta_ij=%f, epsil_ij=%f\n",
+               i,
+               normxiz2[idx], xiz_dot_xi2z[idx],  xiz[idx](0), xiz[idx](1), xiz[idx](2),
+               xi2z[idx](0), xi2z[idx](1), xi2z[idx](2),  xi3z[idx](0), xi3z[idx](1), xi3z[idx](2), diff_xy(0), diff_xy(1), diff_xy(2),
+               bi, ci, di, ei,
+               A_ij, beta_ij, gamma_ij, delta_ij, epsil_ij);
         
-      //}
+               }*/
+      
     }
     
   }
 
 __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
+                                                                    float ell_init,
                                                                     int num_moving,
                                                          SparseKernelMat * A,
                                                                     CvoPoint * cloud_x,
@@ -1067,9 +1209,10 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       if (idx == -1) break;
 #ifdef IS_USING_COVARIANCE
       //temp_ell = (cloud_x[i].cov_eigenvalues[2] + cloud_y[idx].cov_eigenvalues[2] + cloud_x[i].cov_eigenvalues[0] + cloud_y[idx].cov_eigenvalues[0])/4.0 ;
-      temp_ell = ( cloud_x[i].cov_eigenvalues[0] + cloud_y[idx].cov_eigenvalues[0])/2.0 ;
+      temp_ell = ( cloud_x[i].cov_eigenvalues[2] + cloud_y[idx].cov_eigenvalues[2])/2.0 ;
+      temp_ell *= (ell/ell_init);
       if (temp_ell > 1.0) temp_ell = 1.0;
-      if (temp_ell < 0.05) temp_ell =0.05;
+      if (temp_ell < 0.01) temp_ell =0.01;
       //if (i == 0) printf("temp ell in step size is %f, e_value_a is %f, e_value_b is %f\n", temp_ell, cloud_x[i].cov_eigenvalues[2], cloud_y[idx].cov_eigenvalues[2]  );
       //temp_ell = compute_range_ell(ell,d2_sqrt, 1, 80 );
       //temp_ell = 0.5;
@@ -1105,10 +1248,12 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       E[i] += ei;
 
       /*
-      if ( i == 1000) {
-        printf("x==1000,temp_ell is %f, normxiz2[idx]=%f,xiz_dot_xi2z[idx]=%f, xiz[idx]=(%f,%f,%f), xi2z[idx]=(%f,%f,%f),xi3z[idx]=(%f,%f,%f),  diff_xy=(%f,%f,%f), bi=%lf, ci=%lf, di=%lf, ei=%lf, Aij=%f, beta_ij=%f, gamma_ij=%f, delta_ij=%f, epsil_ij=%f\n",
+      if ( idx == 1000) {
+        printf("px is (%f,%f,%f), py is (%f,%f,%f)\n", px(0), px(1), px(2), py(0), py(1), py(2));
+        printf("i=%d, idx==1000,temp_ell is %f, normxiz2[idx]=%f,xiz_dot_xi2z[idx]=%f, xiz[idx]=(%f,%f,%f), xi2z[idx]=(%f,%f,%f),xi3z[idx]=(%f,%f,%f),  diff_xy=(%f,%f,%f), bi=%lf, ci=%lf, di=%lf, ei=%lf, Aij=%f, beta_ij=%f, gamma_ij=%f, delta_ij=%f, epsil_ij=%f\n",
+               i,
                temp_ell, normxiz2[idx], xiz_dot_xi2z[idx],  xiz[idx](0), xiz[idx](1), xiz[idx](2),
-               xi2z[idx](0), xi2z[idx](1), xi2z[idx](2),  xi3z[idx](0), xi3z[idx](1), xi3z[idx](2),
+               xi2z[idx](0), xi2z[idx](1), xi2z[idx](2),  xi3z[idx](0), xi3z[idx](1), xi3z[idx](2), diff_xy(0), diff_xy(1), diff_xy(2),
                bi, ci, di, ei,
                A_ij, beta_ij, gamma_ij, delta_ij, epsil_ij);
         
@@ -1133,7 +1278,8 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     //float temp_coef = 1/(2.0*cvo_state->ell*cvo_state->ell);   // 1/(2*l^2)
     //compute_step_size_poly_coeff_range_ell<<<cvo_state->num_fixed / CUDA_BLOCK_SIZE + 1, CUDA_BLOCK_SIZE>>>
     compute_step_size_poly_coeff_location_dependent_ell<<<cvo_state->num_fixed / CUDA_BLOCK_SIZE + 1, CUDA_BLOCK_SIZE>>>
-      ( cvo_state->ell, cvo_state->num_fixed, cvo_state->A,
+      ( cvo_state->ell, params->ell_init,
+        cvo_state->num_fixed, cvo_state->A,
         thrust::raw_pointer_cast( cvo_state->cloud_x_gpu->points.data()  ),
         thrust::raw_pointer_cast( cvo_state->cloud_y_gpu->points.data() ),
         thrust::raw_pointer_cast(cvo_state->xiz.data()), 
@@ -1178,10 +1324,10 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       std::cout<<"step size "<<temp_step<<"\n original_rc is \n"<< rc<<std::endl;
     
     // if none of the roots are suitable, use min_step
-    //cvo_state->step = temp_step==numeric_limits<float>::max()? params->min_step:temp_step;
+    cvo_state->step = temp_step==numeric_limits<double>::max()? params->min_step:temp_step;
     // if step>0.8, just use 0.8 as step
     cvo_state->step = cvo_state->step > params->max_step ? params->max_step:cvo_state->step;
-    cvo_state->step = cvo_state->step < params->min_step? params->min_step : cvo_state->step;
+    cvo_state->step = cvo_state->step < params->min_step ? params->min_step : cvo_state->step;
     //step *= 10;
     
 
@@ -1358,7 +1504,9 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     std::queue<float> indicator_end_queue;
     float indicator_start_sum = 0;
     float indicator_end_sum = 0;
-
+    int use_least_square = 0;
+    int min_ell_iters  = 0;
+    
     int k = 0;
     for(; k<params.MAX_ITER; k++){
       if (debug_print) printf("new iteration %d, ell is %f\n", k, cvo_state.ell);
@@ -1371,7 +1519,8 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
         Eigen::Matrix4f Tmat = transform;
         transform_file << Tmat(0,0) <<" "<< Tmat(0,1) <<" "<< Tmat(0,2) <<" "<< Tmat(0,3) <<" "
                        << Tmat(1,0) <<" "<< Tmat(1,1) <<" "<< Tmat(1,2) <<" "<< Tmat(1,3) <<" "
-                       << Tmat(2,0) <<" "<< Tmat(2,1) <<" "<< Tmat(2,2) <<" "<< Tmat(2,3) <<"\n"<< std::flush;
+                       << Tmat(2,0) <<" "<< Tmat(2,1) <<" "<< Tmat(2,2) <<" "<< Tmat(2,3)
+                       <<"\n"<< std::flush;
       }
 
       // transform point cloud
@@ -1391,13 +1540,17 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       auto end = chrono::system_clock::now();
       if (debug_print ) {
         std::cout<<"nonzeros in A "<<nonzeros(&cvo_state.A_host)<<std::endl;
-        std::cout<<"time for se_kernel is "<<std::chrono::duration_cast<std::chrono::milliseconds>((end- start)).count()<<std::endl;
+        std::cout<<"time for se_kernel is "
+                 <<std::chrono::duration_cast<std::chrono::milliseconds>((end- start)).count()<<std::endl;
         std::cout<<"A rows is "<<cvo_state.A_host.rows<<", A cols is "<<cvo_state.A_host.cols<<std::endl;
       }
 
       // compute omega and v
       start = chrono::system_clock::now();
-      compute_flow(&cvo_state, params_gpu, &omega, &v);
+      if(use_least_square)
+        compute_flow_least_square(&cvo_state, params_gpu, &omega, &v);
+      else 
+        compute_flow(&cvo_state, params_gpu, &omega, &v);
       if (debug_print) std::cout<<"iter "<<k<< "omega: \n"<<omega.transpose()<<"\nv: \n"<<v.transpose()<<std::endl;
       if (k == 0) {
         printf("iter=0: nonzeros in A is %d\n", cvo_state.A_host.nonzero_sum);
@@ -1459,19 +1612,28 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
         //inner_product_file<<this->inner_product(source_points, target_points, transform)<<"\n"<<std::flush;
       }
      
-      if(dist_this_iter<params.eps_2){
-        iter = k;
-        std::cout<<"break: dist: "<<dist_this_iter<<std::endl;
-        break;
-      }
-
       if (k>params.ell_decay_start && need_decay_ell  ) {
         cvo_state.ell = cvo_state.ell * params.ell_decay_rate;
         if (cvo_state.ell < params.ell_min)
           cvo_state.ell = params.ell_min;
       }
+
+      if(dist_this_iter<(double)params.eps_2){
+        iter = k;
+
+        if (params.is_using_least_square)
+          use_least_square ++;
+        
+        if (params.is_using_least_square == 0 ||
+            use_least_square > params.is_using_least_square) {
+          std::cout<<"break: dist: "<<dist_this_iter<<std::endl;
+          break;
+        }
+      }
+
       
-      if(debug_print) printf("end of iteration \n\n\n");
+      
+      if(debug_print) printf("end of iteration, is_using_least_square is %d \n\n\n", use_least_square);
 
       // std::cout<<"iter: "<<k<<std::endl;
       // if(debug_print){

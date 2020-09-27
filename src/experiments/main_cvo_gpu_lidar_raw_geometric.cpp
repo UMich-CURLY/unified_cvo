@@ -58,7 +58,8 @@ int main(int argc, char *argv[]) {
   kitti.read_next_lidar(source_pc);
   std::cout<<"read next lidar\n"; 
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(source_pc, 5000, 64));
-
+  source->write_to_intensity_pcd("kitti_pcl_loam/05/0.pcd");
+  
   double total_time = 0;
   int i = start_frame;
   for (; i<min(total_iters, start_frame+max_num)-1 ; i++) {
@@ -74,7 +75,7 @@ int main(int argc, char *argv[]) {
       break;
     }
     std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(target_pc, 5000, 64));
-
+    target->write_to_intensity_pcd("kitti_pcl_loam/05/" + std::to_string(i)+".pcd");
     std::cout<<"NUm of source pts is "<<source->num_points()<<"\n";
     std::cout<<"NUm of target pts is "<<target->num_points()<<"\n";
 
@@ -83,6 +84,8 @@ int main(int argc, char *argv[]) {
     printf("Start align... num_fixed is %d, num_moving is %d\n", source->num_points(), target->num_points());
     std::cout<<std::flush;
     double this_time = 0;
+
+    /*
     cvo_align.align(*source, *target, init_guess_inv, result, &this_time);
     total_time += this_time;
     
@@ -127,6 +130,7 @@ int main(int argc, char *argv[]) {
       
     //}
 
+    */
   }
 
   std::cout<<"time per frame is "<<total_time / double(i - start_frame + 1)<<std::endl;

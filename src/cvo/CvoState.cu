@@ -60,7 +60,9 @@ namespace cvo {
     //C(is_adaptive?num_fixed:num_moving),
     //D(is_adaptive?num_fixed:num_moving),
     //E(is_adaptive?num_fixed:num_moving),
-    is_ell_adaptive(cvo_params.is_ell_adaptive)
+    is_ell_adaptive(cvo_params.is_ell_adaptive),
+    least_square_LHS(num_fixed, Eigen::Matrix<float, 6,6>::Zero()),
+    least_square_RHS(num_fixed, Eigen::Matrix<float, 6,1>::Zero())
   {
     std::cout<<"start construct CvoState\n";
     // gpu raw

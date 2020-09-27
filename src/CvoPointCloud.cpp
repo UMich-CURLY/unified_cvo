@@ -284,7 +284,7 @@ namespace cvo{
     int expected_points = target_num_points;
     double intensity_bound = 0.4;
     double depth_bound = 4.0;
-    double distance_bound = 75.0;
+    double distance_bound = 40.0;
     std::vector <int> selected_indexes;
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);    
     std::vector <double> output_depth_grad;
@@ -312,14 +312,17 @@ namespace cvo{
     for(int i=0; i<10; i++)
       std::cout << selected_indexes[i] << " ";
     lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface, selected_indexes);    
-    *pc_out += *pc_out_edge;
-    *pc_out += *pc_out_surface;
-    num_points_ = pc_out->size();
-    assert(num_points_ == selected_indexes.size());
-    std::cout << "\nList of selected lego indexes" << std::endl;
+    //*pc_out += *pc_out_edge;
+    //*pc_out += *pc_out_surface;
+    //
+    num_points_ = selected_indexes.size();
+    std::cout<<"pc_out size is "<<pc_out->size()<<std::endl;
+    std::cout << "\nList of selected lego indexes " << pc_out_surface->size()<< std::endl;
     for(int i=0; i<10; i++){
       std::cout << selected_indexes[i] << " ";
     }
+    std::cout<<std::flush;
+    assert(num_points_ == selected_indexes.size());
     // std::cout << "\n=================" << std::endl;
     // direct downsample using pcl
     // pcl::PointCloud<pcl::PointXYZI>::Ptr pc_randomground (new pcl::PointCloud<pcl::PointXYZI>);

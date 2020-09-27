@@ -14,7 +14,6 @@ namespace cvo {
       -(*v)[1], (*v)[0], 0;
   }
 
-
   template<typename T>
   T * thrust_raw_arr(std::shared_ptr<thrust::device_vector<T>> v_thrust) {
     auto  dv = v_thrust.get();
