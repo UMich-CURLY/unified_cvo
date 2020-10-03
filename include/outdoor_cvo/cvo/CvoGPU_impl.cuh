@@ -49,6 +49,8 @@ namespace cvo {
 
   CvoPointCloudGPU::SharedPtr CvoPointCloud_to_gpu(const CvoPointCloud& cvo_cloud );
 
+  float compute_ranged_lengthscale(float curr_dist_square, float curr_ell, float min_ell, float max_ell );
+
   void update_tf(const Mat33f & R, const Vec3f & T,
                    // outputs
                    CvoState * cvo_state,

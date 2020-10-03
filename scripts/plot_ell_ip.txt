@@ -20,25 +20,15 @@ def translationError(pose_error):
     dz = pose_error[2][3]
     return np.sqrt(dx*dx+dy*dy+dz*dz)
 
-w1=np.genfromtxt("../w1.txt")
-w2=np.genfromtxt("../w2.txt")
-w3=np.genfromtxt("../w3.txt")
-v1=np.genfromtxt("../v1.txt")
-v2=np.genfromtxt("../v2.txt")
-v3=np.genfromtxt("../v3.txt") 
-
 
 ell = np.genfromtxt(sys.argv[1])
-print(ell.shape)
-dist  = np.genfromtxt(sys.argv[2])
 
-transform = np.genfromtxt(sys.argv[3])
-print(transform.shape)
-gt_frame = int(sys.argv[5])
-
+transform = np.genfromtxt(sys.argv[2])
+gt_frame = int(sys.argv[3])
 gt = np.genfromtxt(sys.argv[4])
+ip = np.genfromtxt(sys.argv[5])
+dist = np.genfromtxt(sys.argv[6])
 zero1 = np.array([0,0,0,1.0])
-step = np.genfromtxt(sys.argv[6])
 gt_now = gt[gt_frame,:].reshape((3,4))
 gt_now = (np.vstack([gt_now, zero1]))
 gt_next = gt[gt_frame+1,:].reshape((3,4))
@@ -62,10 +52,10 @@ for i in range(ell.size):
     
 
 iters = np.arange(ell.size)
+#dist_line, = plt.plot(iters, dist, label="dist")
 ell_line, = plt.plot(iters,ell, label="ell", linestyle='dashed')
-dist_line, = plt.plot(iters,dist, label="dist", linestyle='solid')
-step_line, = plt.plot(iters,step, label="step")
-rerr_line, = plt.plot(iters, r_err, label="rotation error", linestyle="dotted")
+ip_line, = plt.plot(iters, ip * 1e2, label='inner_product')
+rerr_line, = plt.plot(iters, r_err * 10, label="rotation error", linestyle="dotted")
 terr_line, = plt.plot(iters, t_err, label="translation error", linestyle="dotted")
 #w1_l, = plt.plot(iters, w1, label="w1")
 #w2_l, = plt.plot(iters, w2, label="w2")
@@ -75,6 +65,6 @@ terr_line, = plt.plot(iters, t_err, label="translation error", linestyle="dotted
 #v3_l, = plt.plot(iters, v3, label="v3")
 #plt.legend(handles=[ell_line, dist_line, step_line, rerr_line,terr_line ])
 #plt.legend(handles=[rerr_line,terr_line,w1_l, w2_l, w3_l, v1_l, v2_l, v3_l ])
-plt.legend(handles=[ell_line, step_line, dist_line, rerr_line,terr_line ])
+plt.legend(handles=[ell_line, ip_line,  rerr_line,terr_line])
 plt.show()
 
