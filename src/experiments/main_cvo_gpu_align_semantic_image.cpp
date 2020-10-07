@@ -6,15 +6,13 @@
 #include <fstream>
 #include <cmath>
 #include <boost/filesystem.hpp>
-//#include <opencv2/opencv.hpp>
 #include "dataset_handler/KittiHandler.hpp"
-//#include "graph_optimizer/Frame.hpp"
-
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
+#include "utils/RawImage.hpp"
+#include "utils/Calibration.hpp"
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/CvoGPU.hpp"
-//#include "cvo/Cvo.hpp"
+#include "cvo/CvoParams.hpp"
+
 using namespace std;
 using namespace boost::filesystem;
 
@@ -22,7 +20,7 @@ using namespace boost::filesystem;
 int main(int argc, char *argv[]) {
   // list all files in current directory.
   //You could put any file path in here, e.g. "/home/me/mwah" to list that directory
-  cvo::KittiHandler kitti(argv[1], 1);
+  cvo::KittiHandler kitti(argv[1], 0);
   int total_iters = kitti.get_total_number();
   string cvo_param_file(argv[2]);
   string calib_file;
@@ -32,9 +30,8 @@ int main(int argc, char *argv[]) {
   int start_frame = std::stoi(argv[4]);
   kitti.set_start_index(start_frame);
   int max_num = std::stoi(argv[5]);
-
+  
   accum_output <<"1 0 0 0 0 1 0 0 0 0 1 0\n";
-
   
   cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();
@@ -43,55 +40,70 @@ int main(int argc, char *argv[]) {
   int ell_decay_start = init_param.ell_decay_start;
   init_param.ell_init = init_param.ell_init_first_frame;
   init_param.ell_decay_rate = init_param.ell_decay_rate_first_frame;
-  init_param.ell_decay_start  = init_param.ell_decay_start_first_frame;  
+  init_param.ell_decay_start  = init_param.ell_decay_start_first_frame;
   cvo_align.write_params(&init_param);
-  
+
+  std::cout<<"write ell! ell init is "<<cvo_align.get_params().ell_init<<std::endl;
+
+  //cvo::cvo cvo_align_cpu("/home/rayzhang/outdoor_cvo/cvo_params/cvo_params.txt");
+
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
-  init_guess(2,3)=0;
+  //init_guess(2,3)=0;
+  /* 05 538
+  init_guess <<
+    0.9982213 ,  0.01526773, -0.0576215, -0.02393033,
+    -0.0153228 ,  0.9998828 , -0.00050758, -0.00169955,
+    0.05760757,  0.00139014,  0.99833823,  0.33685977,
+    0.       ,   0. ,         0.        ,  1.        ;
+  */
+  /* 07: 631
+  init_guess <<
+    0.99996909 , 0.00252929 , 0.00740704 ,-0.07812081,
+    -0.00253296,  0.99999591,  0.00048523, -0.02792174,
+    -0.00740572, -0.00050394,  0.9999729 ,  0.59069083,
+    0.         , 0.         , 0.         , 1.        ;
+  */
+  /*  
+   init_guess << 
+   0.99997081, -0.00067641, -0.00768325,  0.0659839, 
+ 0.00066008  ,0.99999708 ,-0.00211982  ,0.00003192,
+  0.00768426 , 0.00211469 , 0.99996779 , 0.99285757,
+  0.         , 0.         , 0.         , 1.       ; 
+  */
   Eigen::Affine3f init_guess_cpu = Eigen::Affine3f::Identity();
   init_guess_cpu.matrix()(2,3)=0;
   Eigen::Matrix4f accum_mat = Eigen::Matrix4f::Identity();
   // start the iteration
 
-  pcl::PointCloud<pcl::PointXYZI>::Ptr source_pc(new pcl::PointCloud<pcl::PointXYZI>);
-  std::vector<int> semantics_source;
-  kitti.read_next_lidar(source_pc,  semantics_source);
-
-  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(source_pc, semantics_source, 19, 5000, 64)); 
-  
+  cv::Mat source_left, source_right;
+  std::vector<float> semantics_source;
+  kitti.read_next_stereo(source_left, source_right, NUM_CLASSES, semantics_source);
   //kitti.read_next_stereo(source_left, source_right);
-  //std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_pc,
-  //                                                  semantics_source, 
-  //                                                 calib));
-  //0.2));
-  double total_time = 0;
-  int i = start_frame;
-  for (; i<min(total_iters, start_frame+max_num)-1 ; i++) {
+  std::shared_ptr<cvo::RawImage> source_raw(new cvo::RawImage(source_left, NUM_CLASSES, semantics_source));
+  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw, source_right, calib));
+  
+  for (int i = start_frame; i<min(total_iters, start_frame+max_num)-1 ; i++) {
     
     // calculate initial guess
     std::cout<<"\n\n\n\n============================================="<<std::endl;
     std::cout<<"Aligning "<<i<<" and "<<i+1<<" with GPU "<<std::endl;
 
     kitti.next_frame_index();
-    pcl::PointCloud<pcl::PointXYZI>::Ptr target_pc(new pcl::PointCloud<pcl::PointXYZI>);
-    std::vector<int> semantics_target;
-    if (kitti.read_next_lidar(target_pc, semantics_target) != 0) {
+    cv::Mat left, right;
+    vector<float> semantics_target;
+    if (kitti.read_next_stereo(left, right, 19, semantics_target) != 0) {
+    //if (kitti.read_next_stereo(left, right) != 0) {
       std::cout<<"finish all files\n";
       break;
     }
-
-    //std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, target_pc, semantics_target, calib));
-    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(target_pc, semantics_target, 19, 5000, 64));
-
-    // std::cout<<"reading "<<files[cur_kf]<<std::endl;
-    std::cout<<"NUm of source pts is "<<source->num_points()<<"\n";
-    std::cout<<"NUm of target pts is "<<target->num_points()<<"\n";
+    std::shared_ptr<cvo::RawImage> target_raw(new cvo::RawImage(left, NUM_CLASSES, semantics_target));
+    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, right, calib));
 
     Eigen::Matrix4f result, init_guess_inv;
     init_guess_inv = init_guess.inverse();
-    double this_time = 0;
-    cvo_align.align(*source, *target, init_guess_inv, result, &this_time);
-    total_time += this_time;
+    printf("Start align... num_fixed is %d, num_moving is %d\n", source->num_points(), target->num_points());
+    std::cout<<std::flush;
+    cvo_align.align(*source, *target, init_guess_inv, result);
     
     // get tf and inner product from cvo getter
     double in_product = cvo_align.inner_product(*source, *target, result);
@@ -120,21 +132,14 @@ int main(int argc, char *argv[]) {
     source = target;
     if (i == start_frame) {
       init_param.ell_init = ell_init;
-      init_param.ell_decay_start = ell_decay_rate;
-      init_param.ell_decay_start = ell_decay_start;            
+      init_param.ell_decay_rate = ell_decay_rate;
+      init_param.ell_decay_start = ell_decay_start;
       cvo_align.write_params(&init_param);
-      
-    } //else if (i < start_frame + 20)  {
-      //init_param.ell_init =  1.0;
-      //init_param.ell_max = 1.0;
-      //cvo_align.write_params(&init_param);
-
-      
-    //}
+    }
 
   }
 
-  std::cout<<"time per frame is "<<total_time / double(i - start_frame + 1)<<std::endl;
+
   accum_output.close();
 
   return 0;

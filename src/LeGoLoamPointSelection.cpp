@@ -334,8 +334,8 @@ namespace cvo{
                     }
                     // majority of ground points are skipped
                     if (groundMat.at<int8_t>(i,j) == 1){
-                         //if (  std::rand() % 1000 > 5 )  // TODO: this should be tuned, skip more! original num = 5 (j%5!=0 && j>5 && j<Horizon_SCAN-5)
-                            continue;
+                         if (  std::rand() % 100 < 1 )  // TODO: this should be tuned, skip more! original num = 5 (j%5!=0 && j>5 && j<Horizon_SCAN-5)
+                           continue;
                     }
                     // mark ground points so they will not be considered as edge features later
                     segmentedCloudGroundFlag[sizeOfSegCloud] = (groundMat.at<int8_t>(i,j) == 1);
@@ -825,9 +825,11 @@ namespace cvo{
             temp_point.y = pc_out_temp->points[n].y;
             temp_point.z = pc_out_temp->points[n].z;
             // the intensity of pc_out_temp is the index of that point in the input cloud
-            temp_point.intensity = laserCloudIn->points[pc_out_temp->points[n].intensity].intensity;;
-            pc_out->push_back(temp_point);
-            selected_indexes.push_back(pc_out_temp->points[n].intensity);            
+            temp_point.intensity = laserCloudIn->points[pc_out_temp->points[n].intensity].intensity;
+	    if (rand() % 4 == 0) {
+                pc_out->push_back(temp_point);
+                selected_indexes.push_back(pc_out_temp->points[n].intensity);
+	    }	    
         }
     }
 

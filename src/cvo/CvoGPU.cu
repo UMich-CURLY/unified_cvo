@@ -574,6 +574,7 @@ namespace cvo{
 
             A_mat->mat[i * A_mat->cols + num_inds] = a;
             A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
+            //        printf("A[%d][%d] is %f\n", i, ind_b, a);
             num_inds++;
           }
         }
@@ -734,6 +735,8 @@ namespace cvo{
             //A_mat->mat[i * A_mat->cols + j] = a;
             A_mat->mat[i * A_mat->cols + num_inds] = a;
             A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
+            //            if (i == 3664)
+            //printf("A[%d][%d] is %f\n", i, ind_b, a);
             num_inds++;
             /*
             if (i == 1000) {
@@ -918,6 +921,12 @@ namespace cvo{
     *omega = (thrust::reduce(cvo_state->omega_gpu.begin(), cvo_state->omega_gpu.end())).cast<float>();
     *v = (thrust::reduce(cvo_state->v_gpu.begin(), cvo_state->v_gpu.end())).cast<float>();
     // normalize the gradient
+    Eigen::Matrix<float, 6, 1> ov;
+    ov.segment<3>(0) = *omega;
+    ov.segment<3>(3) = *v;
+    ov.normalize();
+    *omega = ov.segment<3>(0);
+    *v = ov.segment<3>(3);
     //omega->normalize();
     //v->normalize();
 
@@ -1083,6 +1092,8 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     
     for (int j = 0; j < CVO_POINT_NEIGHBORS; j++) {
       int idx = A->ind_row2col[i * A_cols + j];
+      //if (i == 3664)
+      //  printf("compute_step_size_poly: idx=%d, A_ij=%f\n ", idx, A->mat[i*A_cols+j]);
       if (idx == -1) break;
 #ifdef IS_USING_COVARIANCE
       //temp_ell = (cloud_x[i].cov_eigenvalues[2] + cloud_y[idx].cov_eigenvalues[2] + cloud_x[i].cov_eigenvalues[0] + cloud_y[idx].cov_eigenvalues[0])/4.0 ;
@@ -1124,13 +1135,15 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       E[i] += ei;
 
       /*
-      if ( i == 1000) {
-        printf("x==1000,temp_ell is %f, normxiz2[idx]=%f,xiz_dot_xi2z[idx]=%f, xiz[idx]=(%f,%f,%f), xi2z[idx]=(%f,%f,%f),xi3z[idx]=(%f,%f,%f),  diff_xy=(%f,%f,%f), bi=%lf, ci=%lf, di=%lf, ei=%lf, Aij=%f, beta_ij=%f, gamma_ij=%f, delta_ij=%f, epsil_ij=%f\n",
+      if ( i == 3664  ) {
+        printf("i=%d, idx=%d,temp_ell is %f, normxiz2[idx]=%f,xiz_dot_xi2z[idx]=%f, xiz[idx]=(%f,%f,%f), xi2z[idx]=(%f,%f,%f),xi3z[idx]=(%f,%f,%f),  diff_xy=(%f,%f,%f), bi=%lf, ci=%lf, di=%lf, ei=%lf, Aij=%f, beta_ij=%f, gamma_ij=%f, delta_ij=%f, epsil_ij=%f\n",
+               i, idx,
                temp_ell, normxiz2[idx], xiz_dot_xi2z[idx],  xiz[idx](0), xiz[idx](1), xiz[idx](2),
                xi2z[idx](0), xi2z[idx](1), xi2z[idx](2),  xi3z[idx](0), xi3z[idx](1), xi3z[idx](2),
+               diff_xy(0), diff_xy(1), diff_xy(2),
                bi, ci, di, ei,
                A_ij, beta_ij, gamma_ij, delta_ij, epsil_ij);
-        
+
                }*/
     }
     
@@ -1189,18 +1202,26 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     double temp_step = numeric_limits<double>::max();
     for(int i=0;i<rc.real().size();i++) {
       if(rc(i,0).real()>0 && rc(i,0).real()<temp_step && std::fabs(rc(i,0).imag())<1e-5) {
+        //if( fabs( rc(i,0).real())<temp_step && std::fabs(rc(i,0).imag())<1e-5) {
 
         temp_step = rc(i,0).real();
+        //break;
       }
     }
     if (debug_print)
       std::cout<<"step size "<<temp_step<<"\n original_rc is \n"<< rc<<std::endl;
-    
+   //if (temp_step == numeric_limits<double>::max() ) temp_step = params->min_step*100; 
     // if none of the roots are suitable, use min_step
     //cvo_state->step = temp_step==numeric_limits<float>::max()? params->min_step:temp_step;
     // if step>0.8, just use 0.8 as step
-    cvo_state->step = cvo_state->step > params->max_step ? params->max_step:cvo_state->step;
-    cvo_state->step = cvo_state->step < params->min_step? params->min_step : cvo_state->step;
+    if (temp_step > params->max_step)
+      cvo_state->step = params->max_step;
+    else if (temp_step < params->min_step)
+      cvo_state->step = params->min_step;
+    else
+      cvo_state->step = temp_step;
+    //cvo_state->step = temp_step > params->max_step ? params->max_step:temp_step;
+    //cvo_state->step = temp_step < params->min_step? params->min_step :temp_step;
     //step *= 10;
     
 
@@ -1486,7 +1507,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
 
 
      
-      if(dist_this_iter<params.eps_2){
+      if(dist_this_iter<params.eps_2 ){
 
 
         //float dist_this_iter = dist_se3(dR.cast<float>(),dT.cast<float>());

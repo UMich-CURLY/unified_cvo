@@ -38,7 +38,7 @@ inline void gpu_assert(cudaError_t code, const char *file, int line, bool abort=
 
 
 namespace cvo {
-  const int CUDA_BLOCK_SIZE = 256;
+  const int CUDA_BLOCK_SIZE = 128;
 
   CvoPointCloudGPU::SharedPtr CvoPointCloud_to_gpu(const CvoPointCloud& cvo_cloud );
 

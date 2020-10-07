@@ -30,6 +30,11 @@ int main(int argc, char *argv[]) {
   int start_frame = std::stoi(argv[4]);
   kitti.set_start_index(start_frame);
   int max_num = std::stoi(argv[5]);
+
+  std::string default_seq_id = "05";
+  if (argc > 6) {
+    default_seq_id = argv[6];
+  }
   
   
   cvo::CvoGPU cvo_align(cvo_param_file );
@@ -55,7 +60,7 @@ int main(int argc, char *argv[]) {
                                                     19, semantics_source, 
                                                     calib));
   //0.2));
-  
+
   for (int i = start_frame; i<min(total_iters, start_frame+max_num)-1 ; i++) {
     
     // calculate initial guess
@@ -74,10 +79,11 @@ int main(int argc, char *argv[]) {
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
     auto source_fr = source->points();
     auto target_fr = target->points();
-
+    
     Eigen::Matrix4f result, init_guess_inv;
     init_guess_inv = init_guess.inverse();
     printf("Start align... num_fixed is %d, num_moving is %d\n", source_fr.num_points(), target_fr.num_points());
+
     std::cout<<std::flush;
     cvo_align.align(source_fr, target_fr, init_guess_inv, result);
     
@@ -102,9 +108,9 @@ int main(int argc, char *argv[]) {
                 <<accum_mat(2,0)<<" " <<accum_mat(2,1)<<" "<<accum_mat(2,2)<<" "<<accum_mat(2,3);
     accum_output<<"\n";
     accum_output<<std::flush;
-    
+
     std::cout<<"\n\n===========next frame=============\n\n";
-   
+    
     source = target;
     if (i == start_frame) {
       init_param.ell_init = ell_init;

@@ -10,9 +10,6 @@ namespace cvo {
   
   // all params to tune :(
   struct CvoParams {
-    int gpu_thread_num;
-    float kdtree_dist_threshold;
-
     float ell_init_first_frame;
     float ell_init;
     float ell_min;
@@ -85,7 +82,7 @@ namespace cvo {
     params->indicator_window_size = (int) fs["indicator_window_size"];
     params->indicator_stable_threshold = (float) fs["indicator_stable_threshold"];
     params->is_pcl_visualization_on = (int) fs["is_pcl_visualization_on"];
-    std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<", indicator window size is "<<params->indicator_window_size<<std::endl;
+    std::cout<<"read: ell_init is "<<params->ell_init<<"max_step is "<<params->max_step<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<", indicator window size is "<<params->indicator_window_size<<std::endl;
     fs.release();
     return;
   }

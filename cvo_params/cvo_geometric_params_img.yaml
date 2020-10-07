@@ -1,7 +1,7 @@
 %YAML:1.0
 ---
-ell_init_first_frame: 0.65
-ell_init: 0.25
+ell_init_first_frame: 0.55
+ell_init: 0.3
 ell_min: 0.025
 ell_max: 0.9
 dl: 0.0
@@ -10,13 +10,12 @@ sigma: 0.1
 sp_thres: 0.0006
 c: 7.0
 d: 7.0
-c_ell: 0.025
-c_sigma: 0.75
+c_ell: 0.15
+c_sigma: 0.6
 s_ell: 0.1
 s_sigma: 0.8
 MAX_ITER: 10000
 min_step: 0.001
-max_step: 0.8
 eps: 0.00005
 eps_2: 0.000012
 ell_decay_rate: 0.95
