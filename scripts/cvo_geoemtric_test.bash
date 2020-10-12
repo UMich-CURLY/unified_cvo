@@ -6,5 +6,4 @@ for i in 08
 do
     ./build/bin/cvo_align_gpu_lidar_raw /home/v9999/media/seagate_2t/kitti/lidar/dataset/sequences/$i cvo_params/cvo_geometric_params_gpu.yaml \
                                        cvo_geometric_$i.txt  0 100000
-    
 done

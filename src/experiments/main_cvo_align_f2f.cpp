@@ -10,6 +10,7 @@
 
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/Cvo.hpp"
+#include "cvo/ACvo.hpp"
 #include "graph_optimizer/Frame.hpp"
 #include "dataset_handler/KittiHandler.hpp"
 #include "utils/Calibration.hpp"
@@ -30,7 +31,6 @@ int main(int argc, char *argv[]) {
     std::cout<<"num_classes: "<<num_class<<std::endl;
     use_semantic_str = "_semantic";
     use_semantic = true;
-    #define IS_USING_SEMANTICS
   }
   
   int mode = stoi(argv[1]); // 0 for online generate 1 for read txt
@@ -51,6 +51,7 @@ int main(int argc, char *argv[]) {
   
   std::ofstream accum_tf_output_file("results/cvo_f2f_tracking_"+dataset_num+use_lidar_str+use_semantic_str+".txt");
   std::ofstream in_product_output_file("results/inner_product_all_"+dataset_num+use_lidar_str+use_semantic_str+".txt");
+  std::ofstream num_points_output_file("results/num_points_"+dataset_num+use_lidar_str+use_semantic_str+".txt");
 
   vector<string> files;
   std::cout<<"pth: "<<pth<<std::endl;
@@ -97,6 +98,15 @@ int main(int argc, char *argv[]) {
   Eigen::Affine3f init_guess;
   init_guess.matrix().setIdentity();
   // init_guess.matrix()(2,3)=0.75;
+  Eigen::Matrix4f result = init_guess.matrix();
+  result = init_guess.matrix();
+  for(int i=0; i<start_frame+1; ++i){
+    accum_tf_output_file << result(0,0)<<" "<<result(0,1)<<" "<<result(0,2)<<" "<<result(0,3)<<" "
+                  <<result(1,0)<<" " <<result(1,1)<<" "<<result(1,2)<<" "<<result(1,3)<<" "
+                  <<result(2,0)<<" " <<result(2,1)<<" "<<result(2,2)<<" "<<result(2,3);
+    accum_tf_output_file<<"\n";
+    accum_tf_output_file<<std::flush;
+  }
   Eigen::Matrix4f tf_kf_im1 = Eigen::Matrix4f::Identity();
   Eigen::Matrix4f tf_im1_im2 = Eigen::Matrix4f::Identity();
   Eigen::Matrix4f accum_tf = Eigen::Matrix4f::Identity();
@@ -153,6 +163,12 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // num_points
+  num_points_output_file << "0 "<< pcl_source_frame->points().num_points();
+  num_points_output_file << "\n";
+  num_points_output_file<<std::flush;
+  
+
   // start the iteration
   for (int i = start_frame+1; i<total_num ; i++) {
   // for (int i = start_frame+1; i<2 ; i++) {
@@ -163,7 +179,7 @@ int main(int argc, char *argv[]) {
     }
     else{
       init_guess.setIdentity();
-      init_guess.matrix()(2,3)=-0.75;
+      init_guess.matrix()(2,3)=0;
     }
 
     std::cout<<"\n============================================="<<std::endl;
@@ -193,6 +209,11 @@ int main(int argc, char *argv[]) {
         auto& source_fr = source_frame->points(); // keyframe
         auto& target_fr = target_frame->points();
         cvo_align.set_pcd(source_fr, target_fr, init_guess, true);
+        if(i==start_frame+1){
+          cvo_align.ell = 1;
+          cvo_align.ell_max = 1.2;
+          std::cout<<"initialize ell to: "<< cvo_align.ell<<std::endl;
+        }
         cvo_align.align();
       }
       else if(data_type==1){
@@ -215,9 +236,19 @@ int main(int argc, char *argv[]) {
           }
         }
 
+        // num_points
+        num_points_output_file << std::to_string(i)<< " "<< pcl_source_frame->points().num_points();
+        num_points_output_file << "\n";
+        num_points_output_file<<std::flush;
+
         auto& source_fr = pcl_source_frame->points(); // keyframe
         auto& target_fr = pcl_target_frame->points();
         cvo_align.set_pcd(source_fr, target_fr, init_guess, true);
+        if(i==start_frame+1){
+          cvo_align.ell = 1;
+          cvo_align.ell_max = 1.2;
+          std::cout<<"initialize ell to: "<< cvo_align.ell<<std::endl;
+        }
         cvo_align.align();
       }
         
@@ -234,12 +265,18 @@ int main(int argc, char *argv[]) {
       const cvo::CvoPointCloud &const_target_fr = target_fr;
       
       cvo_align.set_pcd(const_source_fr, const_target_fr, init_guess, true);
+      if(i==start_frame+1){
+          cvo_align.ell = 1;
+          cvo_align.ell_max = 1.2;
+          std::cout<<"initialize ell to: "<< cvo_align.ell<<std::endl;
+        }
       cvo_align.align();
     }
+
+    
     
     // get tf and inner product from cvo getter
     init_guess= cvo_align.get_transform();
-    Eigen::Matrix4f result = init_guess.matrix();
     double in_product = cvo_align.inner_product();
     double in_product_normalized = cvo_align.inner_product_normalized();
     int non_zeros_in_A = cvo_align.number_of_non_zeros_in_A();
@@ -283,5 +320,6 @@ int main(int argc, char *argv[]) {
   output_file.close();
   accum_tf_output_file.close();
   in_product_output_file.close();
+  num_points_output_file.close();
   return 0;
 }

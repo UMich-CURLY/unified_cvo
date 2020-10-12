@@ -17,3 +17,7 @@ MAX_ITER: 5000
 min_step: 0.2
 eps: 0.00005
 eps_2: 0.000012
+ell_decay_rate: 0.9
+ell_decay_start: 30
+indicator_window_size: 15
+indicator_stable_threshold: 0.02

@@ -7,6 +7,7 @@
 #include <Eigen/Dense>
 
 #include "utils/data_type.hpp"
+#include "utils/LidarPointType.hpp"
 #include "utils/CvoPointCloud.hpp"
 #include "utils/RawImage.hpp"
 #include "utils/Calibration.hpp"
@@ -17,6 +18,12 @@ namespace cvo {
   class Frame {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    
+    Frame(int ind,
+          const cv::Mat & rgb_image,
+          const cv::Mat & depth_image,
+          const Calibration & calib,
+          const bool & is_using_rgbd);
 
     Frame(int ind,
           const cv::Mat & left_image,
@@ -37,6 +44,15 @@ namespace cvo {
 
     Frame(int ind,
           pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
+          const std::vector<int> & semantics,
+          const Calibration & calib);
+    
+    Frame(int ind,
+          pcl::PointCloud<pcl::PointXYZIR>::Ptr pc,
+          const Calibration & calib);
+
+    Frame(int ind,
+          pcl::PointCloud<pcl::PointXYZIR>::Ptr pc,
           const std::vector<int> & semantics,
           const Calibration & calib);
 

@@ -1,0 +1,13 @@
+# - Config file for the cvo package
+# It defines the following variables
+#  cvo_INCLUDE_DIRS - include directories for cvo
+#  cvo_LIBRARY_DIRS - directories for cvo library
+ 
+# Compute paths
+get_filename_component(cvo_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+set(cvo_INCLUDE_DIRS "@cvo_include_dirs@")
+set(cvo_LIBRARY_DIRS "@cvo_library_dirs@")
+set(cvo_LIBRARIES "@cvo_libraries@")
+
+# This causes catkin_simple to link against these libraries
+set(cvo_FOUND_CATKIN_PROJECT true)

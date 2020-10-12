@@ -440,6 +440,7 @@ bool eval (int seq, string gt_dir, string gt_file_name, string result_dir, strin
     else
       seq_str = std::to_string(seq);
     
+
     std::cout<<"gt_dir: "<<gt_dir + seq_str +"/" + gt_file_name<<std::endl;
     std::cout<<"result_dir: "<<result_dir + result_file_name<<std::endl;
     vector<Matrix> poses_gt     = loadPoses(gt_dir + seq_str +"/" + gt_file_name);
@@ -466,6 +467,7 @@ bool eval (int seq, string gt_dir, string gt_file_name, string result_dir, strin
       //string input_file_name = //result_file_name.substr(17,result_file_name.size()-21);
       string input_file_name = file_name.substr(0, file_name.size() - 4);
       // save + plot bird's eye view trajectories
+
        //savePathPlot(poses_gt,poses_result,plot_path_dir + "/" + file_name.c_str());
       vector<int32_t> roi = computeRoi(poses_gt,poses_result);
       //plotPathPlot(plot_path_dir,roi,i);
@@ -473,7 +475,7 @@ bool eval (int seq, string gt_dir, string gt_file_name, string result_dir, strin
       // save + plot individual errors
       char prefix[16];
       sprintf(prefix,"%02d",i);
-      //saveErrorPlots(seq_err,plot_error_dir,input_file_name.c_str());
+      saveErrorPlots(seq_err,plot_error_dir,input_file_name.c_str());
       //plotErrorPlots(plot_error_dir,input_file_name.c_str());
     }
   }
@@ -484,7 +486,7 @@ bool eval (int seq, string gt_dir, string gt_file_name, string result_dir, strin
     string avg_file_name = result_file_name.substr(0, result_file_name.size() - 4) + "_avg";
     char prefix[16];
     sprintf(prefix,"avg");
-    //saveErrorPlots(total_err,plot_error_dir,avg_file_name.c_str());
+    saveErrorPlots(total_err,plot_error_dir,avg_file_name.c_str());
     //plotErrorPlots(plot_error_dir,avg_file_name.c_str());
     //saveStats(total_err,result_dir,avg_file_name.c_str());
   }

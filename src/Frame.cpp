@@ -11,6 +11,30 @@
 namespace cvo {
 
   Frame::Frame(int ind,
+              const cv::Mat & rgb_image,
+              const cv::Mat & depth_image,
+              const Calibration & calib,
+              const bool & is_using_rgbd)
+    : id(ind) ,
+      h(rgb_image.rows),
+      w(rgb_image.cols),
+      raw_image_(rgb_image),
+      calib(calib),
+      points_(raw_image_, depth_image, calib, true),
+      local_map_(nullptr),
+      is_keyframe_(false),
+      tracking_pose_from_last_keyframe_(ind){
+    
+    pose_in_graph_.setIdentity();
+
+    // points_.write_to_color_pcd("cvo_points_pcd/" + std::to_string(ind)+".pcd");
+    // points_.write_to_color_pcd("cvo_points/" +std::to_string(ind)+"_label.pcd");
+
+    Eigen::Affine3f eye = Eigen::Affine3f::Identity();
+    tracking_pose_from_last_keyframe_.set_relative_transform(ind, eye, 1.0 );
+  }
+
+  Frame::Frame(int ind,
                const cv::Mat &left_image,
                const cv::Mat & right_image,
                const Calibration & calib
@@ -72,7 +96,7 @@ namespace cvo {
       w(0),
       calib(calib),
       raw_image_(),
-      points_(pc),
+      points_(pc, 5000, 64),
       local_map_(nullptr),
       is_keyframe_(false),
       tracking_pose_from_last_keyframe_(ind){
@@ -80,8 +104,9 @@ namespace cvo {
     Eigen::Affine3f eye = Eigen::Affine3f::Identity();
     tracking_pose_from_last_keyframe_.set_relative_transform(ind, eye, 1.0 );
 
-    // points_.write_to_intensity_pcd("lidar_pcd/" + std::to_string(ind)+".pcd");
+    // points_.write_to_intensity_pcd("lidar_pcd/edge_and_legoloam_surface/01/" + std::to_string(ind)+".pcd");
   }
+
 
   Frame::Frame(int ind,
                pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
@@ -101,11 +126,12 @@ namespace cvo {
     tracking_pose_from_last_keyframe_.set_relative_transform(ind, eye, 1.0 );
 
     
-    // points_.write_to_intensity_pcd("/home/cel/PERL/datasets/kitti_dataset/sequences/01/cvo_points_pcd/" + std::to_string(ind)+".pcd");
-    // points_.write_to_label_pcd("/home/cel/PERL/datasets/kitti_dataset/sequences/01/cvo_points_label/" +std::to_string(ind)+".pcd");
+    // points_.write_to_intensity_pcd("semantics_" + std::to_string(ind)+".pcd");
+    // points_.write_to_label_pcd("label_" +std::to_string(ind)+".pcd");
     // points_.write_to_txt("/home/cel/PERL/datasets/kitti_dataset/sequences/01/cvo_points/" +std::to_string(ind)+".txt");
     
   }
+
   
   Frame::~Frame() {
   }

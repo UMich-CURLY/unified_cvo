@@ -23,7 +23,7 @@
 #include "utils/PointSegmentedDistribution.hpp"
 #include "cupointcloud/point_types.h"
 #include "cupointcloud/cupointcloud.h"
-#include "cukdtree/cukdtree.cuh"
+#include "cukdtree/cukdtree.h"
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
@@ -907,7 +907,7 @@ namespace cvo{
     if (j > num_moving-1 )
       return;
     Eigen::Matrix3f omega_hat;
-    skew(omega, &omega_hat);
+    skew_gpu(omega, &omega_hat);
     Eigen::Vector3f cloud_yi;
     cloud_yi << cloud_y[j].x , cloud_y[j].y, cloud_y[j].z;
 
@@ -1096,7 +1096,7 @@ namespace cvo{
 
 
     std::cout<<"construct new cvo state...\n";
-    CvoState cvo_state(source_gpu, target_gpu, params,true);
+    CvoState cvo_state(source_gpu, target_gpu, params);
 
     int num_moving = cvo_state.num_moving;
     int num_fixed = cvo_state.num_fixed;
