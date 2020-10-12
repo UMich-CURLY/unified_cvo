@@ -818,7 +818,8 @@ namespace cvo{
                                                                                                            A_mat_gpu // the inner product matrix!
                                                                                                            );
 #else
-    fill_in_A_mat_gpu_range_ell<<<(points_moving->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(params_gpu,
+    fill_in_A_mat_gpu_range_ell<<<(points_fixed->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(params_gpu,
+    //fill_in_A_mat_gpu_range_ell<<<(points_moving->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(params_gpu,
                                                                                                     points_fixed_raw,
                                                                                                     fixed_size,
                                                                                                     points_moving_raw,
@@ -1352,6 +1353,56 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     return decrease;
   }
 
+
+  __global__
+  void fill_in_A_mat_euclidean(// input
+                               CvoPoint * points_a,
+                               int a_size,
+                               CvoPoint * points_b,
+                               int b_size,
+                               // output
+                               double * l2_sum
+                               ) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i > a_size - 1)
+      return;
+
+    CvoPoint * p_a =  &points_a[i];
+
+    for (int j = 0; j < b_size; j++) {
+      CvoPoint * p_b = &points_b[j];
+      l2_sum[i] += (double)squared_dist(*p_a, *p_b );
+    }
+
+  }
+  
+  float compute_std_dist_between_two_pc(std::shared_ptr<CvoPointCloudGPU> source_points, 
+                                        std::shared_ptr<CvoPointCloudGPU> target_points_transformed
+                                        ) {
+    // asssume state is clean
+    double total = 0;
+
+
+    int num_points_source = source_points->size();
+    int num_points_target = target_points_transformed->size();
+    thrust::device_vector<double> l2_sum(num_points_source);
+
+    CvoPoint * points_fixed_raw = thrust::raw_pointer_cast (  source_points->points.data() );
+    CvoPoint * points_moving_raw = thrust::raw_pointer_cast( target_points_transformed->points.data() );
+
+    
+    fill_in_A_mat_euclidean<<<(num_points_target / CUDA_BLOCK_SIZE )+1, CUDA_BLOCK_SIZE >>>
+      ( points_fixed_raw, num_points_source,
+        points_moving_raw, num_points_target,
+        thrust::raw_pointer_cast(l2_sum.data()));
+
+    double dist_square_sum = thrust::reduce(l2_sum.begin(), l2_sum.end());
+    double std_dist = sqrt( dist_square_sum /(double)num_points_source / (double) num_points_target   );
+    
+    return static_cast<float> (std_dist);
+    
+    
+  }
   
   int CvoGPU::align(const CvoPointCloud& source_points,
                     const CvoPointCloud& target_points,
@@ -1421,7 +1472,12 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       transform_pointcloud_thrust(cvo_state.cloud_y_gpu_init, cvo_state.cloud_y_gpu,
                                   cvo_state.R_gpu, cvo_state.T_gpu ); 
       end = std::chrono::system_clock::now();
-      t_transform_pcd += (end - start); 
+      t_transform_pcd += (end - start);
+
+      if (k == 0 ) {
+        double dist_std = compute_std_dist_between_two_pc(cvo_state.cloud_x_gpu, cvo_state.cloud_y_gpu);
+        std::cout<<"l2 dist standard deviation is "<<dist_std<<std::endl;
+      }
 
 
       // update the inner product matrix
@@ -1518,6 +1574,10 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
         //inner_product_file<<this->inner_product(source_points, target_points, transform)<<"\n"<<std::flush;
         iter = k;
         std::cout<<"break: dist: "<<dist_this_iter<<std::endl;
+        double dist_std = compute_std_dist_between_two_pc(cvo_state.cloud_x_gpu, cvo_state.cloud_y_gpu);
+        std::cout<<"l2 dist standard deviation is "<<dist_std<<std::endl;
+
+
         break;
       }
 
@@ -1570,7 +1630,8 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
                               cloud_t* cloud_a_pos, cloud_t* cloud_b_pos, \
                               Eigen::SparseMatrix<float,Eigen::RowMajor>& A_temp,
                               tbb::concurrent_vector<Trip_t> & A_trip_concur_,
-                              const CvoParams & params) {
+                              const CvoParams & params
+                              ) {
     bool debug_print = false;
     A_trip_concur_.clear();
     const float s2= params.sigma*params.sigma;

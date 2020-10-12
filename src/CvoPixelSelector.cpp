@@ -443,6 +443,13 @@ namespace cvo
        times ++;
        if (times == 5) break;
     }
+    if (output_uv.size() < num_want / 3 * 2) {
+       std::fill(heat_map.begin(), heat_map.end(), 0);
+       output_uv.clear();
+       
+       selector.makeHeatMaps(raw_image,static_cast<float> (num_want), heat_map.data(), output_uv, 3+times-2, 0);
+
+    }
    
 
     bool debug_plot = true;
@@ -465,10 +472,6 @@ namespace cvo
 
   }
 
-
-
-  
-  
   
   pcl::PointCloud<pcl::Normal>::Ptr
   compute_pcd_normals(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in, float radius) {

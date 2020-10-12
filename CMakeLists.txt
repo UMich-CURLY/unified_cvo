@@ -195,11 +195,11 @@ endif()
 add_library(lie_group_utils SHARED ${LIE_GROUP_SOURCE})
 
 add_library(cvo_utils_lib SHARED ${CVO_UTILS_SOURCE})
-target_link_libraries(cvo_utils_lib opencv_core opencv_photo opencv_highgui elas opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search ${TBB_LIBRARIES})
+target_link_libraries(cvo_utils_lib opencv_core opencv_photo opencv_features2d  opencv_highgui elas opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search ${TBB_LIBRARIES})
 
 add_library(cvo_utils_range_ell_lib SHARED ${CVO_UTILS_SOURCE})
 target_compile_definitions(cvo_utils_range_ell_lib PRIVATE -DIS_USING_RANGE_ELL)
-target_link_libraries(cvo_utils_range_ell_lib opencv_core opencv_photo opencv_highgui elas opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search ${TBB_LIBRARIES})
+target_link_libraries(cvo_utils_range_ell_lib opencv_core opencv_photo opencv_features2d opencv_highgui elas opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search ${TBB_LIBRARIES})
 
 
 if (${PROJECT_NAME}_ENABLE_CUDA)
@@ -208,16 +208,16 @@ target_compile_definitions(cvo_utils_cov_lib PRIVATE -DIS_USING_COVARIANCE)
 set_target_properties(cvo_utils_cov_lib PROPERTIES
   LANGUAGE CUDA
   CUDA_SOURCE_PROPERTY_FORMAT OBJ)
-target_link_libraries(cvo_utils_cov_lib cukdtree_lib opencv_core opencv_photo opencv_highgui elas opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search ${TBB_LIBRARIES})
+target_link_libraries(cvo_utils_cov_lib cukdtree_lib opencv_core opencv_photo opencv_features2d opencv_highgui elas opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search ${TBB_LIBRARIES})
 endif()
 
 add_library(cvo_utils_normal_lib SHARED ${CVO_UTILS_SOURCE})
 target_compile_definitions(cvo_utils_normal_lib PRIVATE -DIS_USING_NORMALS )
-target_link_libraries(cvo_utils_normal_lib  opencv_core opencv_highgui opencv_photo elas opencv_imgcodecs pcl_filters pcl_features  pcl_io ${TBB_LIBRARIES})
+target_link_libraries(cvo_utils_normal_lib  opencv_core opencv_highgui opencv_photo elas opencv_imgcodecs opencv_features2d pcl_filters pcl_features  pcl_io ${TBB_LIBRARIES})
 
 add_library(cvo_utils_loam_lib SHARED ${CVO_UTILS_SOURCE})
 target_compile_definitions(cvo_utils_loam_lib PRIVATE -DIS_USING_LOAM)
-target_link_libraries(cvo_utils_loam_lib  opencv_core opencv_highgui opencv_photo elas opencv_imgcodecs pcl_filters pcl_features pcl_search pcl_io ${TBB_LIBRARIES})
+target_link_libraries(cvo_utils_loam_lib  opencv_core opencv_highgui opencv_photo elas opencv_imgcodecs pcl_filters pcl_features opencv_features2d pcl_search pcl_io ${TBB_LIBRARIES})
 
 add_library(bki_mapping_lib SHARED ${BKI_MAPPING_SOURCE})
 target_link_libraries(bki_mapping_lib cvo_utils_lib pcl_filters pcl_io pcl_search pcl_visualization )
@@ -544,6 +544,10 @@ target_link_libraries(cvo_align_gpu_lidar_intensity_raw cvo_gpu_lidar_intensity_
 add_executable(cvo_align_gpu_lidar_intensity_loam_raw ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_intensity.cpp)
 target_compile_definitions(cvo_align_gpu_lidar_intensity_loam_raw PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_LOAM)
 target_link_libraries(cvo_align_gpu_lidar_intensity_loam_raw cvo_gpu_lidar_intensity_loam_lib  cvo_utils_loam_lib boost_filesystem boost_system kitti)
+
+
+add_executable(gicp_align_two ${PROJECT_SOURCE_DIR}/src/experiments/gicp_align_two.cpp)
+target_link_libraries(gicp_align_two ${PCL_LIBRARIES})
 
 #add_executable(cvo_align_gpu_lidar_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_pcd.cpp)
 #target_compile_definitions(cvo_align_gpu_lidar_pcd PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_LOAM)

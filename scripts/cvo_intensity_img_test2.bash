@@ -1,10 +1,10 @@
-export CUDA_VISIBLE_DEVICES=1
+
 cd build && make -j && cd .. && \
-for i in 05 
-#for i in 00 01 02 03 04 05 06 07 08 09 10 
+for i in  01   
+#for i in 04 05 10  00 01 02 03 06 07 08 09 
 do
 	echo "new seq $i"
-    ./build/bin/cvo_align_gpu_raw_img_range_ell /home/rzh/media/sda1/ray/datasets/kitti/sequences/$i cvo_params/cvo_intensity_params_img2.yaml \
-                                       cvo_img2_intensity_$i.txt 0 20000
- 
+    ./build/bin/cvo_align_gpu_raw_img /home/rzh/media/sda1/ray/datasets/kitti/sequences/$i cvo_params/cvo_intensity_params_img.yaml \
+                                       cvo_img_intensity_gpu0_$i.txt 283 2
+ 	
 done

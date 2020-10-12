@@ -30,6 +30,7 @@ int main(int argc, char *argv[]) {
   int start_frame = std::stoi(argv[4]);
   kitti.set_start_index(start_frame);
   int max_num = std::stoi(argv[5]);
+
   
   accum_output <<"1 0 0 0 0 1 0 0 0 0 1 0\n";
   
@@ -70,8 +71,27 @@ int main(int argc, char *argv[]) {
   0.00768426 , 0.00211469 , 0.99996779 , 0.99285757,
   0.         , 0.         , 0.         , 1.       ; 
   */
-  Eigen::Affine3f init_guess_cpu = Eigen::Affine3f::Identity();
-  init_guess_cpu.matrix()(2,3)=0;
+  /*
+  // 01: 264
+  init_guess <<
+   0.99997631, -0.00067165,  0.0068385,  -0.09453087,
+  0.00068353 , 0.99999886 ,-0.00174244, -0.00678228,
+-0.00683664  ,0.00174704  ,0.99997478 , 2.6214076 ,
+  0.         , 0.         , 0.        ,  1.        ;
+  */
+  /*
+  init_guess <<
+   0.99999533, -0.00285432,  0.00093057, -0.00943301,
+  0.00285291 , 0.99999478 , 0.00145044 ,-0.02358547,
+ -0.00093543 ,-0.00144773 , 0.99999849 , 2.34234614,
+  0.         , 0.         , 0.         , 1.        ;
+  */
+  init_guess << 
+    0.99999543,  0.00075004 ,-0.00287568 , 0.11622182,
+    -0.0007469   ,0.99999794,  0.00136871, -0.06059335,
+    0.0028771  ,-0.00136674 , 0.99999464 , 2.46390501,
+    0.          ,0.         , 0.         , 1.        ;
+
   Eigen::Matrix4f accum_mat = Eigen::Matrix4f::Identity();
   // start the iteration
 
@@ -81,6 +101,8 @@ int main(int argc, char *argv[]) {
   //kitti.read_next_stereo(source_left, source_right);
   std::shared_ptr<cvo::RawImage> source_raw(new cvo::RawImage(source_left, NUM_CLASSES, semantics_source));
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw, source_right, calib));
+  source->write_to_color_pcd("source.pcd");
+  //source->write_to_txt(std::string(argv[1]) +std::string( "/cvo_points_semantics/") + std::string(argv[4]) + std::string(".txt") );
   
   for (int i = start_frame; i<min(total_iters, start_frame+max_num)-1 ; i++) {
     
@@ -98,10 +120,28 @@ int main(int argc, char *argv[]) {
     }
     std::shared_ptr<cvo::RawImage> target_raw(new cvo::RawImage(left, NUM_CLASSES, semantics_target));
     std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, right, calib));
-
+    if (i == start_frame)
+      target->write_to_color_pcd("target.pcd");
+    //target->write_to_txt(std::string(argv[1]) + std::string("/cvo_points_semantics/") + std::to_string(i) + std::string(".txt") );
+    
     Eigen::Matrix4f result, init_guess_inv;
+    Eigen::Matrix4f identity_init = Eigen::Matrix4f::Identity(); 
+    
+    double in_product_pre = cvo_align.inner_product(*source, *target, init_guess);
+    std::cout<<"Theinit guess  inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_pre<<"\n";
+    double in_product_identity = cvo_align.inner_product(*source, *target, identity_init);
+    std::cout<<"The identity guess  inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_identity<<"\n";
+    if (i==start_frame) {
+      cvo::CvoPointCloud prev_target;
+      std::cout<<"init is "<<init_guess<<std::endl;
+      cvo::CvoPointCloud::transform(init_guess, *target, prev_target);
+      prev_target.write_to_color_pcd("prev_target.pcd");
+    }
+    
+
     init_guess_inv = init_guess.inverse();
     printf("Start align... num_fixed is %d, num_moving is %d\n", source->num_points(), target->num_points());
+
     std::cout<<std::flush;
     cvo_align.align(*source, *target, init_guess_inv, result);
     
@@ -117,7 +157,12 @@ int main(int argc, char *argv[]) {
     init_guess = result;
     accum_mat = accum_mat * result;
     std::cout<<"accum tf: \n"<<accum_mat<<std::endl;
-    
+
+    if (i==start_frame) {
+      cvo::CvoPointCloud t_target;
+      cvo::CvoPointCloud::transform(result, *target, t_target);
+      t_target.write_to_color_pcd("t_target.pcd");
+    }
     
     // log accumulated pose
 
@@ -128,7 +173,7 @@ int main(int argc, char *argv[]) {
     accum_output<<std::flush;
     
     std::cout<<"\n\n===========next frame=============\n\n";
-   
+
     source = target;
     if (i == start_frame) {
       init_param.ell_init = ell_init;
