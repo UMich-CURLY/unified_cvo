@@ -203,13 +203,13 @@ namespace cvo{
     //auto detector =  cv::FastFeatureDetector::create();
     cv::FAST(left_gray,keypoints, 5,false);
 
-    int thresh = 4, num_want = 28000, num_min = 12000;
+    int thresh = 4, num_want = 28000, num_min = 13000;
     while (keypoints.size() > num_want)  {
       std::cout<<"selected "<<keypoints.size()<<" points more than "<<num_want<<std::endl;
         keypoints.clear();
         thresh++;
         cv::FAST(left_gray,keypoints, thresh,false);
-        if (thresh == 13) break;
+        if (thresh == 30) break;
     }
     while (keypoints.size() < num_min ) {
 	std::cout<<"selected "<<keypoints.size()<<" points less than "<<num_want/4<<std::endl;
