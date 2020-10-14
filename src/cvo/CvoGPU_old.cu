@@ -16,7 +16,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/transforms.h>
-#include <pcl/impl/instantiate.hpp>
+
 
 #include <thrust/functional.h>
 #include <thrust/transform.h>
@@ -39,18 +39,14 @@
 using namespace std;
 using namespace nanoflann;
 
-
-extern template struct pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS, NUM_CLASSES>;
-
 namespace cvo{
   
   typedef Eigen::Triplet<float> Trip_t;
 
   static bool is_logging = true;
-  static bool debug_print = false;
+  static bool debug_print =false;
 
 
-  
 
   
   __global__
@@ -833,9 +829,6 @@ namespace cvo{
     float px_arr[3] = {px->x, px->y, px->z};
     Eigen::Vector3f omega_i = Eigen::Vector3f::Zero();
     Eigen::Vector3f v_i = Eigen::Vector3f::Zero();
-#ifdef IS_USING_COVARIANCE
-    Eigen::Matrix3f cov_i = Eigen::Map<Eigen::Matrix3f>(px->covariance);
-#endif    
     float dl_i = 0;
     for (int j = 0; j < A_cols; j++) {
       int idx = A->ind_row2col[i*A_cols+j];
@@ -849,20 +842,9 @@ namespace cvo{
       Eigen::Vector3f cross_xy_j = px_eig.cross(py_eig) ;
       Eigen::Vector3f diff_yx_j = py_eig - px_eig;
       float sum_diff_yx_2_j = diff_yx_j.squaredNorm();
-
-#ifdef IS_USING_COVARIANCE      
-      Eigen::Matrix3f cov_j = Eigen::Map<Eigen::Matrix3f>(py->covariance);
-      omega_i = omega_i + cov_j * cross_xy_j *  *(Ai + j );
-      v_i = v_i + cov_j * diff_yx_j *  *(Ai + j);
-      //float eigenvalue_sum = px->cov_eigenvalues(0)
-
-      //omega_i = omega_i +  cross_xy_j *  *(Ai + j );
-      // v_i = v_i + diff_yx_j *  *(Ai + j);      
       
-#else      
       omega_i = omega_i + cross_xy_j *  *(Ai + j );
       v_i = v_i + diff_yx_j *  *(Ai + j);
-#endif      
     }
 
     Eigen::Vector3d & omega_i_eig = omega_all_gpu[i];
@@ -900,15 +882,10 @@ namespace cvo{
     thrust::plus<Eigen::Vector3d> plus_vector;
     *omega = (thrust::reduce(cvo_state->omega_gpu.begin(), cvo_state->omega_gpu.end())).cast<float>();
     *v = (thrust::reduce(cvo_state->v_gpu.begin(), cvo_state->v_gpu.end())).cast<float>();
-    // normalize the gradient
-    //omega->normalize();
-    //v->normalize();
 
     // Eigen::Vector3d::Zero(), plus_vector)).cast<float>();
     cudaMemcpy(cvo_state->omega, omega, sizeof(Eigen::Vector3f), cudaMemcpyHostToDevice );
     cudaMemcpy(cvo_state->v, v, sizeof(Eigen::Vector3f), cudaMemcpyHostToDevice );
-
-    
     end = chrono::system_clock::now();
     //std::cout<<"time for thrust_reduce is "<<std::chrono::duration_cast<std::chrono::milliseconds>((end- start)).count()<<std::endl;
     start = chrono::system_clock::now();
@@ -948,7 +925,7 @@ namespace cvo{
     xiz_dot_xi2z[j]  = (-xiz[j] .dot(xi2z[j]));
     epsil_const[j] = xi2z[j].squaredNorm()+2*xiz[j].dot(xi3z[j]);
     /*
-    if ( j == 1000) {
+    if (j == 1000) {
       printf("j==1000, cloud+yi is (%f,%f,%f), xiz=(%f %f %f), xi2z=(%f %f %f), xi3z=(%f %f %f), xi4z=(%f %f %f), normxiz2=%f, xiz_dot_xi2z=%f, epsil_const=%f\n ",
             cloud_y[j].x , cloud_y[j].y, cloud_y[j].z,
             xiz[j](0), xiz[j](1), xiz[j](2),
@@ -960,7 +937,6 @@ namespace cvo{
       
     }
     */
-    
   }
   __global__ void compute_step_size_poly_coeff(float temp_coef,
                                               int num_moving,
@@ -1016,12 +992,12 @@ namespace cvo{
       D[i] += double(A_ij * (delta_ij+beta_ij*gamma_ij + beta_ij*beta_ij*beta_ij/6.0));
       E[i] += double(A_ij * (epsil_ij+beta_ij*delta_ij+1/2.0*beta_ij*beta_ij*gamma_ij \
                              + 1/2.0*gamma_ij*gamma_ij + 1/24.0*beta_ij*beta_ij*beta_ij*beta_ij));
-     
-      //if ( i == 1000) {
-      //  printf("x==1000,  Aij=%f, beta_ij=%f, gamma_ij=%f, delta_ij=%f, epsil_ij=%f\n",
-      //         A_ij, beta_ij, gamma_ij, delta_ij, epsil_ij);
+      /*
+        if (i == 1074 && j == 1000) {
+        printf("x==1000, y==1074, Aij=%f, beta_ij=%f, gamma_ij=%f, delta_ij=%f, epsil_ij=%f\n",
+        A_ij, beta_ij, gamma_ij, delta_ij, epsil_ij);
         
-      //}
+        }*/
     }
     
   }
@@ -1067,13 +1043,11 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       int idx = A->ind_row2col[i * A_cols + j];
       if (idx == -1) break;
 #ifdef IS_USING_COVARIANCE
-      //temp_ell = (cloud_x[i].cov_eigenvalues[2] + cloud_y[idx].cov_eigenvalues[2] + cloud_x[i].cov_eigenvalues[0] + cloud_y[idx].cov_eigenvalues[0])/4.0 ;
-      temp_ell = ( cloud_x[i].cov_eigenvalues[0] + cloud_y[idx].cov_eigenvalues[0])/2.0 ;
+      temp_ell = (cloud_x[i].cov_eigenvalues[0] + cloud_y[idx].cov_eigenvalues[0])/10 ;
       if (temp_ell > 1.0) temp_ell = 1.0;
-      if (temp_ell < 0.05) temp_ell =0.05;
-      //if (i == 0) printf("temp ell in step size is %f, e_value_a is %f, e_value_b is %f\n", temp_ell, cloud_x[i].cov_eigenvalues[2], cloud_y[idx].cov_eigenvalues[2]  );
+      if (temp_ell < 0.1) temp_ell = 0.1;
+      if (i == 0) printf("temp ell in step size is %f, e_value_a is %f, e_value_b is %f\n", temp_ell, cloud_x[i].cov_eigenvalues[2], cloud_y[idx].cov_eigenvalues[2]  );
       //temp_ell = compute_range_ell(ell,d2_sqrt, 1, 80 );
-      //temp_ell = 0.5;
 #endif      
       float temp_coef = 1/(2.0*temp_ell*temp_ell);   // 1/(2*l^2)       
       
@@ -1095,25 +1069,17 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
 
       float A_ij = A->mat[i * A_cols + j];
       // eq (34)
-      double bi = double(A_ij * beta_ij);
-      B[i] += bi;
-      double ci = double(A_ij * (gamma_ij+beta_ij*beta_ij/2.0));
-      C[i] += ci;
-      double di = double(A_ij * (delta_ij+beta_ij*gamma_ij + beta_ij*beta_ij*beta_ij/6.0));
-      D[i] += di;
-      double ei = double(A_ij * (epsil_ij+beta_ij*delta_ij+1/2.0*beta_ij*beta_ij*gamma_ij\
-                                 + 1/2.0*gamma_ij*gamma_ij + 1/24.0*beta_ij*beta_ij*beta_ij*beta_ij));
-      E[i] += ei;
-
+      B[i] += double(A_ij * beta_ij);
+      C[i] += double(A_ij * (gamma_ij+beta_ij*beta_ij/2.0));
+      D[i] += double(A_ij * (delta_ij+beta_ij*gamma_ij + beta_ij*beta_ij*beta_ij/6.0));
+      E[i] += double(A_ij * (epsil_ij+beta_ij*delta_ij+1/2.0*beta_ij*beta_ij*gamma_ij\
+                          + 1/2.0*gamma_ij*gamma_ij + 1/24.0*beta_ij*beta_ij*beta_ij*beta_ij));
       /*
-      if ( i == 1000) {
-        printf("x==1000,temp_ell is %f, normxiz2[idx]=%f,xiz_dot_xi2z[idx]=%f, xiz[idx]=(%f,%f,%f), xi2z[idx]=(%f,%f,%f),xi3z[idx]=(%f,%f,%f),  diff_xy=(%f,%f,%f), bi=%lf, ci=%lf, di=%lf, ei=%lf, Aij=%f, beta_ij=%f, gamma_ij=%f, delta_ij=%f, epsil_ij=%f\n",
-               temp_ell, normxiz2[idx], xiz_dot_xi2z[idx],  xiz[idx](0), xiz[idx](1), xiz[idx](2),
-               xi2z[idx](0), xi2z[idx](1), xi2z[idx](2),  xi3z[idx](0), xi3z[idx](1), xi3z[idx](2),
-               bi, ci, di, ei,
-               A_ij, beta_ij, gamma_ij, delta_ij, epsil_ij);
+    if (i == 1074 && j == 1000) {
+        printf("x==1000, y==1074, Aij=%f, beta_ij=%f, gamma_ij=%f, delta_ij=%f, epsil_ij=%f\n",
+              A_ij, beta_ij, gamma_ij, delta_ij, epsil_ij);
         
-               }*/
+              }*/
     }
     
   }
@@ -1154,42 +1120,28 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     double C = thrust::reduce(cvo_state->C.begin(), cvo_state->C.end(), 0.0, plus_double);
     double D = thrust::reduce(cvo_state->D.begin(), cvo_state->D.end(), 0.0, plus_double);
     double E = thrust::reduce(cvo_state->E.begin(), cvo_state->E.end(), 0.0, plus_double);
-    //Eigen::Vector4f p_coef(4);
-    //p_coef << 4.0*float(E),3.0*float(D),2.0*float(C),float(B);
-    Eigen::Vector4d p_coef(4);
-    p_coef << 4.0*(E),3.0*(D),2.0*(C),(B);
+    Eigen::Vector4f p_coef(4);
+    p_coef << 4.0*float(E),3.0*float(D),2.0*float(C),float(B);
     if (debug_print)
       std::cout<<"BCDE is "<<p_coef.transpose()<<std::endl;
     
     // solve polynomial roots
     //Eigen::VectorXcf rc = poly_solver(p_coef);
-    Eigen::Vector3cd rc = poly_solver_order3(p_coef);
+    Eigen::Vector3cf rc = poly_solver_order3(p_coef);
     
     
     // find usable step size
-    //float temp_step = numeric_limits<float>::max();
-    double temp_step = numeric_limits<double>::max();
-    for(int i=0;i<rc.real().size();i++) {
-      if(rc(i,0).real()>0 && rc(i,0).real()<temp_step && std::fabs(rc(i,0).imag())<1e-5) {
-
+    float temp_step = numeric_limits<float>::max();
+    for(int i=0;i<rc.real().size();i++)
+      if(rc(i,0).real()>0 && rc(i,0).real()<temp_step && rc(i,0).imag()==0)
         temp_step = rc(i,0).real();
-      }
-    }
-    if (debug_print)
-      std::cout<<"step size "<<temp_step<<"\n original_rc is \n"<< rc<<std::endl;
     
     // if none of the roots are suitable, use min_step
-    cvo_state->step = temp_step==numeric_limits<double>::max()? params->min_step:temp_step;
+    cvo_state->step = temp_step==numeric_limits<float>::max()? params->min_step:temp_step;
     // if step>0.8, just use 0.8 as step
-    cvo_state->step = cvo_state->step > params->max_step ? params->max_step:cvo_state->step;
-    cvo_state->step = cvo_state->step < params->min_step? params->min_step : cvo_state->step;
+    cvo_state->step = cvo_state->step>0.8 ? 0.8:cvo_state->step;
     //step *= 10;
-        // if none of the roots are suitable, use min_step
-        // cvo_state->step = temp_step==numeric_limits<float>::max()? params->min_step:temp_step;
-    // if step>0.8, just use 0.8 as step
-    // cvo_state->step = cvo_state->step>0.8 ? 0.8:cvo_state->step;
-
-    //cvo_state->step  = 0.005;
+    //step = step>0.001 ? 0.001:step;
     if (debug_print) 
       std::cout<<"step size "<<cvo_state->step<<"\n";
         
@@ -1230,12 +1182,12 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
          indicator_end_sum / indicator_start_sum  < 1 + params.indicator_stable_threshold){
         decrease = true;
         std::queue<float> empty;
-        std::swap( indicator_start_queue, empty );
-        // std::swap( indicator_start_queue, indicator_end_queue );
-        // std::swap( indicator_end_queue, empty );
+        std::swap( indicator_start_queue, indicator_end_queue );
+
+        std::swap( indicator_end_queue, empty );
         
         std::queue<float> empty2;
-        std::swap( indicator_end_queue, empty2 );
+        std::swap( indicator_start_queue, empty2 );
         indicator_start_sum = 0;
         //indicator_start_sum = indicator_end_sum;
         indicator_end_sum = 0;
@@ -1404,9 +1356,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       start = chrono::system_clock::now();
       compute_flow(&cvo_state, params_gpu, &omega, &v);
       if (debug_print) std::cout<<"iter "<<k<< "omega: \n"<<omega.transpose()<<"\nv: \n"<<v.transpose()<<std::endl;
-      if (k == 0) {
-        printf("iter=0: nonzeros in A is %d\n", cvo_state.A_host.nonzero_sum);
-      }
+      if (k == 0) printf("nonzeros in A is %d\n", cvo_state.A_host.nonzero_sum);
       end = std::chrono::system_clock::now();
       t_compute_flow += (end - start);
 
@@ -1439,14 +1389,8 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       R = R_angle.toRotationMatrix().cast<float>(); // re-orthogonalization
 
       // reduce ell, if the se3 distance is smaller than eps2, break
-      double dist_this_iter = dist_se3(dR,dT);
-      if (debug_print)  {
-        std::cout<<"just computed distk. dR "<<dR<<"\n dt is "<<dT<<std::endl;
-	std::cout<<"dist: "<<dist_this_iter <<std::endl<<"check bounds....\n";
-	if (std::isnan(dist_this_iter)) {
-          break; 
-	}
-      }
+      float dist_this_iter = dist_se3(dR.cast<float>(),dT.cast<float>());
+      if (debug_print)  std::cout<<"dist: "<<dist_this_iter <<std::endl<<"check bounds....\n";
       float ip_curr = (float)((double)cvo_state.A_host.nonzero_sum / (double)source_points.num_points() / (double) target_points.num_points());
       //float ip_curr = (float) this->inner_product(source_points, target_points, transform);
       bool need_decay_ell = A_sparsity_indicator_ell_update( indicator_start_queue,
@@ -1478,16 +1422,6 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       
       if(debug_print) printf("end of iteration \n\n\n");
 
-      // std::cout<<"iter: "<<k<<std::endl;
-      // if(debug_print){
-      // std::cout<<"num non zeros in A: "<<A.nonZeros()<<std::endl;
-      // std::cout<<"inner product before normalized: "<<A.sum()<<std::endl;
-      // std::cout<<"inner product after normalized: "<<A.sum()/num_fixed/num_moving*1e6<<std::endl; 
-      // std::cout<<transform.matrix()<<std::endl;
-      // }
-
-      //inner_product_file << A.sum()<<"\n";
-      //inner_product_file << std::flush;
     }
     auto end_all = chrono::system_clock::now();
     chrono::duration<double> t_all = chrono::duration<double>::zero();

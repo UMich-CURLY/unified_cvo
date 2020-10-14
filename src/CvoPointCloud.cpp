@@ -153,6 +153,87 @@ namespace cvo{
     }
     
   }
+  CvoPointCloud::CvoPointCloud(const RawImage & rgb_raw_image,
+                  const cv::Mat & depth_image,
+                  const Calibration &calib,
+                  const bool& is_using_rgbd){
+    if(is_using_rgbd){
+      int expected_points = 5000;
+      std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> output_uv;
+      select_pixels(rgb_raw_image,
+                    expected_points,
+                    output_uv);
+
+      std::vector<int> good_point_ind;
+      int h = rgb_raw_image.color().rows;
+      int w = rgb_raw_image.color().cols;
+      Mat33f intrinsic = calib.intrinsic();
+
+      // cv::Mat img_selected;
+      // rgb_raw_image.color().copyTo(img_selected);
+
+      // for(int i=0; i<h; ++i){
+      //   for(int j=0; j<w; ++j){
+      //     img_selected.at<cv::Vec3b>(cv::Point(j, i)).val[0] = 0;
+      //     img_selected.at<cv::Vec3b>(cv::Point(j, i)).val[1] = 0;
+      //     img_selected.at<cv::Vec3b>(cv::Point(j, i)).val[2] = 0;
+      //   }
+      // }
+
+      for (int i = 0; i < output_uv.size(); i++) {
+        auto uv = output_uv[i];
+        int u = uv(0);
+        int v = uv(1);
+        Vec3f xyz;
+
+        uint16_t dep = depth_image.at<uint16_t>(cv::Point(u, v));
+        
+        if(dep!=0 && !isnan(dep)){
+
+            // construct depth
+            xyz(2) = dep/calib.scaling_factor();
+            
+            // construct x and y
+            // x = (u-cx)*z/fx
+            // y = (v-cy)*z/fy
+            xyz(0) = (u-intrinsic(0,2)) * xyz(2) / intrinsic(0,0);
+            xyz(1) = (v-intrinsic(1,2)) * xyz(2) / intrinsic(1,1);
+            
+            // add point to pcd
+            good_point_ind.push_back(i);
+            positions_.push_back(xyz);
+
+            // for visualization
+            // cv::Vec3b avg_pixel = rgb_raw_image.color().at<cv::Vec3b>(v,u);
+            // img_selected.at<cv::Vec3b>(cv::Point(u, v)).val[0] = avg_pixel [0];
+            // img_selected.at<cv::Vec3b>(cv::Point(u, v)).val[1] = avg_pixel [1];
+            // img_selected.at<cv::Vec3b>(cv::Point(u, v)).val[2] = avg_pixel [2];
+        }
+      }
+
+      // cv::imshow("selected img: ",img_selected);
+      // cv::waitKey(0);
+      // cv::imwrite("selected_img.jpg", img_selected);
+
+      num_points_ = good_point_ind.size();
+      num_classes_ = rgb_raw_image.num_class();
+      feature_dimensions_ = 5;
+      features_.resize(num_points_, feature_dimensions_);
+      for (int i = 0; i < num_points_ ; i++) {
+        int u = output_uv[good_point_ind[i]](0);
+        int v = output_uv[good_point_ind[i]](1);
+        cv::Vec3b avg_pixel = rgb_raw_image.color().at<cv::Vec3b>(v,u);
+        auto & gradient = rgb_raw_image.gradient()[v * w + u];
+        features_(i,0) = ((float)(avg_pixel [0]) )/255.0;
+        features_(i,1) = ((float)(avg_pixel[1]) )/255.0;
+        features_(i,2) = ((float)(avg_pixel[2]) )/255.0;
+        features_(i,3) = gradient(0)/ 500.0 + 0.5;
+        features_(i,4) = gradient(1)/ 500.0 + 0.5;
+      }
+    }
+  }
+
+
 
   static void stereo_surface_sampling(const cv::Mat & left_gray,
                                       const std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & dso_selected_uv,

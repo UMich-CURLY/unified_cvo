@@ -30,6 +30,11 @@ namespace cvo {
     CvoPointCloud(const RawImage & left_raw_image,
                   const cv::Mat & right_image,
                   const Calibration &calib);
+
+    CvoPointCloud(const RawImage & rgb_raw_image,
+                  const cv::Mat & depth_image,
+                  const Calibration &calib,
+                  const bool& is_using_rgbd);
     
     CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
                   int target_num_points,
