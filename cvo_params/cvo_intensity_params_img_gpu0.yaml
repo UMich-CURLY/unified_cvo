@@ -10,9 +10,9 @@ sigma: 0.1
 sp_thres: 0.0006
 c: 7.0
 d: 7.0
-c_ell: 0.025 #0.02
+c_ell: 0.05 #0.025 #0.02
 c_sigma: 1 
-s_ell: 0.15 #0.04
+s_ell: 0.1 #0.15 #0.04
 s_sigma: 1 #0.7
 MAX_ITER: 100000
 min_step: 0.000001
