@@ -48,3 +48,5 @@ build
 *.eps
 *.gp
 *.tar.gz
+*.ps
+*.pdf

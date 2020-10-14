@@ -11,6 +11,7 @@
 #include "utils/Calibration.hpp"
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/CvoGPU.hpp"
+#include "cvo/CvoParams.hpp"
 
 using namespace std;
 using namespace boost::filesystem;
@@ -30,6 +31,7 @@ int main(int argc, char *argv[]) {
   kitti.set_start_index(start_frame);
   int max_num = std::stoi(argv[5]);
   
+  accum_output <<"1 0 0 0 0 1 0 0 0 0 1 0\n";
   
   cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();
@@ -40,13 +42,22 @@ int main(int argc, char *argv[]) {
   init_param.ell_decay_rate = init_param.ell_decay_rate_first_frame;
   init_param.ell_decay_start  = init_param.ell_decay_start_first_frame;
   cvo_align.write_params(&init_param);
-  
+
+  std::cout<<"write ell! ell init is "<<cvo_align.get_params().ell_init<<std::endl;
+
+  //cvo::cvo cvo_align_cpu("/home/rayzhang/outdoor_cvo/cvo_params/cvo_params.txt");
+
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
-  init_guess(2,3)=0;
-  Eigen::Affine3f init_guess_cpu = Eigen::Affine3f::Identity();
-  init_guess_cpu.matrix()(2,3)=0;
+  //init_guess(2,3)=2.22;
   Eigen::Matrix4f accum_mat = Eigen::Matrix4f::Identity();
   // start the iteration
+  /*  init_guess <<
+   0.99999533, -0.00285432,  0.00093057, -0.00943301,
+  0.00285291 , 0.99999478 , 0.00145044 ,-0.02358547,
+ -0.00093543 ,-0.00144773 , 0.99999849 , 2.34234614,
+  0.         , 0.         , 0.         , 1.        ;
+  */
+
 
   cv::Mat source_left, source_right;
   //std::vector<float> semantics_source;
@@ -74,6 +85,14 @@ int main(int argc, char *argv[]) {
     std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, right, calib));
 
     Eigen::Matrix4f result, init_guess_inv;
+    Eigen::Matrix4f identity_init = Eigen::Matrix4f::Identity(); 
+    
+    double in_product_pre = cvo_align.inner_product(*source, *target, init_guess);
+    std::cout<<"Theinit guess  inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_pre<<"\n";
+    double in_product_identity = cvo_align.inner_product(*source, *target, identity_init);
+    std::cout<<"The identity guess  inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_identity<<"\n";
+    
+    
     init_guess_inv = init_guess.inverse();
     printf("Start align... num_fixed is %d, num_moving is %d\n", source->num_points(), target->num_points());
     std::cout<<std::flush;
@@ -107,7 +126,7 @@ int main(int argc, char *argv[]) {
     source = target;
     if (i == start_frame) {
       init_param.ell_init = ell_init;
-      init_param.ell_decay_start = ell_decay_rate;
+      init_param.ell_decay_rate = ell_decay_rate;
       init_param.ell_decay_start = ell_decay_start;
       cvo_align.write_params(&init_param);
     }

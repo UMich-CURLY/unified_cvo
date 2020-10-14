@@ -43,8 +43,8 @@ int main(int argc, char *argv[]) {
   if (argc > 6) {
     default_seq_id = argv[6];
   }
+
   int seq_id = std::stoi(default_seq_id);
-  
   
   cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();
@@ -69,6 +69,7 @@ int main(int argc, char *argv[]) {
                                                     19, semantics_source, 
                                                     calib));
   //0.2));
+
 
   for (int i = start_frame; i<min(total_iters[seq_id], start_frame+max_num)-1 ; i++) {
     

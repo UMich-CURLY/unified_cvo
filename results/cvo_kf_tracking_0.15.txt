@@ -1,0 +1,1772 @@
+pth: /media/justin/LaCie/data/kitti/sequences/05
+Kitti contains 2761 files
+intrinsic: 
+707.091       0 601.887
+      0 707.091  183.11
+      0       0       1
+ baseline: 0.54
+reading cvo params from file
+
+=============================================
+Aligning 330 and 331
+num fixed: 17289
+num moving: 16450
+[Cvo ] the init guess for the transformation is 
+ 1 -0  0 -0
+-0  1 -0  0
+ 0 -0  1 -0
+-0  0 -0  1
+num_thread: 12
+dist: 9.83978e-06
+cvo # of iterations is 518
+t_transform_pcd is 0.012502
+t_compute_flow is 100.608
+t_compute_step is 1.55322
+num non-zeros in A: 27213
+The inner product between 330 and 331 is 0.167155
+Transform is 
+   0.999982 -0.00164785 -0.00592471  0.00110619
+ 0.00165723    0.999999  0.00156586 -0.00552918
+ 0.00592224 -0.00157578    0.999982    0.665564
+         -0           0          -0           1
+
+multiplying tf with 330
+adding 1 to accum_tf
+
+=============================================
+Aligning 330 and 332
+num fixed: 17289
+num moving: 13332
+[Cvo ] the init guess for the transformation is 
+   0.999922  0.00332354   0.0118414  -0.0140074
+-0.00328646    0.999987 -0.00316101   0.0142163
+  -0.011852  0.00312211    0.999923    -1.33102
+         -0           0          -0           1
+num_thread: 12
+dist: 8.16367e-06
+cvo # of iterations is 128
+t_transform_pcd is 0.0025752
+t_compute_flow is 55.7162
+t_compute_step is 0.387019
+num non-zeros in A: 254348
+The inner product between 330 and 332 is 1.93329
+Transform is 
+   0.999846 -0.00434368  -0.0168725   0.0802258
+ 0.00437277    0.999988  0.00171394  0.00943329
+  0.0168646 -0.00178725    0.999855      1.2788
+         -0           0          -0           1
+
+multiplying tf with 330
+adding 2 to accum_tf
+
+=============================================
+Aligning 330 and 333
+num fixed: 17289
+num moving: 14337
+[Cvo ] the init guess for the transformation is 
+   0.999594  0.00707465   0.0278092   -0.201702
+-0.00701995    0.999977 -0.00203076  -0.0188389
+ -0.0278221  0.00183414    0.999614    -1.88755
+         -0           0          -0           1
+num_thread: 12
+dist: 8.65069e-06
+cvo # of iterations is 1644
+t_transform_pcd is 0.0325193
+t_compute_flow is 631.552
+t_compute_step is 4.55236
+num non-zeros in A: 13409
+The inner product between 330 and 333 is 0.0942505
+Transform is 
+   0.999877 -0.00220769   -0.015898   -0.019419
+ 0.00228422    0.999989  0.00473176  -0.0299282
+  0.0158878   -0.004768    0.999866     1.97255
+         -0           0          -0           1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 332 and 333
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=============================================
+Aligning 332 and 333
+num fixed: 13332
+num moving: 14337
+[Cvo ] the init guess for the transformation is 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+num_thread: 12
+dist: 9.95357e-06
+cvo # of iterations is 137
+t_transform_pcd is 0.00255039
+t_compute_flow is 5.97377
+t_compute_step is 0.23797
+num non-zeros in A: 4928
+The inner product between 332 and 333 is 0.0418038
+Transform is 
+    0.999995   0.00261377  -0.00162765  -0.00243689
+ -0.00261333     0.999997  0.000269692  0.000467785
+  0.00162832 -0.000265437     0.999998    0.0019367
+           0            0            0            1
+
+multiplying tf with 332
+adding 3 to accum_tf
+
+=============================================
+Aligning 333 and 334
+num fixed: 14337
+num moving: 14236
+[Cvo ] the init guess for the transformation is 
+    0.999996  -0.00261119   0.00162257   0.00445412
+   0.0026117     0.999996 -0.000316603  -0.00060649
+  -0.0016217  0.000320837     0.999999  -0.00214651
+          -0            0           -0            1
+num_thread: 12
+dist: 8.51857e-06
+cvo # of iterations is 1163
+t_transform_pcd is 0.0216218
+t_compute_flow is 52.4146
+t_compute_step is 2.29484
+num non-zeros in A: 19830
+The inner product between 333 and 334 is 0.173247
+Transform is 
+   0.999997 -0.00106651 -0.00338076  -0.0174775
+ 0.00107024           1  0.00104412 -0.00381947
+  0.0033799 -0.00104758    0.999998    0.655101
+         -0           0          -0           1
+
+multiplying tf with 333
+adding 4 to accum_tf
+
+=============================================
+Aligning 333 and 335
+num fixed: 14337
+num moving: 13265
+[Cvo ] the init guess for the transformation is 
+   0.999969  0.00216811  0.00675878    0.012766
+-0.00215455     0.99999 -0.00207116  0.00943094
+-0.00676384  0.00205628    0.999967    -1.31132
+         -0           0          -0           1
+num_thread: 12
+dist: 9.36969e-06
+cvo # of iterations is 153
+t_transform_pcd is 0.0028524
+t_compute_flow is 6.5428
+t_compute_step is 0.320143
+num non-zeros in A: 14634
+The inner product between 333 and 335 is 0.136537
+Transform is 
+    0.99995 -0.00435259  -0.0083454 -0.00474343
+ 0.00438281    0.999979  0.00366544  -0.0134613
+ 0.00832879 -0.00370213     0.99995     1.28747
+         -0           0          -0           1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 334 and 335
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=============================================
+Aligning 334 and 335
+num fixed: 14236
+num moving: 13265
+[Cvo ] the init guess for the transformation is 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+num_thread: 12
+dist: 8.05363e-06
+cvo # of iterations is 1109
+t_transform_pcd is 0.0206629
+t_compute_flow is 45.9983
+t_compute_step is 2.11496
+num non-zeros in A: 19826
+The inner product between 334 and 335 is 0.191036
+Transform is 
+   0.999982  -0.0039826 -0.00453121  0.00373454
+ 0.00399205    0.999992  0.00195879 -0.00303036
+ 0.00452364 -0.00197701     0.99999    0.634288
+          0           0           0           1
+
+multiplying tf with 334
+adding 5 to accum_tf
+
+=============================================
+Aligning 335 and 336
+num fixed: 13265
+num moving: 13498
+[Cvo ] the init guess for the transformation is 
+   0.999982  0.00401961  0.00453033  -0.0116798
+-0.00401156    0.999988 -0.00190215  0.00222612
+-0.00453829  0.00188412    0.999986   -0.634405
+         -0           0          -0           1
+num_thread: 12
+dist: 9.13136e-06
+cvo # of iterations is 106
+t_transform_pcd is 0.00192307
+t_compute_flow is 4.63916
+t_compute_step is 0.222213
+num non-zeros in A: 21516
+The inner product between 335 and 336 is 0.219446
+Transform is 
+   0.999989 -0.00244681 -0.00409489  0.00167446
+ 0.00245298    0.999994  0.00164013 -0.00344542
+ 0.00409053 -0.00164995    0.999988    0.632275
+         -0           0          -0           1
+
+multiplying tf with 335
+adding 6 to accum_tf
+
+=============================================
+Aligning 335 and 337
+num fixed: 13265
+num moving: 13678
+[Cvo ] the init guess for the transformation is 
+   0.999955  0.00495836  0.00818035  -0.0233889
+-0.00493084    0.999986 -0.00323641  0.00767822
+-0.00819531  0.00319546    0.999965    -1.26474
+         -0           0          -0           1
+num_thread: 12
+dist: 9.46675e-06
+cvo # of iterations is 155
+t_transform_pcd is 0.00289323
+t_compute_flow is 6.49179
+t_compute_step is 0.307603
+num non-zeros in A: 15891
+The inner product between 335 and 337 is 0.157273
+Transform is 
+    0.999972  0.000197185  -0.00751935   -0.0124009
+-0.000174901            1   0.00278582   -0.0208784
+  0.00752085  -0.00278489     0.999972      1.24771
+          -0            0           -0            1
+
+multiplying tf with 335
+adding 7 to accum_tf
+
+=============================================
+Aligning 335 and 338
+num fixed: 13265
+num moving: 13257
+[Cvo ] the init guess for the transformation is 
+   0.999936 -0.00275079    0.010903   -0.013015
+ 0.00279208    0.999979 -0.00407738   0.0445255
+ -0.0108944  0.00410886    0.999922    -1.86396
+         -0           0          -0           1
+num_thread: 12
+dist: 9.79253e-06
+cvo # of iterations is 236
+t_transform_pcd is 0.00418018
+t_compute_flow is 9.09596
+t_compute_step is 0.434969
+num non-zeros in A: 10193
+The inner product between 335 and 338 is 0.102773
+Transform is 
+   0.999932  0.00296352  -0.0111902  -0.0245012
+-0.00295425    0.999987   0.0011429  -0.0321796
+  0.0111907 -0.00110853    0.999926     1.88882
+         -0           0          -0           1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 337 and 338
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=============================================
+Aligning 337 and 338
+num fixed: 13678
+num moving: 13257
+[Cvo ] the init guess for the transformation is 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+num_thread: 12
+dist: 9.41046e-06
+cvo # of iterations is 650
+t_transform_pcd is 0.0114389
+t_compute_flow is 25.147
+t_compute_step is 1.14635
+num non-zeros in A: 5324
+The inner product between 337 and 338 is 0.0471199
+Transform is 
+    0.999984   0.00427237  -0.00383268  -0.00987114
+ -0.00427483     0.999992 -0.000655066  -0.00952189
+  0.00383009  0.000671244     0.999994     0.080819
+           0            0            0            1
+
+multiplying tf with 337
+adding 8 to accum_tf
+
+=============================================
+Aligning 338 and 339
+num fixed: 13257
+num moving: 13534
+[Cvo ] the init guess for the transformation is 
+    0.999983  -0.00432406   0.00380038    0.0214921
+  0.00432206     0.999989  0.000500281    0.0126312
+ -0.00380277 -0.000483633     0.999991   -0.0816362
+          -0            0           -0            1
+num_thread: 12
+dist: 9.75229e-06
+cvo # of iterations is 733
+t_transform_pcd is 0.0129813
+t_compute_flow is 29.4094
+t_compute_step is 1.38457
+num non-zeros in A: 18032
+The inner product between 338 and 339 is 0.175238
+Transform is 
+    0.999985 -0.000785694  -0.00582854   0.00471835
+  0.00076366     0.999992  -0.00388916  -0.00221632
+  0.00583181   0.00388453     0.999975     0.609771
+          -0            0           -0            1
+
+multiplying tf with 338
+adding 9 to accum_tf
+
+=============================================
+Aligning 338 and 340
+num fixed: 13257
+num moving: 13557
+[Cvo ] the init guess for the transformation is 
+   0.999927  0.00112471   0.0116928  -0.0205786
+-0.00121705    0.999969  0.00779064   0.0364661
+ -0.0116836 -0.00780404    0.999903    -1.21941
+         -0           0          -0           1
+num_thread: 12
+dist: 9.54127e-06
+cvo # of iterations is 332
+t_transform_pcd is 0.00586074
+t_compute_flow is 13.4543
+t_compute_step is 0.649269
+num non-zeros in A: 11433
+The inner product between 338 and 340 is 0.106359
+Transform is 
+   0.999944 -0.00215909  -0.0100273  -0.0241632
+ 0.00209519    0.999978  -0.0062545  -0.0242189
+  0.0100407  0.00623341    0.999932     1.21461
+         -0           0          -0           1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 339 and 340
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=============================================
+Aligning 339 and 340
+num fixed: 13534
+num moving: 13557
+[Cvo ] the init guess for the transformation is 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+num_thread: 12
+dist: 9.3218e-06
+cvo # of iterations is 1607
+t_transform_pcd is 0.0300183
+t_compute_flow is 64.93
+t_compute_step is 3.10525
+num non-zeros in A: 16428
+The inner product between 339 and 340 is 0.154114
+Transform is 
+   0.999988 -0.00107251 -0.00536633  -0.0104115
+ 0.00105569    0.999996 -0.00325637 -0.00766438
+ 0.00537076  0.00325027    0.999986    0.607788
+          0           0           0           1
+
+multiplying tf with 339
+adding 10 to accum_tf
+
+=============================================
+Aligning 340 and 341
+num fixed: 13557
+num moving: 13603
+[Cvo ] the init guess for the transformation is 
+    0.999982  0.000894582   0.00538263   0.00489957
+-0.000912846     0.999992   0.00327764    0.0223474
+ -0.00538081  -0.00328207     0.999975    -0.608431
+          -0            0           -0            1
+num_thread: 12
+dist: 9.4369e-06
+cvo # of iterations is 364
+t_transform_pcd is 0.00689452
+t_compute_flow is 15.5827
+t_compute_step is 0.821751
+num non-zeros in A: 16871
+The inner product between 340 and 341 is 0.158016
+Transform is 
+   0.999977  0.00100022 -0.00630436  -0.0225895
+-0.00100957    0.999997 -0.00137718 -0.00506354
+ 0.00630183  0.00138394    0.999974     0.59115
+         -0           0          -0           1
+
+multiplying tf with 340
+adding 11 to accum_tf
+
+=============================================
+Aligning 340 and 342
+num fixed: 13557
+num moving: 13645
+[Cvo ] the init guess for the transformation is 
+   0.999924 -0.00215815   0.0126153   0.0407288
+ 0.00212645    0.999997  0.00262182   0.0216301
+  -0.012618 -0.00259572    0.999926    -1.18555
+         -0           0          -0           1
+num_thread: 12
+dist: 9.73621e-06
+cvo # of iterations is 244
+t_transform_pcd is 0.00466569
+t_compute_flow is 9.791
+t_compute_step is 0.522753
+num non-zeros in A: 13721
+The inner product between 340 and 342 is 0.125112
+Transform is 
+     0.99988   0.00406235   -0.0152991   -0.0462714
+ -0.00405546     0.999994  0.000403443   -0.0224618
+   0.0153035 -0.000342233     0.999892       1.1866
+          -0            0           -0            1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 341 and 342
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=============================================
+Aligning 341 and 342
+num fixed: 13603
+num moving: 13645
+[Cvo ] the init guess for the transformation is 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+num_thread: 12
+dist: 9.77115e-06
+cvo # of iterations is 2110
+t_transform_pcd is 0.0421351
+t_compute_flow is 81.7428
+t_compute_step is 4.17869
+num non-zeros in A: 18656
+The inner product between 341 and 342 is 0.173702
+Transform is 
+   0.999956  0.00234803 -0.00945375  -0.0139597
+-0.00233077    0.999999  0.00185279   -0.016994
+ 0.00945948 -0.00183099    0.999958    0.597695
+          0           0           0           1
+
+multiplying tf with 341
+adding 12 to accum_tf
+
+=============================================
+Aligning 342 and 343
+num fixed: 13645
+num moving: 14148
+[Cvo ] the init guess for the transformation is 
+   0.999949 -0.00221194  0.00945526   0.0293635
+ 0.00223096    0.999992 -0.00198544  0.00651497
+-0.00945209  0.00200673    0.999949   -0.599634
+         -0           0          -0           1
+num_thread: 12
+dist: 9.70356e-06
+cvo # of iterations is 297
+t_transform_pcd is 0.00596134
+t_compute_flow is 12.7654
+t_compute_step is 0.69619
+num non-zeros in A: 22727
+The inner product between 342 and 343 is 0.200922
+Transform is 
+     0.99996  0.000822253  -0.00843005   -0.0531955
+-0.000810798     0.999995   0.00134215  -0.00523342
+  0.00842992  -0.00133496      0.99996      0.60671
+          -0            0           -0            1
+
+multiplying tf with 342
+adding 13 to accum_tf
+
+=============================================
+Aligning 342 and 344
+num fixed: 13645
+num moving: 14474
+[Cvo ] the init guess for the transformation is 
+   0.999866   -0.001444     0.01686    0.118642
+  0.0014906           1 -0.00277711 -0.00337056
+ -0.0168533  0.00280122    0.999862    -1.22284
+         -0           0          -0           1
+num_thread: 12
+dist: 9.43036e-06
+cvo # of iterations is 535
+t_transform_pcd is 0.0107702
+t_compute_flow is 23.1099
+t_compute_step is 1.21575
+num non-zeros in A: 18312
+The inner product between 342 and 344 is 0.154737
+Transform is 
+    0.999821 -0.000484202   -0.0194061    -0.101449
+ 0.000518233      1.00001   0.00177432 -0.000310752
+   0.0194079  -0.00178467     0.999818      1.20166
+          -0            0           -0            1
+
+multiplying tf with 342
+adding 14 to accum_tf
+
+=============================================
+Aligning 342 and 345
+num fixed: 13645
+num moving: 14483
+[Cvo ] the init guess for the transformation is 
+   0.999512  0.00195916   0.0303778    0.177827
+-0.00189403    0.999978 -0.00212917  -0.0131122
+ -0.0303872  0.00207202    0.999516    -1.81271
+         -0           0          -0           1
+num_thread: 12
+dist: 9.24669e-06
+cvo # of iterations is 741
+t_transform_pcd is 0.0156475
+t_compute_flow is 31.4131
+t_compute_step is 1.622
+num non-zeros in A: 15445
+The inner product between 342 and 345 is 0.130091
+Transform is 
+   0.999312 -0.00118585  -0.0364088  -0.0825211
+ 0.00132503    0.999975   0.0037609  -0.0178833
+  0.0363987 -0.00380535     0.99931     1.79771
+         -0           0          -0           1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 344 and 345
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=============================================
+Aligning 344 and 345
+num fixed: 14474
+num moving: 14483
+[Cvo ] the init guess for the transformation is 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+num_thread: 12
+dist: 9.93755e-06
+cvo # of iterations is 1212
+t_transform_pcd is 0.0336525
+t_compute_flow is 60.4422
+t_compute_step is 2.93964
+num non-zeros in A: 29081
+The inner product between 344 and 345 is 0.239708
+Transform is 
+    0.999925  0.000474948   -0.0125014   -0.0325231
+-0.000462087            1   0.00103586  -0.00791341
+   0.0125028  -0.00103024     0.999926     0.584045
+           0            0            0            1
+
+multiplying tf with 344
+adding 15 to accum_tf
+
+=============================================
+Aligning 345 and 346
+num fixed: 14483
+num moving: 14096
+[Cvo ] the init guess for the transformation is 
+    0.999919 -0.000402988    0.0124993    0.0699028
+ 0.000416611     0.999998  -0.00108297   0.00191504
+  -0.0124999   0.00108832     0.999917     -0.58794
+          -0            0           -0            1
+num_thread: 12
+dist: 9.1037e-06
+cvo # of iterations is 228
+t_transform_pcd is 0.00785152
+t_compute_flow is 14.4235
+t_compute_step is 0.770103
+num non-zeros in A: 29823
+The inner product between 345 and 346 is 0.253547
+Transform is 
+    0.999891  0.000359019   -0.0146256   -0.0417849
+-0.000357388     0.999999  0.000114777  -0.00510865
+   0.0146246  -0.00010931     0.999888     0.576082
+          -0            0           -0            1
+
+multiplying tf with 345
+adding 16 to accum_tf
+
+=============================================
+Aligning 345 and 347
+num fixed: 14483
+num moving: 14353
+[Cvo ] the init guess for the transformation is 
+    0.999577  -0.00078763    0.0292462     0.183363
+ 0.000796909            1 -0.000309414    0.0121742
+  -0.0292426  0.000332038     0.999581     -1.16456
+          -0            0           -0            1
+num_thread: 12
+dist: 9.86259e-06
+cvo # of iterations is 353
+t_transform_pcd is 0.0100512
+t_compute_flow is 19.08
+t_compute_step is 1.03773
+num non-zeros in A: 25084
+The inner product between 345 and 347 is 0.207554
+Transform is 
+    0.999383  0.000846563   -0.0352652   -0.0547154
+-0.000821372            1  0.000736584   -0.0138918
+   0.0352691 -0.000707844     0.999387       1.1684
+          -0            0           -0            1
+
+multiplying tf with 345
+adding 17 to accum_tf
+
+=============================================
+Aligning 345 and 348
+num fixed: 14483
+num moving: 14167
+[Cvo ] the init guess for the transformation is 
+   0.998422 -0.00131858   0.0558835    0.266767
+ 0.00140345    0.999989 -0.00146671   0.0190914
+ -0.0558903  0.00154436    0.998414    -1.77835
+         -0           0          -0           1
+num_thread: 12
+dist: 9.84581e-06
+cvo # of iterations is 534
+t_transform_pcd is 0.0106143
+t_compute_flow is 24.6762
+t_compute_step is 1.29214
+num non-zeros in A: 22250
+The inner product between 345 and 348 is 0.185063
+Transform is 
+    0.998334  0.000122773   -0.0574728   -0.0900499
+-0.000106155     0.999992  0.000285627  -0.00825553
+    0.057464 -0.000277655     0.998327      1.74146
+          -0            0           -0            1
+
+multiplying tf with 345
+adding 18 to accum_tf
+
+=============================================
+Aligning 345 and 349
+num fixed: 14483
+num moving: 13932
+[Cvo ] the init guess for the transformation is 
+    0.996858  0.000266826    0.0796615     0.379687
+-0.000282816      1.00002  0.000165148    0.0129039
+  -0.0796354 -0.000190719      0.99687     -2.34744
+          -0            0           -0            1
+num_thread: 12
+dist: 9.96632e-06
+cvo # of iterations is 651
+t_transform_pcd is 0.0123558
+t_compute_flow is 28.4922
+t_compute_step is 1.41574
+num non-zeros in A: 20335
+The inner product between 345 and 349 is 0.171888
+Transform is 
+    0.996791   0.00277464   -0.0804439    -0.145585
+ -0.00275991      1.00001  0.000311737    -0.017995
+   0.0804702 -9.25759e-05     0.996808      2.32406
+          -0            0           -0            1
+
+multiplying tf with 345
+adding 19 to accum_tf
+
+=============================================
+Aligning 345 and 350
+num fixed: 14483
+num moving: 13544
+[Cvo ] the init guess for the transformation is 
+    0.994532  -0.00567717     0.103333     0.474359
+   0.0057748     0.999942 -0.000594279    0.0355794
+   -0.103394   0.00119671     0.994531     -2.96055
+          -0            0           -0     0.999999
+num_thread: 12
+dist: 9.69185e-06
+cvo # of iterations is 1234
+t_transform_pcd is 0.0265051
+t_compute_flow is 60.2068
+t_compute_step is 2.61623
+num non-zeros in A: 17354
+The inner product between 345 and 350 is 0.14747
+Transform is 
+   0.994572  0.00929266   -0.102751   -0.232188
+-0.00933003    0.999919 7.02368e-05  -0.0425889
+   0.102681 0.000898214    0.994603     2.90087
+         -0           0          -0    0.999999
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 349 and 350
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=============================================
+Aligning 349 and 350
+num fixed: 13932
+num moving: 13544
+[Cvo ] the init guess for the transformation is 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+num_thread: 12
+dist: 5.5892e-06
+cvo # of iterations is 1
+t_transform_pcd is 0.000109631
+t_compute_flow is 0.510203
+t_compute_step is 0.00446393
+num non-zeros in A: 2035
+The inner product between 349 and 350 is 0.0156223
+Transform is 
+    0.999956   0.00167291   -0.0092579  -0.00142258
+ -0.00168736     0.999997  -0.00155399 -0.000317798
+  0.00925527   0.00156954     0.999956   0.00374645
+           0            0            0            1
+
+multiplying tf with 349
+adding 20 to accum_tf
+
+=============================================
+Aligning 350 and 351
+num fixed: 13544
+num moving: 14300
+[Cvo ] the init guess for the transformation is 
+   0.999956  -0.0019721  0.00924546    0.097119
+ 0.00196055    0.999997  0.00126649     0.01452
+-0.00924769 -0.00124814    0.999956 -0.00901354
+         -0           0          -0           1
+num_thread: 12
+dist: 9.49415e-06
+cvo # of iterations is 833
+t_transform_pcd is 0.0162991
+t_compute_flow is 39.6841
+t_compute_step is 1.78837
+num non-zeros in A: 37720
+The inner product between 350 and 351 is 0.338334
+Transform is 
+   0.999748  0.00527751  -0.0219322  -0.0341552
+-0.00531921    0.999987 -0.00185943 -0.00814582
+  0.0219233  0.00197579    0.999759    0.568682
+         -0           0          -0           1
+
+multiplying tf with 350
+adding 21 to accum_tf
+
+=============================================
+Aligning 350 and 352
+num fixed: 13544
+num moving: 14462
+[Cvo ] the init guess for the transformation is 
+   0.998972  -0.0112868   0.0437949    0.275818
+  0.0112002     0.99993  0.00221199   0.0446652
+ -0.0438167 -0.00171884    0.999035    -1.15719
+         -0           0          -0           1
+num_thread: 12
+dist: 9.18525e-06
+cvo # of iterations is 479
+t_transform_pcd is 0.00962268
+t_compute_flow is 27.096
+t_compute_step is 1.17597
+num non-zeros in A: 36040
+The inner product between 350 and 352 is 0.315227
+Transform is 
+   0.998998    0.011006  -0.0432932  -0.0660675
+  -0.011129     0.99993 -0.00259259  -0.0168266
+  0.0432623  0.00307215    0.999056     1.13521
+         -0           0          -0           1
+
+multiplying tf with 350
+adding 22 to accum_tf
+
+=============================================
+Aligning 350 and 353
+num fixed: 13544
+num moving: 14638
+[Cvo ] the init guess for the transformation is 
+    0.997775   -0.0174163    0.0645564     0.356423
+   0.0173666      0.99986    0.0013524    0.0462331
+  -0.0645695 -0.000228327     0.997918     -1.72926
+          -0            0           -0            1
+num_thread: 12
+dist: 9.93668e-06
+cvo # of iterations is 518
+t_transform_pcd is 0.0103599
+t_compute_flow is 29.6425
+t_compute_step is 1.18032
+num non-zeros in A: 34638
+The inner product between 350 and 353 is 0.292912
+Transform is 
+   0.998067   0.0171864  -0.0599443   -0.108714
+ -0.0173719    0.999857 -0.00260213  -0.0246858
+  0.0598909  0.00363849    0.998203     1.71483
+         -0           0          -0           1
+
+multiplying tf with 350
+adding 23 to accum_tf
+
+=============================================
+Aligning 350 and 354
+num fixed: 13544
+num moving: 14307
+[Cvo ] the init guess for the transformation is 
+   0.996758   -0.023841   0.0765016    0.349982
+  0.0238991    0.999687 0.000117488   0.0430146
+ -0.0764743  0.00171315    0.997053      -2.325
+         -0           0          -0           1
+num_thread: 12
+0dist: 9.64463e-06
+cvo # of iterations is 624
+t_transform_pcd is 0.0125928
+t_compute_flow is 37.1492
+t_compute_step is 1.40256
+num non-zeros in A: 34231
+The inner product between 350 and 354 is 0.30088
+Transform is 
+  0.997122  0.0252228 -0.0711172  -0.157107
+-0.0254504   0.999647 -0.0022553 -0.0190422
+ 0.0710459 0.00406058    0.99745    2.27776
+        -0          0         -0          1
+
+multiplying tf with 350
+adding 24 to accum_tf
+
+=============================================
+Aligning 350 and 355
+num fixed: 13544
+num moving: 13706
+[Cvo ] the init guess for the transformation is 
+   0.996116  -0.0334114   0.0822247    0.293723
+  0.0336676    0.999496 -0.00164255   0.0109689
+ -0.0821496  0.00440021    0.996649    -2.86852
+         -0           0          -0    0.999999
+num_thread: 12
+dist: 9.7168e-06
+cvo # of iterations is 842
+t_transform_pcd is 0.0166677
+t_compute_flow is 48.6743
+t_compute_step is 1.821
+num non-zeros in A: 31147
+The inner product between 350 and 355 is 0.292873
+Transform is 
+  0.996538  0.0342514 -0.0766057  -0.193914
+ -0.034453   0.999471 -0.0014144 -0.0194088
+ 0.0764857 0.00404432   0.997102    2.84058
+        -0          0         -0   0.999999
+
+multiplying tf with 350
+adding 25 to accum_tf
+
+=============================================
+Aligning 350 and 356
+num fixed: 13544
+num moving: 12588
+[Cvo ] the init guess for the transformation is 
+   0.995571   -0.042859   0.0821033    0.152833
+  0.0433341    0.998893 -0.00417286  -0.0029066
+ -0.0817641  0.00772811    0.996502    -3.41512
+         -0           0          -0           1
+num_thread: 12
+dist: 9.74486e-06
+cvo # of iterations is 879
+t_transform_pcd is 0.0159363
+t_compute_flow is 44.9612
+t_compute_step is 1.74568
+num non-zeros in A: 28280
+The inner product between 350 and 356 is 0.292072
+Transform is 
+   0.996549   0.0395715  -0.0710749   -0.234899
+ -0.0393382    0.999058  0.00487412  -0.0510294
+  0.0712939 -0.00204438    0.997341     3.40201
+         -0           0          -0           1
+
+multiplying tf with 350
+adding 26 to accum_tf
+
+=============================================
+Aligning 350 and 357
+num fixed: 13544
+num moving: 11860
+[Cvo ] the init guess for the transformation is 
+  0.997235  -0.041031  0.0663277 -0.0934514
+  0.042242    0.99935 -0.0166107 -0.0403117
+-0.0657736  0.0193174   0.997968   -3.94961
+        -0          0         -0   0.999992
+num_thread: 12
+dist: 9.98512e-06
+cvo # of iterations is 1225
+t_transform_pcd is 0.0234302
+t_compute_flow is 59.7843
+t_compute_step is 2.33955
+num non-zeros in A: 26000
+The inner product between 350 and 357 is 0.290404
+Transform is 
+   0.997512    0.043764  -0.0603248   -0.252356
+ -0.0432628    0.999403  0.00918851  -0.0729607
+  0.0604746 -0.00660357    0.998456     3.95418
+         -0           0          -0    0.999992
+
+multiplying tf with 350
+adding 27 to accum_tf
+
+=============================================
+Aligning 350 and 358
+num fixed: 13544
+num moving: 11002
+[Cvo ] the init guess for the transformation is 
+  0.997191 -0.0435096   0.050332  -0.350601
+ 0.0445493   0.997878 -0.0201721 -0.0387824
+-0.0489848  0.0224911   0.997695   -4.47487
+        -0          0         -0    1.00002
+num_thread: 12
+dist: 9.43221e-06
+cvo # of iterations is 1954
+t_transform_pcd is 0.0355877
+t_compute_flow is 85.6938
+t_compute_step is 3.4155
+num non-zeros in A: 26634
+The inner product between 350 and 358 is 0.323339
+Transform is 
+   0.997356   0.0444891  -0.0456062   -0.280518
+ -0.0440498    0.998048    0.011126  -0.0816366
+  0.0464574 -0.00895738    0.998048     4.51586
+         -0           0          -0     1.00002
+
+multiplying tf with 350
+adding 28 to accum_tf
+
+=============================================
+Aligning 350 and 359
+num fixed: 13544
+num moving: 10843
+[Cvo ] the init guess for the transformation is 
+  0.999919 -0.0415404  0.0319577  -0.563218
+ 0.0421694    1.00113 -0.0204046 -0.0246708
+-0.0317728  0.0214093    1.00145   -5.01112
+        -0          0         -0   0.999951
+num_thread: 12
+dist: 1.95271e-07
+cvo # of iterations is 2176
+t_transform_pcd is 0.037761
+t_compute_flow is 85.5194
+t_compute_step is 3.28917
+num non-zeros in A: 15814
+The inner product between 350 and 359 is 0.197593
+Transform is 
+    1.00082   0.0178286  -0.0257305    0.153631
+ -0.0180775     1.00204 -0.00782348   -0.100921
+  0.0249093  0.00794291     1.00183     5.01158
+         -0           0          -0    0.999951
+
+multiplying tf with 350
+adding 29 to accum_tf
+
+=============================================
+Aligning 350 and 360
+num fixed: 13544
+num moving: 10759
+[Cvo ] the init guess for the transformation is 
+   0.997062  0.00299311  0.00424925    -1.69933
+-0.00274616    0.994269    0.027335    0.344123
+-0.00339446  -0.0265663    0.994182    -5.29596
+         -0           0          -0     1.00012
+num_thread: 12
+cvo # of iterations is 5000
+t_transform_pcd is 0.0859395
+t_compute_flow is 200.203
+t_compute_step is 7.5049
+num non-zeros in A: 12477
+The inner product between 350 and 360 is 0.159155
+Transform is 
+  0.986982  0.0320478  -0.136787   0.628278
+-0.0275105   0.993729  0.0332999   -0.26688
+  0.138831 -0.0283754   0.984532    5.36382
+        -0          0         -0    1.00012
+
+multiplying tf with 350
+adding 30 to accum_tf
+
+=============================================
+Aligning 350 and 361
+num fixed: 13544
+num moving: 10323
+[Cvo ] the init guess for the transformation is 
+  0.974335 -0.0189752   0.254043  -0.282537
+ 0.0366208     1.0099 -0.0711876  -0.160379
+ -0.252154  0.0765002   0.978405   -5.34437
+        -0          0         -0   0.999715
+num_thread: 12
+norm, omega: 0.000117387, v: 0.000111619
+cvo # of iterations is 122
+t_transform_pcd is 0.00219735
+t_compute_flow is 5.3227
+t_compute_step is 0.194517
+num non-zeros in A: 137
+The inner product between 350 and 361 is 0.00146338
+Transform is 
+  0.975434  0.0291967  -0.248851   -1.04572
+-0.0203102    1.01193  0.0424441   0.380983
+  0.249688 -0.0380223   0.981317    5.29591
+        -0          0         -0   0.999715
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 360 and 361
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=============================================
+Aligning 360 and 361
+num fixed: 10759
+num moving: 10323
+[Cvo ] the init guess for the transformation is 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+num_thread: 12
+dist: 9.38812e-06
+cvo # of iterations is 1653
+t_transform_pcd is 0.0286571
+t_compute_flow is 77.0265
+t_compute_step is 2.55348
+num non-zeros in A: 84778
+The inner product between 360 and 361 is 1.50446
+Transform is 
+    0.999894 -0.000241974    0.0148602   -0.0039673
+ 0.000240993            1  8.12011e-05  -0.00445627
+  -0.0148598 -7.78585e-05     0.999898     0.537543
+           0            0            0            1
+
+multiplying tf with 360
+adding 31 to accum_tf
+
+=============================================
+Aligning 361 and 362
+num fixed: 10323
+num moving: 9590
+[Cvo ] the init guess for the transformation is 
+    0.999888  0.000845305   -0.0147948     -0.38849
+-0.000865537     0.999999 -0.000356349    0.0136969
+   0.0148709   0.00037772      0.99988    -0.475219
+          -0           -0           -0            1
+num_thread: 12
+dist: 7.27248e-06
+cvo # of iterations is 232
+t_transform_pcd is 0.00404233
+t_compute_flow is 10.1664
+t_compute_step is 0.39371
+num non-zeros in A: 35528
+The inner product between 361 and 362 is 0.627946
+Transform is 
+   0.999825  0.00663764   0.0174357 -0.00104906
+-0.00667353    0.999976  0.00115762  -0.0130925
+ -0.0173512  -0.0012652    0.999838    0.525159
+         -0          -0          -0           1
+
+multiplying tf with 361
+adding 32 to accum_tf
+
+=============================================
+Aligning 361 and 363
+num fixed: 10323
+num moving: 9442
+[Cvo ] the init guess for the transformation is 
+    0.99929  -0.0106167  -0.0349968   -0.844854
+  0.0104185    0.999923 -0.00742441  -0.0235198
+  0.0351403  0.00704098    0.999419    -0.92005
+         -0           0          -0           1
+num_thread: 12
+norm, omega: 0.000110935, v: 0.000119951
+cvo # of iterations is 4285
+t_transform_pcd is 0.0739288
+t_compute_flow is 155.519
+t_compute_step is 5.65887
+num non-zeros in A: 3657
+The inner product between 361 and 363 is 0.0604315
+Transform is 
+  0.997753  0.0506274 -0.0430794   0.594281
+-0.0524683   0.997661 -0.0440814   0.448336
+ 0.0408082  0.0462299   0.998173   0.866816
+        -0          0         -0          1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 362 and 363
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=============================================
+Aligning 362 and 363
+num fixed: 9590
+num moving: 9442
+[Cvo ] the init guess for the transformation is 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+num_thread: 12
+dist: 9.76003e-06
+cvo # of iterations is 578
+t_transform_pcd is 0.00927152
+t_compute_flow is 20.1939
+t_compute_step is 0.812254
+num non-zeros in A: 32628
+The inner product between 362 and 363 is 0.615928
+Transform is 
+   0.999848   0.0011425   0.0174438  0.00428058
+-0.00117162    0.999999  0.00164456  -0.0234702
+ -0.0174417 -0.00166452    0.999847    0.527218
+          0           0           0           1
+
+multiplying tf with 362
+adding 33 to accum_tf
+
+=============================================
+Aligning 363 and 364
+num fixed: 9442
+num moving: 9231
+[Cvo ] the init guess for the transformation is 
+     0.99985  0.000102469   -0.0173399    -0.432677
+-0.000157587     0.999994   -0.0024453   0.00189732
+   0.0174339   0.00245658     0.999845    -0.456521
+          -0           -0           -0            1
+num_thread: 12
+dist: 1.58593e-06
+cvo # of iterations is 112
+t_transform_pcd is 0.00197994
+t_compute_flow is 4.33051
+t_compute_step is 0.162983
+num non-zeros in A: 21547
+The inner product between 363 and 364 is 0.399728
+Transform is 
+   0.999632  0.00462968  -0.0266361    0.229649
+-0.00462881    0.999986 0.000579819  -0.0217472
+  0.0267329 -0.00044785    0.999645    0.625434
+         -0          -0          -0           1
+
+multiplying tf with 363
+adding 34 to accum_tf
+
+=============================================
+Aligning 363 and 365
+num fixed: 9442
+num moving: 9902
+[Cvo ] the init guess for the transformation is 
+   0.998474   -0.010941     0.05277    0.060945
+  0.0111568    0.999949 -0.00158253   0.0740281
+ -0.0532008  0.00210918    0.998648    -1.24957
+         -0           0          -0           1
+num_thread: 12
+dist: 9.49022e-07
+cvo # of iterations is 30
+t_transform_pcd is 0.000593035
+t_compute_flow is 1.25219
+t_compute_step is 0.0417968
+num non-zeros in A: 1928
+The inner product between 363 and 365 is 0.0306556
+Transform is 
+   0.999752  0.00240985  -0.0190107  -0.0614639
+-0.00231404     1.00001 -0.00113271   -0.076723
+  0.0185614  0.00111383    0.999885     1.21513
+         -0           0          -0           1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 364 and 365
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=============================================
+Aligning 364 and 365
+num fixed: 9231
+num moving: 9902
+[Cvo ] the init guess for the transformation is 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+num_thread: 12
+dist: 9.92941e-06
+cvo # of iterations is 1633
+t_transform_pcd is 0.0275623
+t_compute_flow is 56.6882
+t_compute_step is 2.23111
+num non-zeros in A: 5458
+The inner product between 364 and 365 is 0.0919322
+Transform is 
+   0.999836 -0.00944292   0.0155046  -0.0289733
+ 0.00939607    0.999948  0.00309929  -0.0108863
+ -0.0155331 -0.00295301    0.999874   -0.141537
+          0           0           0           1
+
+multiplying tf with 364
+adding 35 to accum_tf
+
+=============================================
+Aligning 365 and 366
+num fixed: 9902
+num moving: 9946
+[Cvo ] the init guess for the transformation is 
+    0.999836    0.0105789   -0.0149785    -0.199825
+  -0.0106541     0.999941 -0.000544285   -0.0424067
+   0.0150626  0.000711913     0.999887     0.182134
+          -0           -0           -0            1
+num_thread: 12
+dist: 9.95788e-06
+cvo # of iterations is 733
+t_transform_pcd is 0.0124978
+t_compute_flow is 25.098
+t_compute_step is 1.04383
+num non-zeros in A: 4819
+The inner product between 365 and 366 is 0.0765427
+Transform is 
+   0.999943 -0.00984949  0.00554012   0.0522789
+ 0.00977616    0.999948  0.00134779 0.000105174
+ -0.0054622 -0.00128592    0.999986   -0.045161
+         -0          -0          -0           1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 365 and 366
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=============================================
+Aligning 365 and 366
+num fixed: 9902
+num moving: 9946
+[Cvo ] the init guess for the transformation is 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+num_thread: 12
+dist: 7.95078e-06
+cvo # of iterations is 637
+t_transform_pcd is 0.0108833
+t_compute_flow is 21.8148
+t_compute_step is 0.943685
+num non-zeros in A: 26764
+The inner product between 365 and 366 is 0.481509
+Transform is 
+   0.999892  0.00120536   0.0146667  0.00790341
+-0.00124722    0.999997  0.00284173  -0.0232299
+ -0.0146632 -0.00285982    0.999891    0.518613
+          0           0           0           1
+
+multiplying tf with 365
+adding 36 to accum_tf
+
+=============================================
+Aligning 366 and 367
+num fixed: 9946
+num moving: 10985
+[Cvo ] the init guess for the transformation is 
+    0.999894  0.000294417   -0.0145427    -0.399628
+-0.000356759      0.99999  -0.00344952    -0.015766
+   0.0146219   0.00346265     0.999887    -0.449477
+          -0           -0           -0            1
+num_thread: 12
+dist: 3.30269e-06
+cvo # of iterations is 112
+t_transform_pcd is 0.00200715
+t_compute_flow is 4.13889
+t_compute_step is 0.156494
+num non-zeros in A: 15286
+The inner product between 366 and 367 is 0.22206
+Transform is 
+   0.999682  0.00110345   -0.025071    0.210437
+-0.00115299    0.999994 -0.00146972  0.00619594
+  0.0251496  0.00150619    0.999685    0.470281
+         -0          -0          -0           1
+
+multiplying tf with 366
+adding 37 to accum_tf
+
+=============================================
+Aligning 366 and 368
+num fixed: 9946
+num moving: 10824
+[Cvo ] the init guess for the transformation is 
+   0.998694 -0.00555116   0.0496968    0.190801
+ 0.00546126    0.999993  0.00367252   0.0920281
+ -0.0501328  -0.0034521    0.998785   -0.980942
+         -0           0          -0           1
+num_thread: 12
+dist: 1.73354e-06
+cvo # of iterations is 112
+t_transform_pcd is 0.00195991
+t_compute_flow is 3.76971
+t_compute_step is 0.14667
+num non-zeros in A: 15318
+The inner product between 366 and 368 is 0.235109
+Transform is 
+    0.99903  0.00361538   0.0422367  -0.0641263
+ -0.0038523    0.999978  0.00743003  -0.0551241
+ -0.0426161 -0.00764698    0.999128      1.0115
+         -0           0          -0           1
+
+multiplying tf with 366
+adding 38 to accum_tf
+
+=============================================
+Aligning 366 and 369
+num fixed: 9946
+num moving: 11309
+[Cvo ] the init guess for the transformation is 
+   0.994366  0.00279809   -0.108618     -1.9538
+-0.00529866    0.999717  -0.0202099   -0.162342
+   0.109761   0.0209282    0.993499    -1.29473
+         -0          -0          -0           1
+num_thread: 12
+dist: 6.68624e-07
+cvo # of iterations is 1
+t_transform_pcd is 0.000120743
+t_compute_flow is 0.222408
+t_compute_step is 0.00252677
+num non-zeros in A: 189
+The inner product between 366 and 369 is 0.00226837
+Transform is 
+   0.994911    -0.00495    0.104659     2.07803
+ 0.00366299    0.999878   0.0102547    0.181783
+  -0.103474 -0.00952825    0.994216     1.08358
+         -0          -0          -0           1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 368 and 369
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=============================================
+Aligning 368 and 369
+num fixed: 10824
+num moving: 11309
+[Cvo ] the init guess for the transformation is 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+num_thread: 12
+dist: 8.77973e-06
+cvo # of iterations is 3014
+t_transform_pcd is 0.0525534
+t_compute_flow is 111.09
+t_compute_step is 4.77271
+num non-zeros in A: 25868
+The inner product between 368 and 369 is 0.365114
+Transform is 
+   0.999925 -0.00623794   0.0106439   0.0215704
+ 0.00625059    0.999981 -0.00115834 0.000858832
+ -0.0106365   0.0012248    0.999946    0.509942
+          0           0           0           1
+
+multiplying tf with 368
+adding 39 to accum_tf
+
+=============================================
+Aligning 369 and 370
+num fixed: 11309
+num moving: 11130
+[Cvo ] the init guess for the transformation is 
+   0.999932  0.00641875  -0.0103146   -0.331541
+-0.00643295    0.999974  0.00232903    0.042464
+  0.0103814 -0.00225454    0.999936   -0.453327
+         -0           0          -0           1
+num_thread: 12
+dist: 9.91016e-06
+cvo # of iterations is 301
+t_transform_pcd is 0.00527688
+t_compute_flow is 12.3805
+t_compute_step is 0.536016
+num non-zeros in A: 27655
+The inner product between 369 and 370 is 0.368424
+Transform is 
+   0.999942 -0.00515105   0.0101803   0.0133534
+ 0.00513083    0.999982 -0.00172056  -0.0165382
+ -0.0101193  0.00178074    0.999938    0.503862
+         -0           0          -0           1
+
+multiplying tf with 369
+adding 40 to accum_tf
+
+=============================================
+Aligning 369 and 371
+num fixed: 11309
+num moving: 11636
+[Cvo ] the init guess for the transformation is 
+   0.999726   0.0104594  -0.0198249   -0.623475
+ -0.0103465     0.99994  0.00530603    0.141194
+  0.0199029 -0.00512225    0.999816   -0.901547
+         -0           0          -0           1
+num_thread: 12
+dist: 2.83711e-06
+cvo # of iterations is 5
+t_transform_pcd is 0.000170703
+t_compute_flow is 0.4241
+t_compute_step is 0.0094572
+num non-zeros in A: 415
+The inner product between 369 and 371 is 0.004472
+Transform is 
+   0.999752  -0.0102005    0.018635    0.641296
+  0.0101876    0.999955  0.00128099   -0.133159
+ -0.0186236 -0.00111383    0.999852    0.890358
+         -0           0          -0           1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 370 and 371
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=============================================
+Aligning 370 and 371
+num fixed: 11130
+num moving: 11636
+[Cvo ] the init guess for the transformation is 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+num_thread: 12
+dist: 9.85585e-06
+cvo # of iterations is 525
+t_transform_pcd is 0.00973743
+t_compute_flow is 20.9057
+t_compute_step is 0.92695
+num non-zeros in A: 7066
+The inner product between 370 and 371 is 0.0874103
+Transform is 
+   0.999957  0.00243542  0.00891379  -0.0275554
+-0.00244195    0.999998 0.000720292  -0.0149973
+-0.00891204 -0.00074205     0.99996  -0.0287665
+          0           0           0           1
+
+multiplying tf with 370
+adding 41 to accum_tf
+
+=============================================
+Aligning 371 and 372
+num fixed: 11636
+num moving: 12025
+[Cvo ] the init guess for the transformation is 
+    0.99996 -0.00175921 -0.00897382   -0.143027
+ 0.00174994    0.999996 -0.00138268 -0.00545793
+ 0.00902041  0.00137104    0.999957   0.0595804
+         -0           0          -0           1
+num_thread: 12
+dist: 9.74044e-06
+cvo # of iterations is 1034
+t_transform_pcd is 0.018693
+t_compute_flow is 37.8216
+t_compute_step is 1.79783
+num non-zeros in A: 7830
+The inner product between 371 and 372 is 0.0897162
+Transform is 
+    0.999975   -0.0069824   0.00226689    0.0351526
+    0.006986     0.999978 -0.000258288    0.0155437
+ -0.00222098  0.000278166     0.999996   -0.0442193
+          -0            0           -0            1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 371 and 372
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=============================================
+Aligning 371 and 372
+num fixed: 11636
+num moving: 12025
+[Cvo ] the init guess for the transformation is 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+num_thread: 12
+dist: 9.89663e-06
+cvo # of iterations is 869
+t_transform_pcd is 0.0155681
+t_compute_flow is 31.0154
+t_compute_step is 1.47272
+num non-zeros in A: 7854
+The inner product between 371 and 372 is 0.0899023
+Transform is 
+   0.999967 -0.00798111  0.00225389   0.0350234
+ 0.00798238    0.999974 -0.00060985   0.0205409
+-0.00224895 0.000627852    0.999997  -0.0421078
+          0           0           0           1
+
+multiplying tf with 371
+adding 42 to accum_tf
+
+=============================================
+Aligning 372 and 373
+num fixed: 12025
+num moving: 11925
+[Cvo ] the init guess for the transformation is 
+   0.999971  0.00779386 -0.00185451   -0.069505
+-0.00782913    0.999959  0.00216351  -0.0135591
+ 0.00188511 -0.00214652    0.999994   0.0569862
+         -0           0          -0           1
+num_thread: 12
+dist: 9.51741e-06
+cvo # of iterations is 520
+t_transform_pcd is 0.00901984
+t_compute_flow is 17.6486
+t_compute_step is 0.886579
+num non-zeros in A: 6805
+The inner product between 372 and 373 is 0.075471
+Transform is 
+    0.999983   0.00644214  0.000549491    0.0191475
+ -0.00648361     0.999966    0.0036707   -0.0296927
+-0.000511904  -0.00367186     0.999992   -0.0390268
+          -0            0           -0            1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 372 and 373
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=============================================
+Aligning 372 and 373
+num fixed: 12025
+num moving: 11925
+[Cvo ] the init guess for the transformation is 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+num_thread: 12
+dist: 9.70465e-06
+cvo # of iterations is 713
+t_transform_pcd is 0.0122587
+t_compute_flow is 24.1564
+t_compute_step is 1.19003
+num non-zeros in A: 6820
+The inner product between 372 and 373 is 0.0755824
+Transform is 
+   0.999981  0.00601364  0.00163564  0.00650638
+-0.00601861     0.99998  0.00301886     -0.0232
+-0.00161747 -0.00302872    0.999994 -0.00961724
+          0           0           0           1
+
+multiplying tf with 372
+adding 43 to accum_tf
+
+=============================================
+Aligning 373 and 374
+num fixed: 11925
+num moving: 12679
+[Cvo ] the init guess for the transformation is 
+   0.999982 -0.00520228 -0.00183831  -0.0365496
+ 0.00521977    0.999975 -0.00417546  -0.0374686
+ 0.00186844  0.00416548    0.999992   0.0161035
+         -0           0          -0           1
+num_thread: 12
+dist: 9.98141e-06
+cvo # of iterations is 599
+t_transform_pcd is 0.0103723
+t_compute_flow is 21.0726
+t_compute_step is 1.08592
+num non-zeros in A: 6366
+The inner product between 373 and 374 is 0.0681498
+Transform is 
+    0.999996   0.00215686  0.000224792    0.0171092
+ -0.00213209     0.999994   0.00201843   -0.0123911
+-0.000211985  -0.00201915            1   -0.0318311
+          -0            0           -0            1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 373 and 374
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=============================================
+Aligning 373 and 374
+num fixed: 11925
+num moving: 12679
+[Cvo ] the init guess for the transformation is 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+num_thread: 12
+dist: 9.85189e-06
+cvo # of iterations is 1178
+t_transform_pcd is 0.0197578
+t_compute_flow is 39.2546
+t_compute_step is 1.99515
+num non-zeros in A: 6387
+The inner product between 373 and 374 is 0.0683028
+Transform is 
+    0.999997   0.00274841   0.00081965    0.0113245
+ -0.00275033     0.999995    0.0022651   -0.0160689
+-0.000813428  -0.00226739     0.999997   -0.0296138
+           0            0            0            1
+
+multiplying tf with 373
+adding 44 to accum_tf
+
+=============================================
+Aligning 374 and 375
+num fixed: 12679
+num moving: 13151
+[Cvo ] the init guess for the transformation is 
+    0.999995  -0.00220103 -0.000889983   -0.0211734
+  0.00220947     0.999992  -0.00277524   -0.0310373
+ 0.000900908   0.00277333     0.999997    0.0335606
+          -0            0           -0            1
+num_thread: 12
+dist: 9.96736e-06
+cvo # of iterations is 652
+t_transform_pcd is 0.0112541
+t_compute_flow is 22.5924
+t_compute_step is 1.16025
+num non-zeros in A: 6746
+The inner product between 374 and 375 is 0.0650789
+Transform is 
+    0.999997  -0.00146782 -1.29633e-05   0.00289966
+  0.00147866     0.999996    0.0012671  -0.00771429
+ 1.58483e-05  -0.00126716            1  -0.00957482
+          -0            0           -0            1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 374 and 375
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=============================================
+Aligning 374 and 375
+num fixed: 12679
+num moving: 13151
+[Cvo ] the init guess for the transformation is 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+num_thread: 12
+dist: 9.38543e-06
+cvo # of iterations is 255
+t_transform_pcd is 0.00451987
+t_compute_flow is 8.99546
+t_compute_step is 0.468751
+num non-zeros in A: 6852
+The inner product between 374 and 375 is 0.065764
+Transform is 
+    0.999999  -0.00146057  0.000187953 -0.000405379
+  0.00146031     0.999998   0.00127239  -0.00865593
+-0.000189846  -0.00127207     0.999999   0.00559504
+           0            0            0            1
+
+multiplying tf with 374
+adding 45 to accum_tf
+
+=============================================
+Aligning 375 and 376
+num fixed: 13151
+num moving: 14099
+[Cvo ] the init guess for the transformation is 
+           1   0.00168372 -7.00579e-05  -0.00376307
+ -0.00169165     0.999997 -0.000966046   -0.0170544
+ 7.02297e-05  0.000966781            1  -0.00565357
+          -0           -0           -0            1
+num_thread: 12
+dist: 9.49766e-06
+cvo # of iterations is 406
+t_transform_pcd is 0.00751
+t_compute_flow is 15.0672
+t_compute_step is 0.796652
+num non-zeros in A: 7883
+The inner product between 375 and 376 is 0.0674144
+Transform is 
+           1  0.000191678  0.000629112   0.00484919
+-0.000199795     0.999998  0.000346875  -0.00836367
+ -0.00062721 -0.000346403            1    0.0115185
+          -0           -0           -0            1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 375 and 376
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=============================================
+Aligning 375 and 376
+num fixed: 13151
+num moving: 14099
+[Cvo ] the init guess for the transformation is 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+num_thread: 12
+dist: 9.92626e-06
+cvo # of iterations is 288
+t_transform_pcd is 0.00552427
+t_compute_flow is 10.72
+t_compute_step is 0.569454
+num non-zeros in A: 7822
+The inner product between 375 and 376 is 0.067069
+Transform is 
+    0.999999  0.000366692  0.000635483   0.00396104
+-0.000366957            1  0.000408345  -0.00898446
+-0.000635328 -0.000408597     0.999999   0.00340635
+           0            0            0            1
+
+multiplying tf with 375
+adding 46 to accum_tf
+
+=============================================
+Aligning 376 and 377
+num fixed: 14099
+num moving: 14587
+[Cvo ] the init guess for the transformation is 
+           1 -0.000241552  -0.00064101    -0.017071
+  0.00024216     0.999999 -0.000483227  0.000638516
+ 0.000644403  0.000483361            1  0.000233705
+          -0            0           -0            1
+num_thread: 12
+dist: 9.98727e-06
+cvo # of iterations is 681
+t_transform_pcd is 0.0124431
+t_compute_flow is 25.8457
+t_compute_step is 1.37088
+num non-zeros in A: 8887
+The inner product between 376 and 377 is 0.0690308
+Transform is 
+   0.999996  0.00246342  0.00180876  0.00820365
+-0.00246407    0.999998 0.000874338  -0.0159289
+-0.00180332 -0.00087855    0.999999  -0.0200028
+         -0           0          -0           1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 376 and 377
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=============================================
+Aligning 376 and 377
+num fixed: 14099
+num moving: 14587
+[Cvo ] the init guess for the transformation is 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+num_thread: 12
+dist: 9.95752e-06
+cvo # of iterations is 995
+t_transform_pcd is 0.0180098
+t_compute_flow is 37.7376
+t_compute_step is 1.94244
+num non-zeros in A: 8833
+The inner product between 376 and 377 is 0.0688052
+Transform is 
+    0.999992   0.00237193   0.00339378  -0.00432795
+ -0.00237518     0.999998  0.000959233    -0.016721
+ -0.00339151 -0.000967222     0.999994   -0.0307513
+           0            0            0            1
+
+multiplying tf with 376
+adding 47 to accum_tf
+
+=============================================
+Aligning 377 and 378
+num fixed: 14587
+num moving: 14555
+[Cvo ] the init guess for the transformation is 
+   0.999992 -0.00193137 -0.00348091  -0.0566872
+ 0.00193372    0.999995 -0.00146952 -0.00551851
+  0.0035007  0.00146394    0.999993   0.0437952
+         -0           0          -0           1
+

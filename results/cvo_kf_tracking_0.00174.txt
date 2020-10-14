@@ -1,0 +1,509 @@
+reading cvo params from file
+
+=============================================
+Aligning 0 and 1
+num fixed: 13542
+num moving: 13665
+[Cvo ] the init guess for the transformation is 
+ 1 -0  0 -0
+-0  1 -0  0
+ 0 -0  1 -0
+-0  0 -0  1
+num_thread: 12
+dist: 9.82131e-06
+cvo # of iterations is 715
+t_transform_pcd is 0.01621
+t_compute_flow is 29.7505
+t_compute_step is 1.74833
+The inner product between 0 and 1 is 0.00189597
+Transform is 
+    0.999999  -0.00156952   -0.0012558  -0.00743958
+  0.00156785            1 -0.000886073   -0.0124169
+  0.00125673  0.000883858            1     0.558281
+          -0            0           -0            1
+
+
+=============================================
+Aligning 0 and 2
+num fixed: 13542
+num moving: 13299
+[Cvo ] the init guess for the transformation is 
+   0.999991  0.00313568  0.00251575   0.0128311
+-0.00313902    0.999991  0.00176622   0.0233189
+-0.00250927 -0.00177362    0.999992    -1.11662
+         -0           0          -0           1
+num_thread: 12
+dist: 9.98983e-06
+cvo # of iterations is 590
+t_transform_pcd is 0.0130282
+t_compute_flow is 28.9154
+t_compute_step is 1.53653
+The inner product between 0 and 2 is 0.00187538
+Transform is 
+   0.999995 -0.00217864 -0.00214629  -0.0225326
+ 0.00217533    0.999993 -0.00207592  -0.0262681
+ 0.00215175  0.00207169    0.999993     1.13638
+         -0           0          -0           1
+
+
+=============================================
+Aligning 0 and 3
+num fixed: 13542
+num moving: 13210
+[Cvo ] the init guess for the transformation is 
+   0.999992  0.00277891  0.00304515   0.0330247
+-0.00279168    0.999997  0.00325786   0.0351239
+-0.00303842 -0.00326747    0.999996    -1.71469
+         -0           0          -0           1
+num_thread: 12
+dist: 9.14473e-06
+cvo # of iterations is 475
+t_transform_pcd is 0.0106348
+t_compute_flow is 32.2708
+t_compute_step is 1.37052
+The inner product between 0 and 3 is 0.00186825
+Transform is 
+   0.999989 -0.00267841 -0.00417664  -0.0173144
+ 0.00266362    0.999999 -0.00286675  -0.0524398
+ 0.00418192   0.0028544    0.999993     1.69045
+         -0           0          -0           1
+
+
+=============================================
+Aligning 0 and 4
+num fixed: 13542
+num moving: 13195
+[Cvo ] the init guess for the transformation is 
+    0.999974   0.00315707   0.00621805 -0.000498586
+ -0.00317291     0.999973   0.00363883    0.0708352
+ -0.00620084  -0.00365567     0.999959     -2.24479
+          -0            0           -0            1
+num_thread: 12
+dist: 9.77887e-06
+cvo # of iterations is 956
+t_transform_pcd is 0.0240094
+t_compute_flow is 62.6188
+t_compute_step is 2.74607
+The inner product between 0 and 4 is 0.00184723
+Transform is 
+   0.999968 -0.00518554 -0.00550428  -0.0433499
+ 0.00516844    0.999962 -0.00434208  -0.0678537
+ 0.00553232  0.00431629    0.999962     2.29236
+         -0           0          -0           1
+
+
+=============================================
+Aligning 0 and 5
+num fixed: 13542
+num moving: 13148
+[Cvo ] the init guess for the transformation is 
+   0.999954  0.00765511  0.00687293   0.0508999
+-0.00771128    0.999991  0.00576838   0.0669777
+-0.00684199 -0.00582781    0.999994    -2.89515
+         -0           0          -0           1
+num_thread: 12
+dist: 9.54882e-06
+cvo # of iterations is 534
+t_transform_pcd is 0.0118322
+t_compute_flow is 42.5334
+t_compute_step is 1.54507
+The inner product between 0 and 5 is 0.00181381
+Transform is 
+   0.999951 -0.00742297 -0.00775715  -0.0252773
+ 0.00735342    0.999986 -0.00684838  -0.0755056
+ 0.00779381   0.0067841    0.999981     2.81957
+         -0           0          -0           1
+
+
+=============================================
+Aligning 0 and 6
+num fixed: 13542
+num moving: 13484
+[Cvo ] the init guess for the transformation is 
+   0.999884  0.00957161    0.010093   -0.024592
+-0.00962504    0.999823  0.00926194   0.0533394
+-0.00997072 -0.00934181    0.999824     -3.3471
+         -0           0          -0           1
+num_thread: 12
+dist: 9.96434e-06
+cvo # of iterations is 416
+t_transform_pcd is 0.0098474
+t_compute_flow is 38.1369
+t_compute_step is 1.17145
+The inner product between 0 and 6 is 0.00180828
+Transform is 
+   0.999902 -0.00731681   -0.010184 -0.00278743
+ 0.00726287    0.999843 -0.00918359   -0.064428
+  0.0102837  0.00912538    0.999823      3.4393
+         -0           0          -0           1
+
+
+=============================================
+Aligning 0 and 7
+num fixed: 13542
+num moving: 13971
+[Cvo ] the init guess for the transformation is 
+    0.99994   0.0070725   0.0126958  -0.0693437
+-0.00731451     1.00012   0.0114311  0.00854201
+ -0.0126927   -0.011562     1.00005    -4.05966
+         -0           0          -0           1
+num_thread: 12
+dist: 9.93566e-06
+cvo # of iterations is 643
+t_transform_pcd is 0.0151671
+t_compute_flow is 62.8137
+t_compute_step is 1.79993
+The inner product between 0 and 7 is 0.00180617
+Transform is 
+   0.999951  -0.0074918  -0.0118223 0.000933794
+ 0.00730289     1.00015 -0.00790964  -0.0869015
+  0.0118011  0.00778257      1.0001       4.017
+         -0           0          -0           1
+
+
+=============================================
+Aligning 0 and 8
+num fixed: 13542
+num moving: 13651
+[Cvo ] the init guess for the transformation is 
+   0.999768   0.0075724   0.0135034  -0.0649349
+ -0.0074277    0.999436  0.00652886   0.0786108
+  -0.013263 -0.00653351    0.999409    -4.59284
+         -0           0          -0           1
+num_thread: 12
+dist: 9.97905e-06
+cvo # of iterations is 451
+t_transform_pcd is 0.0111413
+t_compute_flow is 43.4362
+t_compute_step is 1.28904
+The inner product between 0 and 8 is 0.0017817
+Transform is 
+   0.999774 -0.00775499  -0.0126012  -0.0211917
+ 0.00788912    0.999426 -0.00770542    -0.11441
+  0.0128527  0.00770149     0.99941     4.59983
+         -0           0          -0           1
+
+
+=============================================
+Aligning 0 and 9
+num fixed: 13542
+num moving: 13754
+[Cvo ] the init guess for the transformation is 
+    1.00015  0.00792687   0.0134582  -0.0248504
+-0.00859147     1.00118  0.00740532    0.103207
+ -0.0138578 -0.00774934     1.00104    -5.18931
+         -0           0          -0           1
+num_thread: 12
+dist: 9.91593e-06
+cvo # of iterations is 559
+t_transform_pcd is 0.0125235
+t_compute_flow is 55.8911
+t_compute_step is 1.55103
+The inner product between 0 and 9 is 0.00178165
+Transform is 
+    1.00014 -0.00853412  -0.0150192  -0.0147044
+ 0.00782698     1.00116   -0.010068   -0.141332
+  0.0146362  0.00971536       1.001     5.23192
+         -0           0          -0           1
+
+
+=============================================
+Aligning 0 and 10
+num fixed: 13542
+num moving: 13272
+[Cvo ] the init guess for the transformation is 
+  0.999149 0.00908029  0.0174932 -0.0913402
+-0.0079334   0.996901  0.0122299  0.0974563
+-0.0162741 -0.0118169   0.996996   -5.84955
+        -0          0         -0          1
+num_thread: 12
+dist: 9.52532e-06
+cvo # of iterations is 701
+t_transform_pcd is 0.0172568
+t_compute_flow is 71.4851
+t_compute_step is 1.96469
+The inner product between 0 and 10 is 0.00177486
+Transform is 
+   0.999194 -0.00341918  -0.0155598    -0.04878
+ 0.00450257    0.996874  -0.0154705   -0.142243
+   0.016741   0.0159594     0.99696      5.8982
+         -0           0          -0           1
+
+
+=============================================
+Aligning 0 and 11
+num fixed: 13542
+num moving: 13501
+[Cvo ] the init guess for the transformation is 
+    1.00146 -0.00204291   0.0162216  -0.0234582
+-0.00159182     1.00703   0.0210965  0.00916527
+ -0.0189412  -0.0224394     1.00637    -6.60844
+         -0           0          -0    0.999999
+num_thread: 12
+dist: 9.77381e-06
+cvo # of iterations is 1185
+t_transform_pcd is 0.0271524
+t_compute_flow is 134.889
+t_compute_step is 3.21521
+The inner product between 0 and 11 is 0.00176783
+Transform is 
+    1.00149 -0.00632175  -0.0170996  -0.0774952
+ 0.00276271      1.0071  -0.0179393   -0.184358
+  0.0144823   0.0165148      1.0065     6.36061
+         -0           0          -0    0.999999
+
+
+=============================================
+Aligning 0 and 12
+num fixed: 13542
+num moving: 13218
+[Cvo ] the init guess for the transformation is 
+   0.995978  0.00875616    0.018457  -0.0175748
+-0.00122492    0.982526   0.0197543   0.0889541
+ -0.0119333  -0.0166266     0.98357     -6.7204
+         -0           0          -0           1
+num_thread: 12
+dist: 9.99733e-06
+cvo # of iterations is 3358
+t_transform_pcd is 0.0698392
+t_compute_flow is 157.422
+t_compute_step is 6.79068
+The inner product between 0 and 12 is 0.00169937
+Transform is 
+   0.99599 0.00351116 -0.0130059  -0.170749
+0.00390857   0.982497 -0.0179067  -0.161591
+ 0.0194666  0.0210945   0.983541    7.43727
+        -0          0         -0          1
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 11 and 12
+~~~~~~~~~~~~~~~~~~~~~~~~~
+init guess for 11 and 12 is: 
+    0.997755    0.0028268   0.00138908    0.0210254
+  0.00177378     0.989833    0.0022778    0.0335619
+  0.00224727 -0.000425677     0.990465    -0.460292
+          -0            0           -0            1
+
+=============================================
+Aligning 11 and 12
+num fixed: 13501
+num moving: 13218
+[Cvo ] the init guess for the transformation is 
+    0.997755    0.0028268   0.00138908    0.0210254
+  0.00177378     0.989833    0.0022778    0.0335619
+  0.00224727 -0.000425677     0.990465    -0.460292
+          -0            0           -0            1
+num_thread: 12
+dist: 9.88359e-06                                                     
+cvo # of iterations is 1137
+t_transform_pcd is 0.0219326
+t_compute_flow is 33.8708
+t_compute_step is 2.46844
+The inner product between 11 and 12 is 0.00178335
+Transform is 
+    0.997756   0.00673052   0.00087257   -0.0375386
+ -0.00217302     0.989813 -0.000748412    0.0137098
+  0.00277079   0.00259829     0.990469     0.775604
+          -0            0           -0            1
+
+
+=============================================
+Aligning 12 and 13
+num fixed: 13218
+num moving: 12971
+[Cvo ] the init guess for the transformation is 
+    1.00447  -0.0137082 -0.00179189   0.0776885
+ 0.00442172     1.02064  0.00153608  -0.0293769
+-0.00565806  -0.0052956     1.01934    -1.57388
+         -0           0          -0    0.999996
+num_thread: 12
+dist: 9.85907e-06
+cvo # of iterations is 2687
+t_transform_pcd is 0.0478971
+t_compute_flow is 68.666
+t_compute_step is 4.57691
+The inner product between 12 and 13 is 0.00173557
+Transform is 
+    1.00453  -0.0105551 0.000513803   -0.020737
+0.000948942     1.02054  0.00672753 -0.00834876
+-0.00780882   -0.010521     1.01935     1.34872
+         -0           0          -0    0.999996
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 12 and 13
+~~~~~~~~~~~~~~~~~~~~~~~~~
+init guess for 12 and 13 is: 
+     1.00224  -0.00681267 -0.000888084    0.0384047
+  0.00219818      1.01028  0.000761441   -0.0143587
+ -0.00280948  -0.00263119      1.00962    -0.783136
+          -0            0           -0     0.999998
+
+=============================================
+Aligning 12 and 13
+num fixed: 13218
+num moving: 12971
+[Cvo ] the init guess for the transformation is 
+     1.00224  -0.00681267 -0.000888084    0.0384047
+  0.00219818      1.01028  0.000761441   -0.0143587
+ -0.00280948  -0.00263119      1.00962    -0.783136
+          -0            0           -0     0.999998
+num_thread: 12
+dist: 9.95215e-06
+cvo # of iterations is 926
+t_transform_pcd is 0.0169479
+t_compute_flow is 25.5579
+t_compute_step is 2.02027
+The inner product between 12 and 13 is 0.00180801
+Transform is 
+     1.00226   -0.0026877  -0.00269822    0.0108586
+ -0.00197539      1.01023   0.00762157    -0.019011
+-0.000966006  -0.00951114       1.0096     0.537966
+          -0            0           -0     0.999998
+
+
+=============================================
+Aligning 13 and 14
+num fixed: 12971
+num moving: 13202
+[Cvo ] the init guess for the transformation is 
+  0.995521 0.00535023 0.00524138 -0.0257349
+0.00385589   0.979663 -0.0147812  0.0493477
+0.00195259  0.0184728   0.980871      -1.06
+        -0         -0         -0          1
+num_thread: 12
+dist: 9.26736e-06
+cvo # of iterations is 1086
+t_transform_pcd is 0.020363
+t_compute_flow is 29.2997
+t_compute_step is 2.32507
+The inner product between 13 and 14 is 0.00178182
+Transform is 
+   0.995537   0.0107713  0.00247896  -0.0549112
+-0.00173256    0.979713  0.00838141   0.0332546
+ 0.00482167 -0.00472161     0.98101    0.874265
+         -0          -0          -0           1
+
+
+=============================================
+Aligning 13 and 15
+num fixed: 12971
+num moving: 13023
+[Cvo ] the init guess for the transformation is 
+    1.01128   -0.025287 -0.00770308    0.130569
+ 0.00169432     1.05245  -0.0100504  -0.0764094
+ -0.0110409 0.000416651     1.04911    -1.26119
+         -0           0          -0    0.999989
+num_thread: 12
+dist: 9.88026e-06
+cvo # of iterations is 2867
+t_transform_pcd is 0.0495895
+t_compute_flow is 69.4911
+t_compute_step is 4.99267
+The inner product between 13 and 15 is 0.00177878
+Transform is 
+     1.01153   -0.0241881  -0.00438559    0.0859467
+-0.000738932      1.05179     0.020126    -0.127659
+  -0.0141163   -0.0299324      1.04898     0.764293
+          -0            0           -0     0.999989
+
+
+=============================================
+Aligning 13 and 16
+num fixed: 12971
+num moving: 13597
+[Cvo ] the init guess for the transformation is 
+   0.973185   0.0540212  0.00900699   -0.218814
+-0.00100441    0.884438  -0.0264284    0.284039
+  0.0300645   0.0474378    0.890567   -0.569876
+         -0          -0          -0     1.00003
+num_thread: 12
+norm, omega: 8.06646e-05, v: 0.000119619
+cvo # of iterations is 3349
+t_transform_pcd is 0.0573934
+t_compute_flow is 83.2513
+t_compute_step is 5.33377
+The inner product between 13 and 16 is 0.0016282
+Transform is 
+  0.974359  0.0617355  0.0212441   0.326221
+-0.0146373   0.882154   0.050015  -0.210113
+ 0.0223143 -0.0303626   0.890681   0.486157
+        -0         -0         -0    1.00003
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 15 and 16
+~~~~~~~~~~~~~~~~~~~~~~~~~
+init guess for 15 and 16 is: 
+   0.984237   0.0330101  0.00626737   -0.135182
+-0.00129646    0.931061  -0.0099182    0.150844
+  0.0178046   0.0225108    0.935007    0.107311
+         -0          -0          -0     1.00002
+
+=============================================
+Aligning 15 and 16
+num fixed: 13023
+num moving: 13597
+[Cvo ] the init guess for the transformation is 
+   0.984237   0.0330101  0.00626737   -0.135182
+-0.00129646    0.931061  -0.0099182    0.150844
+  0.0178046   0.0225108    0.935007    0.107311
+         -0          -0          -0     1.00002
+num_thread: 12
+norm, omega: 6.71564e-05, v: 0.000119872
+cvo # of iterations is 1865
+t_transform_pcd is 0.035396
+t_compute_flow is 48.9944
+t_compute_step is 3.09632
+The inner product between 15 and 16 is 0.00163044
+Transform is 
+   0.984064 -0.00401225   0.0110299    0.086578
+  0.0359817    0.931036   0.0243419   -0.155099
+  0.0132581  -0.0117176    0.935057  -0.0649357
+         -0          -0          -0     1.00002
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+start the kf init process
+will redo 15 and 16
+~~~~~~~~~~~~~~~~~~~~~~~~~
+init guess for 15 and 16 is: 
+ 1 -0  0 -0
+-0  1 -0  0
+ 0 -0  1 -0
+-0  0 -0  1
+
+=============================================
+Aligning 15 and 16
+num fixed: 13023
+num moving: 13597
+[Cvo ] the init guess for the transformation is 
+ 1 -0  0 -0
+-0  1 -0  0
+ 0 -0  1 -0
+-0  0 -0  1
+num_thread: 12
+dist: 9.32862e-06
+cvo # of iterations is 3230
+t_transform_pcd is 0.0597501
+t_compute_flow is 89.6844
+t_compute_step is 6.36706
+The inner product between 15 and 16 is 0.00180571
+Transform is 
+    0.999998   0.00243555  -0.00109501   -0.0123398
+ -0.00243609            1 -0.000487774   -0.0272108
+  0.00109187  0.000490353      1.00001     0.694101
+          -0            0           -0            1
+
+
+=============================================
+Aligning 16 and 17
+num fixed: 13597
+num moving: 13617
+[Cvo ] the init guess for the transformation is 
+    0.999982  -0.00487264    0.0021864    0.0222036
+  0.00487052      0.99998  0.000983524    0.0534879
+ -0.00218728 -0.000972701     0.999982     -1.38826
+           0            0           -0            1
+num_thread: 12
+

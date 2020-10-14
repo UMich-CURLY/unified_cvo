@@ -105,9 +105,8 @@ namespace cvo {
 
   void CvoState::reset_state_at_new_iter () {
 
-    cudaMemset( (void*)A_host.mat, 0, sizeof(float) * A_host.rows * A_host.cols );
-    cudaMemset( (void*)A_host.ind_row2col , -1 , sizeof(int )* A_host.rows * A_host.cols  );
-
+    clear_SparseKernelMat(&A_host);
+    
     if (is_ell_adaptive) {
       cudaMemset( (void*)Axx_host.mat, 0, sizeof(float) * Axx_host.rows * Axx_host.cols  );
       cudaMemset( (void*)Axx_host.ind_row2col , -1 , sizeof(int )* Axx_host.rows * Axx_host.cols);

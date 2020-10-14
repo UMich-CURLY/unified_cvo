@@ -20,12 +20,12 @@ def translationError(pose_error):
     dz = pose_error[2][3]
     return np.sqrt(dx*dx+dy*dy+dz*dz)
 
-w1=np.genfromtxt("../w1.txt")
-w2=np.genfromtxt("../w2.txt")
-w3=np.genfromtxt("../w3.txt")
-v1=np.genfromtxt("../v1.txt")
-v2=np.genfromtxt("../v2.txt")
-v3=np.genfromtxt("../v3.txt") 
+#w1=np.genfromtxt("../w1.txt")
+#w2=np.genfromtxt("../w2.txt")
+#w3=np.genfromtxt("../w3.txt")
+#v1=np.genfromtxt("../v1.txt")
+#v2=np.genfromtxt("../v2.txt")
+#v3=np.genfromtxt("../v3.txt") 
 
 
 ell = np.genfromtxt(sys.argv[1])
@@ -43,7 +43,7 @@ gt_now = gt[gt_frame,:].reshape((3,4))
 gt_now = (np.vstack([gt_now, zero1]))
 gt_next = gt[gt_frame+1,:].reshape((3,4))
 gt_next = np.vstack([gt_next, zero1])
-gt_curr = LA.inv(gt_now) @ gt_next
+gt_curr = np.matmul(LA.inv(gt_now) , gt_next)
 r_err = np.zeros(ell.size)
 t_err = np.zeros(ell.size)
 for i in range(ell.size):
@@ -51,9 +51,9 @@ for i in range(ell.size):
     t_i = np.vstack([t_i, zero1])
 
     #e = 
-    error = linalg.inv(gt_curr) @ t_i
+    error = np.matmul(linalg.inv(gt_curr) , t_i)
     #error =  gt.I * t_i 
-    r_err[i] = LA.norm(SO3.log(SO3.from_matrix(linalg.inv(t_i[:3,:3]) @ gt_curr[:3,:3], normalize=True)))         #rotationError(error)
+    r_err[i] = LA.norm(SO3.log(SO3.from_matrix(np.matmul(linalg.inv(t_i[:3,:3]) ,gt_curr[:3,:3]), normalize=True)))         #rotationError(error)
     #if r_err[i] > 0:
     #    print(r_err[i])
     t_err[i] = LA.norm(t_i[:3, 3] - gt_curr[:3, 3])
