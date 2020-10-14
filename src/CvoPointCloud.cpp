@@ -393,7 +393,7 @@ namespace cvo{
 
     
     std::cout<<"Construct Cvo PointCloud, num of points is "<<num_points_<<" from "<<pc->size()<<" input points "<<std::endl;    
-    write_to_intensity_pcd("kitti_lidar.pcd");
+    // write_to_intensity_pcd("kitti_lidar.pcd");
 
   }
 
@@ -401,7 +401,7 @@ namespace cvo{
   CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, const std::vector<int> & semantic,
                                int num_classes, int target_num_points, int beam_num) {
 
-    write_all_to_label_pcd("kitti_semantic_lidar_pre.pcd", *pc, num_classes, semantic);
+    // write_all_to_label_pcd("kitti_semantic_lidar_pre.pcd", *pc, num_classes, semantic);
 
     int expected_points = target_num_points;
     double intensity_bound = 0.4;
@@ -429,22 +429,22 @@ namespace cvo{
     LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
 
     // running edge detection + lego loam point selection
+    // edge detection
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
-    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
-    lps.edge_detection(pc, semantic, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_indexes, semantic_out);   
-    lps.legoloam_point_selector(pc, semantic, pc_out_surface, edge_or_surface, selected_indexes, semantic_out);    
+    lps.edge_detection(pc, semantic, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_indexes, semantic_out);  
     *pc_out += *pc_out_edge;
+    // lego loam surface
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>); 
+    lps.legoloam_point_selector(pc, semantic, pc_out_surface, edge_or_surface, selected_indexes, semantic_out);
+    std::cout<<"semantic out size = "<<semantic_out.size()<<std::endl;
     *pc_out += *pc_out_surface;
     num_points_ = pc_out->size();
     assert(num_points_ == selected_indexes.size());
-
-    //for (int i = 0; i < pc_out_surface->size() ; i++) {
-    //    std::cout<<"pc_out_surface pointcloud (index,x,y,z,i)=("<<i<<", "<<pc_out_surface->points[i].x<<", "<<pc_out_surface->points[i].y<<", "<<pc_out_surface->points[i].z<<", "<<pc_out_surface->points[i].intensity<<")"<<std::endl;
-    //}
+    assert(num_points_ == semantic_out.size());
 
 
-    pcl::io::savePCDFileASCII("pc_out_edge.pcd", *pc_out_edge);
-    pcl::io::savePCDFileASCII("pc_out_legoloam.pcd", *pc_out_surface);
+    //pcl::io::savePCDFileASCII("pc_out_edge.pcd", *pc_out_edge);
+    // pcl::io::savePCDFileASCII("pc_out_legoloam.pcd", *pc_out_surface);
     
 #endif
 
@@ -493,9 +493,6 @@ namespace cvo{
 
       if (semantic_out[i] == -1)
         continue;
-
-      // std::cout<<"pc_out (x,y,z,i)=("<<pc_out->points[i].x<<","<<pc_out->points[i].y<<","<<pc_out->points[i].z<<","<<pc_out->points[i].intensity<<"; output pointcloud (index,x,y,z,i)=("<<idx<<", "<<pc->points[idx].x<<","<<pc->points[idx].y<<","<<pc->points[idx].z<<","<<pc->points[idx].intensity<<")"<<std::endl;
-      
       
       xyz << pc->points[idx].x, pc->points[idx].y, pc->points[idx].z;
       positions_.push_back(xyz);
@@ -518,8 +515,9 @@ namespace cvo{
 
     }
     std::cout<<"Construct Cvo PointCloud, num of points is "<<num_points_<<" from "<<pc->size()<<" input points "<<std::endl;
-    write_to_label_pcd("kitti_semantic_lidar.pcd");
-    write_to_intensity_pcd("kitti_intensity_lidar.pcd");
+    // write_to_pcd("kitti_lidar.pcd");
+    // write_to_label_pcd("kitti_semantic_lidar.pcd");
+    // write_to_intensity_pcd("kitti_intensity_lidar.pcd");
   }
 
   CvoPointCloud::CvoPointCloud(){}
@@ -593,6 +591,18 @@ namespace cvo{
     pcl::io::savePCDFileASCII(name ,pc);  
   }
 
+  void CvoPointCloud::write_to_pcd(const std::string & name) const {
+    pcl::PointCloud<pcl::PointXYZ> pc;
+    for (int i = 0; i < num_points_; i++) {
+      pcl::PointXYZ p;
+      p.x = positions_[i](0);
+      p.y = positions_[i](1);
+      p.z = positions_[i](2);
+      pc.push_back(p);
+    }
+    pcl::io::savePCDFileASCII(name, pc); 
+    std::cout << "Finished write to pcd" << std::endl; 
+  }
 
   void CvoPointCloud::write_to_label_pcd(const std::string & name) const {
     if (num_classes_ < 1)

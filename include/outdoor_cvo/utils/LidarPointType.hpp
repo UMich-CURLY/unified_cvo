@@ -77,7 +77,7 @@
 
 
 
-typedef pcl::PointXYZI  PointType;
+typedef pcl::PointXYZL  PointType;
 
 //#define PI 3.14159265
 
@@ -202,6 +202,24 @@ struct PointXYZIR
 POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZIR,  
                                    (float, x, x) (float, y, y)
                                    (float, z, z) (float, intensity, intensity)
+                                   (uint16_t, ring, ring)
+)
+
+namespace pcl {
+/*
+    * A point cloud type that has "ring" channel
+    */
+struct PointXYZLR
+{
+    PCL_ADD_POINT4D
+    uint32_t label;
+    uint16_t ring;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+} EIGEN_ALIGN16;
+}
+POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZLR,  
+                                   (float, x, x) (float, y, y)
+                                   (float, z, z) (uint32_t, label, label)
                                    (uint16_t, ring, ring)
 )
 

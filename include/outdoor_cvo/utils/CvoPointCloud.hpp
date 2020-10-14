@@ -88,6 +88,7 @@ namespace cvo {
     // for visualization via pcl_viewer
     void write_to_color_pcd(const std::string & name) const;
     void write_to_label_pcd(const std::string & name) const;
+    void write_to_pcd(const std::string & name) const;
     void write_to_txt(const std::string & name) const;
     void write_to_intensity_pcd(const std::string & name) const;
    

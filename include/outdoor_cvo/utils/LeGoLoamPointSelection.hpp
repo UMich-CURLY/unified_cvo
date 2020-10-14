@@ -50,8 +50,8 @@ public:
 
     ~LeGoLoamPointSelection();
     
-    void cloudHandler(const pcl::PointCloud<pcl::PointXYZI>::ConstPtr pc_in, 
-                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, 
+    void cloudHandler(const pcl::PointCloud<PointType>::ConstPtr pc_in, 
+                      pcl::PointCloud<PointType>::Ptr pc_out, 
                       std::vector <float> & edge_or_surface,
                       std::vector <int> & selected_indexes);
 
@@ -61,7 +61,7 @@ private:
 
     pcl::PointCloud<PointType>::Ptr laserCloudInPtr;
     pcl::PointCloud<PointType> laserCloudIn;
-    pcl::PointCloud<pcl::PointXYZIR>::Ptr laserCloudInRing;
+    pcl::PointCloud<pcl::PointXYZLR>::Ptr laserCloudInRing;
 
     pcl::PointCloud<PointType>::Ptr fullCloud; // projected velodyne raw cloud, but saved in the form of 1-D matrix
     pcl::PointCloud<PointType>::Ptr fullInfoCloud; // same as fullCloud, but with intensity - range
@@ -106,13 +106,13 @@ private:
     // moved from public to private
     void allocateMemory();
     void resetParameters();
-    void copyPointCloud(const pcl::PointCloud<pcl::PointXYZI>::ConstPtr pc_in);
+    void copyPointCloud(const pcl::PointCloud<PointType>::ConstPtr pc_in);
 
     void findStartEndAngle();
 
     void projectPointCloud();
     void groundRemoval();
-    void cloudSegmentation(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_segmented);
+    void cloudSegmentation(pcl::PointCloud<PointType>::Ptr pc_out_segmented);
     void labelComponents(int row, int col);
 
     // FeatureAssociation from LeGO-LOAM
@@ -249,11 +249,11 @@ private:
     int frameCount;
 
     void initializationValue();
-    void runFeatureAssociation(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, std::vector <float> & edge_or_surface, std::vector <int> & selected_indexes);
+    void runFeatureAssociation(pcl::PointCloud<PointType>::Ptr pc_out, std::vector <float> & edge_or_surface, std::vector <int> & selected_indexes);
     void adjustDistortion();
     void calculateSmoothness();
     void markOccludedPoints();
-    void extractFeatures(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, std::vector <float> & edge_or_surface, std::vector <int> & selected_indexes);
+    void extractFeatures(pcl::PointCloud<PointType>::Ptr pc_out, std::vector <float> & edge_or_surface, std::vector <int> & selected_indexes);
 
 
     // From utility.h
@@ -264,7 +264,7 @@ private:
     // Save pcd
   const std::string fileDirectory = "/tmp/";
 
-    // Using velodyne cloud "ring" channel for image projection (other lidar may have different name for this channel, change "PointXYZIR" below)
+    // Using velodyne cloud "ring" channel for image projection (other lidar may have different name for this channel, change "PointXYZLR" below)
     const bool useCloudRing = true; // if true, ang_res_y and ang_bottom are not used
 
     // VLP-16
@@ -292,6 +292,7 @@ private:
     // extern const int groundScanInd = 10;
 
     // HDL-64E
+    // ref: https://github.com/RobustFieldAutonomyLab/LeGO-LOAM/issues/12
     const int N_SCAN = 64;
     const int Horizon_SCAN = 1800;
     const float ang_res_x = 0.2;
@@ -352,7 +353,7 @@ private:
     const float globalMapVisualizationSearchRadius = 500.0; // key frames with in n meters will be visualized
 
     // My own fuction
-    int get_quadrant(pcl::PointXYZI point);
+    int get_quadrant(PointType point);
 
 
 };
