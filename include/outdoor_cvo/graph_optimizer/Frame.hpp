@@ -18,6 +18,12 @@ namespace cvo {
   class Frame {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    
+    Frame(int ind,
+          const cv::Mat & rgb_image,
+          const cv::Mat & depth_image,
+          const Calibration & calib,
+          const bool & is_using_rgbd);
 
     Frame(int ind,
           const cv::Mat & left_image,

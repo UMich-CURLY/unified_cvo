@@ -30,6 +30,11 @@ namespace cvo {
     CvoPointCloud(const RawImage & left_raw_image,
                   const cv::Mat & right_image,
                   const Calibration &calib);
+
+    CvoPointCloud(const RawImage & rgb_raw_image,
+                  const cv::Mat & depth_image,
+                  const Calibration &calib,
+                  const bool& is_using_rgbd);
     
     CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
                   int target_num_points,
@@ -88,6 +93,7 @@ namespace cvo {
     // for visualization via pcl_viewer
     void write_to_color_pcd(const std::string & name) const;
     void write_to_label_pcd(const std::string & name) const;
+    void write_to_pcd(const std::string & name) const;
     void write_to_txt(const std::string & name) const;
     void write_to_intensity_pcd(const std::string & name) const;
    
