@@ -359,10 +359,20 @@ set_target_properties(cvo_gpu_lib PROPERTIES
   CUDA_SEPERABLE_COMPILATION ON
   COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 
-add_library(cvo_gpu_geometric_lib ${CVO_GPU_SOURCE})
-target_link_libraries(cvo_gpu_geometric_lib PRIVATE lie_group_utils cvo_utils_lib  )
-target_compile_definitions(cvo_gpu_geometric_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_USING_GEOMETRIC)
-set_target_properties(cvo_gpu_geometric_lib PROPERTIES
+
+add_library(cvo_gpu_img_intensity_lib ${CVO_GPU_SOURCE})
+target_compile_definitions(cvo_gpu_img_intensity_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
+target_link_libraries(cvo_gpu_img_intensity_lib PRIVATE lie_group_utils cvo_utils_lib)
+set_target_properties(cvo_gpu_img_intensity_lib PROPERTIES POSITION_INDEPENDENT_CODE ON
+    CUDA_SEPERABLE_COMPILATION ON
+    COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
+  
+
+
+add_library(cvo_gpu_img_geometric_lib ${CVO_GPU_SOURCE})
+target_link_libraries(cvo_gpu_img_geometric_lib PRIVATE lie_group_utils cvo_utils_lib  )
+target_compile_definitions(cvo_gpu_img_geometric_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_GEOMETRIC_ONLY)
+set_target_properties(cvo_gpu_img_geometric_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   CUDA_SEPERABLE_COMPILATION ON
   COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
@@ -432,14 +442,6 @@ set_target_properties(cvo_gpu_lidar_intensity_lib PROPERTIES POSITION_INDEPENDEN
     CUDA_SEPERABLE_COMPILATION ON
     COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 
-
-add_library(cvo_gpu_img_intensity_lib ${CVO_GPU_SOURCE})
-target_compile_definitions(cvo_gpu_img_intensity_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 )
-target_link_libraries(cvo_gpu_img_intensity_lib PRIVATE lie_group_utils cvo_utils_lib)
-set_target_properties(cvo_gpu_img_intensity_lib PROPERTIES POSITION_INDEPENDENT_CODE ON
-    CUDA_SEPERABLE_COMPILATION ON
-    COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
-  
 add_library(cvo_gpu_lidar_intensity_loam_lib SHARED ${CVO_GPU_SOURCE})
 target_compile_definitions(cvo_gpu_lidar_intensity_loam_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_LOAM )
 target_link_libraries(cvo_gpu_lidar_intensity_loam_lib PRIVATE lie_group_utils cvo_utils_loam_lib )
@@ -517,13 +519,13 @@ target_link_libraries(acvo_semantic_lidar_align_gpu  acvo_gpu_semantic_lidar_lib
 
 endif()
 
-add_executable(cvo_align_gpu_raw_img ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_raw_image.cpp)
-target_compile_definitions(cvo_align_gpu_raw_img PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
-target_link_libraries(cvo_align_gpu_raw_img cvo_gpu_lib cvo_utils_lib kitti  boost_filesystem boost_system)
+add_executable(cvo_align_gpu_intensity_img ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_raw_image.cpp)
+target_compile_definitions(cvo_align_gpu_intensity_img PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
+target_link_libraries(cvo_align_gpu_intensity_img cvo_gpu_img_intensity_lib cvo_utils_lib kitti  boost_filesystem boost_system)
 
 add_executable(cvo_align_gpu_geometric_img ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_raw_image.cpp)
-target_compile_definitions(cvo_align_gpu_geometric_img PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
-target_link_libraries(cvo_align_gpu_geometric_img cvo_gpu_lib cvo_utils_lib kitti  boost_filesystem boost_system)
+target_compile_definitions(cvo_align_gpu_geometric_img PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_GEOMETRIC_ONLY)
+target_link_libraries(cvo_align_gpu_geometric_img cvo_gpu_img_geometric_lib cvo_utils_lib kitti  boost_filesystem boost_system)
 
 add_executable(cvo_align_gpu_raw_img_range_ell ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_raw_image.cpp)
 target_compile_definitions(cvo_align_gpu_raw_img_range_ell PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_USING_RANGE_ELL)
@@ -573,6 +575,10 @@ target_link_libraries(cvo_align_gpu_lidar_intensity_loam_raw cvo_gpu_lidar_inten
 
 add_executable(gicp_align_two ${PROJECT_SOURCE_DIR}/src/experiments/gicp_align_two.cpp)
 target_link_libraries(gicp_align_two ${PCL_LIBRARIES})
+
+add_executable(cvo_single_test ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_single_image_test.cpp)
+target_compile_definitions(cvo_single_test PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_GEOMETRIC_ONLY)
+target_link_libraries(cvo_single_test cvo_gpu_img_geometric_lib cvo_utils_lib kitti  boost_filesystem boost_system)
 
 #add_executable(cvo_align_gpu_lidar_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_pcd.cpp)
 #target_compile_definitions(cvo_align_gpu_lidar_pcd PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_LOAM)

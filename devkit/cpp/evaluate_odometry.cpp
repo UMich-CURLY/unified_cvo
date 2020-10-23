@@ -488,7 +488,7 @@ bool eval (int seq, string gt_dir, string gt_file_name, string result_dir, strin
     sprintf(prefix,"avg");
     saveErrorPlots(total_err,plot_error_dir,avg_file_name.c_str());
     //plotErrorPlots(plot_error_dir,avg_file_name.c_str());
-    //saveStats(total_err,result_dir,avg_file_name.c_str());
+    saveStats(total_err,result_dir,avg_file_name.c_str());
   }
 
   // success

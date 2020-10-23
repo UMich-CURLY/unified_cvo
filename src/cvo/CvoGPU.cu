@@ -47,7 +47,7 @@ namespace cvo{
   typedef Eigen::Triplet<float> Trip_t;
 
   static bool is_logging = false;
-  static bool debug_print = true;
+  static bool debug_print = false;
 
 
   
@@ -382,13 +382,7 @@ namespace cvo{
         
           
           float k = s2*exp(-d2/(2.0*l*l));
-          //<<<<<<< HEAD
-          //float ck = c_sigma*c_sigma*exp(-d2_color/(2.0*c_ell*c_ell));
-          //float ck = 1;
-          //=======
           float ck = c_sigma*c_sigma*exp(-d2_color/(2.0*c_ell*c_ell));
-          // float ck = 1;
-          //>>>>>>> origin/range_ell
 #ifdef IS_USING_SEMANTICS              
           float sk = cvo_params->s_sigma*cvo_params->s_sigma*exp(-d2_semantic/(2.0*s_ell*s_ell));
 #else
@@ -613,14 +607,9 @@ namespace cvo{
     float c_sigma2 = cvo_params->c_sigma * cvo_params->c_sigma;
     float s_ell = cvo_params->s_ell;
 
-    //Eigen::VectorXf feature_a = feature_a_gpu->row(i).transpose();
     CvoPoint * p_a =  &points_a[i];
     float a_to_sensor = sqrtf(p_a->x * p_a->x + p_a->y * p_a->y + p_a->z * p_a->z);
     float l = compute_range_ell(ell, a_to_sensor , 1, 80 );
-    if (a_to_sensor > 40 ) {
-      //printf("ell: from %f to %f, curr_dist_to_sensor is %f\n", ell, l,a_to_sensor);
-      
-    }
        
     // convert k threshold to d2 threshold (so that we only need to calculate k when needed)
     float d2_thres = -2.0*l*l*log(cvo_params->sp_thres/sigma2);
@@ -631,21 +620,11 @@ namespace cvo{
     float * label_a = p_a ->label_distribution;
 #endif
 
-    //int * mat_inds = new int [kd_tree_max_leafIf they all have the same size, tha];
     unsigned int num_inds = 0;
-    //#ifdef IS_USING_KDTREE
-    //for (int j = 0; j < CVO_POINT_NEIGHBORS ; j++) {
-      //int ind_b = kdtree_inds[i * CVO_POINT_NEIGHBORS  + j];
-      //#else      
     for (int j = 0; j < b_size ; j++) {
       int ind_b = j;
       if (num_inds == CVO_POINT_NEIGHBORS) break;
-      //#endif
-      //A_mat->mat[i * A_mat->cols + ind_b] = 0;
-      //A_mat->ind_row2col[i * A_mat->cols + ind_b] = -1;
-
-      //float d2 = (cloud_y_gpu[ind_b] - cloud_x_gpu[i]).squaredNorm();
-      // d2 = (x-y)^2
+      
       CvoPoint * p_b = &points_b[ind_b];
       float d2 = (squared_dist( *p_b ,*p_a ));
       float normal_ip = 1;
@@ -657,9 +636,6 @@ namespace cvo{
       //       p_a->normal[0], p_a->normal[1], p_a->normal[2],
       //       p_b->normal[0], p_b->normal[1], p_b->normal[2]);
 #endif      
-        
-
-      
       /*
       if ( i == 1000 && j== 1074) {
         CvoPoint * pb = points_b + j;
@@ -672,7 +648,8 @@ namespace cvo{
 
 #ifdef IS_GEOMETRIC_ONLY
         float a = sigma2*exp(-d2/(2.0*l*l)) * normal_ip;
-        //       printf("a is %f, normal_ip is %f, final_a is %f\n", s2*exp(-d2/(2.0*l*l)), normal_ip, a );
+        //if (i==0)
+          printf("geometric: a is %f, normal_ip is %f, final_a is %f\n", sigma2*exp(-d2/(2.0*l*l)), normal_ip, a );
         if (a > cvo_params->sp_thres){
           A_mat->mat[i * A_mat->cols + num_inds] = a;
           A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
@@ -680,15 +657,11 @@ namespace cvo{
         }
 
 #else
-
         //float feature_b[5] = {(float)p_a->r, (float)p_a->g, (float)p_a->b,  p_a->gradient[0], p_a->gradient[1]  };
         float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
-
 #ifdef IS_USING_SEMANTICS            
         float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
 #endif
-
-
         /*
         if (i == 1000 && j==1074) {
           float * fa = p_a->features;
@@ -696,88 +669,49 @@ namespace cvo{
           printf("gpu se_kernel: i=%d,j=%d: d2_color is %f, d2_c_thres is %f,", i,j,d2_color, d2_c_thres );
           printf("color feature i == 0, a=(%f,%f,%f,%f,%f), b=(%f,%f,%f,%f,%f)\n",
                   fa[0], fa[1], fa[2], fa[3], fa[4], fb[0], fb[1], fb[2], fb[3], fb[4]);
-                  }*/
+         }*/
 
-        //<<<<<<< HEAD
-        //#endif  
-
-            
-        //if(d2_color<d2_c_thres){
-        //float k = s2*exp(-d2/(2.0*l*l));
-          //float ck = c_sigma*c_sigma*exp(-d2_color/(2.0*c_ell*c_ell));
-          //float ck = 1;
-        //=======
         if(d2_color<d2_c_thres){
-          //#ifdef IS_GEOMETRIC_ONLY
-          //float a = s2*exp(-d2/(2.0*l*l));
-
-          //#else
-        
-          
           float k = sigma2*exp(-d2/(2.0*l*l));
           float ck = c_sigma2*exp(-d2_color/(2.0*c2 ));
-          // float ck = 1;
-          //>>>>>>> origin/range_ell
 #ifdef IS_USING_SEMANTICS              
           float sk = cvo_params->s_sigma*cvo_params->s_sigma*exp(-d2_semantic/(2.0*s_ell*s_ell));
 #else
           float sk = 1;
 #endif              
           float a = ck*k*sk*normal_ip;
-          //#endif          
 
           //if (i == 1000 && j == 51)
           //  printf("se_kernel: i=%d,j=%d: d2_color is %f, d2_c_thres is %f,k is %f, ck is %f\n", i,j,d2_color, d2_c_thres, k, ck );
           // if ( i == 1000 )
           // printf("se_kernel: i==1000, j==%d: k is %f, ck is %f\n", j, k, ck );
 
-
-
-          // concrrent access !
           if (a > cvo_params->sp_thres){
 
             //A_mat->mat[i * A_mat->cols + j] = a;
             A_mat->mat[i * A_mat->cols + num_inds] = a;
             A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
-            //            if (i == 3664)
-            //printf("A[%d][%d] is %f\n", i, ind_b, a);
+            //if (i == 0)
+              printf("color: A[%d][%d] is %f\n", i, ind_b, a);
             num_inds++;
             /*
             if (i == 1000) {
               printf("[se_kernel] cloud_x[%d] (%f, %f, %f), cloud_y[%d] (%f, %f, %f):  non_zero_A ind %d, value %f\n", j, p_a->x, p_a->y, p_a->z, 1000, p_b->x, p_b->y, p_b->z, num_inds,  a);
               
               }*/
-
-              
-
             // if (i == 1000 ) {
             //  printf("[se_kernel] i == 1000: non_zero_A is at %d value %f\n", j, a);
             //}
-
           }// else {
           // A_mat->mat[i][num_inds] = 0;
           // A_mat->ind_row2col[i][num_inds] = -1;
           //}
 
-
-            
-
         }
 #endif        
-
       }
-
-
-      
     }
     A_mat->nonzeros[i] = num_inds;
-    # if __CUDA_ARCH__>=200
-    //if (i == 1000)
-    //printf("se_kernel: i==1000: nonzeros is %d \n", num_inds );
-
-    #endif  
-    //delete mat_inds;
-    
   }
 
 

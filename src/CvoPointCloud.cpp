@@ -31,7 +31,7 @@ namespace cvo{
     if ( u < 2 || u > w -2 || v < 100 || v > h-30 )
       return false;
 
-    if (xyz.norm() >= 55)
+    if (xyz.norm() >=55)
       return false;
 
     return true;
@@ -274,8 +274,8 @@ namespace cvo{
     }
 
 
-    std::cout<<" final selected uv size is "<<final_selected_uv.size()<<std::endl;
-    cv::imwrite("canny.png", detected_edges);
+    //std::cout<<" final selected uv size is "<<final_selected_uv.size()<<std::endl;
+    //cv::imwrite("canny.png", detected_edges);
 
     
     
@@ -302,20 +302,23 @@ namespace cvo{
     //auto detector =  cv::FastFeatureDetector::create();
     cv::FAST(left_gray,keypoints, 5,false);
 
-    int thresh = 4, num_want = 28000, num_min = 15000;
+    // for semantic
+    //int thresh = 4, num_want = 28000, num_min = 15000;
+    //// for geometric
+    int thresh = 4, num_want = 24000, num_min = 15000;
     while (keypoints.size() > num_want)  {
       std::cout<<"selected "<<keypoints.size()<<" points more than "<<num_want<<std::endl;
-      keypoints.clear();
-      thresh++;
-      cv::FAST(left_gray,keypoints, thresh,false);
-      //if (thresh == 30) break;
+        keypoints.clear();
+        thresh++;
+        cv::FAST(left_gray,keypoints, thresh,false);
+        if (thresh == 50) break;
     }
     while (keypoints.size() < num_min ) {
-      std::cout<<"selected "<<keypoints.size()<<" points less than "<<num_want/4<<std::endl;
+      std::cout<<"selected "<<keypoints.size()<<" points less than "<<num_min<<std::endl;
       keypoints.clear();
       thresh--;
       cv::FAST(left_gray,keypoints, thresh,false);
-      if (thresh== 1) break;
+      if (thresh== 0) break;
 
     }
     std::cout<<"FAST selected "<<keypoints.size()<<std::endl;
@@ -327,7 +330,7 @@ namespace cvo{
       p(1) = (int)kp.pt.y;
       output_uv.push_back(p);
     }
-    bool debug_plot = true;
+    bool debug_plot = false;
     if (debug_plot) {
       std::cout<<"Number of selected points is "<<output_uv.size()<<"\n";
       cv::Mat heatmap(left_image.color().rows, left_image.color().cols, CV_32FC1, cv::Scalar(0) );
@@ -439,9 +442,9 @@ namespace cvo{
         }
 
       }
-      if (num_classes_)
-        write_to_label_pcd("labeled_stereo.pcd");
-      write_to_color_pcd("color_stereo.pcd");
+      //if (num_classes_)
+      //  write_to_label_pcd("labeled_stereo.pcd");
+      //write_to_color_pcd("color_stereo.pcd");
     }
   
 
