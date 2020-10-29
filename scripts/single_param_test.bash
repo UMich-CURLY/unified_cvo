@@ -2,5 +2,5 @@
 
 cd build && make -j && cd .. && \
 
-
-./build/bin/cvo_single_test  /home/v9999/media/seagate_2t/kitti/stereo/  cvo_params/cvo_geometric_params_img_gpu0.yaml single_tests  0
+#gdb -ex=r --args \
+./build/bin/cvo_single_test  /home/v9999/media/seagate_2t/kitti/stereo/  cvo_params/cvo_semantic_params_img_gpu0.yaml single_tests  1

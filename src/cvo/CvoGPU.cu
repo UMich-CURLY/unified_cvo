@@ -680,7 +680,7 @@ namespace cvo{
           float sk = 1;
 #endif              
           float a = ck*k*sk*normal_ip;
-
+          //printf("sk is %f\n", sk);
           //if (i == 1000 && j == 51)
           //  printf("se_kernel: i=%d,j=%d: d2_color is %f, d2_c_thres is %f,k is %f, ck is %f\n", i,j,d2_color, d2_c_thres, k, ck );
           // if ( i == 1000 )
@@ -692,7 +692,7 @@ namespace cvo{
             A_mat->mat[i * A_mat->cols + num_inds] = a;
             A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
             //if (i == 0)
-              printf("color: A[%d][%d] is %f\n", i, ind_b, a);
+            //  printf("color: A[%d][%d] is %f\n", i, ind_b, a);
             num_inds++;
             /*
             if (i == 1000) {
@@ -1417,7 +1417,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       end = std::chrono::system_clock::now();
       t_transform_pcd += (end - start);
 
-      if (k == 0 ) {
+      if (k == 0 && debug_print ) {
         double dist_std = compute_std_dist_between_two_pc(cvo_state.cloud_x_gpu, cvo_state.cloud_y_gpu);
         std::cout<<"l2 dist standard deviation is "<<dist_std<<std::endl;
       }
@@ -1674,7 +1674,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     se_kernel_init_ell_cpu(&source_points, &target_points, &fixed_positions, &moving_positions, A_mat, A_trip_concur_ , params );
     //std::cout<<"num of non-zeros in A: "<<A_mat.nonZeros()<<std::endl;
     //return float(A_mat.sum())/float(A_mat.nonZeros());
-    return A_mat.sum()/fixed_positions.size()*1e5/moving_positions.size() ;
+    return A_mat.sum()/(fixed_positions.size())*1e5/moving_positions.size() ;
     //return float(A_mat.nonZeros()) / float(fixed_positions.size()) / float(moving_positions.size() ) * 100 ;
   }
   
