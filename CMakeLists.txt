@@ -552,8 +552,8 @@ add_executable(gicp_align_two ${PROJECT_SOURCE_DIR}/src/experiments/gicp_align_t
 target_link_libraries(gicp_align_two ${PCL_LIBRARIES})
 
 add_executable(cvo_single_test ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_single_image_test.cpp)
-target_compile_definitions(cvo_single_test PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_USING_SEMANTIC)
-target_link_libraries(cvo_single_test cvo_gpu_img_semantic_lib cvo_utils_lib kitti  boost_filesystem boost_system)
+target_compile_definitions(cvo_single_test PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_GEOMETRIC_ONLY)
+target_link_libraries(cvo_single_test cvo_gpu_img_geometric_lib cvo_utils_lib kitti  boost_filesystem boost_system)
 
 #add_executable(cvo_align_gpu_lidar_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_pcd.cpp)
 #target_compile_definitions(cvo_align_gpu_lidar_pcd PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_LOAM)
