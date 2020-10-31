@@ -6,7 +6,7 @@ for i in 01 07  02 04 05 03
 do
 	echo "new seq $i"
     ./build/bin/cvo_align_gpu_semantic_img /home/v9999/media/seagate_2t/kitti/stereo/$i cvo_params/cvo_semantic_params_img_gpu0.yaml \
-                                       cvo_img_semantic_oct26_$i.txt  0 30000
+                                       cvo_img_semantic_oct26_$i.txt  0 20000
 
  	
 done

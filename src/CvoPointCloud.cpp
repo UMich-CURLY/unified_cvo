@@ -294,7 +294,8 @@ namespace cvo{
     std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> output_uv;
 
     /*****************************************/
-    // using opencv surf
+    // using opencv FAST
+    
     //-- Step 1: Detect the keypoints using SURF Detector
     int minHessian = 400;
     std::vector<cv::KeyPoint> keypoints;    
@@ -346,7 +347,7 @@ namespace cvo{
       //
       //                }
       //
-
+	
       /*****************************************/
       // using DSO semi dense point selector
       /*
@@ -364,16 +365,16 @@ namespace cvo{
     
       /********************************************/
       // using full point cloud
-   
-      //output_uv.clear();
-      //for (int h = 0; h < left_image.color().cols; h++){
-      //  for (int w = 0; w < left_image.color().rows; w++){
-      //    Vec2i uv;
-      //    uv << h , w;
-      //    output_uv.push_back(uv);
-      //  }
-      //}
-     
+   /*
+      output_uv.clear();
+      for (int h = 0; h < left_image.color().cols; h++){
+        for (int w = 0; w < left_image.color().rows; w++){
+          Vec2i uv;
+          uv << h , w;
+          output_uv.push_back(uv);
+        }
+      }
+     */
       /**********************************************/
       //auto & pre_depth_selected_ind = final_selected_uv;
       auto & pre_depth_selected_ind = output_uv;
@@ -746,6 +747,28 @@ namespace cvo{
 
     void CvoPointCloud::write_to_color_pcd(const std::string & name) const {
       pcl::PointCloud<pcl::PointXYZRGB> pc;
+      std::unordered_map<int, std::tuple<uint8_t, uint8_t, uint8_t>> label2color;
+      label2color[0]  =std::make_tuple(128, 64,128 ); // road
+      label2color[1]  =std::make_tuple(244, 35,232 ); // sidewalk
+      label2color[2]  =std::make_tuple(70, 70, 70 ); // sidewalk
+      label2color[3]  =std::make_tuple(102,102,156   ); // building
+      label2color[4] =std::make_tuple(190,153,153 ); // pole
+      label2color[5] =std::make_tuple(153,153,153  ); // sign
+      label2color[6]  =std::make_tuple(250,170, 30   ); // vegetation
+      label2color[7]  =std::make_tuple(220,220,  0   ); // terrain
+      label2color[8] =std::make_tuple(107,142, 35 ); // sky
+      label2color[9]  =std::make_tuple(152,251,152 ); // water
+      label2color[10]  =std::make_tuple(70,130,180  ); // person
+      label2color[11]  =std::make_tuple( 220, 20, 60   ); // car
+      label2color[12]  =std::make_tuple(255,  0,  0  ); // bike
+      label2color[13] =std::make_tuple( 0,  0,142 ); // stair
+      label2color[14]  =std::make_tuple(0,  0, 70 ); // background
+      label2color[15]  =std::make_tuple(0, 60,100 ); // background
+      label2color[16]  =std::make_tuple(0, 80,100 ); // background
+      label2color[17]  =std::make_tuple( 0,  0,230 ); // background
+      label2color[18]  =std::make_tuple(119, 11, 32 ); // background
+
+
       for (int i = 0; i < num_points_; i++) {
         pcl::PointXYZRGB p;
         p.x = positions_[i](0);
@@ -755,6 +778,17 @@ namespace cvo{
         uint8_t b = static_cast<uint8_t>(std::min(255, (int)(features_(i,0) * 255) ) );
         uint8_t g = static_cast<uint8_t>(std::min(255, (int)(features_(i,1) * 255) ) );
         uint8_t r = static_cast<uint8_t>(std::min(255, (int)(features_(i,2) * 255)));
+/*
+        if (num_classes_ ) {
+          int max_class;
+          labels_.row(i).maxCoeff(&max_class);
+          auto c = label2color[max_class];
+          auto r = std::get<0>(c);
+          auto g = std::get<1>(c);
+          auto b = std::get<2>(c);
+          
+        }
+	*/
         uint32_t rgb = ((uint32_t) r << 16 |(uint32_t) g << 8  | (uint32_t) b ) ;
         p.rgb = *reinterpret_cast<float*>(&rgb);
         pc.push_back(p);
