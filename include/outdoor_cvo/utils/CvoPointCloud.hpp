@@ -53,6 +53,8 @@ namespace cvo {
                   int target_num_points = 5000
                   );
 
+    CvoPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc);
+
     CvoPointCloud(pcl::PointCloud<pcl::PointXYZIR>::Ptr pc, 
                   const std::vector<int> & semantics,
                   int num_classes=19,

@@ -107,6 +107,25 @@ namespace cvo {
     // points_.write_to_intensity_pcd("lidar_pcd/edge_and_legoloam_surface/01/" + std::to_string(ind)+".pcd");
   }
 
+  Frame::Frame(int ind,
+               pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc,
+               const bool & from_pcd_file)
+    : id(ind),
+      h(0),
+      w(0),
+      calib(),
+      raw_image_(),
+      points_(pc),
+      local_map_(nullptr),
+      is_keyframe_(false),
+      tracking_pose_from_last_keyframe_(ind){
+    pose_in_graph_.setIdentity();
+    Eigen::Affine3f eye = Eigen::Affine3f::Identity();
+    tracking_pose_from_last_keyframe_.set_relative_transform(ind, eye, 1.0 );
+
+    // points_.write_to_intensity_pcd("lidar_pcd/edge_and_legoloam_surface/01/" + std::to_string(ind)+".pcd");
+  }
+
 
   Frame::Frame(int ind,
                pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
