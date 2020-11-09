@@ -294,8 +294,8 @@ namespace cvo{
     std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> output_uv;
 
     /*****************************************/
-    // using opencv FAST
     
+    // using opencv FAST
     //-- Step 1: Detect the keypoints using SURF Detector
     int minHessian = 400;
     std::vector<cv::KeyPoint> keypoints;    
@@ -309,10 +309,10 @@ namespace cvo{
     int thresh = 4, num_want = 24000, num_min = 15000;
     while (keypoints.size() > num_want)  {
       std::cout<<"selected "<<keypoints.size()<<" points more than "<<num_want<<std::endl;
-        keypoints.clear();
-        thresh++;
-        cv::FAST(left_gray,keypoints, thresh,false);
-        if (thresh == 50) break;
+      keypoints.clear();
+      thresh++;
+      cv::FAST(left_gray,keypoints, thresh,false);
+      if (thresh == 50) break;
     }
     while (keypoints.size() < num_min ) {
       std::cout<<"selected "<<keypoints.size()<<" points less than "<<num_min<<std::endl;
@@ -341,112 +341,111 @@ namespace cvo{
         cv::circle(heatmap, cv::Point( output_uv[i](0), output_uv[i](1) ), 1, cv::Scalar(255, 0 ,0), 1);
       cv::imwrite("FAST_selected_pixels.png", heatmap);
     }
-      //cv::imshow("heat map", heatmap);
-      //      //cv::waitKey(200);
+    //cv::imshow("heat map", heatmap);
+    //      //cv::waitKey(200);
    
-      //
-      //                }
-      //
+    //
+    //                }
+    //
 	
-      /*****************************************/
-      // using DSO semi dense point selector
-      /*
-        int expected_points = 20000;
-        select_pixels(left_image,
-        expected_points,
-        output_uv);
-      */
-      //******************************************/
-      // using canny or random point selection
-      //std::vector<bool> selected_inds_map;
-      //std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> final_selected_uv;
-      //stereo_surface_sampling(left_gray, output_uv, true, false,
-      //                         selected_inds_map, final_selected_uv);
+    /*****************************************/
+    // using DSO semi dense point selector
+    /*
+      int expected_points = 20000;
+      select_pixels(left_image,
+      expected_points,
+      output_uv);
+    */
+    //******************************************/
+    // using canny or random point selection
+    //std::vector<bool> selected_inds_map;
+    //std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> final_selected_uv;
+    //stereo_surface_sampling(left_gray, output_uv, true, false,
+    //                         selected_inds_map, final_selected_uv);
     
-      /********************************************/
-      // using full point cloud
-   /*
-      output_uv.clear();
+    /********************************************/
+    // using full point cloud
+    /*  output_uv.clear();
       for (int h = 0; h < left_image.color().cols; h++){
-        for (int w = 0; w < left_image.color().rows; w++){
-          Vec2i uv;
-          uv << h , w;
-          output_uv.push_back(uv);
-        }
+      for (int w = 0; w < left_image.color().rows; w++){
+      Vec2i uv;
+      uv << h , w;
+      output_uv.push_back(uv);
       }
-     */
-      /**********************************************/
-      //auto & pre_depth_selected_ind = final_selected_uv;
-      auto & pre_depth_selected_ind = output_uv;
+      }
+      */
+    /**********************************************/
+    //auto & pre_depth_selected_ind = final_selected_uv;
+    auto & pre_depth_selected_ind = output_uv;
 
 
     
-      std::vector<int> good_point_ind;
-      int h = left_image.color().rows;
-      int w = left_image.color().cols;
-      cv::Mat depth_map(h, w, CV_32F, cv::Scalar(0));
-      bool is_recording_depth_map = true;
-      static unsigned int depth_map_counter = 0;    
-      for (int i = 0; i < pre_depth_selected_ind.size(); i++) {
-        auto uv = pre_depth_selected_ind[i];
-        Vec3f xyz;
+    std::vector<int> good_point_ind;
+    int h = left_image.color().rows;
+    int w = left_image.color().cols;
+    cv::Mat depth_map(h, w, CV_32F, cv::Scalar(0));
+    bool is_recording_depth_map = true;
+    static unsigned int depth_map_counter = 0;    
+    for (int i = 0; i < pre_depth_selected_ind.size(); i++) {
+      auto uv = pre_depth_selected_ind[i];
+      Vec3f xyz;
 
-        StaticStereo::TraceStatus trace_status = StaticStereo::pt_depth_from_disparity(left_image,
-                                                                                       left_disparity,
-                                                                                       calib,
-                                                                                       uv,
-                                                                                       xyz );
-        if (trace_status == StaticStereo::TraceStatus::GOOD && 
-            is_good_point (xyz, uv, h, w) 
-            //is_good_point(xyz)
-            ) {
-          int u = uv(0);
-          int v = uv(1);
-          if(left_image.num_class() ){
-            auto labels = Eigen::Map<const VecXf_row>((left_image.semantic_image().data()+ (v * w + u)*left_image.num_class()), left_image.num_class() );
-            int max_class = 0;
-            labels.maxCoeff(&max_class);
-            if( max_class == 10)
-              // exclude unlabeled points
-              continue;
-          }
-
-          good_point_ind.push_back(i);
-          //good_point_xyz.push_back(xyz);
-          positions_.push_back(xyz);
-        
-        }
-      }
-     
-      // start to fill in class members
-      num_points_ = good_point_ind.size();
-      num_classes_ = left_image.num_class();
-      if (num_classes_ )
-        labels_.resize(num_points_, num_classes_);
-      feature_dimensions_ = 5;
-      features_.resize(num_points_, feature_dimensions_);
-      for (int i = 0; i < num_points_ ; i++) {
-        int u = pre_depth_selected_ind[good_point_ind[i]](0);
-        int v = pre_depth_selected_ind[good_point_ind[i]](1);
-        cv::Vec3b avg_pixel = left_image.color().at<cv::Vec3b>(v,u);
-        auto & gradient = left_image.gradient()[v * w + u];
-        features_(i,0) = ((float)(avg_pixel [0]) )/255.0;
-        features_(i,1) = ((float)(avg_pixel[1]) )/255.0;
-        features_(i,2) = ((float)(avg_pixel[2]) )/255.0;
-        features_(i,3) = gradient(0)/ 500.0 + 0.5;
-        features_(i,4) = gradient(1)/ 500.0 + 0.5;
-
-        if (num_classes_) {
-          labels_.row(i) = Eigen::Map<const VecXf_row>((left_image.semantic_image().data()+ (v * w + u)*num_classes_), num_classes_);
+      StaticStereo::TraceStatus trace_status = StaticStereo::pt_depth_from_disparity(left_image,
+                                                                                     left_disparity,
+                                                                                     calib,
+                                                                                     uv,
+                                                                                     xyz );
+      if (trace_status == StaticStereo::TraceStatus::GOOD && 
+          is_good_point (xyz, uv, h, w) 
+          //is_good_point(xyz)
+          ) {
+        int u = uv(0);
+        int v = uv(1);
+        if(left_image.num_class() ){
+          auto labels = Eigen::Map<const VecXf_row>((left_image.semantic_image().data()+ (v * w + u)*left_image.num_class()), left_image.num_class() );
           int max_class = 0;
-          labels_.row(i).maxCoeff(&max_class);
+          labels.maxCoeff(&max_class);
+          if( max_class == 10)
+            // exclude unlabeled points
+            continue;
         }
 
+        good_point_ind.push_back(i);
+        //good_point_xyz.push_back(xyz);
+        positions_.push_back(xyz);
+        
       }
-      //if (num_classes_)
-      //  write_to_label_pcd("labeled_stereo.pcd");
-      //write_to_color_pcd("color_stereo.pcd");
     }
+     
+    // start to fill in class members
+    num_points_ = good_point_ind.size();
+    num_classes_ = left_image.num_class();
+    if (num_classes_ )
+      labels_.resize(num_points_, num_classes_);
+    feature_dimensions_ = 5;
+    features_.resize(num_points_, feature_dimensions_);
+    for (int i = 0; i < num_points_ ; i++) {
+      int u = pre_depth_selected_ind[good_point_ind[i]](0);
+      int v = pre_depth_selected_ind[good_point_ind[i]](1);
+      cv::Vec3b avg_pixel = left_image.color().at<cv::Vec3b>(v,u);
+      auto & gradient = left_image.gradient()[v * w + u];
+      features_(i,0) = ((float)(avg_pixel [0]) )/255.0;
+      features_(i,1) = ((float)(avg_pixel[1]) )/255.0;
+      features_(i,2) = ((float)(avg_pixel[2]) )/255.0;
+      features_(i,3) = gradient(0)/ 500.0 + 0.5;
+      features_(i,4) = gradient(1)/ 500.0 + 0.5;
+
+      if (num_classes_) {
+        labels_.row(i) = Eigen::Map<const VecXf_row>((left_image.semantic_image().data()+ (v * w + u)*num_classes_), num_classes_);
+        int max_class = 0;
+        labels_.row(i).maxCoeff(&max_class);
+      }
+
+    }
+    //if (num_classes_)
+    //  write_to_label_pcd("labeled_stereo.pcd");
+    //write_to_color_pcd("color_stereo.pcd");
+  }
   
 
     CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, int target_num_points, int beam_num) {
@@ -547,8 +546,6 @@ namespace cvo{
         positions_.push_back(xyz);
         features_(i, 0) = pc->points[idx].intensity;
 
-        // if (i < 100) std::cout<<"intensity is "<< pc_out->points[i].intensity<<std::endl;
-
 #ifdef IS_USING_NORMALS      
         normals_(i,0) = normals_out->points[i].normal_x;
         normals_(i,1) = normals_out->points[i].normal_y;
@@ -562,6 +559,7 @@ namespace cvo{
       //compute_covariance(*pc, selected_indexes);
 
     
+
       std::cout<<"Construct Cvo PointCloud, num of points is "<<num_points_<<" from "<<pc->size()<<" input points "<<std::endl;    
       write_to_intensity_pcd("kitti_lidar.pcd");
     }
@@ -594,27 +592,27 @@ namespace cvo{
 #endif    
 
 #if defined(IS_USING_LOAM) && !defined(IS_USING_NORMALS)
-      std::cout<<"using loam, not using normals"<<std::endl;
-      std::vector <float> edge_or_surface;
-      LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
+    std::cout<<"using loam, not using normals"<<std::endl;
+    std::vector <float> edge_or_surface;
+    LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
 
-      // running edge detection + lego loam point selection
-      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
-      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
-      lps.edge_detection(pc, semantic, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_indexes, semantic_out);   
-      lps.legoloam_point_selector(pc, semantic, pc_out_surface, edge_or_surface, selected_indexes, semantic_out);    
-      *pc_out += *pc_out_edge;
-      *pc_out += *pc_out_surface;
-      num_points_ = pc_out->size();
-      assert(num_points_ == selected_indexes.size());
+    // running edge detection + lego loam point selection
+    // edge detection
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
+    lps.edge_detection(pc, semantic, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_indexes, semantic_out);  
+    *pc_out += *pc_out_edge;
+    // lego loam surface
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>); 
+    lps.legoloam_point_selector(pc, semantic, pc_out_surface, edge_or_surface, selected_indexes, semantic_out);
+    std::cout<<"semantic out size = "<<semantic_out.size()<<std::endl;
+    *pc_out += *pc_out_surface;
+    num_points_ = pc_out->size();
+    assert(num_points_ == selected_indexes.size());
+    assert(num_points_ == semantic_out.size());
 
-      //for (int i = 0; i < pc_out_surface->size() ; i++) {
-      //    std::cout<<"pc_out_surface pointcloud (index,x,y,z,i)=("<<i<<", "<<pc_out_surface->points[i].x<<", "<<pc_out_surface->points[i].y<<", "<<pc_out_surface->points[i].z<<", "<<pc_out_surface->points[i].intensity<<")"<<std::endl;
-      //}
 
-
-      pcl::io::savePCDFileASCII("pc_out_edge.pcd", *pc_out_edge);
-      pcl::io::savePCDFileASCII("pc_out_legoloam.pcd", *pc_out_surface);
+    //pcl::io::savePCDFileASCII("pc_out_edge.pcd", *pc_out_edge);
+    // pcl::io::savePCDFileASCII("pc_out_legoloam.pcd", *pc_out_surface);
     
 #endif
 
@@ -666,7 +664,6 @@ namespace cvo{
 
         // std::cout<<"pc_out (x,y,z,i)=("<<pc_out->points[i].x<<","<<pc_out->points[i].y<<","<<pc_out->points[i].z<<","<<pc_out->points[i].intensity<<"; output pointcloud (index,x,y,z,i)=("<<idx<<", "<<pc->points[idx].x<<","<<pc->points[idx].y<<","<<pc->points[idx].z<<","<<pc->points[idx].intensity<<")"<<std::endl;
       
-      
         xyz << pc->points[idx].x, pc->points[idx].y, pc->points[idx].z;
         positions_.push_back(xyz);
         features_(i, 0) = pc->points[idx].intensity;
@@ -691,6 +688,7 @@ namespace cvo{
       write_to_label_pcd("kitti_semantic_lidar.pcd");
       write_to_intensity_pcd("kitti_intensity_lidar.pcd");
     }
+
 
     CvoPointCloud::CvoPointCloud(){}
     CvoPointCloud::~CvoPointCloud() {
@@ -775,11 +773,10 @@ namespace cvo{
         p.y = positions_[i](1);
         p.z = positions_[i](2);
       
-        uint8_t b = static_cast<uint8_t>(std::min(255, (int)(features_(i,0) * 255) ) );
-        uint8_t g = static_cast<uint8_t>(std::min(255, (int)(features_(i,1) * 255) ) );
-        uint8_t r = static_cast<uint8_t>(std::min(255, (int)(features_(i,2) * 255)));
-/*
-        if (num_classes_ ) {
+       // uint8_t b = static_cast<uint8_t>(std::min(255, (int)(features_(i,0) * 255) ) );
+       // uint8_t g = static_cast<uint8_t>(std::min(255, (int)(features_(i,1) * 255) ) );
+       // uint8_t r = static_cast<uint8_t>(std::min(255, (int)(features_(i,2) * 255)));
+        //if (num_classes_ ) {
           int max_class;
           labels_.row(i).maxCoeff(&max_class);
           auto c = label2color[max_class];
@@ -787,8 +784,7 @@ namespace cvo{
           auto g = std::get<1>(c);
           auto b = std::get<2>(c);
           
-        }
-	*/
+       // }
         uint32_t rgb = ((uint32_t) r << 16 |(uint32_t) g << 8  | (uint32_t) b ) ;
         p.rgb = *reinterpret_cast<float*>(&rgb);
         pc.push_back(p);
@@ -796,6 +792,18 @@ namespace cvo{
       pcl::io::savePCDFileASCII(name ,pc);  
     }
 
+  void CvoPointCloud::write_to_pcd(const std::string & name) const {
+    pcl::PointCloud<pcl::PointXYZ> pc;
+    for (int i = 0; i < num_points_; i++) {
+      pcl::PointXYZ p;
+      p.x = positions_[i](0);
+      p.y = positions_[i](1);
+      p.z = positions_[i](2);
+      pc.push_back(p);
+    }
+    pcl::io::savePCDFileASCII(name, pc); 
+    std::cout << "Finished write to pcd" << std::endl; 
+  }
 
     void CvoPointCloud::write_to_label_pcd(const std::string & name) const {
       if (num_classes_ < 1)

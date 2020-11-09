@@ -83,8 +83,7 @@ find_package(CUDA)
 #SET(CUDA_SEPARABLE_COMPILATION ON)
 #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++14; -Xcompiler -fPIC; -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -O2; -use_fast_math; --extended-lambda; -gencode arch=compute_75,code=sm_75;)
 #list(APPEND CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS}  "-Xcompiler -std=c++14  -O3 -rdc=true -Wno-deprecated-gpu-targets -lgsl -lgslcblas -lm -use_fast_math"  )
-
-#list(APPEND CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-ccbin g++-8 --extended-lambda -gencode arch=compute_61,code=sm_61" )
+#<<<<<<< HEAD
 set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --extended-lambda -gencode arch=compute_61,code=sm_61 -gencode arch=compute_52,code=sm_52 "  )
 #foreach(flag IN LISTS " -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -use_fast_math; -fPIC"  )
 foreach(flag IN LISTS " -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -fPIC"  )
@@ -595,6 +594,14 @@ target_link_libraries(cvo_single_test cvo_gpu_img_semantic_lib cvo_utils_lib kit
 #add_executable(acvo_semantic_lidar_align_gpu ${PROJECT_SOURCE_DIR}/src/experiments/main_acvo_gpu_lidar_align.cpp)
 #target_compile_definitions(acvo_semantic_lidar_align_gpu PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_SEMANTICS)
 #target_link_libraries(acvo_semantic_lidar_align_gpu  acvo_gpu_semantic_lidar_lib cvo_cpu_semantic_lib cvo_utils_lib boost_filesystem boost_system kitti)
+
+add_executable(cvo_evaluate_indicator ${PROJECT_SOURCE_DIR}/src/experiments/main_evaluate_indicator.cpp)
+target_compile_definitions(cvo_evaluate_indicator PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_GEOMETRIC_ONLY)
+target_link_libraries(cvo_evaluate_indicator cvo_gpu_lib cvo_cpu_lib pose_graph_lib cvo_utils_lib boost_filesystem boost_system)
+
+add_executable(cvo_indicator_in_sequence ${PROJECT_SOURCE_DIR}/src/experiments/main_indicator_in_sequence.cpp)
+target_compile_definitions(cvo_indicator_in_sequence PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_GEOMETRIC_ONLY) # -DIS_USING_SEMANTICS
+target_link_libraries(cvo_indicator_in_sequence cvo_gpu_lib cvo_cpu_lib cvo_utils_lib boost_filesystem boost_system kitti)
 
 endif()
 

@@ -166,7 +166,7 @@ init_guess <<
   //kitti.read_next_stereo(source_left, source_right);
   std::shared_ptr<cvo::RawImage> source_raw(new cvo::RawImage(source_left, NUM_CLASSES, semantics_source));
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw, source_right, calib));
-  source->write_to_color_pcd("source.pcd");
+  //source->write_to_color_pcd(std::string(argv[1]) +std::string( "/cvo_semantic_pcds/") + std::string(argv[4]) + std::string(".pcd")) ;
   //source->write_to_txt(std::string(argv[1]) +std::string( "/cvo_points_semantics/") + std::string(argv[4]) + std::string(".txt") );
   double total_time = 0;
   int i = start_frame;
@@ -187,9 +187,9 @@ init_guess <<
     std::shared_ptr<cvo::RawImage> target_raw(new cvo::RawImage(left, NUM_CLASSES, semantics_target));
     std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, right, calib));
 
-    if (i == start_frame)
-      target->write_to_color_pcd("target.pcd");
-    //target->write_to_txt(std::string(argv[1]) + std::string("/cvo_points_semantics/") + std::to_string(i) + std::string(".txt") );
+    //if (i == start_frame)
+    //  target->write_to_color_pcd("target.pcd");
+    //target->write_to_color_pcd(std::string(argv[1]) + std::string("/cvo_semantic_pcds/") + std::to_string(i) + std::string(".pcd") );
     
     Eigen::Matrix4f result, init_guess_inv;
     Eigen::Matrix4f identity_init = Eigen::Matrix4f::Identity(); 
@@ -204,8 +204,6 @@ init_guess <<
     //  cvo::CvoPointCloud::transform(init_guess, *target, prev_target);
     //  prev_target.write_to_color_pcd("prev_target.pcd");
     // }
-    
-
     init_guess_inv = init_guess.inverse();
     printf("Start align... num_fixed is %d, num_moving is %d\n", source->num_points(), target->num_points());
 
@@ -238,7 +236,6 @@ init_guess <<
                 <<accum_mat(2,0)<<" " <<accum_mat(2,1)<<" "<<accum_mat(2,2)<<" "<<accum_mat(2,3);
     accum_output<<"\n";
     accum_output<<std::flush;
-    
     std::cout<<"\n\n===========next frame=============\n\n";
 
     source = target;
