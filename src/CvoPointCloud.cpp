@@ -358,8 +358,6 @@ namespace cvo{
     /**********************************************/
     //auto & pre_depth_selected_ind = final_selected_uv;
     auto & pre_depth_selected_ind = output_uv;
-
-
     
     std::vector<int> good_point_ind;
     int h = left_image.color().rows;
@@ -423,9 +421,6 @@ namespace cvo{
       }
 
     }
-    //if (num_classes_)
-    //  write_to_label_pcd("labeled_stereo.pcd");
-    //write_to_color_pcd("color_stereo.pcd");
   }
   
 
@@ -456,11 +451,7 @@ namespace cvo{
     // running edge detection + lego loam point selection
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
-    lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_indexes);   
-    std::cout<<"Number edge selection result is "<<selected_indexes.size()<<std::endl; 
-    std::cout << "\nList of selected edge indexes: " << std::endl;
-    for(int i=0; i<10; i++)
-      std::cout << selected_indexes[i] << " ";
+    lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_indexes);
     lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface, selected_indexes);    
     //*pc_out += *pc_out_edge;
     //*pc_out += *pc_out_surface;
@@ -530,8 +521,6 @@ namespace cvo{
       positions_.push_back(xyz);
       features_(i, 0) = pc->points[idx].intensity;
 
-      // if (i < 100) std::cout<<"intensity is "<< pc_out->points[i].intensity<<std::endl;
-
 #ifdef IS_USING_NORMALS      
       normals_(i,0) = normals_out->points[i].normal_x;
       normals_(i,1) = normals_out->points[i].normal_y;
@@ -549,6 +538,39 @@ namespace cvo{
     //write_to_intensity_pcd("kitti_lidar.pcd");
   }
 
+  CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc) {
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZRGB>);
+
+    Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+    pcl::transformPointCloud (*pc, *pc_out, transform);
+    num_points_ = pc_out->size();
+
+    // fill in class members
+    num_classes_ = 0;
+    
+    // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
+    feature_dimensions_ = 5;
+    features_.resize(num_points_, feature_dimensions_);
+    normals_.resize(num_points_,3);
+
+    for (int i = 0; i < num_points_ ; i++) {
+      Vec3f xyz;
+      xyz << pc->points[i].x, pc->points[i].y, pc->points[i].z;
+      positions_.push_back(xyz);
+      
+      features_(i,0) = pc->points[i].r;
+      features_(i,1) = pc->points[i].g;
+      features_(i,2) = pc->points[i].b;
+      features_(i,3) = 0;
+      features_(i,4) = 0;
+      // auto & gradient = left_image.gradient()[v * w + u];
+      // features_(i,3) = gradient(0)/ 500.0 + 0.5;
+      // features_(i,4) = gradient(1)/ 500.0 + 0.5;
+    }
+    
+    std::cout<<"Construct Cvo PointCloud from pcd file, num of points is "<<num_points_<<std::endl;    
+    //write_to_color_pcd("CvoPointCloud.pcd");
+  }
 
   CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, const std::vector<int> & semantic,
                                int num_classes, int target_num_points, int beam_num) {

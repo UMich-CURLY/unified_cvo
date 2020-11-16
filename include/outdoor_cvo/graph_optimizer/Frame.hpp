@@ -39,6 +39,10 @@ namespace cvo {
           float local_map_res=0.1);
     
     Frame(int ind,
+          pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc,
+          const bool & from_pcd_file);
+
+    Frame(int ind,
           pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
           const Calibration & calib);
 

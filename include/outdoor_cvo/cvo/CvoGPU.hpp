@@ -63,6 +63,19 @@ namespace cvo{
                         const CvoPointCloud& target_points,
                         const Eigen::Matrix4f & source_frame_to_target_frame) const;
 
+    float indicator_value(const CvoPointCloud& source_points,
+                      const CvoPointCloud& target_points,
+                      const Eigen::Matrix4f & init_guess_transform,
+                      Eigen::Ref<Eigen::Matrix4f> transform) const;
+
+    float function_angle(const CvoPointCloud& source_points,
+                        const CvoPointCloud& target_points,
+                        const Eigen::Matrix4f & source_frame_to_target_frame) const;
+
+    float real_inner_product(const CvoPointCloud& source_points,
+                             const CvoPointCloud& target_points,
+                             const Eigen::Matrix4f & source_frame_to_target_frame) const;
+
   };
 
   
