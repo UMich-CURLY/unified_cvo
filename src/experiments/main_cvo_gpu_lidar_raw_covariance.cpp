@@ -140,7 +140,7 @@ int main(int argc, char *argv[]) {
   //write_to_pcl(cvo_cloud, "lidar_pcl.pcd");
   pcl::PointCloud<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES>> pcl_cloud;
   convert_to_pcl(*source, pcl_cloud);
-  //source->write_to_intensity_pcd("kitti_pcl/"+std::to_string(start_frame)+".pcd" );
+  source->write_to_intensity_pcd("kitti_pcl/"+std::to_string(start_frame)+".pcd" );
   pcl::io::savePCDFileASCII<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES>>("kitti_pcl/"+std::to_string(start_frame)+".pcd" ,pcl_cloud);
   
   if (init_param.is_pcl_visualization_on == 1) {
@@ -179,14 +179,14 @@ int main(int argc, char *argv[]) {
     std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(target_pc, 64));
     //cvo::CvoPointCloud * target = new cvo::CvoPointCloud(target_pc, 64);
     //cvo::CvoPointCloud target (target_pc, 64);
-    //pcl::PointCloud<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES>> pcl_target;
-    //convert_to_pcl(*target, pcl_target);
-    //pcl::io::savePCDFileASCII<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES>>("kitti_pcl/"+std::to_string(i+1)+".pcd" ,pcl_target);  
+    pcl::PointCloud<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES>> pcl_target;
+    convert_to_pcl(*target, pcl_target);
+    pcl::io::savePCDFileASCII<pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES>>("kitti_pcl/"+std::to_string(i+1)+".pcd" ,pcl_target);  
     //target->write_to_intensity_pcd("kitti_pcl/"+std::to_string(i+1)+".pcd"); 
     std::cout<<"NUm of source pts is "<<source->num_points()<<"\n";
     std::cout<<"NUm of target pts is "<<target->num_points()<<"\n";
 
-    
+    /*
     Eigen::Matrix4f result, init_guess_inv;
     init_guess_inv = init_guess.inverse();
     printf("Start align... num_fixed is %d, num_moving is %d\n", source->num_points(), target->num_points());
@@ -218,7 +218,7 @@ int main(int argc, char *argv[]) {
     accum_output<<"\n";
     accum_output<<std::flush;
 
-
+    */
     std::cout<<"\n\n===========next frame=============\n\n";
     //delete source;
     std::cout<<"just swtich source and target\n"<<std::flush;

@@ -10,8 +10,6 @@ namespace cvo {
   
   // all params to tune :(
   struct CvoParams {
-
-
     float ell_init_first_frame;
     float ell_init;
     float ell_min;
@@ -44,7 +42,7 @@ namespace cvo {
     int is_pcl_visualization_on;
     int is_using_least_square;
     
-    bool is_ell_adaptive;
+    int is_ell_adaptive;
 
     
     CvoParams() :
@@ -75,7 +73,7 @@ namespace cvo {
       indicator_stable_threshold(0.2),
       is_pcl_visualization_on(0),
       is_using_least_square(0),
-      is_ell_adaptive(false) {}
+      is_ell_adaptive(0) {}
     
   };
 
@@ -84,7 +82,7 @@ namespace cvo {
     std::cout<<"open "<<filename<<std::endl;
     fs.open(std::string(filename), cv::FileStorage::READ );
     if (!fs.isOpened()) {
-      std::cerr << "Failed to open " << filename << std::endl;
+      std::cerr << "Failed to open CvoParam file " << filename << std::endl;
       return;
     }
 
@@ -123,42 +121,6 @@ namespace cvo {
     fs.release();
     return;
   }
-
-  inline void read_CvoParams(const char * filename, CvoParams * params) {
-    //FILE * ptr = fopen(filename, "r");
-    std::ifstream f;
-    f.open(filename);
-    if (f.is_open() )  {
-      memset(params, 0, sizeof(CvoParams));
-      printf( "reading cvo params from file %s\n", filename);
-      //fscanf(ptr, "%f\n%f\n%f\n%lf\n%lf\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n",
-      f >> params->ell_init
-        >> params->ell_min
-        >> params->ell_max
-        >> params->dl
-        >> params->dl_step
-        >> params->sigma
-        >> params->sp_thres
-        >> params->c
-        >> params->d
-        >> params->c_ell
-        >> params->c_sigma
-        >> params->s_ell
-        >> params->s_sigma
-        >> params->MAX_ITER
-        >> params->min_step
-        >> params->eps
-        >> params->eps_2;
-      f.close();
-    //fclose(ptr);
-
-      std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<std::endl;
-    } else {
-      printf("Error: the CvoParam file is empty\n");
-    }
-
-  }
-
 
   
 }

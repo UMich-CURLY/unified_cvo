@@ -11,6 +11,8 @@
 #include "utils/Calibration.hpp"
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/CvoGPU.hpp"
+#include "cvo/CvoParams.hpp"
+
 using namespace std;
 using namespace boost::filesystem;
 
@@ -29,6 +31,7 @@ int main(int argc, char *argv[]) {
   kitti.set_start_index(start_frame);
   int max_num = std::stoi(argv[5]);
   
+  accum_output <<"1 0 0 0 0 1 0 0 0 0 1 0\n";
   
   cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();
@@ -39,13 +42,84 @@ int main(int argc, char *argv[]) {
   init_param.ell_decay_rate = init_param.ell_decay_rate_first_frame;
   init_param.ell_decay_start  = init_param.ell_decay_start_first_frame;
   cvo_align.write_params(&init_param);
-  
+
+  std::cout<<"write ell! ell init is "<<cvo_align.get_params().ell_init<<std::endl;
+
+  //cvo::cvo cvo_align_cpu("/home/rayzhang/outdoor_cvo/cvo_params/cvo_params.txt");
+
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
-  init_guess(2,3)=0;
-  Eigen::Affine3f init_guess_cpu = Eigen::Affine3f::Identity();
-  init_guess_cpu.matrix()(2,3)=0;
+  //init_guess(2,3)=2.22;
   Eigen::Matrix4f accum_mat = Eigen::Matrix4f::Identity();
   // start the iteration
+  /*  init_guess <<
+   0.99999533, -0.00285432,  0.00093057, -0.00943301,
+  0.00285291 , 0.99999478 , 0.00145044 ,-0.02358547,
+ -0.00093543 ,-0.00144773 , 0.99999849 , 2.34234614,
+  0.         , 0.         , 0.         , 1.        ;
+  */
+
+  /*
+// 05 538
+  init_guess <<
+    0.9982213 ,  0.01526773, -0.0576215, -0.02393033,
+    -0.0153228 ,  0.9998828 , -0.00050758, -0.00169955,
+    0.05760757,  0.00139014,  0.99833823,  0.33685977,
+    0.       ,   0. ,         0.        ,  1.        ;
+  */
+  /*
+  // 07: 631
+  init_guess <<
+    0.99996909 , 0.00252929 , 0.00740704 ,-0.07812081,
+    -0.00253296,  0.99999591,  0.00048523, -0.02792174,
+    -0.00740572, -0.00050394,  0.9999729 ,  0.59069083,
+    0.         , 0.         , 0.         , 1.        ;
+  */
+  /*  
+   init_guess << 
+   0.99997081, -0.00067641, -0.00768325,  0.0659839, 
+ 0.00066008  ,0.99999708 ,-0.00211982  ,0.00003192,
+  0.00768426 , 0.00211469 , 0.99996779 , 0.99285757,
+  0.         , 0.         , 0.         , 1.       ; 
+  */
+  /*
+  // 01: 264
+  init_guess <<
+   0.99997631, -0.00067165,  0.0068385,  -0.09453087,
+  0.00068353 , 0.99999886 ,-0.00174244, -0.00678228,
+-0.00683664  ,0.00174704  ,0.99997478 , 2.6214076 ,
+  0.         , 0.         , 0.        ,  1.        ;
+  */
+  /*
+  init_guess <<
+   0.99999533, -0.00285432,  0.00093057, -0.00943301,
+  0.00285291 , 0.99999478 , 0.00145044 ,-0.02358547,
+ -0.00093543 ,-0.00144773 , 0.99999849 , 2.34234614,
+  0.         , 0.         , 0.         , 1.        ;
+*/
+  /*
+  // 276
+  init_guess << 
+    0.99999543,  0.00075004 ,-0.00287568 , 0.11622182,
+    -0.0007469   ,0.99999794,  0.00136871, -0.06059335,
+    0.0028771  ,-0.00136674 , 0.99999464 , 2.46390501,
+    0.          ,0.         , 0.         , 1.        ;
+  */
+  /*
+  //01:1074
+  init_guess << 
+ 0.99950189 , 0.00224    , 0.0314794  , 0.04486028,
+ -0.00222771 , 0.99999744 ,-0.00042506, -0.02349048,
+ -0.03148026 , 0.00035473 , 0.99950426,  1.68980931,
+  0.         , 0.         , 0.        ,  1.        ;
+  */
+  /*
+  // 02: 4352
+  init_guess <<
+    0.999996 ,-0.00171092, -0.00244798,    0.011453,
+    0.0017332,    0.999957,  0.00912998,    0.032082,
+    0.00243225, -0.00913418,    0.999955  ,  -1.29516 ,                                                                                                          -0   ,        0  ,        -0 ,          1;
+  init_guess = init_guess.inverse().eval();
+*/
 
   cv::Mat source_left, source_right;
   //std::vector<float> semantics_source;
@@ -53,6 +127,7 @@ int main(int argc, char *argv[]) {
   kitti.read_next_stereo(source_left, source_right);
   std::shared_ptr<cvo::RawImage> source_raw(new cvo::RawImage(source_left));
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw, source_right, calib));
+  source->write_to_color_pcd("source.pcd");
   
   for (int i = start_frame; i<min(total_iters, start_frame+max_num)-1 ; i++) {
     
@@ -72,6 +147,14 @@ int main(int argc, char *argv[]) {
     std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, right, calib));
 
     Eigen::Matrix4f result, init_guess_inv;
+    Eigen::Matrix4f identity_init = Eigen::Matrix4f::Identity(); 
+    
+    double in_product_pre = cvo_align.inner_product(*source, *target, init_guess);
+    std::cout<<"Theinit guess  inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_pre<<"\n";
+    double in_product_identity = cvo_align.inner_product(*source, *target, identity_init);
+    std::cout<<"The identity guess  inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_identity<<"\n";
+    
+    
     init_guess_inv = init_guess.inverse();
     printf("Start align... num_fixed is %d, num_moving is %d\n", source->num_points(), target->num_points());
     std::cout<<std::flush;
@@ -90,6 +173,11 @@ int main(int argc, char *argv[]) {
     accum_mat = accum_mat * result;
     std::cout<<"accum tf: \n"<<accum_mat<<std::endl;
     
+    if (i==start_frame) {
+      cvo::CvoPointCloud t_target;
+      cvo::CvoPointCloud::transform(result, *target, t_target);
+      t_target.write_to_color_pcd("t_target.pcd");
+    }
     
     // log accumulated pose
 
@@ -104,7 +192,7 @@ int main(int argc, char *argv[]) {
     source = target;
     if (i == start_frame) {
       init_param.ell_init = ell_init;
-      init_param.ell_decay_start = ell_decay_rate;
+      init_param.ell_decay_rate = ell_decay_rate;
       init_param.ell_decay_start = ell_decay_start;
       cvo_align.write_params(&init_param);
     }

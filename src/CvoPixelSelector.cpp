@@ -432,8 +432,26 @@ namespace cvo
                      std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv ) {
     PixelSelector selector(raw_image.color().cols, raw_image.color().rows);
     std::vector<float> heat_map(raw_image.color().total(), 0);
-    selector.makeHeatMaps(raw_image,static_cast<float> (num_want), heat_map.data(), output_uv, 5, 0);
-    
+    selector.makeHeatMaps(raw_image,static_cast<float> (num_want), heat_map.data(), output_uv, 3, 0);
+    int times = 1;
+    while (output_uv.size() > num_want)  {
+	std::cout<<"selected points more than "<<num_want<<std::endl;
+       std::fill(heat_map.begin(), heat_map.end(), 0);
+       output_uv.clear();
+       
+       selector.makeHeatMaps(raw_image,static_cast<float> (num_want), heat_map.data(), output_uv, 3+times, 0);
+       times ++;
+       if (times == 5) break;
+    }
+    if (output_uv.size() < num_want / 3 * 2) {
+       std::fill(heat_map.begin(), heat_map.end(), 0);
+       output_uv.clear();
+       
+       selector.makeHeatMaps(raw_image,static_cast<float> (num_want), heat_map.data(), output_uv, 3+times-2, 0);
+
+    }
+   
+
     bool debug_plot = true;
     if (debug_plot) {
       std::cout<<"Number of selected points is "<<output_uv.size()<<"\n";
@@ -448,16 +466,12 @@ namespace cvo
       }
       //cv::imshow("heat map", heatmap);
       //cv::waitKey(200);
-      //cv::imwrite("heatmap.png", heatmap);
+      cv::imwrite("stereo_selected_pixels.png", heatmap);
       
     }
 
   }
 
-
-
-  
-  
   
   pcl::PointCloud<pcl::Normal>::Ptr
   compute_pcd_normals(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in, float radius) {
@@ -497,6 +511,8 @@ namespace cvo
     int num_points = pc_in->points.size();
     int previous_quadrant = get_quadrant(pc_in->points[0]);
     int ring_num = 0;
+    // int num_points_in_one_ring = 0;
+    //int num_points_counting = 1;
 
 #ifdef IS_USING_NORMALS 
     //std::cout<<"calculate surface normals\n";
@@ -522,14 +538,23 @@ namespace cvo
       int quadrant = get_quadrant(pc_in->points[i]);
       if(quadrant == 1 && previous_quadrant == 4 && ring_num < beam_num-1){
         ring_num += 1;
+        //num_points_in_one_ring = num_points_counting;
+        //num_points_counting = 1;
+        //previous_quadrant = quadrant;
         continue;
       }
+      // else{
+      //  num_points_counting += 1;
+      // }
 
       // select points
       const auto& point_l = pc_in->points[i-1];
-      const auto& point = pc_in->points[i];
+      const auto & point = pc_in->points[i];
       const auto& point_r = pc_in->points[i+1];
-      
+
+      double distance = sqrt(point.x*point.x + point.y*point.y + point.z*point.z);
+
+      // horizontal
       double depth_grad = std::max((point_l.getVector3fMap()-point.getVector3fMap()).norm(),
                                    (point.getVector3fMap()-point_r.getVector3fMap()).norm());
       
@@ -548,6 +573,7 @@ namespace cvo
 #endif
           && ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0)) //){
           && (  point.x*point.x+point.y*point.y+point.z*point.z) < distance_bound * distance_bound  ) {
+
         //&&  std::fabs(point.x) < distance_bound && std::fabs(point.y) < distance_bound && std::fabs(point.z) < distance_bound) {
 
         // std::cout << "points: " << point.x << ", " << point.y << ", " << point.z << ", " << point.intensity << std::endl;
@@ -559,8 +585,8 @@ namespace cvo
         normals_out->push_back(normals->points[i]);
 #endif
       }
-
       previous_quadrant = quadrant;      
+      
     }
 
     // visualize
@@ -578,7 +604,7 @@ namespace cvo
     // }
     
     // pcl::io::savePCDFile("input.pcd", *pc_in);
-    // pcl::io::savePCDFile("output.pcd", *pc_out);
+    //pcl::io::savePCDFile("output.pcd", *pc_out);
   }
 
   void edge_detection(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
@@ -883,30 +909,42 @@ namespace cvo
     int num_points = pc_in->points.size();
     int previous_quadrant = get_quadrant(pc_in->points[0]);
     int ring_num = 0;
+    int num_points_in_one_ring = 0;
+    int num_points_counting = 1;
 
-    for(int i = 1; i<num_points; i++) {   
+    for(int i = 1; i<num_points; i++) {      
       if(semantic_in[i]==-1){
         // exclude unlabeled points
-
         continue;
-      }   
+      }
+      
       int quadrant = get_quadrant(pc_in->points[i]);
       if(quadrant == 1 && previous_quadrant == 4 && ring_num < beam_num-1){
         ring_num += 1;
+        num_points_in_one_ring = num_points_counting;
+        num_points_counting = 0;
+        previous_quadrant = quadrant;
         continue;
+      }
+      else{
+        num_points_counting += 1;
       }
 
       // select points
       const auto& point_l = pc_in->points[i-1];
       const auto& point = pc_in->points[i];
       const auto& point_r = pc_in->points[i+1];
+
+      double distance = sqrt(point.x*point.x + point.y*point.y + point.z*point.z);
       
+      // horizontal
       double depth_grad = std::max((point_l.getVector3fMap()-point.getVector3fMap()).norm(),
                                    (point.getVector3fMap()-point_r.getVector3fMap()).norm());
       
       double intenstity_grad = std::max(
                                         std::abs( point_l.intensity - point.intensity ),
                                         std::abs( point.intensity - point_r.intensity ));
+
 
 
       if( (intenstity_grad > intensity_bound || depth_grad > depth_bound)
@@ -956,15 +994,21 @@ namespace cvo
   }
 
 
-
   int get_quadrant(pcl::PointXYZI point){
     int res = 0;
-    float x = point.x;
-    float y = point.y;
+    /* because for kitti dataset lidar, we changed the coordinate...
+    now.x = -raw.y;
+    now.y = -raw.z;
+    now.z = raw.x;
+    */
+    float x = point.z;
+    float y = -point.x;
+
     if(x > 0 && y >= 0){res = 1;}
     else if(x <= 0 && y > 0){res = 2;}
     else if(x < 0 && y <= 0){res = 3;}
-    else if(x >= 0 && y < 0){res = 4;}
+    else if(x >= 0 && y < 0){res = 4;}   
+
     return res;
   }
 

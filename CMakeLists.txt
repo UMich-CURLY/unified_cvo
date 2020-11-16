@@ -3,7 +3,7 @@ SET(PROJECT_NAME OUTDOOR_CVO)
 PROJECT(${PROJECT_NAME})
 cmake_minimum_required(VERSION 3.8)
 option(${PROJECT_NAME}_ENABLE_CUDA "ENABLE_CUDA" ON)
-
+option(${PROJECT_NAME}_ENABLE_ACVO "ENABLE_ACVO" OFF)
 include(CheckLanguage)
 if (${PROJECT_NAME}_ENABLE_CUDA)
   enable_language(CUDA)
@@ -81,7 +81,7 @@ find_package(CUDA)
 #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++14; -Xcompiler -fPIC; -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -O2; -use_fast_math; --extended-lambda; -gencode arch=compute_75,code=sm_75;)
 #list(APPEND CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS}  "-Xcompiler -std=c++14  -O3 -rdc=true -Wno-deprecated-gpu-targets -lgsl -lgslcblas -lm -use_fast_math"  )
 #list(APPEND CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-ccbin g++-8 --extended-lambda -gencode arch=compute_75,code=sm_75" )
-set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_61,code=sm_61"  )
+set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_61,code=sm_61  -gencode arch=compute_75,code=sm_75"  )
 foreach(flag IN LISTS " -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -use_fast_math"  )
   add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${flag}>")
 endforeach()
@@ -206,11 +206,11 @@ endif()
 add_library(lie_group_utils SHARED ${LIE_GROUP_SOURCE})
 
 add_library(cvo_utils_lib SHARED ${CVO_UTILS_SOURCE})
-target_link_libraries(cvo_utils_lib opencv_core opencv_photo opencv_highgui elas opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search ${TBB_LIBRARIES})
+target_link_libraries(cvo_utils_lib opencv_core opencv_photo opencv_features2d  opencv_highgui elas opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search ${TBB_LIBRARIES})
 
 add_library(cvo_utils_range_ell_lib SHARED ${CVO_UTILS_SOURCE})
 target_compile_definitions(cvo_utils_range_ell_lib PRIVATE -DIS_USING_RANGE_ELL)
-target_link_libraries(cvo_utils_range_ell_lib opencv_core opencv_photo opencv_highgui elas opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search ${TBB_LIBRARIES})
+target_link_libraries(cvo_utils_range_ell_lib opencv_core opencv_photo opencv_features2d opencv_highgui elas opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search ${TBB_LIBRARIES})
 
 
 if (${PROJECT_NAME}_ENABLE_CUDA)
@@ -219,16 +219,16 @@ target_compile_definitions(cvo_utils_cov_lib PRIVATE -DIS_USING_COVARIANCE)
 set_target_properties(cvo_utils_cov_lib PROPERTIES
   LANGUAGE CUDA
   CUDA_SOURCE_PROPERTY_FORMAT OBJ)
-target_link_libraries(cvo_utils_cov_lib cukdtree_lib opencv_core opencv_photo opencv_highgui elas opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search ${TBB_LIBRARIES})
+target_link_libraries(cvo_utils_cov_lib cukdtree_lib opencv_core opencv_photo opencv_features2d opencv_highgui elas opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search ${TBB_LIBRARIES})
 endif()
 
 add_library(cvo_utils_normal_lib SHARED ${CVO_UTILS_SOURCE})
 target_compile_definitions(cvo_utils_normal_lib PRIVATE -DIS_USING_NORMALS )
-target_link_libraries(cvo_utils_normal_lib  opencv_core opencv_highgui opencv_photo elas opencv_imgcodecs pcl_filters pcl_features  pcl_io ${TBB_LIBRARIES})
+target_link_libraries(cvo_utils_normal_lib  opencv_core opencv_highgui opencv_photo elas opencv_imgcodecs opencv_features2d pcl_filters pcl_features  pcl_io ${TBB_LIBRARIES})
 
 add_library(cvo_utils_loam_lib SHARED ${CVO_UTILS_SOURCE})
 target_compile_definitions(cvo_utils_loam_lib PRIVATE -DIS_USING_LOAM)
-target_link_libraries(cvo_utils_loam_lib  opencv_core opencv_highgui opencv_photo elas opencv_imgcodecs pcl_filters pcl_features pcl_search pcl_io ${TBB_LIBRARIES})
+target_link_libraries(cvo_utils_loam_lib  opencv_core opencv_highgui opencv_photo elas opencv_imgcodecs pcl_filters pcl_features opencv_features2d pcl_search pcl_io ${TBB_LIBRARIES})
 
 add_library(bki_mapping_lib SHARED ${BKI_MAPPING_SOURCE})
 target_link_libraries(bki_mapping_lib cvo_utils_lib pcl_filters pcl_io pcl_search pcl_visualization )
@@ -255,6 +255,8 @@ add_library(cvo_cpu_semantic_lib SHARED ${CVO_CPU_SOURCE} )
 target_compile_definitions(cvo_cpu_semantic_lib PRIVATE -DIS_USING_SEMANTICS)
 target_link_libraries(cvo_cpu_semantic_lib lie_group_utils ${TBB_LIBRARIES} pcl_io pcl_search pcl_visualization cxsparse)
 
+if (${PROJECT_NAME}_ENABLE_ACVO )
+
 add_library(acvo_cpu_lib SHARED ${ACVO_CPU_SOURCE} )
 target_link_libraries(acvo_cpu_lib PRIVATE  lie_group_utils ${TBB_LIBRARIES} pcl_io  cxsparse)
 
@@ -262,10 +264,10 @@ add_library(acvo_cpu_semantic_lib SHARED ${ACVO_CPU_SOURCE} )
 target_compile_definitions(acvo_cpu_semantic_lib PRIVATE -DIS_USING_SEMANTICS)
 target_link_libraries(acvo_cpu_semantic_lib lie_group_utils ${TBB_LIBRARIES} pcl_io  cxsparse)
 
+endif()
 
 add_library(pose_graph_lib SHARED ${POSE_GRAPH_SOURCE})
 target_link_libraries(pose_graph_lib PRIVATE cvo_utils_lib bki_mapping_lib cvo_cpu_lib opencv_core opencv_imgcodecs boost_filesystem  gtsam gtsam_unstable pcl_io pcl_search pcl_visualization)
-
 
 #add_library(pose_graph_cov_lib SHARED ${POSE_GRAPH_SOURCE})
 #target_compile_definitions(pose_graph_cov_lib PRIVATE -DIS_USING_COVARIANCE)
@@ -300,7 +302,7 @@ target_link_libraries(cvo_align_loam cvo_cpu_loam_lib boost_system  cvo_utils_lo
 
 #############################################
 # Adaptive CVO GPU
-if (${PROJECT_NAME}_ENABLE_CUDA)
+if (${PROJECT_NAME}_ENABLE_CUDA AND ${PROJECT_NAME}_ENABLE_ACVO)
 add_library(acvo_gpu_lib  ${ACVO_GPU_SOURCE})
 set_target_properties(acvo_gpu_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
@@ -351,6 +353,32 @@ add_library(cvo_gpu_lib ${CVO_GPU_SOURCE})
 target_link_libraries(cvo_gpu_lib PRIVATE lie_group_utils cvo_utils_lib  )
 target_compile_definitions(cvo_gpu_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
 set_target_properties(cvo_gpu_lib PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+  CUDA_SEPERABLE_COMPILATION ON
+  COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
+
+
+add_library(cvo_gpu_img_intensity_lib ${CVO_GPU_SOURCE})
+target_compile_definitions(cvo_gpu_img_intensity_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
+target_link_libraries(cvo_gpu_img_intensity_lib PRIVATE lie_group_utils cvo_utils_lib)
+set_target_properties(cvo_gpu_img_intensity_lib PROPERTIES POSITION_INDEPENDENT_CODE ON
+    CUDA_SEPERABLE_COMPILATION ON
+    COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
+  
+
+
+add_library(cvo_gpu_img_geometric_lib ${CVO_GPU_SOURCE})
+target_link_libraries(cvo_gpu_img_geometric_lib PRIVATE lie_group_utils cvo_utils_lib  )
+target_compile_definitions(cvo_gpu_img_geometric_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_GEOMETRIC_ONLY)
+set_target_properties(cvo_gpu_img_geometric_lib PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+  CUDA_SEPERABLE_COMPILATION ON
+  COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
+
+add_library(cvo_gpu_range_ell_lib ${CVO_GPU_SOURCE})
+target_link_libraries(cvo_gpu_range_ell_lib PRIVATE lie_group_utils cvo_utils_range_ell_lib  )
+target_compile_definitions(cvo_gpu_range_ell_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_USING_RANGE_ELL)
+set_target_properties(cvo_gpu_range_ell_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   CUDA_SEPERABLE_COMPILATION ON
   COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
@@ -412,7 +440,6 @@ set_target_properties(cvo_gpu_lidar_intensity_lib PROPERTIES POSITION_INDEPENDEN
     CUDA_SEPERABLE_COMPILATION ON
     COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 
-
 add_library(cvo_gpu_lidar_intensity_loam_lib SHARED ${CVO_GPU_SOURCE})
 target_compile_definitions(cvo_gpu_lidar_intensity_loam_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_LOAM )
 target_link_libraries(cvo_gpu_lidar_intensity_loam_lib PRIVATE lie_group_utils cvo_utils_loam_lib )
@@ -437,7 +464,12 @@ set_target_properties(cvo_gpu_lidar_semantic_loam_lib PROPERTIES
     CUDA_SEPERABLE_COMPILATION ON
     COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
   
-
+add_library(cvo_gpu_img_semantic_lib ${CVO_GPU_SOURCE})
+target_compile_definitions(cvo_gpu_img_semantic_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_USING_SEMANTICS)
+target_link_libraries(cvo_gpu_img_semantic_lib PRIVATE lie_group_utils cvo_utils_lib)
+set_target_properties(cvo_gpu_img_semantic_lib PROPERTIES POSITION_INDEPENDENT_CODE ON
+    CUDA_SEPERABLE_COMPILATION ON
+    COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
   
 endif()
 
@@ -446,6 +478,7 @@ endif()
 # tests GPU
 if (${PROJECT_NAME}_ENABLE_CUDA)
 
+if (${PROJECT_NAME}_ENABLE_ACVO )
 add_executable(acvo_align_gpu ${PROJECT_SOURCE_DIR}/src/experiments/main_acvo_gpu_align.cpp)
 target_compile_definitions(acvo_align_gpu PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
 target_link_libraries(acvo_align_gpu acvo_gpu_lib cvo_cpu_lib cvo_utils_lib boost_filesystem kitti boost_system)
@@ -476,9 +509,29 @@ add_executable(acvo_intensity_gpu_raw_lidar ${PROJECT_SOURCE_DIR}/src/experiment
 target_compile_definitions(acvo_intensity_gpu_raw_lidar PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 )
 target_link_libraries(acvo_intensity_gpu_raw_lidar acvo_gpu_lidar_lib kitti cvo_utils_lib pose_graph_lib  boost_filesystem boost_system)
 
-add_executable(cvo_align_gpu_raw_img ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_raw_image.cpp)
-target_compile_definitions(cvo_align_gpu_raw_img PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
-target_link_libraries(cvo_align_gpu_raw_img cvo_gpu_lib cvo_utils_lib kitti  boost_filesystem boost_system)
+
+add_executable(acvo_semantic_lidar_align_gpu ${PROJECT_SOURCE_DIR}/src/experiments/main_acvo_gpu_lidar_align.cpp)
+target_compile_definitions(acvo_semantic_lidar_align_gpu PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_SEMANTICS)
+target_link_libraries(acvo_semantic_lidar_align_gpu  acvo_gpu_semantic_lidar_lib cvo_cpu_semantic_lib cvo_utils_lib boost_filesystem boost_system kitti)
+
+
+endif()
+
+add_executable(cvo_align_gpu_intensity_img ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_raw_image.cpp)
+target_compile_definitions(cvo_align_gpu_intensity_img PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
+target_link_libraries(cvo_align_gpu_intensity_img cvo_gpu_img_intensity_lib cvo_utils_lib kitti  boost_filesystem boost_system)
+
+add_executable(cvo_align_gpu_geometric_img ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_raw_image.cpp)
+target_compile_definitions(cvo_align_gpu_geometric_img PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_GEOMETRIC_ONLY)
+target_link_libraries(cvo_align_gpu_geometric_img cvo_gpu_img_geometric_lib cvo_utils_lib kitti  boost_filesystem boost_system)
+
+add_executable(cvo_align_gpu_raw_img_range_ell ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_raw_image.cpp)
+target_compile_definitions(cvo_align_gpu_raw_img_range_ell PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_USING_RANGE_ELL)
+target_link_libraries(cvo_align_gpu_raw_img_range_ell cvo_gpu_range_ell_lib cvo_utils_range_ell_lib kitti  boost_filesystem boost_system)
+
+add_executable(cvo_align_gpu_semantic_img ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_semantic_image.cpp)
+target_compile_definitions(cvo_align_gpu_semantic_img PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_USING_SEMANTIC)
+target_link_libraries(cvo_align_gpu_semantic_img cvo_gpu_img_semantic_lib cvo_utils_lib kitti  boost_filesystem boost_system)
 
 add_executable(cvo_align_gpu ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align.cpp)
 target_compile_definitions(cvo_align_gpu PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
@@ -515,6 +568,14 @@ add_executable(cvo_align_gpu_lidar_intensity_loam_raw ${PROJECT_SOURCE_DIR}/src/
 target_compile_definitions(cvo_align_gpu_lidar_intensity_loam_raw PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_LOAM)
 target_link_libraries(cvo_align_gpu_lidar_intensity_loam_raw cvo_gpu_lidar_intensity_loam_lib  cvo_utils_loam_lib boost_filesystem boost_system kitti)
 
+
+add_executable(gicp_align_two ${PROJECT_SOURCE_DIR}/src/experiments/gicp_align_two.cpp)
+target_link_libraries(gicp_align_two ${PCL_LIBRARIES})
+
+add_executable(cvo_single_test ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_single_image_test.cpp)
+target_compile_definitions(cvo_single_test PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_GEOMETRIC_ONLY)
+target_link_libraries(cvo_single_test cvo_gpu_img_geometric_lib cvo_utils_lib kitti  boost_filesystem boost_system)
+
 #add_executable(cvo_align_gpu_lidar_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_pcd.cpp)
 #target_compile_definitions(cvo_align_gpu_lidar_pcd PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY -DIS_USING_LOAM)
 #target_link_libraries(cvo_align_gpu_lidar_pcd cvo_gpu_lidar_loam_lib pose_graph_loam_lib cvo_utils_loam_lib boost_filesystem boost_system pcl_io kitti)
@@ -523,11 +584,6 @@ target_link_libraries(cvo_align_gpu_lidar_intensity_loam_raw cvo_gpu_lidar_inten
 add_executable(cvo_align_gpu_lidar_semantic_loam ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_semantic.cpp)
 target_compile_definitions(cvo_align_gpu_lidar_semantic_loam PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_SEMANTICS)
 target_link_libraries(cvo_align_gpu_lidar_semantic_loam cvo_gpu_lidar_semantic_loam_lib  cvo_utils_loam_lib boost_filesystem boost_system kitti)
-
-
-add_executable(acvo_semantic_lidar_align_gpu ${PROJECT_SOURCE_DIR}/src/experiments/main_acvo_gpu_lidar_align.cpp)
-target_compile_definitions(acvo_semantic_lidar_align_gpu PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_SEMANTICS)
-target_link_libraries(acvo_semantic_lidar_align_gpu  acvo_gpu_semantic_lidar_lib cvo_cpu_semantic_lib cvo_utils_lib boost_filesystem boost_system kitti)
 
 endif()
 
