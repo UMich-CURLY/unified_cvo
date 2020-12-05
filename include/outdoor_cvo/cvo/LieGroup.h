@@ -14,7 +14,7 @@
 #define __LIEGROUP_H__
 
 #include <Eigen/Dense>
-#include <unsupported/Eigen/MatrixFunctions>
+
 #include <iostream>
 
 

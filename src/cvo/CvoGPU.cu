@@ -276,7 +276,7 @@ namespace cvo{
 
     cudaMemcpy(cvo_state->R_gpu->data(), R_inv.data(), sizeof(Eigen::Matrix3f), cudaMemcpyHostToDevice);
     cudaMemcpy(cvo_state->T_gpu->data(), T_inv.data(), sizeof(Eigen::Vector3f), cudaMemcpyHostToDevice );
-
+    if (debug_print) std::cout<<"R,T is "<<R<<std::endl<<T<<std::endl;
     if (debug_print) std::cout<<"transform mat R"<<transform.block<3,3>(0,0)<<"\nT: "<<transform.block<3,1>(0,3)<<std::endl;
   }
 
@@ -1586,49 +1586,18 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
         std::cout<<"dist: "<<dist_this_iter <<std::endl<<"check bounds....\n"<<std::flush;
       }
 
-
-     
       if(dist_this_iter<params.eps_2 ){
-
-
-        //float dist_this_iter = dist_se3(dR.cast<float>(),dT.cast<float>());
-        //ell_file << cvo_state.ell<<"\n"<<std::flush;
-        ///dist_change_file << dist_this_iter<<"\n"<<std::flush;
-        //float ip_curr = (double)cvo_state.A_host.nonzero_sum / (double)source_points.num_points() / (double) target_points.num_points();
-        //inner_product_file<<ip_curr<<std::flush;
-        //inner_product_file<<this->inner_product(source_points, target_points, transform)<<"\n"<<std::flush;
         iter = k;
         std::cout<<"break: dist: "<<dist_this_iter<<std::endl;
-        double dist_std = compute_std_dist_between_two_pc(cvo_state.cloud_x_gpu, cvo_state.cloud_y_gpu);
-        std::cout<<"l2 dist standard deviation is "<<dist_std<<std::endl;
-
-
         break;
       }
 
       if (k>params.ell_decay_start && need_decay_ell  ) {
-      //if (k>params.ell_decay_start && k % params.ell_decay_start == 0  ) {
         cvo_state.ell = cvo_state.ell * params.ell_decay_rate;
         if (cvo_state.ell < params.ell_min)
           cvo_state.ell = params.ell_min;
       }
 
-      if(dist_this_iter<(double)params.eps_2){
-        iter = k;
-
-        if (params.is_using_least_square)
-          use_least_square ++;
-        
-        if (params.is_using_least_square == 0 ||
-            use_least_square > params.is_using_least_square) {
-          std::cout<<"break: dist: "<<dist_this_iter<<std::endl;
-          break;
-        }
-      }
-
-      
-      
-      if(debug_print) printf("end of iteration, is_using_least_square is %d \n\n\n", use_least_square);
     }
     auto end_all = chrono::system_clock::now();
     chrono::duration<double> t_all = chrono::duration<double>::zero();

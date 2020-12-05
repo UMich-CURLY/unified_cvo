@@ -1181,7 +1181,8 @@ namespace cvo{
 
       // if the se3 distance is smaller than eps2, break
       if (debug_print) {
-        std::cout<<"dist: "<<dist_se3(dR, dT)<<std::endl<<"check bounds....\n";
+	      std::cout<<"get_dsist...\n"<<std::flush;
+        std::cout<<"dist: "<<dist_se3(dR, dT)<<std::endl<<"check bounds....\n"<<std::flush;
       }
       if(dist_se3(dR,dT)<params.eps_2){
         iter = k;
