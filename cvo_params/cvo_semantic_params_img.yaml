@@ -27,3 +27,4 @@ indicator_window_size: 30
 indicator_stable_threshold: 0.001
 is_ell_adaptive: False
 is_dense_kernel: False
+

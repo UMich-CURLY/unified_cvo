@@ -16,6 +16,7 @@ s_ell: 0.1
 s_sigma: 0.8
 MAX_ITER: 2000
 min_step: 0.0001
+max_step: 0.8
 eps: 0.00005
 eps_2: 0.000006
 ell_decay_rate: 0.95

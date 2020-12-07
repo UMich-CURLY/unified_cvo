@@ -143,6 +143,11 @@ namespace cvo{
     return gpu_cloud;
   }
 
+  float compute_ranged_lengthscale(float curr_dist_square, float curr_ell, float min_ell, float max_ell ) {
+    
+    
+  }
+
   CvoGPU::CvoGPU(const std::string & param_file) {
     // read_CvoParams(param_file.c_str(), &params);
     read_CvoParams_yaml(param_file.c_str(), &params);
@@ -378,7 +383,6 @@ namespace cvo{
           
           float k = s2*exp(-d2/(2.0*l*l));
           float ck = c_sigma*c_sigma*exp(-d2_color/(2.0*c_ell*c_ell));
-          // float ck = 1;
 #ifdef IS_USING_SEMANTICS              
           float sk = cvo_params->s_sigma*cvo_params->s_sigma*exp(-d2_semantic/(2.0*s_ell*s_ell));
 #else
@@ -633,7 +637,7 @@ namespace cvo{
 #ifdef IS_GEOMETRIC_ONLY
         float a = sigma2*exp(-d2/(2.0*l*l)) * normal_ip;
         //if (i==0)
-        //  printf("geometric: a is %f, normal_ip is %f, final_a is %f\n", sigma2*exp(-d2/(2.0*l*l)), normal_ip, a );
+          printf("geometric: a is %f, normal_ip is %f, final_a is %f\n", sigma2*exp(-d2/(2.0*l*l)), normal_ip, a );
         if (a > cvo_params->sp_thres){
           A_mat->mat[i * A_mat->cols + num_inds] = a;
           A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
@@ -709,6 +713,7 @@ namespace cvo{
     
 #ifdef IS_USING_COVARIANCE   
     fill_in_A_mat_gpu_dense_mat_kernel<<<(points_moving->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(// input
+<<<<<<< HEAD
                                                                                                            params_gpu,
                                                                                                            points_fixed_raw,
                                                                                                            fixed_size,
@@ -733,7 +738,6 @@ namespace cvo{
     compute_nonzeros(A_mat);
   }
 
-
   __global__ void compute_flow_gpu_no_eigen(const CvoParams * cvo_params,
                                             CvoPoint * cloud_x, CvoPoint * cloud_y,
                                             SparseKernelMat * A,
@@ -752,6 +756,7 @@ namespace cvo{
     Eigen::Vector3f px_eig;
     px_eig<< px->x , px->y, px->z;
     float px_arr[3] = {px->x, px->y, px->z};
+
     Eigen::Vector3f omega_i = Eigen::Vector3f::Zero();
     Eigen::Vector3f v_i = Eigen::Vector3f::Zero();
 #ifdef IS_USING_COVARIANCE
@@ -790,6 +795,7 @@ namespace cvo{
     omega_i_eig = (omega_i / cvo_params->c ).cast<double>();
     Eigen::Vector3d & v_i_eig = v_all_gpu[i];
     v_i_eig = (v_i /  cvo_params->d).cast<double>();
+
   }
 
 
@@ -801,7 +807,6 @@ namespace cvo{
       //std::cout<<"time for se_kernel is "<<std::chrono::duration_cast<std::chrono::milliseconds>((end- start)).count()<<std::endl;
       std::cout<<"A rows is "<<cvo_state->A_host.rows<<", A cols is "<<cvo_state->A_host.cols<<std::endl;
     }
-    
     auto start = chrono::system_clock::now();
     compute_flow_gpu_no_eigen<<<cvo_state->A_host.rows / CUDA_BLOCK_SIZE + 1 ,CUDA_BLOCK_SIZE>>>(params_gpu,
                                                                                                  thrust::raw_pointer_cast(cvo_state->cloud_x_gpu->points.data()   ),
@@ -1250,6 +1255,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     
   }
 
+
   static bool A_sparsity_indicator_ell_update(std::queue<float> & indicator_start_queue,
                                               std::queue<float> & indicator_end_queue,
                                               float & indicator_start_sum,
@@ -1428,7 +1434,6 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
                     Eigen::Ref<Eigen::Matrix4f> transform,
                     double *registration_seconds) const {
 
-
     Mat33f R = init_guess_transform.block<3,3>(0,0);
     Vec3f T= init_guess_transform.block<3,1>(0,3);
 
@@ -1460,6 +1465,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     chrono::duration<double> t_transform_pcd = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_flow = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_step = chrono::duration<double>::zero();
+
     std::cout<<"Start iteration, init transform is \n";
     std::cout<<init_guess_transform<<std::endl;
     std::cout<<"Max iter is "<<params.MAX_ITER<<std::endl;
@@ -1479,6 +1485,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       
       // update transformation matrix to CvoState
       update_tf(R, T, &cvo_state, transform);
+
       if (is_logging) {
         Eigen::Matrix4f Tmat = transform;
         transform_file << Tmat(0,0) <<" "<< Tmat(0,1) <<" "<< Tmat(0,2) <<" "<< Tmat(0,3) <<" "
@@ -1494,11 +1501,10 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       end = std::chrono::system_clock::now();
       t_transform_pcd += (end - start);
 
-      if (k == 0 ) {
+      if (k == 0 && debug_print ) {
         double dist_std = compute_std_dist_between_two_pc(cvo_state.cloud_x_gpu, cvo_state.cloud_y_gpu);
         std::cout<<"l2 dist standard deviation is "<<dist_std<<std::endl;
       }
-
 
       // update the inner product matrix
       start = chrono::system_clock::now();
@@ -1517,10 +1523,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
 
       // compute omega and v
       start = chrono::system_clock::now();
-      if(use_least_square)
-        compute_flow_least_square(&cvo_state, params_gpu, &omega, &v);
-      else 
-        compute_flow(&cvo_state, params_gpu, &omega, &v);
+      compute_flow(&cvo_state, params_gpu, &omega, &v);
       if (debug_print) std::cout<<"iter "<<k<< "omega: \n"<<omega.transpose()<<"\nv: \n"<<v.transpose()<<std::endl;
       if (k == 0) {
         printf("iter=0: nonzeros in A is %d\n", cvo_state.A_host.nonzero_sum);
@@ -1576,6 +1579,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       if (is_logging) {
         ell_file << cvo_state.ell<<"\n"<<std::flush;
         dist_change_file << dist_this_iter<<"\n"<<std::flush;
+
         //float ip_curr = (double)cvo_state.A_host.nonzero_sum / (double)source_points.num_points() / (double) target_points.num_points();
         //effective_points_file << indicator << "\n" << std::flush;
         inner_product_file<<ip_curr<<"\n"<<std::flush;
@@ -1588,6 +1592,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
 
       if(dist_this_iter<params.eps_2 ){
         iter = k;
+
         std::cout<<"break: dist: "<<dist_this_iter<<std::endl;
         break;
       }
@@ -1597,7 +1602,6 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
         if (cvo_state.ell < params.ell_min)
           cvo_state.ell = params.ell_min;
       }
-
     }
     auto end_all = chrono::system_clock::now();
     chrono::duration<double> t_all = chrono::duration<double>::zero();
@@ -1609,6 +1613,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     std::cout<<"t_all is "<<t_all.count()<<"\n"<<std::flush;
     std::cout<<"non adaptive cvo ends. final ell is "<<cvo_state.ell<<", final iteration is "<<k
              <<"MAX_ITER is "<<params.MAX_ITER<<std::endl;
+
     if (registration_seconds)
       *registration_seconds = t_all.count();
 
@@ -1633,6 +1638,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     bool debug_print = false;
     A_trip_concur_.clear();
     const float s2= params.sigma*params.sigma;
+
      const float l = params.ell_min;
 
     // convert k threshold to d2 threshold (so that we only need to calculate k when needed)
@@ -1723,11 +1729,12 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     A_mat.setZero();
     se_kernel_init_ell_cpu(&source_points, &target_points, &fixed_positions, &moving_positions, A_mat, A_trip_concur_ , params );
 
-    std::cout<<"--- inner_product ---"<<std::endl;
-    std::cout<<"nonzero_sum = "<<A_mat.sum()<<std::endl;
-    std::cout<<"source_points = "<<fixed_positions.size()<<std::endl;
-    std::cout<<"target_points = "<<moving_positions.size()<<std::endl;
-
+    //std::cout<<"num of non-zeros in A: "<<A_mat.nonZeros()<<std::endl;
+    //return float(A_mat.sum())/float(A_mat.nonZeros());
+    //return A_mat.sum()/(fixed_positions.size())*1e5/moving_positions.size() ;
+    //return float(A_mat.nonZeros()) / float(fixed_positions.size()) / float(moving_positions.size() ) * 100 ;
+    //}
+  
     return A_mat.sum()/fixed_positions.size()/moving_positions.size() ;
   }
 
@@ -1768,28 +1775,14 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
               &cvo_state.A_host, cvo_state.A);
     cudaDeviceSynchronize();
 
-    // compute omega and v
-    compute_flow(&cvo_state, params_gpu, &omega, &v);
 
-    // compute step size for integrating the flow
-    compute_step_size(&cvo_state, &params);
-
-    // stop if the step size is too small
-    cudaMemcpy(omega.data(), cvo_state.omega->data(), sizeof(Eigen::Vector3f), cudaMemcpyDeviceToHost);
-    cudaMemcpy(v.data(), cvo_state.v->data(), sizeof(Eigen::Vector3f), cudaMemcpyDeviceToHost);
-
-    // stacked omega and v for finding dtrans
-    Eigen::Matrix<float, 6,1> vec_joined;
-    vec_joined << omega, v;
-    // find the change of translation matrix dtrans
-    Eigen::Matrix<float,3,4> dtrans = Exp_SEK3(vec_joined, cvo_state.step).cast<float>();
-    // extract dR and dT from dtrans
-
+    float ip_value = A_sum(&cvo_state.A_host);
+    
     // float ip_curr = (float)((double)cvo_state.A_host.nonzero_sum / (double)source_points.num_points() / (double) target_points.num_points());
-    float ip_curr = (float)((double)cvo_state.A_host.nonzero_sum / sqrt((double)source_points.num_points() * (double) target_points.num_points()));
-
+    //float ip_curr = (float)((double)cvo_state.A_host.nonzero_sum / sqrt((double)source_points.num_points() * (double) target_points.num_points()));
+    float ip_curr = (float)((double)ip_value / sqrt((double)source_points.num_points() * (double) target_points.num_points()));
     std::cout<<"--- indicator_value ---"<<std::endl;
-    std::cout<<"nonzero_sum = "<<(double)cvo_state.A_host.nonzero_sum<<std::endl;
+    std::cout<<"nonzero_sum = "<<(double)ip_value<<std::endl;
     std::cout<<"source_points = "<<(double)source_points.num_points()<<std::endl;
     std::cout<<"target_points = "<<(double) target_points.num_points()<<std::endl;
 

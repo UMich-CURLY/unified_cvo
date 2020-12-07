@@ -16,7 +16,7 @@ def get_relative_pose(poses, t1, t2):
 gtpose = np.genfromtxt(accum_pose_f )
 
 pairs = []
-for i in range(50):
+for i in range(100):
     pairs.append((start_time+i, start_time+i+1))
 
 np.set_printoptions(suppress=True)

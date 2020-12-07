@@ -45,6 +45,8 @@ tags
 .vscode
 build
 *.zip
+*.eps
+*.gp
 *.tar.gz
 *.ps
 *.pdf

@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
   std::cout<<"\n\nstart indicator evaluation for "<<sequence<<"\n\n";
 
   // output file
-  std::ofstream indicator_file("indicator_evaluation/value_history_sequence/"+sequence+"_"+method+"_indicator.csv"); 
+  std::ofstream indicator_file("indicator_evaluation/value_history_sequence/"+sequence+"/"+method+".csv"); 
   std::cout<<"the indicator_file has been created\n";
   
   // get transformation file
@@ -99,9 +99,12 @@ int main(int argc, char *argv[]) {
 
     // get initial guess from transformation file
     Eigen::Matrix4f target_tf = TFs[i+1];  
-    Eigen::Matrix4f init_guess = target_tf * source_tf.inverse(); // from source frame to the target frame
+    //Eigen::Matrix4f init_guess = target_tf * source_tf.inverse(); // from source frame to the target frame
+    Eigen::Matrix4f init_guess = source_tf.inverse() * target_tf; // from source frame to the target frame
 
     // checking the tf
+    std::cout<<"accumed source_tf is \n"<<source_tf<<std::endl;
+    std::cout<<"accumed target_tf is \n"<<target_tf<<std::endl;
     std::cout<<"init_guess tf: \n"<<init_guess<<std::endl;
 
     // get the inverse

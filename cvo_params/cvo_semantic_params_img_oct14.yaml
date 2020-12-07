@@ -1,0 +1,29 @@
+%YAML:1.0
+---
+ell_init_first_frame: 0.75
+ell_init: 0.15 
+ell_min: 0.05
+ell_max: 0.9
+dl: 0.0
+dl_step: 0.3
+sigma: 0.1
+sp_thres: 0.0006
+c: 7.0
+d: 7.0
+c_ell: 0.075 #0.05
+c_sigma: 1 
+s_ell: 1 #0.04
+s_sigma: 1 #0.7
+MAX_ITER: 10000
+min_step: 0.000001
+max_step: 0.1
+eps: 0.00005
+eps_2: 0.000012
+ell_decay_rate: 0.95 #0.98
+ell_decay_rate_first_frame: 0.99 #0.99
+ell_decay_start: 300 #60
+ell_decay_start_first_frame: 600 #2000
+indicator_window_size: 30
+indicator_stable_threshold: 0.001
+is_ell_adaptive: False
+is_dense_kernel: False

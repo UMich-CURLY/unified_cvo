@@ -1,12 +1,13 @@
-cd build && make -j6 && cd .. && \
+export CUDA_VISIBLE_DEVICES=1
+#cd build && make -j6 && cd .. && \
 # for i in freiburg1_desk
-for i in 04 #00 01 02 03 05 06 07 08 09 10 #01 02 03 04 05 06 07 08 09 10
+for i in 00 01 02 04 05 06 07 08 09 10 #01 02 03 04 05 06 07 08 09 10
 # for i in freiburg1_desk freiburg1_desk2 freiburg1_room freiburg1_360 freiburg1_teddy freiburg1_xyz freiburg1_rpy freiburg1_plant freiburg1_floor freiburg3_nostructure_texture_far freiburg3_nostructure_texture_near freiburg3_structure_notexture_far freiburg3_structure_notexture_near freiburg3_structure_texture_far freiburg3_structure_texture_near freiburg3_nostructure_notexture_far freiburg3_nostructure_notexture_near
 do
     echo ""
     echo "/********************** Sequence "$i" *************************/"
-    for method in fast_gicp #results_semantic_cvo #results_gicp_new results_ndt ground_truth results_cvo_geometric_stereo #results_gicp results_color_cvo 
-    do
+    #for method in geometric_cvo semantic_cvo #fast_gicp #results_semantic_cvo #results_gicp_new results_ndt ground_truth results_cvo_geometric_stereo #results_gicp results_color_cvo 
+    #do
 
     # gdb -ex run --args \
      # ./build/bin/cvo_align_gpu_lidar_raw /home/cel/data/kitti/sequences/$i cvo_params/cvo_geometric_params_gpu.yaml \
@@ -30,12 +31,23 @@ do
         #                                     indicator_evaluation/$i"_evaluate_indicator_full.txt" \
         #                                     $i
 
-        ./build/bin/cvo_indicator_in_sequence /home/cel/data/kitti/sequences/$i \
-                                                cvo_params/cvo_intensity_params_img.yaml \
-                                                $i \
-                                                $method \
-                                                /home/cel/outdoor_cvo_stereo/results/$method/$i.txt
+        #./build/bin/cvo_indicator_in_sequence /home/v9999/media/seagate_2t/kitti/stereo/$i \
+        #                                        cvo_params/cvo_geometric_params_img_gpu0.yaml \
+        #                                        $i \
+        #                                        $method \
+        #                                        baselines/stereo/$method/$i.txt
                                        
                                       
-    done
+        #./build/bin/cvo_indicator_in_sequence /home/v9999/media/seagate_2t/kitti/stereo/$i \
+        #                                        cvo_params/cvo_geometric_params_img_gpu0.yaml \
+        #                                        $i \
+        #                                        $method \
+        #                                        results/cvo_geometric_img_gpu0_oct23/$i.txt
+        
+	./build/bin/cvo_indicator_in_sequence /home/v9999/media/seagate_2t/kitti/stereo/$i \
+                                                cvo_params/cvo_inner_product_eval.yaml \
+                                                $i \
+                                                $method \
+                                                paper/indicator_test/$i/$method.txt
+     #done 
 done

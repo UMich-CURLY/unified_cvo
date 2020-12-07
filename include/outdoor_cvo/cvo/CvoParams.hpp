@@ -33,6 +33,7 @@ namespace cvo {
     float step;         // integration step size
 
     float ell_decay_rate;
+
     float ell_decay_rate_first_frame;
     int ell_decay_start;
     int ell_decay_start_first_frame;
@@ -105,6 +106,7 @@ namespace cvo {
     params->eps = (float) fs["eps"];
     params->eps_2 = (float) fs["eps_2"];
     params->min_step = (float) fs["min_step"];
+
     params->max_step = (float) fs["max_step"];
 
     params->ell_decay_rate = (float) fs["ell_decay_rate"];

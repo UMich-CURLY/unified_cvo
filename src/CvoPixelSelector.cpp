@@ -952,6 +952,10 @@ namespace cvo
           && ((point.x!=0.0) && (point.y!=0.0) && (point.z!=0.0)) //){
           &&  (point.x*point.x+point.y*point.y+point.z*point.z) < distance_bound * distance_bound){
         //&& std::fabs(point.x) < distance_bound && std::fabs(point.y) < distance_bound && std::fabs(point.z) < distance_bound) {
+          pc_out->push_back(pc_in->points[i]);
+          output_depth_grad.push_back(depth_grad);
+          output_intenstity_grad.push_back(intenstity_grad);
+          semantic_out.push_back(semantic_in[i]);
 
         pc_out->push_back(pc_in->points[i]);
         output_depth_grad.push_back(depth_grad);

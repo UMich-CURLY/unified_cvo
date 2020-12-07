@@ -143,6 +143,7 @@ int main(int argc, char *argv[]) {
       std::cout<<"finish all files\n";
       break;
     }
+
     std::shared_ptr<cvo::RawImage> target_raw(new cvo::RawImage(left));
     std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, right, calib));
 
@@ -162,6 +163,7 @@ int main(int argc, char *argv[]) {
     
     // get tf and inner product from cvo getter
     double in_product = cvo_align.inner_product(*source, *target, result);
+
     //double in_product_normalized = cvo_align.inner_product_normalized();
     //int non_zeros_in_A = cvo_align.number_of_non_zeros_in_A();
     std::cout<<"The gpu inner product between "<<i-1 <<" and "<< i <<" is "<<in_product<<"\n";
