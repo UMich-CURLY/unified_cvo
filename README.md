@@ -33,3 +33,11 @@ cd build
 cmake ..
 make -j
 ```
+
+### Startup scripts of this library:
+Geometric CVO example: `scripts/cvo_geometric_img_gpu0.bash`
+
+Color CVO example: `scripts/cvo_intensity_img_gpu0.bash`
+
+Semantic CVO example: `scripts/cvo_semantic_img_oct26_gpu0.bash`
+
