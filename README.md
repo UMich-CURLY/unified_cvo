@@ -1,4 +1,4 @@
-# Outdoor CVO
+# Outdoor CVO (Code is in the progress of being cleaned up)
 
 ### Dockerfile to help resolve dependencies
 [Docker file for building CVO](https://github.com/UMich-BipedLab/docker_images/tree/master/cvo_gpu)
