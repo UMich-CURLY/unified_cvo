@@ -235,6 +235,27 @@ namespace cvo{
     }
   }
 
+  CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc) {
+    num_points_ = pc->size();
+    num_classes_ = 0;
+    feature_dimensions_ = 3;
+
+    positions_.resize(pc->size());
+    features_.resize(num_points_, feature_dimensions_);
+    for (int i = 0; i < num_points_; i++) {
+      Eigen::Vector3f xyz;
+      auto & p = (*pc)[i];
+      xyz << p.x, p.y, p.z;
+      positions_[i] = xyz;
+
+      features_(i,0) = ((float)(int)p.r) / 255.0;
+      features_(i,1) = ((float)(int)p.g) / 255.0;
+      features_(i,2) = ((float)(int)p.b) / 255.0;
+      
+    }
+    
+  }
+  
 
 
   static void stereo_surface_sampling(const cv::Mat & left_gray,

@@ -10,20 +10,10 @@
  *  @brief  Source file for various Lie Group functions 
  *  @date   September 12, 2019
  **/
-<<<<<<< HEAD
 #include "cvo/LieGroup.h"
 #include <unsupported/Eigen/MatrixFunctions>
 #include <opencv2/core/eigen.hpp>
-=======
 
-
-//#include "LieGroup.h"
-//#include <unsupported/Eigen/MatrixFunctions>
-//#include <opencv2/core/eigen.hpp>
-
-#include "cvo/LieGroup.h"
-#include <unsupported/Eigen/MatrixFunctions>
->>>>>>> origin/indicator_sunny
 using namespace std;
 
 const float TOLERANCE = 1e-6;
