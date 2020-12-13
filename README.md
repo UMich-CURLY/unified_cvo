@@ -1,7 +1,7 @@
 # Outdoor CVO (In progress: Code being cleaned up)
 
 ### Dockerfile to help resolve dependencies
-[Docker file for building CVO](https://github.com/UMich-BipedLab/docker_images/tree/master/cvo_gpu)
+[Docker file for building CVO](https://github.com/UMich-CURLY/docker_images)
 
 Follow it to first get a cuda10 environment. Then manually install the following dependencies from source inside your docker container.
 
