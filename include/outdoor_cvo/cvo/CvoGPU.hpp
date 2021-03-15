@@ -76,6 +76,9 @@ namespace cvo{
                              const CvoPointCloud& target_points,
                              const Eigen::Matrix4f & source_frame_to_target_frame) const;
 
+    float label_only_inner_product(const CvoPointCloud & source_points,
+                                   const CvoPointCloud & target_points) const;
+
   };
 
   

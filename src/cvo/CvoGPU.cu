@@ -637,7 +637,7 @@ namespace cvo{
 #ifdef IS_GEOMETRIC_ONLY
         float a = sigma2*exp(-d2/(2.0*l*l)) * normal_ip;
         //if (i==0)
-          printf("geometric: a is %f, normal_ip is %f, final_a is %f\n", sigma2*exp(-d2/(2.0*l*l)), normal_ip, a );
+        //  printf("geometric: a is %f, normal_ip is %f, final_a is %f\n", sigma2*exp(-d2/(2.0*l*l)), normal_ip, a );
         if (a > cvo_params->sp_thres){
           A_mat->mat[i * A_mat->cols + num_inds] = a;
           A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
@@ -695,25 +695,12 @@ namespace cvo{
                 )  {
 
     auto start = chrono::system_clock::now();
-    /*
-    thrust::device_vector<int> indices;
-    kdtree->NearestKSearch(points_moving, CVO_POINT_NEIGHBORS, indices );
-    ind_device = thrust::raw_pointer_cast(indices.data() );
-    if (debug_print) {
-      std::cout<<"kdtree search result size is "<<indices.size();
-      std::cout<<"\n";
-    }
-    auto end = chrono::system_clock::now();
-    chrono::duration<double> t_kdtree_search = end-start;
-    std::cout<<"t kdtree search in se_kernel is "<<t_kdtree_search.count()<<std::endl;
-    */
     int fixed_size = points_fixed->points.size();
     CvoPoint * points_fixed_raw = thrust::raw_pointer_cast (  points_fixed->points.data() );
     CvoPoint * points_moving_raw = thrust::raw_pointer_cast( points_moving->points.data() );
     
 #ifdef IS_USING_COVARIANCE   
     fill_in_A_mat_gpu_dense_mat_kernel<<<(points_moving->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(// input
-<<<<<<< HEAD
                                                                                                            params_gpu,
                                                                                                            points_fixed_raw,
                                                                                                            fixed_size,
@@ -1121,8 +1108,6 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     
     for (int j = 0; j < CVO_POINT_NEIGHBORS; j++) {
       int idx = A->ind_row2col[i * A_cols + j];
-      //if (i == 3664)
-      //  printf("compute_step_size_poly: idx=%d, A_ij=%f\n ", idx, A->mat[i*A_cols+j]);
       if (idx == -1) break;
 #ifdef IS_USING_COVARIANCE
       //temp_ell = (cloud_x[i].cov_eigenvalues[2] + cloud_y[idx].cov_eigenvalues[2] + cloud_x[i].cov_eigenvalues[0] + cloud_y[idx].cov_eigenvalues[0])/4.0 ;
@@ -1130,9 +1115,6 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       temp_ell *= (ell/ell_init);
       if (temp_ell > 1.0) temp_ell = 1.0;
       if (temp_ell < 0.01) temp_ell =0.01;
-      //if (i == 0) printf("temp ell in step size is %f, e_value_a is %f, e_value_b is %f\n", temp_ell, cloud_x[i].cov_eigenvalues[2], cloud_y[idx].cov_eigenvalues[2]  );
-      //temp_ell = compute_range_ell(ell,d2_sqrt, 1, 80 );
-      //temp_ell = 0.5;
 #endif      
       float temp_coef = 1/(2.0*temp_ell*temp_ell);   // 1/(2*l^2)       
       
@@ -1153,7 +1135,6 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
                                       + (2.0*xi4z[idx]*diff_xy).value()  ));
 
       float A_ij = A->mat[i * A_cols + j];
-      // eq (34)
       double bi = double(A_ij * beta_ij);
       B[i] += bi;
       double ci = double(A_ij * (gamma_ij+beta_ij*beta_ij/2.0));
