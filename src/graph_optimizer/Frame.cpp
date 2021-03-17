@@ -129,6 +129,8 @@ namespace cvo {
 
   Frame::Frame(int ind,
                pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
+               int num_classes,
+               int beam_num,
                const std::vector<int> & semantics,
                const Calibration & calib)
     : id(ind),
@@ -136,7 +138,7 @@ namespace cvo {
       w(0),
       calib(calib),
       raw_image_(), 
-      points_(pc, semantics),
+      points_(pc, semantics, num_classes, 10000, beam_num),
       local_map_(nullptr),
       is_keyframe_(false),
       tracking_pose_from_last_keyframe_(ind){

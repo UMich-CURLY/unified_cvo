@@ -20,48 +20,70 @@ namespace semantic_bki {
 
 namespace cvo {
 
+
   class CvoPointCloud{
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
-    //const int pixel_pattern[8][2] = {{0,0}, {-2, 0},{-1,-1}, {-1,1}, {0,2},{0,-2},{1,1},{2,0} };
+
+    enum PointSelectionMethod {
+      CV_FAST,
+      RANDOM,
+      DSO_EDGES,
+      LIDAR_EDGES,
+      CANNY_EDGES,
+      LOAM,
+      FULL
+    };
+
     const int pixel_pattern[8][2] = {{0,0}, {-1, 0},{-1,-1}, {-1,1}, {0,1},{0,-1},{1,1},{1,0} };
-    
+
+    // Constructor for stereo image
     CvoPointCloud(const RawImage & left_raw_image,
                   const cv::Mat & right_image,
-                  const Calibration &calib);
+                  const Calibration &calib,
+                  PointSelectionMethod pt_selection_method=CV_FAST);
 
+    // Constructor for rgbd image
     CvoPointCloud(const RawImage & rgb_raw_image,
                   const cv::Mat & depth_image,
                   const Calibration &calib,
-                  const bool& is_using_rgbd);
+                  const bool is_using_rgbd,
+                  PointSelectionMethod pt_selection_method=CV_FAST);
     
     CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
                   int target_num_points,
-                  int beam_num);
+                  int beam_num,
+                  PointSelectionMethod pt_selection_method=LOAM);
 
-    CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_intensity,
-                  int beam_num=64);
+    //CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_intensity,
+    //              int beam_num=64);
 
     CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, 
                   const std::vector<int> & semantics,
-                  int num_classes=19,
-                  int target_num_points = 5000,
-                  int beam_num =64);
+                  int num_classes,
+                  int target_num_points,
+                  int beam_num,
+                  PointSelectionMethod pt_selection_method=LOAM);
 
+
+    // Not recommended: Image Gradient is empty
+    CvoPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc);    
+
+    /*
     CvoPointCloud(pcl::PointCloud<pcl::PointXYZIR>::Ptr pc,
                   int target_num_points = 5000
                   );
 
-    CvoPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc);
+
 
     CvoPointCloud(pcl::PointCloud<pcl::PointXYZIR>::Ptr pc, 
                   const std::vector<int> & semantics,
                   int num_classes=19,
                   int target_num_points = 5000
                   );
-    
-    
+    */
+    // Constructor from continuous maps
     CvoPointCloud(const semantic_bki::SemanticBKIOctoMap * map,
                   int num_semantic_class);
 

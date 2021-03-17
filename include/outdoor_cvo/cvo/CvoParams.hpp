@@ -44,7 +44,7 @@ namespace cvo {
     int is_using_least_square;
     
     int is_ell_adaptive;
-
+    int is_full_ip_matrix;
     
     CvoParams() :
       ell_init_first_frame(0.5),
@@ -74,7 +74,8 @@ namespace cvo {
       indicator_stable_threshold(0.2),
       is_pcl_visualization_on(0),
       is_using_least_square(0),
-      is_ell_adaptive(0) {}
+      is_ell_adaptive(0),
+      is_full_ip_matrix(0){}
     
   };
 
@@ -119,6 +120,7 @@ namespace cvo {
     params->indicator_stable_threshold = (float) fs["indicator_stable_threshold"];
     params->is_pcl_visualization_on = (int) fs["is_pcl_visualization_on"];
     params->is_using_least_square = (int) fs["is_using_least_square"];
+    params->is_full_ip_matrix = (int) fs["is_full_ip_matrix"];
     std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<", indicator window size is "<<params->indicator_window_size<<std::endl;
     fs.release();
     return;

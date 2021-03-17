@@ -7,7 +7,7 @@
 
 /**
  *  @file   cvo.hpp
- *  @author Tzu-yuan Lin, Maani Ghaffari 
+ *  @author Tzu-yuan Lin, Maani Ghaffari, Ray Zhang
  *  @brief  Header file for contineuous visual odometry registration
  *  @date   November 03, 2019
  **/

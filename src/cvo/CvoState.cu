@@ -60,6 +60,7 @@ namespace cvo {
     //C(is_adaptive?num_fixed:num_moving),
     //D(is_adaptive?num_fixed:num_moving),
     //E(is_adaptive?num_fixed:num_moving),
+    
     is_ell_adaptive(cvo_params.is_ell_adaptive),
     least_square_LHS(num_fixed, Eigen::Matrix<float, 6,6>::Zero()),
     least_square_RHS(num_fixed, Eigen::Matrix<float, 6,1>::Zero())
@@ -70,10 +71,13 @@ namespace cvo {
     int A_rows = source_points->size() ;
     int Ayy_rows = target_points->size();
     int Axx_rows = source_points->size();
-        
-    int A_cols = CVO_POINT_NEIGHBORS;
-    int Axx_cols = CVO_POINT_NEIGHBORS;
 
+    int A_cols, Axx_cols;
+    if (cvo_params.is_full_ip_matrix)
+      A_cols = Axx_cols = target_points->size();
+    else 
+      A_cols = Axx_cols = CVO_POINT_NEIGHBORS;
+    
     A = init_SparseKernelMat_gpu(A_rows, A_cols, A_host);
     if(is_ell_adaptive) {
       Axx = init_SparseKernelMat_gpu(Axx_rows, Axx_cols, Axx_host);

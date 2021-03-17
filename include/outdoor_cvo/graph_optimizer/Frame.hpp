@@ -48,6 +48,8 @@ namespace cvo {
 
     Frame(int ind,
           pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
+          int num_classes,
+          int beam_num,
           const std::vector<int> & semantics,
           const Calibration & calib);
     

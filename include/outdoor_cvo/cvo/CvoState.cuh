@@ -41,7 +41,7 @@ namespace cvo {
     float ell;          // kernel characteristic length-scale
     float ell_max;
     
-    // GPU raw memory
+    // GPU raw  memory
     SparseKernelMat * A;
     SparseKernelMat *Axx;
     SparseKernelMat *Ayy;
@@ -75,6 +75,7 @@ namespace cvo {
     Eigen::Vector3f *v;
 
     bool is_ell_adaptive;
+    bool is_full_ip_matrix;
 
     //thrust::device_vector<Eigen::Vector3f> residual; // for least square
     //thrust::device_vector<Eigen::Matrix<float, 3, 6>> jacobian; // for least square
