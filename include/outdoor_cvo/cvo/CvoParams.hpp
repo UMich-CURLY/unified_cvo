@@ -45,7 +45,12 @@ namespace cvo {
     
     int is_ell_adaptive;
     int is_full_ip_matrix;
-    
+
+    // what to compute inside the inner product
+    int is_using_geometry;
+    int is_using_intensity;
+    int is_using_semantics;
+    int is_using_range_ell;
     CvoParams() :
       ell_init_first_frame(0.5),
       ell_init(0.5),
@@ -75,7 +80,12 @@ namespace cvo {
       is_pcl_visualization_on(0),
       is_using_least_square(0),
       is_ell_adaptive(0),
-      is_full_ip_matrix(0){}
+      is_full_ip_matrix(0),
+      is_using_geometry(1),
+      is_using_intensity(0),
+      is_using_semantics(0),
+      is_using_range_ell(0)
+    {}
     
   };
 
@@ -121,6 +131,11 @@ namespace cvo {
     params->is_pcl_visualization_on = (int) fs["is_pcl_visualization_on"];
     params->is_using_least_square = (int) fs["is_using_least_square"];
     params->is_full_ip_matrix = (int) fs["is_full_ip_matrix"];
+    params->is_using_geometry = (int) fs["is_using_geometry"];
+    params->is_using_intensity = (int) fs["is_using_intensity"];
+    params->is_using_semantics = (int) fs["is_using_semantics"];
+    params->is_using_range_ell = (int) fs["is_using_range_ell"];
+    
     std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<", indicator window size is "<<params->indicator_window_size<<std::endl;
     fs.release();
     return;

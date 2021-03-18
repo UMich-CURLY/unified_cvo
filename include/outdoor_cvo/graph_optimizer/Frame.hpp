@@ -52,7 +52,7 @@ namespace cvo {
           int beam_num,
           const std::vector<int> & semantics,
           const Calibration & calib);
-    
+    /*
     Frame(int ind,
           pcl::PointCloud<pcl::PointXYZIR>::Ptr pc,
           const Calibration & calib);
@@ -61,7 +61,7 @@ namespace cvo {
           pcl::PointCloud<pcl::PointXYZIR>::Ptr pc,
           const std::vector<int> & semantics,
           const Calibration & calib);
-
+    */
     ~Frame();
 
     // public attributes

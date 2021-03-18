@@ -77,9 +77,7 @@ namespace cvo{
     const Eigen::Matrix<float, Eigen::Dynamic, FEATURE_DIMENSIONS> & features = cvo_cloud.features();
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals = cvo_cloud.normals();
     // const Eigen::Matrix<float, Eigen::Dynamic, 2> & types = cvo_cloud.types();
-#ifdef IS_USING_SEMANTICS
     auto & labels = cvo_cloud.labels();
-#endif
     // set basic informations for pcl_cloud
     thrust::host_vector<CvoPoint> host_cloud;
     host_cloud.resize(num_points);
@@ -99,24 +97,18 @@ namespace cvo{
       for (int j = 0; j < FEATURE_DIMENSIONS; j++)
         host_cloud[i].features[j] = features(i,j);
 
-#ifdef IS_USING_SEMANTICS
-      labels.row(i).maxCoeff(&host_cloud[i].label);
-      for (int j = 0; j < NUM_CLASSES; j++)
-        host_cloud[i].label_distribution[j] = labels(i,j);
-#endif
+      if (cvo_cloud.num_classes() > 0) {
+        labels.row(i).maxCoeff(&host_cloud[i].label);
+        for (int j = 0; j < NUM_CLASSES; j++)
+          host_cloud[i].label_distribution[j] = labels(i,j);
+      }
       
-#ifdef IS_USING_NORMALS
+
       for (int j = 0; j < 3; j++)
         host_cloud[i].normal[j] = normals(i,j);
-#endif
 
-
-#ifdef IS_USING_COVARIANCE
       memcpy(host_cloud[i].covariance, cvo_cloud.covariance().data()+ i*9, sizeof(float)*9  );
       memcpy(host_cloud[i].cov_eigenvalues, cvo_cloud.eigenvalues().data() + i*3, sizeof(float)*3);
-      if (i == 0)
-        std::cout<<"cov_eigenvalues "<<host_cloud[i].cov_eigenvalues[0]<<", "<<host_cloud[i].cov_eigenvalues[1]<<", "<<host_cloud[i].cov_eigenvalues[2]<<std::endl;
-#endif      
 
       //if (i == 1000) {
       //  printf("Total %d, Raw input from pcl at 1000th: \n", num_points);
@@ -129,24 +121,20 @@ namespace cvo{
     gpu_cloud->points = host_cloud;
 
     /*
-#ifdef IS_USING_COVARIANCE    
-    auto covariance = &cvo_cloud.covariance();
-    auto eigenvalues = &cvo_cloud.eigenvalues();
-    thrust::device_vector<float> cov_gpu(cvo_cloud.covariance());
-    thrust::device_vector<float> eig_gpu(cvo_cloud.eigenvalues());
-    copy_covariances<<<host_cloud.size()/256 +1, 256>>>(thrust::raw_pointer_cast(cov_gpu.data()),
-                                                        thrust::raw_pointer_cast(eig_gpu.data()),
-                                                        host_cloud.size(),
-                                                        thrust::raw_pointer_cast(gpu_cloud->points.data()));
-#endif    
+      #ifdef IS_USING_COVARIANCE    
+      auto covariance = &cvo_cloud.covariance();
+      auto eigenvalues = &cvo_cloud.eigenvalues();
+      thrust::device_vector<float> cov_gpu(cvo_cloud.covariance());
+      thrust::device_vector<float> eig_gpu(cvo_cloud.eigenvalues());
+      copy_covariances<<<host_cloud.size()/256 +1, 256>>>(thrust::raw_pointer_cast(cov_gpu.data()),
+      thrust::raw_pointer_cast(eig_gpu.data()),
+      host_cloud.size(),
+      thrust::raw_pointer_cast(gpu_cloud->points.data()));
+      #endif    
     */
     return gpu_cloud;
   }
 
-  float compute_ranged_lengthscale(float curr_dist_square, float curr_ell, float min_ell, float max_ell ) {
-    
-    
-  }
 
   CvoGPU::CvoGPU(const std::string & param_file) {
     // read_CvoParams(param_file.c_str(), &params);
@@ -174,8 +162,11 @@ namespace cvo{
   {
     const Mat33f * R;
     const Vec3f * T;
+    const bool update_normal_and_cov;
 
-    transform_point(const Mat33f * R_gpu, const Vec3f * T_gpu): R(R_gpu), T(T_gpu){}
+    transform_point(const Mat33f * R_gpu, const Vec3f * T_gpu,
+                    bool update_normal_and_covariance): R(R_gpu), T(T_gpu),
+                                                        update_normal_and_cov(update_normal_and_covariance){}
     
     __host__ __device__
     CvoPoint operator()(const CvoPoint & p_init)
@@ -189,38 +180,40 @@ namespace cvo{
       result.y = trans(1);
       result.z = trans(2);
       /*      
-      result.r = p_init.r;
-      result.g = p_init.g;
-      result.b = p_init.b;
-      result.label = p_init.label;
-      memcpy(result.features, p_init.features, FEATURE_DIMENSIONS * sizeof(float) );
-#ifdef IS_USING_SEMANTICS
-      memcpy(result.label_distribution, p_init.label_distribution, NUM_CLASSES * sizeof(float) );
-#endif
-#ifdef IS_USING_NORMALS
-      Eigen::Vector3f input_normal;
-      input_normal << p_init.normal[0], p_init.normal[1], p_init.normal[2];
-      Eigen::Vector3f trans_normal = (*R) * input_normal + (*T);
-      result.normal[0] = trans_normal(0);
-      result.normal[1] = trans_normal(1);
-      result.normal[2] = trans_normal(2);
-#endif
+              result.r = p_init.r;
+              result.g = p_init.g;
+              result.b = p_init.b;
+              result.label = p_init.label;
+              memcpy(result.features, p_init.features, FEATURE_DIMENSIONS * sizeof(float) );
+              #ifdef IS_USING_SEMANTICS
+              memcpy(result.label_distribution, p_init.label_distribution, NUM_CLASSES * sizeof(float) );
+              #endif
       */
-#ifdef IS_USING_COVARIANCE
-      Eigen::Matrix3f point_cov;
-      point_cov << p_init.covariance[0], p_init.covariance[1], p_init.covariance[2],
-        p_init.covariance[3], p_init.covariance[4], p_init.covariance[5],
-        p_init.covariance[6], p_init.covariance[7], p_init.covariance[8];
+      if (update_normal_and_cov) {
+        Eigen::Vector3f input_normal;
+        input_normal << p_init.normal[0], p_init.normal[1], p_init.normal[2];
+        Eigen::Vector3f trans_normal = (*R) * input_normal + (*T);
+        result.normal[0] = trans_normal(0);
+        result.normal[1] = trans_normal(1);
+        result.normal[2] = trans_normal(2);
+
+
+
+        Eigen::Matrix3f point_cov;
+        point_cov << p_init.covariance[0], p_init.covariance[1], p_init.covariance[2],
+          p_init.covariance[3], p_init.covariance[4], p_init.covariance[5],
+          p_init.covariance[6], p_init.covariance[7], p_init.covariance[8];
       
-      point_cov = ((*R) * point_cov * (R->transpose())).eval();
-      for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-          result.covariance[i*3 + j] = point_cov(i,j);
+        point_cov = ((*R) * point_cov * (R->transpose())).eval();
+        for (int i = 0; i < 3; i++) {
+          for (int j = 0; j < 3; j++) {
+            result.covariance[i*3 + j] = point_cov(i,j);
+          }
         }
+        memcpy(result.cov_eigenvalues, p_init.cov_eigenvalues, sizeof(float)*3);
       }
-      memcpy(result.cov_eigenvalues, p_init.cov_eigenvalues, sizeof(float)*3);
+
       
-#endif      
       return result;
     }
   };
@@ -228,10 +221,11 @@ namespace cvo{
 
   void  transform_pointcloud_thrust(std::shared_ptr<CvoPointCloudGPU> init_cloud,
                                     std::shared_ptr<CvoPointCloudGPU> transformed_cloud,
-                                    Mat33f * R_gpu, Vec3f * T_gpu
+                                    Mat33f * R_gpu, Vec3f * T_gpu,
+                                    bool update_normal_and_cov
                                     ) {
     thrust::transform( init_cloud->begin(), init_cloud->end(),  transformed_cloud->begin(), 
-                      transform_point(R_gpu, T_gpu));
+                       transform_point(R_gpu, T_gpu, update_normal_and_cov));
 
     if (debug_print) {
     
@@ -241,11 +235,11 @@ namespace cvo{
         cudaMemcpy((void*)&transformed_point, (void*)thrust::raw_pointer_cast( transformed_cloud->points.data() +i), sizeof(CvoPoint), cudaMemcpyDeviceToHost  );
         cudaMemcpy((void*)&from_point, (void*)thrust::raw_pointer_cast( init_cloud->points.data() +i), sizeof(CvoPoint), cudaMemcpyDeviceToHost  );
         /*
-        printf("print %d point after transformation:\n", i);
-        printf("from\n ");
-        pcl::print_point(from_point);
-        printf("to\n");
-        pcl::print_point(transformed_point  );
+          printf("print %d point after transformation:\n", i);
+          printf("from\n ");
+          pcl::print_point(from_point);
+          printf("to\n");
+          pcl::print_point(transformed_point  );
         */
       }     
     }
@@ -255,21 +249,17 @@ namespace cvo{
 
   __device__
   float compute_range_ell(float curr_ell, float curr_dist_to_sensor, float min_dist, float max_dist ) {
-#ifdef IS_USING_RANGE_ELL    
     float final_ell = ((curr_dist_to_sensor) / 500.0 + 1.0)* curr_ell;
-    return  final_ell;
-#else    
-    return curr_ell;
-#endif    
+    return final_ell;
   }
 
 
   
   void update_tf(const Mat33f & R, const Vec3f & T,
-                // outputs
-                CvoState * cvo_state,
-                Eigen::Ref<Mat44f> transform
-                )  {
+                 // outputs
+                 CvoState * cvo_state,
+                 Eigen::Ref<Mat44f> transform
+                 )  {
     // transform = [R', -R'*T; 0,0,0,1]
     Mat33f R_inv = R.transpose();
     Vec3f T_inv = -R_inv * T;
@@ -288,135 +278,6 @@ namespace cvo{
 
   typedef KDTreeVectorOfVectorsAdaptor<cloud_t, float>  kd_tree_t;
 
-  __global__
-  void fill_in_A_mat_gpu(const CvoParams * cvo_params,
-                        //SquareExpParams * se_params,
-                        CvoPoint * points_a,
-                        int a_size,
-                        CvoPoint * points_b,
-                        int b_size,
-                        int * kdtree_inds,
-                        float ell,
-                        // output
-                        SparseKernelMat * A_mat // the kernel matrix!
-                        ) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i > a_size - 1)
-      return;
-
-    float s2= cvo_params->sigma * cvo_params->sigma;
-    float l = ell ;
-    float c_ell = cvo_params->c_ell;
-    float sp_thres = cvo_params->sp_thres;
-    float c_sigma = cvo_params->c_sigma;
-#ifdef IS_USING_SEMANTICS
-    float s_ell = cvo_params->s_ell;
-#endif
-
-    // convert k threshold to d2 threshold (so that we only need to calculate k when needed)
-    float d2_thres = -2.0*l*l*log(sp_thres/s2);
-    float d2_c_thres = -2.0*c_ell*c_ell*log(sp_thres/c_sigma/c_sigma);
-
-    CvoPoint * p_a =  &points_a[i];
-#ifdef IS_USING_SEMANTICS
-    float * label_a = p_a ->label_distribution;
-#endif
-
-
-    unsigned int num_inds = 0;
-    for (int j = 0; j < b_size ; j++) {
-      int ind_b = j;
-      if (num_inds == CVO_POINT_NEIGHBORS) break;
-
-      CvoPoint * p_b = &points_b[ind_b];
-      float d2 = (squared_dist( *p_b ,*p_a ));
-
-      float normal_ip = 1;
-#ifdef IS_USING_NORMALS
-      normal_ip = fabs(p_a->normal[0] * p_b->normal[0] +
-                       p_a->normal[1] * p_b->normal[1] +
-                       p_a->normal[2] * p_b->normal[2]);
-      //printf("normal ip is %f\n", normal_ip);
-#endif      
-      /*
-      if ( i == 1000 && j== 1074) {
-        CvoPoint * pb = points_b + j;
-        printf("gpu se_kernel: i==%d,j==%d: d2 is %f, d2_thres is %f, point_a (%f, %f, %f), point_b: (%f, %f, %f)\n", i, j,d2, d2_thres,
-              p_a->x, p_a->y, p_a->z,
-              pb->x, pb->y,  pb->z );
-              }*/
-      
-      if(d2<d2_thres  ){
-
-#ifdef IS_GEOMETRIC_ONLY
-        float a = s2*exp(-d2/(2.0*l*l)) * normal_ip;
-        if (a > cvo_params->sp_thres){
-          A_mat->mat[i * A_mat->cols + num_inds] = a;
-          A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
-          num_inds++;
-        }
-
-#else
-        float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
-
-#ifdef IS_USING_SEMANTICS            
-        float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
-#endif
-
-
-        /*
-        if (i == 1000 && j==1074) {
-          float * fa = p_a->features;
-          float *fb = p_b->features;
-          printf("gpu se_kernel: i=%d,j=%d: d2_color is %f, d2_c_thres is %f,", i,j,d2_color, d2_c_thres );
-          printf("color feature i == 0, a=(%f,%f,%f,%f,%f), b=(%f,%f,%f,%f,%f)\n",
-                  fa[0], fa[1], fa[2], fa[3], fa[4], fb[0], fb[1], fb[2], fb[3], fb[4]);
-                  }*/
-
-        //if(d2_color<d2_c_thres){
-
-          //#ifdef IS_GEOMETRIC_ONLY
-          //float a = s2*exp(-d2/(2.0*l*l));
-
-          //#else
-        
-          
-          float k = s2*exp(-d2/(2.0*l*l));
-          float ck = c_sigma*c_sigma*exp(-d2_color/(2.0*c_ell*c_ell));
-#ifdef IS_USING_SEMANTICS              
-          float sk = cvo_params->s_sigma*cvo_params->s_sigma*exp(-d2_semantic/(2.0*s_ell*s_ell));
-#else
-          float sk = 1;
-#endif              
-          float a = ck*k*sk * normal_ip;
-          //#endif          
-
-          //if (i == 1000 && j == 51)
-          //  printf("se_kernel: i=%d,j=%d: d2_color is %f, d2_c_thres is %f,k is %f, ck is %f\n", i,j,d2_color, d2_c_thres, k, ck );
-          // if ( i == 1000 )
-          // printf("se_kernel: i==1000, j==%d: k is %f, ck is %f\n", j, k, ck );
-
-
-
-          // concrrent access !
-          if (a > cvo_params->sp_thres){
-
-            //A_mat->mat[i * A_mat->cols + j] = a;
-            A_mat->mat[i * A_mat->cols + num_inds] = a;
-            A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
-            num_inds++;
-
-          }// else {
-#endif        
-      }
-
-
-      
-    }
-    A_mat->nonzeros[i] = num_inds;
-    //delete mat_inds;
-    
-  }
 
   __device__
   float mahananobis_distance( const CvoPoint & p_a,const  CvoPoint &p_b) {
@@ -504,9 +365,8 @@ namespace cvo{
     float d2_thres = -2.0*log(sp_thres/sigma_square);
     float d2_c_thres = -2.0*c_ell_square*log(sp_thres/c_sigma_square);
 
-#ifdef IS_USING_SEMANTICS
+
     float * label_a = p_a ->label_distribution;
-#endif
 
     unsigned int num_inds = 0;
     for (int j = 0; j < b_size ; j++) {
@@ -528,53 +388,35 @@ namespace cvo{
       //float d2_iso =  squared_dist(*p_a, *p_b) / cvo_params->ell_init / cvo_params->ell_init;
       //d2 = d2 < d2_iso ? d2 : d2_iso;
 
-      
-      if(d2<d2_thres){
-
-#ifdef IS_GEOMETRIC_ONLY
-        float a = sigma_square*exp(-d2/2.0);
-        if (a > cvo_params->sp_thres){
-          A_mat->mat[i * A_mat->cols + num_inds] = a;
-          A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
-
-          if (a > curr_max_ip) {
-            curr_max_ip = a;
-            A_mat->max_index[i] = ind_b;
-          }
-          
-          num_inds++;
-        }
-
-#else
-        float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
-
-#ifdef IS_USING_SEMANTICS            
-        float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
-#endif
-
-        if(d2_color<d2_c_thres){
-          float k = sigma_square*exp(-d2/(2.0));
-          float ck = c_sigma_square*exp(-d2_color/(2.0*c_ell_square));
-#ifdef IS_USING_SEMANTICS              
-          float sk = cvo_params->s_sigma*cvo_params->s_sigma*exp(-d2_semantic/(2.0*s_ell_square));
-#else
-          float sk = 1;
-#endif              
-          float a = ck*k*sk;
-
-          if (a > cvo_params->sp_thres){
-
-            A_mat->mat[i * A_mat->cols + num_inds] = a;
-            A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
-            if (a > curr_max_ip) {
-              curr_max_ip = a;
-              A_mat->max_index[i] = ind_b;
-            }
-            num_inds++;
-          }
-        }
-#endif        
+      float l = ell_curr;
+      float a = 1, sk=1, ck=1, k=1;
+      if (cvo_params->is_using_geometry) {
+        k= cvo_params->sigma * cvo_params->sigma*exp(-d2/(2.0*l*l));
       }
+      //if (i==0)
+      //  printf("geometric: a is %f, normal_ip is %f, final_a is %f\n", sigma2*exp(-d2/(2.0*l*l)), normal_ip, a );
+      if (cvo_params->is_using_intensity) {
+        float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
+        
+        ck = cvo_params->c_sigma * cvo_params->c_sigma*exp(-d2_color/(2.0*c_ell_square ));
+      }
+      if (cvo_params->is_using_semantics) {
+        float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);        
+        sk = cvo_params->s_sigma*cvo_params->s_sigma*exp(-d2_semantic/(2.0*s_ell_square));
+      }
+      a = ck*k*sk;
+      if (a > cvo_params->sp_thres){
+        A_mat->mat[i * A_mat->cols + num_inds] = a;
+        A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
+        if (a > curr_max_ip) {
+          curr_max_ip = a;
+          A_mat->max_index[i] = ind_b;
+        }
+        
+        num_inds++;
+      }
+
+
     }
     A_mat->nonzeros[i] = num_inds;
   }
@@ -583,16 +425,15 @@ namespace cvo{
   
 
   __global__
-  void fill_in_A_mat_gpu_range_ell(const CvoParams * cvo_params,
-                                   //SquareExpParams * se_params,
-                                   CvoPoint * points_a,
-                                   int a_size,
-                                   CvoPoint * points_b,
-                                   int b_size,
-                                   float ell,
-                                   // output
-                                   SparseKernelMat * A_mat // the kernel matrix!
-                                   ) {
+  void fill_in_A_mat_gpu(const CvoParams * cvo_params,
+                         CvoPoint * points_a,
+                         int a_size,
+                         CvoPoint * points_b,
+                         int b_size,
+                         float ell,
+                         // output
+                         SparseKernelMat * A_mat // the kernel matrix!
+                         ) {
 
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i > a_size - 1)
@@ -609,74 +450,44 @@ namespace cvo{
     CvoPoint * p_a =  &points_a[i];
     float a_to_sensor = sqrtf(p_a->x * p_a->x + p_a->y * p_a->y + p_a->z * p_a->z);
     float l = compute_range_ell(ell, a_to_sensor , 1, 80 );
-       
 
-    float d2_thres = -2.0*l*l*log(cvo_params->sp_thres/sigma2);
-    float d2_c_thres = -2.0*c2*log(cvo_params->sp_thres/cvo_params->c_sigma/cvo_params->c_sigma);
-
-
-#ifdef IS_USING_SEMANTICS
-    float * label_a = p_a ->label_distribution;
-#endif
+    float * label_a = nullptr;
+    if (cvo_params->is_using_semantics)
+      label_a = p_a ->label_distribution;
 
     unsigned int num_inds = 0;
     for (int j = 0; j < b_size ; j++) {
       int ind_b = j;
       if (num_inds == CVO_POINT_NEIGHBORS) break;
       CvoPoint * p_b = &points_b[ind_b];
-      float d2 = (squared_dist( *p_b ,*p_a ));
-      float normal_ip = 1;
-#ifdef IS_USING_NORMALS
-      normal_ip = fabs(p_a->normal[0] * p_b->normal[0] +
-                       p_a->normal[1] * p_b->normal[1] +
-                       p_a->normal[2] * p_b->normal[2]) * 0.81 * 0.01;
-#endif      
-      
-      if(d2<d2_thres  ){
 
-#ifdef IS_GEOMETRIC_ONLY
-        float a = sigma2*exp(-d2/(2.0*l*l)) * normal_ip;
-        //if (i==0)
-        //  printf("geometric: a is %f, normal_ip is %f, final_a is %f\n", sigma2*exp(-d2/(2.0*l*l)), normal_ip, a );
-        if (a > cvo_params->sp_thres){
-          A_mat->mat[i * A_mat->cols + num_inds] = a;
-          A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
-          if (a > curr_max_ip) {
-            curr_max_ip = a;
-            A_mat->max_index[i] = ind_b;
-          }
-
-          num_inds++;
-        }
-
-#else
-        float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
-#ifdef IS_USING_SEMANTICS            
-        float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
-#endif
-        if(d2_color<d2_c_thres){
-          float k = sigma2*exp(-d2/(2.0*l*l));
-          float ck = c_sigma2*exp(-d2_color/(2.0*c2 ));
-#ifdef IS_USING_SEMANTICS              
-          float sk = cvo_params->s_sigma*cvo_params->s_sigma*exp(-d2_semantic/(2.0*s_ell*s_ell));
-#else
-          float sk = 1;
-#endif              
-          float a = ck*k*sk*normal_ip;
-          if (a > cvo_params->sp_thres){
-            A_mat->mat[i * A_mat->cols + num_inds] = a;
-            A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
-            if (a > curr_max_ip) {
-              curr_max_ip = a;
-              A_mat->max_index[i] = ind_b;
-            }
-            
-            num_inds++;
-          }
-
-        }
-#endif        
+      float a = 1, sk=1, ck=1, k=1;
+      if (cvo_params->is_using_geometry) {
+        float d2 = (squared_dist( *p_b ,*p_a ));        
+        k= sigma2*exp(-d2/(2.0*l*l));
       }
+      //if (i==0)
+      //  printf("geometric: a is %f, normal_ip is %f, final_a is %f\n", sigma2*exp(-d2/(2.0*l*l)), normal_ip, a );
+      if (cvo_params->is_using_intensity) {
+        float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);        
+        ck = c_sigma2*exp(-d2_color/(2.0*c2 ));
+      }
+      if (cvo_params->is_using_semantics) {
+        float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);        
+        sk = cvo_params->s_sigma*cvo_params->s_sigma*exp(-d2_semantic/(2.0*s_ell*s_ell));
+      }
+      a = ck*k*sk;
+      if (a > cvo_params->sp_thres){
+        A_mat->mat[i * A_mat->cols + num_inds] = a;
+        A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
+        if (a > curr_max_ip) {
+          curr_max_ip = a;
+          A_mat->max_index[i] = ind_b;
+        }
+        
+        num_inds++;
+      }
+
     }
     A_mat->nonzeros[i] = num_inds;
   }
@@ -685,43 +496,30 @@ namespace cvo{
 
   static
   void se_kernel(// input
-                const CvoParams * params_gpu,
-                std::shared_ptr<CvoPointCloudGPU> points_fixed,
-                std::shared_ptr<CvoPointCloudGPU> points_moving,
-                float ell,
-                // output
-                SparseKernelMat * A_mat,
-                SparseKernelMat * A_mat_gpu
-                )  {
+                 const CvoParams * params_gpu,
+                 std::shared_ptr<CvoPointCloudGPU> points_fixed,
+                 std::shared_ptr<CvoPointCloudGPU> points_moving,
+                 float ell,
+                 // output
+                 SparseKernelMat * A_mat,
+                 SparseKernelMat * A_mat_gpu
+                 )  {
 
     auto start = chrono::system_clock::now();
     int fixed_size = points_fixed->points.size();
     CvoPoint * points_fixed_raw = thrust::raw_pointer_cast (  points_fixed->points.data() );
     CvoPoint * points_moving_raw = thrust::raw_pointer_cast( points_moving->points.data() );
     
-#ifdef IS_USING_COVARIANCE   
-    fill_in_A_mat_gpu_dense_mat_kernel<<<(points_moving->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(// input
-                                                                                                           params_gpu,
-                                                                                                           points_fixed_raw,
-                                                                                                           fixed_size,
-                                                                                                           points_moving_raw,
-                                                                                                           points_moving->points.size(),
-                                                                                                           ell,
-                                                                                                           // output
-                                                                                                           A_mat_gpu // the inner product matrix!
-                                                                                                           );
-#else
-    fill_in_A_mat_gpu_range_ell<<<(points_fixed->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(params_gpu,
-    //fill_in_A_mat_gpu_range_ell<<<(points_moving->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(params_gpu,
-                                                                                                    points_fixed_raw,
-                                                                                                    fixed_size,
-                                                                                                    points_moving_raw,
-                                                                                                    points_moving->points.size(),
-                                                                                                    ell,
-                                                                                                    // output
-                                                                                                    A_mat_gpu // the kernel matrix!
-                                                                                                    );
-#endif    
+    fill_in_A_mat_gpu<<<(points_fixed->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(params_gpu,
+                                                                                         points_fixed_raw,
+                                                                                         fixed_size,
+                                                                                         points_moving_raw,
+                                                                                         points_moving->points.size(),
+                                                                                         ell,
+                                                                                         // output
+                                                                                         A_mat_gpu // the kernel mat
+                                                                                         );
+
     compute_nonzeros(A_mat);
   }
 
@@ -746,9 +544,9 @@ namespace cvo{
 
     Eigen::Vector3f omega_i = Eigen::Vector3f::Zero();
     Eigen::Vector3f v_i = Eigen::Vector3f::Zero();
-#ifdef IS_USING_COVARIANCE
-    Eigen::Matrix3f cov_i = Eigen::Map<Eigen::Matrix3f>(px->covariance);
-#endif    
+    //#ifdef IS_USING_COVARIANCE
+    //Eigen::Matrix3f cov_i = Eigen::Map<Eigen::Matrix3f>(px->covariance);
+    //#endif    
     float dl_i = 0;
     for (int j = 0; j < A_cols; j++) {
       int idx = A->ind_row2col[i*A_cols+j];
@@ -762,20 +560,21 @@ namespace cvo{
       Eigen::Vector3f cross_xy_j = px_eig.cross(py_eig) ;
       Eigen::Vector3f diff_yx_j = py_eig - px_eig;
       float sum_diff_yx_2_j = diff_yx_j.squaredNorm();
+      /*
+        #ifdef IS_USING_COVARIANCE      
+        Eigen::Matrix3f cov_j = Eigen::Map<Eigen::Matrix3f>(py->covariance);
+        omega_i = omega_i + cov_j * cross_xy_j *  *(Ai + j );
+        v_i = v_i + cov_j * diff_yx_j *  *(Ai + j);
+        //float eigenvalue_sum = px->cov_eigenvalues(0)
 
-#ifdef IS_USING_COVARIANCE      
-      Eigen::Matrix3f cov_j = Eigen::Map<Eigen::Matrix3f>(py->covariance);
-      omega_i = omega_i + cov_j * cross_xy_j *  *(Ai + j );
-      v_i = v_i + cov_j * diff_yx_j *  *(Ai + j);
-      //float eigenvalue_sum = px->cov_eigenvalues(0)
-
-      //omega_i = omega_i +  cross_xy_j *  *(Ai + j );
-      // v_i = v_i + diff_yx_j *  *(Ai + j);      
+        //omega_i = omega_i +  cross_xy_j *  *(Ai + j );
+        // v_i = v_i + diff_yx_j *  *(Ai + j);      
       
-#else      
+        #else   
+      */   
       omega_i = omega_i + cross_xy_j *  *(Ai + j );
       v_i = v_i + diff_yx_j *  *(Ai + j);
-#endif      
+
     }
 
     Eigen::Vector3d & omega_i_eig = omega_all_gpu[i];
@@ -801,7 +600,7 @@ namespace cvo{
                                                                                                  cvo_state->A, 
                                                                                                  thrust::raw_pointer_cast(cvo_state->omega_gpu.data()  ),
                                                                                                  thrust::raw_pointer_cast(cvo_state->v_gpu.data() ));
-                                                          ;
+    ;
     //cudaDeviceSynchronize();
     if (debug_print)
       printf("finsih compute_flow_gpu_no_eigen\n");
@@ -865,12 +664,12 @@ namespace cvo{
     for (int j = 0; j < A->cols; j++) {
       //int id_y_closest = A->max_index[i];
       int id_y = A->ind_row2col[i*A->cols+j];
-     if (id_y == -1) break;
-     float w_ij = A->mat[i*A->cols+j];
+      if (id_y == -1) break;
+      float w_ij = A->mat[i*A->cols+j];
 
-     //int id_y = A->max_index[i];
-     //if (id_y == -1) return;
-     //float w_ij = 1;    
+      //int id_y = A->max_index[i];
+      //if (id_y == -1) return;
+      //float w_ij = 1;    
 
 
       Eigen::Vector3f y(cloud_y[id_y].x, cloud_y[id_y].y, cloud_y[id_y].z);
@@ -905,13 +704,13 @@ namespace cvo{
                                  Eigen::Vector3f * omega, Eigen::Vector3f * v) {
 
     fill_in_residual_and_jacobian<<< cvo_state->A_host.rows / CUDA_BLOCK_SIZE + 1, CUDA_BLOCK_SIZE >>> (cvo_state->ell,
-                                                                                                    thrust::raw_pointer_cast(cvo_state->cloud_x_gpu->points.data()),
-                                                                                                    thrust::raw_pointer_cast(cvo_state->cloud_y_gpu->points.data()),
-                                                                                                    cvo_state->A,
+                                                                                                        thrust::raw_pointer_cast(cvo_state->cloud_x_gpu->points.data()),
+                                                                                                        thrust::raw_pointer_cast(cvo_state->cloud_y_gpu->points.data()),
+                                                                                                        cvo_state->A,
 
-                                                                                                    thrust::raw_pointer_cast(cvo_state->least_square_LHS.data()),
-                                                                                                    thrust::raw_pointer_cast(cvo_state->least_square_RHS.data())
-                                                                                                    );
+                                                                                                        thrust::raw_pointer_cast(cvo_state->least_square_LHS.data()),
+                                                                                                        thrust::raw_pointer_cast(cvo_state->least_square_RHS.data())
+                                                                                                        );
 
     thrust::plus<Eigen::Matrix<float,6,6>> plus_mat66;
 
@@ -942,18 +741,18 @@ namespace cvo{
   }
   
   __global__ void compute_step_size_xi(Eigen::Vector3f * omega ,
-                                      Eigen::Vector3f * v,
-                                      CvoPoint * cloud_y,
-                                      int num_moving,
-                                      // outputs
-                                      Eigen::Vector3f_row * xiz,
-                                      Eigen::Vector3f_row * xi2z,
-                                      Eigen::Vector3f_row * xi3z,
-                                      Eigen::Vector3f_row * xi4z,
-                                      float * normxiz2,
-                                      float * xiz_dot_xi2z,
-                                      float * epsil_const
-                                      ) {
+                                       Eigen::Vector3f * v,
+                                       CvoPoint * cloud_y,
+                                       int num_moving,
+                                       // outputs
+                                       Eigen::Vector3f_row * xiz,
+                                       Eigen::Vector3f_row * xi2z,
+                                       Eigen::Vector3f_row * xi3z,
+                                       Eigen::Vector3f_row * xi4z,
+                                       float * normxiz2,
+                                       float * xiz_dot_xi2z,
+                                       float * epsil_const
+                                       ) {
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     if (j > num_moving-1 )
       return;
@@ -963,131 +762,52 @@ namespace cvo{
     cloud_yi << cloud_y[j].x , cloud_y[j].y, cloud_y[j].z;
     xiz[j] = omega->transpose().cross(cloud_yi.transpose()) + v->transpose();
     xi2z[j] = (omega_hat*omega_hat*cloud_yi                         \
-                  +(omega_hat*(*v))).transpose();    // (xi^2*z+xi*v)
+               +(omega_hat*(*v))).transpose();    // (xi^2*z+xi*v)
     xi3z[j] = (omega_hat*omega_hat*omega_hat*cloud_yi               \
-                  +(omega_hat*omega_hat*(*v)  )).transpose();  // (xi^3*z+xi^2*v)
+               +(omega_hat*omega_hat*(*v)  )).transpose();  // (xi^3*z+xi^2*v)
     xi4z[j] = (omega_hat*omega_hat*omega_hat*omega_hat*cloud_yi     \
-                  +(omega_hat*omega_hat*omega_hat*(*v)  )).transpose();    // (xi^4*z+xi^3*v)
+               +(omega_hat*omega_hat*omega_hat*(*v)  )).transpose();    // (xi^4*z+xi^3*v)
     normxiz2[j] = xiz[j].squaredNorm();
     xiz_dot_xi2z[j]  = (-xiz[j] .dot(xi2z[j]));
     epsil_const[j] = xi2z[j].squaredNorm()+2*xiz[j].dot(xi3z[j]);
     /*
-    if ( j == 1000) {
+      if ( j == 1000) {
       printf("j==1000, cloud+yi is (%f,%f,%f), xiz=(%f %f %f), xi2z=(%f %f %f), xi3z=(%f %f %f), xi4z=(%f %f %f), normxiz2=%f, xiz_dot_xi2z=%f, epsil_const=%f\n ",
-            cloud_y[j].x , cloud_y[j].y, cloud_y[j].z,
-            xiz[j](0), xiz[j](1), xiz[j](2),
-            xi2z[j](0),xi2z[j](1),xi2z[j](2),
-            xi3z[j](0),xi3z[j](1),xi3z[j](2),
-            xi4z[j](0),xi4z[j](1),xi4z[j](2),
-            normxiz2[j], xiz_dot_xi2z[j], epsil_const[j]
-            );
+      cloud_y[j].x , cloud_y[j].y, cloud_y[j].z,
+      xiz[j](0), xiz[j](1), xiz[j](2),
+      xi2z[j](0),xi2z[j](1),xi2z[j](2),
+      xi3z[j](0),xi3z[j](1),xi3z[j](2),
+      xi4z[j](0),xi4z[j](1),xi4z[j](2),
+      normxiz2[j], xiz_dot_xi2z[j], epsil_const[j]
+      );
       
-            }*/
+      }*/
 
     
   }
-  __global__ void compute_step_size_poly_coeff(float temp_coef,
-                                              int num_moving,
-                                              SparseKernelMat * A,
-                                              CvoPoint * cloud_x,
-                                              CvoPoint * cloud_y,
-                                              Eigen::Vector3f_row * xiz,
-                                              Eigen::Vector3f_row * xi2z,
-                                              Eigen::Vector3f_row * xi3z,
-                                              Eigen::Vector3f_row * xi4z,
-                                              float * normxiz2,
-                                              float * xiz_dot_xi2z,
-                                              float * epsil_const,
-                                              
-                                              // output
-                                              double * B,
-                                              double * C,
-                                              double * D,
-                                              double * E
-                                              ) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i > A->rows-1 )
-      return;
-    int A_cols = A->cols;
-    B[i] = 0;
-    C[i] = 0;
-    D[i] = 0;
-    E[i] = 0;
-    Eigen::Vector3f px;
-    px << cloud_x[i].x, cloud_x[i].y, cloud_x[i].z;
-    B[i] = C[i] = D[i] = E[i] = 0.0;
-    for (int j = 0; j < CVO_POINT_NEIGHBORS; j++) {
-      int idx = A->ind_row2col[i * A_cols + j];
-      if (idx == -1) break;
-      Eigen::Vector3f py;
-      py << cloud_y[idx].x, cloud_y[idx].y, cloud_y[idx].z;
-      Eigen::Vector3f diff_xy = (px - py);
-      // beta_i = -1/l^2 * dot(xiz,diff_xy)
-      float beta_ij = (-2.0*temp_coef * (xiz[idx] *diff_xy  ).value()  );
-      // gamma_i = -1/(2*l^2) * (norm(xiz).^2 + 2*dot(xi2z,diff_xy))
-      float gamma_ij = (-temp_coef * (normxiz2[idx] \
-                                      + (2.0*xi2z[idx]  *diff_xy).value())  );
-      // delta_i = 1/l^2 * (dot(-xiz,xi2z) + dot(-xi3z,diff_xy))
-      float delta_ij = (2.0*temp_coef * (xiz_dot_xi2z[idx]  \
-                                        + (-xi3z[idx] *diff_xy).value ( ) ));
-      // epsil_i = -1/(2*l^2) * (norm(xi2z).^2 + 2*dot(xiz,xi3z) + 2*dot(xi4z,diff_xy))
-      float epsil_ij = (-temp_coef * (epsil_const[idx] \
-                                      + (2.0*xi4z[idx]*diff_xy).value()  ));
 
-      float A_ij = A->mat[i * A_cols + j];
-      // eq (34)
-      /*B[i] += double(A_ij * beta_ij);
-      C[i] += double(A_ij * (gamma_ij+beta_ij*beta_ij/2.0));
-      D[i] += double(A_ij * (delta_ij+beta_ij*gamma_ij + beta_ij*beta_ij*beta_ij/6.0));
-      E[i] += double(A_ij * (epsil_ij+beta_ij*delta_ij+1/2.0*beta_ij*beta_ij*gamma_ij \
-                             + 1/2.0*gamma_ij*gamma_ij + 1/24.0*beta_ij*beta_ij*beta_ij*beta_ij));
-      */
-      double bi = double(A_ij * beta_ij);
-      B[i] += bi;
-      double ci = double(A_ij * (gamma_ij+beta_ij*beta_ij/2.0));
-      C[i] += ci;
-      double di = double(A_ij * (delta_ij+beta_ij*gamma_ij + beta_ij*beta_ij*beta_ij/6.0));
-      D[i] += di;
-      double ei = double(A_ij * (epsil_ij+beta_ij*delta_ij+1/2.0*beta_ij*beta_ij*gamma_ij\
-                                 + 1/2.0*gamma_ij*gamma_ij + 1/24.0*beta_ij*beta_ij*beta_ij*beta_ij));
-      E[i] += ei;
-      
-      /*
-      if ( idx == 1000) {
-        printf("px is (%f,%f,%f), py is (%f,%f,%f)\n", px(0), px(1), px(2), py(0), py(1), py(2));
-        printf("i=%d, idx==1000, normxiz2[idx]=%f,xiz_dot_xi2z[idx]=%f, xiz[idx]=(%f,%f,%f), xi2z[idx]=(%f,%f,%f),xi3z[idx]=(%f,%f,%f),  diff_xy=(%f,%f,%f), bi=%lf, ci=%lf, di=%lf, ei=%lf, Aij=%f, beta_ij=%f, gamma_ij=%f, delta_ij=%f, epsil_ij=%f\n",
-               i,
-               normxiz2[idx], xiz_dot_xi2z[idx],  xiz[idx](0), xiz[idx](1), xiz[idx](2),
-               xi2z[idx](0), xi2z[idx](1), xi2z[idx](2),  xi3z[idx](0), xi3z[idx](1), xi3z[idx](2), diff_xy(0), diff_xy(1), diff_xy(2),
-               bi, ci, di, ei,
-               A_ij, beta_ij, gamma_ij, delta_ij, epsil_ij);
-        
-               }*/
-      
-    }
-    
-  }
 
-__global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
-                                                                    float ell_init,
-                                                                    int num_moving,
-                                                         SparseKernelMat * A,
-                                                                    CvoPoint * cloud_x,
-                                                                    CvoPoint * cloud_y,
-                                                                    Eigen::Vector3f_row * xiz,
-                                                                    Eigen::Vector3f_row * xi2z,
-                                                                    Eigen::Vector3f_row * xi3z,
-                                                                    Eigen::Vector3f_row * xi4z,
-                                                                    float * normxiz2,
-                                                                    float * xiz_dot_xi2z,
-                                                                    float * epsil_const,
+  __global__ void compute_step_size_poly_coeff(float ell,
+                                               float ell_init,
+                                               int is_using_location_dependent_ell,
+                                               int num_moving,
+                                               SparseKernelMat * A,
+                                               CvoPoint * cloud_x,
+                                               CvoPoint * cloud_y,
+                                               Eigen::Vector3f_row * xiz,
+                                               Eigen::Vector3f_row * xi2z,
+                                               Eigen::Vector3f_row * xi3z,
+                                               Eigen::Vector3f_row * xi4z,
+                                               float * normxiz2,
+                                               float * xiz_dot_xi2z,
+                                               float * epsil_const,
                                                                     
-                                                                    // output
-                                                                    double * B,
-                                                                    double * C,
-                                                                    double * D,
-                                                         double * E
-                                                                    ) {
+                                               // output
+                                               double * B,
+                                               double * C,
+                                               double * D,
+                                               double * E
+                                               ) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i > A->rows-1 )
       return;
@@ -1102,20 +822,21 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
 
     float d2_sqrt = px.norm();
     float temp_ell = ell; // init value
-#ifdef IS_USING_RANGE_ELL    
-    temp_ell = compute_range_ell(ell,d2_sqrt, 1, 80 );
-#endif    
+    if (is_using_location_dependent_ell)
+      temp_ell = compute_range_ell(ell,d2_sqrt, 1, 80 );
+
     
     for (int j = 0; j < CVO_POINT_NEIGHBORS; j++) {
       int idx = A->ind_row2col[i * A_cols + j];
       if (idx == -1) break;
-#ifdef IS_USING_COVARIANCE
-      //temp_ell = (cloud_x[i].cov_eigenvalues[2] + cloud_y[idx].cov_eigenvalues[2] + cloud_x[i].cov_eigenvalues[0] + cloud_y[idx].cov_eigenvalues[0])/4.0 ;
-      temp_ell = ( cloud_x[i].cov_eigenvalues[2] + cloud_y[idx].cov_eigenvalues[2])/2.0 ;
-      temp_ell *= (ell/ell_init);
-      if (temp_ell > 1.0) temp_ell = 1.0;
-      if (temp_ell < 0.01) temp_ell =0.01;
-#endif      
+      /*
+        #ifdef IS_USING_COVARIANCE
+        temp_ell = (cloud_x[i].cov_eigenvalues[2] + cloud_y[idx].cov_eigenvalues[2] + cloud_x[i].cov_eigenvalues[0] + cloud_y[idx].cov_eigenvalues[0])/4.0 ;
+        //temp_ell = ( cloud_x[i].cov_eigenvalues[2] + cloud_y[idx].cov_eigenvalues[2])/2.0 ;
+        temp_ell *= (ell/ell_init);
+        if (temp_ell > 1.0) temp_ell = 1.0;
+        if (temp_ell < 0.01) temp_ell =0.01;
+        #endif  */    
       float temp_coef = 1/(2.0*temp_ell*temp_ell);   // 1/(2*l^2)       
       
       Eigen::Vector3f py;
@@ -1164,8 +885,8 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
 
     //float temp_coef = 1/(2.0*cvo_state->ell*cvo_state->ell);   // 1/(2*l^2)
     //compute_step_size_poly_coeff_range_ell<<<cvo_state->num_fixed / CUDA_BLOCK_SIZE + 1, CUDA_BLOCK_SIZE>>>
-    compute_step_size_poly_coeff_location_dependent_ell<<<cvo_state->num_fixed / CUDA_BLOCK_SIZE + 1, CUDA_BLOCK_SIZE>>>
-      ( cvo_state->ell, params->ell_init,
+    compute_step_size_poly_coeff<<<cvo_state->num_fixed / CUDA_BLOCK_SIZE + 1, CUDA_BLOCK_SIZE>>>
+      ( cvo_state->ell, params->ell_init, params->is_using_range_ell,
         cvo_state->num_fixed, cvo_state->A,
         thrust::raw_pointer_cast( cvo_state->cloud_x_gpu->points.data()  ),
         thrust::raw_pointer_cast( cvo_state->cloud_y_gpu->points.data() ),
@@ -1211,7 +932,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     }
     if (debug_print)
       std::cout<<"step size "<<temp_step<<"\n original_rc is \n"<< rc<<std::endl;
-   //if (temp_step == numeric_limits<double>::max() ) temp_step = params->min_step*100; 
+    //if (temp_step == numeric_limits<double>::max() ) temp_step = params->min_step*100; 
     // if none of the roots are suitable, use min_step
     cvo_state->step = temp_step==numeric_limits<double>::max()? params->min_step:temp_step;
     // if step>0.8, just use 0.8 as step
@@ -1224,8 +945,8 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     //cvo_state->step = temp_step > params->max_step ? params->max_step:temp_step;
     //cvo_state->step = temp_step < params->min_step? params->min_step :temp_step;
     //step *= 10;
-        // if none of the roots are suitable, use min_step
-        // cvo_state->step = temp_step==numeric_limits<float>::max()? params->min_step:temp_step;
+    // if none of the roots are suitable, use min_step
+    // cvo_state->step = temp_step==numeric_limits<float>::max()? params->min_step:temp_step;
     // if step>0.8, just use 0.8 as step
     // cvo_state->step = cvo_state->step>0.8 ? 0.8:cvo_state->step;
 
@@ -1304,7 +1025,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
         // add current indicator to the end queue and compute sum
         indicator_end_queue.push(indicator);
         indicator_end_sum += indicator;
-       }
+      }
     } //else {
       //ratio << 1.0 <<"\n"<< std::flush;
       
@@ -1335,24 +1056,24 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     // << ", end size=" << indicator_end_queue.size() << ", sum=" << indicator_end_sum << std::endl;
 
 
-      /*
+    /*
       if(decrease && cvo_state.ell > params.ell_min){
-        cvo_state.ell = cvo_state.ell * 0.9;
-        last_decrease = true;
-        decrease = false;
+      cvo_state.ell = cvo_state.ell * 0.9;
+      last_decrease = true;
+      decrease = false;
       }
       else if(~decrease && last_decrease){
-        last_decrease = false;
+      last_decrease = false;
       }
       if(increase && cvo_state.ell < params.ell_max){
-        cvo_state.ell = cvo_state.ell * 1.1;
-        increase = false;
+      cvo_state.ell = cvo_state.ell * 1.1;
+      increase = false;
       }
 
       if(skip_iteration){
-        continue;
+      continue;
       }
-      */
+    */
 
     return decrease;
   }
@@ -1408,7 +1129,8 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     
   }
   
-  int CvoGPU::align(const CvoPointCloud& source_points,
+  int CvoGPU::align(// inputs
+                    const CvoPointCloud& source_points,
                     const CvoPointCloud& target_points,
                     const Eigen::Matrix4f & init_guess_transform,
                     // outputs
@@ -1425,11 +1147,13 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     std::ofstream inner_product_file("inner_product_history.txt");
     
     std::cout<<"[align] convert points to gpu\n"<<std::flush;
+    if (source_points.num_points() == 0 || target_points.num_points() == 0) {
+      std::cout<<"[align] point clouds inputs are empty\n";
+      return 0;
+    }
     CvoPointCloudGPU::SharedPtr source_gpu = CvoPointCloud_to_gpu(source_points);
     CvoPointCloudGPU::SharedPtr target_gpu = CvoPointCloud_to_gpu(target_points);
 
-    assert(source_gpu != nullptr && target_gpu != nullptr);
-    std::cout<<"Pc non-empty\n";
     CvoState cvo_state(source_gpu, target_gpu, params);
     std::cout<<"construct new cvo state..., init ell is "<<cvo_state.ell<<std::endl;
 
@@ -1478,7 +1202,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
       // transform point cloud
       start = chrono::system_clock::now();
       transform_pointcloud_thrust(cvo_state.cloud_y_gpu_init, cvo_state.cloud_y_gpu,
-                                  cvo_state.R_gpu, cvo_state.T_gpu ); 
+                                  cvo_state.R_gpu, cvo_state.T_gpu, false ); 
       end = std::chrono::system_clock::now();
       t_transform_pcd += (end - start);
 
@@ -1620,7 +1344,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     A_trip_concur_.clear();
     const float s2= params.sigma*params.sigma;
 
-     const float l = params.ell_min;
+    const float l = params.ell_min;
 
     // convert k threshold to d2 threshold (so that we only need to calculate k when needed)
     const float d2_thres = -2.0*l*l*log(params.sp_thres/s2);
@@ -1640,56 +1364,51 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
         //params.sorted = false;
         const size_t nMatches = mat_index.index->radiusSearch(&(*cloud_a_pos)[i](0), search_radius, ret_matches, params_flann);
         Eigen::Matrix<float,Eigen::Dynamic,1> feature_a = cloud_a->features().row(i).transpose();
-#ifdef IS_USING_SEMANTICS        
-        Eigen::VectorXf label_a = cloud_a->labels().row(i);
-#endif
+        Eigen::VectorXf label_a;
+        if (params.is_using_semantics)
+          label_a = cloud_a->labels().row(i);
+        
         // for(int j=0; j<num_moving; j++){
         for(size_t j=0; j<nMatches; ++j){
           int idx = ret_matches[j].first;
           float d2 = ret_matches[j].second;
           // d2 = (x-y)^2
-          float k = 0;
-          float ck = 0;
+          float k = 1;
+          float ck = 1;
           float sk = 1;
           float d2_color = 0;
           float d2_semantic = 0;
-          float a = 0;
-          if(d2<d2_thres){
-            Eigen::Matrix<float,Eigen::Dynamic,1> feature_b = cloud_b->features().row(idx).transpose();
-            d2_color = ((feature_a-feature_b).squaredNorm());
-#ifdef IS_USING_SEMANTICS            
-            Eigen::VectorXf label_b = cloud_b->labels().row(idx);
-            d2_semantic = ((label_a-label_b).squaredNorm());
-#endif
-            
-            //if(d2_color<d2_c_thres){
-              k = s2*exp(-d2/(2.0*l*l));
-              ck = params.c_sigma*params.c_sigma*exp(-d2_color/(2.0*params.c_ell*params.c_ell));
-              // ck = 1;
+          float a = 1;
 
-#ifdef IS_USING_SEMANTICS              
-              sk = params.s_sigma*params.s_sigma*exp(-d2_semantic/(2.0*params.s_ell*params.s_ell));
-#else
-              sk = 1;
-#endif              
-              a = ck*k*sk;
-              if (a > params.sp_thres){
-                A_trip_concur_.push_back(Trip_t(i,idx,a));
-              }
-            
-            
-            //}
+          Eigen::VectorXf label_b;
+          if (params.is_using_semantics) {
+            label_b = cloud_b->labels().row(idx);
+            d2_semantic = ((label_a-label_b).squaredNorm());            
+            sk = params.s_sigma*params.s_sigma*exp(-d2_semantic/(2.0*params.s_ell*params.s_ell));
+          }
+
+          if (params.is_using_geometry) {
+            k = s2*exp(-d2/(2.0*l*l));            
+          } 
+
+          if (params.is_using_intensity) {
+            Eigen::Matrix<float,Eigen::Dynamic,1> feature_b = cloud_b->features().row(idx).transpose();            
+            d2_color = ((feature_a-feature_b).squaredNorm());
+            ck = params.c_sigma*params.c_sigma*exp(-d2_color/(2.0*params.c_ell*params.c_ell));
+          }
+          a = ck*k*sk;
+          if (a > params.sp_thres){
+            A_trip_concur_.push_back(Trip_t(i,idx,a));
           }
         }
       });
-    //}
-    // form A
+
     A_temp.setFromTriplets(A_trip_concur_.begin(), A_trip_concur_.end());
     A_temp.makeCompressed();
   }
   
   float CvoGPU::inner_product(const CvoPointCloud& source_points,
-                          const CvoPointCloud& target_points,
+                              const CvoPointCloud& target_points,
                               const Eigen::Matrix4f & s2t_frame_transform
                               ) const {
     if (source_points.num_points() == 0 || target_points.num_points() == 0) {
@@ -1701,8 +1420,8 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     Eigen::Vector3f trans = s2t_frame_transform.block<3,1>(0,3) ;
     // transform moving points
     tbb::parallel_for(int(0), target_points.num_points(), [&]( int j ){
-                                                            moving_positions[j] = (rot*moving_positions[j]+trans).eval();
-                                                          });
+      moving_positions[j] = (rot*moving_positions[j]+trans).eval();
+    });
     Eigen::SparseMatrix<float,Eigen::RowMajor> A_mat;
     tbb::concurrent_vector<Trip_t> A_trip_concur_;
     A_trip_concur_.reserve(target_points.num_points() * 20);
@@ -1746,7 +1465,7 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     update_tf(R, T, &cvo_state, transform);
 
     transform_pointcloud_thrust(cvo_state.cloud_y_gpu_init, cvo_state.cloud_y_gpu,
-                                cvo_state.R_gpu, cvo_state.T_gpu ); 
+                                cvo_state.R_gpu, cvo_state.T_gpu, false ); 
 
     // update the inner product matrix
     // std::cout<<"cvo_state.ell = "<<cvo_state.ell<<std::endl;
@@ -1771,35 +1490,35 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
   }
 
   float CvoGPU::function_angle(const CvoPointCloud& source_points,
-        const CvoPointCloud& target_points,
-        const Eigen::Matrix4f & s2t_frame_transform
-        ) const {
-      if (source_points.num_points() == 0 || target_points.num_points() == 0) {
-        return 0;
-      }
+                               const CvoPointCloud& target_points,
+                               const Eigen::Matrix4f & s2t_frame_transform
+                               ) const {
+    if (source_points.num_points() == 0 || target_points.num_points() == 0) {
+      return 0;
+    }
 
-      Eigen::Matrix4f identity = Eigen::Matrix4f::Identity();
+    Eigen::Matrix4f identity = Eigen::Matrix4f::Identity();
 
-      float fxfz = real_inner_product(source_points, target_points, s2t_frame_transform);
-      float fx_norm = sqrt(real_inner_product(source_points, source_points, identity));
-      float fz_norm = sqrt(real_inner_product(target_points, target_points, identity));
-      float cosine_value = fxfz / (fx_norm * fz_norm);
+    float fxfz = real_inner_product(source_points, target_points, s2t_frame_transform);
+    float fx_norm = sqrt(real_inner_product(source_points, source_points, identity));
+    float fz_norm = sqrt(real_inner_product(target_points, target_points, identity));
+    float cosine_value = fxfz / (fx_norm * fz_norm);
 
-      std::cout<<"--- function_angle ---"<<std::endl;
-      std::cout<<"fxfz = "<<fxfz<<std::endl;
-      std::cout<<"fx_norm = "<<fx_norm<<std::endl;
-      std::cout<<"fz_norm = "<<fz_norm<<std::endl;
-      std::cout<<"cosine_value = "<<cosine_value<<std::endl;
+    std::cout<<"--- function_angle ---"<<std::endl;
+    std::cout<<"fxfz = "<<fxfz<<std::endl;
+    std::cout<<"fx_norm = "<<fx_norm<<std::endl;
+    std::cout<<"fz_norm = "<<fz_norm<<std::endl;
+    std::cout<<"cosine_value = "<<cosine_value<<std::endl;
 
-      return cosine_value;
+    return cosine_value;
   }
 
   float CvoGPU::real_inner_product(const CvoPointCloud& source_points,
-         const CvoPointCloud& target_points,
-         const Eigen::Matrix4f & s2t_frame_transform
-         ) const {
+                                   const CvoPointCloud& target_points,
+                                   const Eigen::Matrix4f & s2t_frame_transform
+                                   ) const {
     if (source_points.num_points() == 0 || target_points.num_points() == 0) {
-    return 0;
+      return 0;
     }
     ArrayVec3f fixed_positions = source_points.positions();
     ArrayVec3f moving_positions = target_points.positions();
@@ -1808,8 +1527,8 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     Eigen::Vector3f trans = s2t_frame_transform.block<3,1>(0,3) ;
     // transform moving points
     tbb::parallel_for(int(0), target_points.num_points(), [&]( int j ){
-                                      moving_positions[j] = (rot*moving_positions[j]+trans).eval();
-                                    });
+      moving_positions[j] = (rot*moving_positions[j]+trans).eval();
+    });
 
     Eigen::SparseMatrix<float,Eigen::RowMajor> A_mat;
     tbb::concurrent_vector<Trip_t> A_trip_concur_;
@@ -1825,21 +1544,21 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
   /*
   
   
-  void CvoGPU::transform_pcd(CvoData & cvo_data, const & Mat33f R, const & Vec3f &T) {
+    void CvoGPU::transform_pcd(CvoData & cvo_data, const & Mat33f R, const & Vec3f &T) {
     
     tbb::parallel_for(int(0), cvo_data.num_moving, [&]( int j ){
-                                                    (cvo_data.cloud_y)[j] = R*cvo_data.ptr_moving_pcd->positions()[j]+T;
-                                                  });
+    (cvo_data.cloud_y)[j] = R*cvo_data.ptr_moving_pcd->positions()[j]+T;
+    });
     
-  }
-  std::unique_ptr<CvoData> cvo::set_pcd(const CvoPointCloud& source_points,
-                                        const CvoPointCloud& target_points,
-                                        const Eigen::Matrix4f & init_guess_transform,
-                                        bool is_using_init_guess,
-                                        float ell_init_val,
-                                        Eigen::Ref<Mat33f> R,
-                                        Eigen::Ref<Vec3f> T
-                                        ) const  {
+    }
+    std::unique_ptr<CvoData> cvo::set_pcd(const CvoPointCloud& source_points,
+    const CvoPointCloud& target_points,
+    const Eigen::Matrix4f & init_guess_transform,
+    bool is_using_init_guess,
+    float ell_init_val,
+    Eigen::Ref<Mat33f> R,
+    Eigen::Ref<Vec3f> T
+    ) const  {
     std::unique_ptr<CvoData> cvo_data(new CvoData(source_points, target_points,ell_init_val));
     // std::cout<<"fixed[0] \n"<<ptr_fixed_pcd->positions()[0]<<"\nmoving[0] "<<ptr_moving_pcd->positions()[0]<<"\n";
     // std::cout<<"fixed[0] \n"<<(*cloud_x)[0]<<"\nmoving[0] "<<(*cloud_y)[0]<<"\n";
@@ -1849,29 +1568,29 @@ __global__ void compute_step_size_poly_coeff_location_dependent_ell(float ell,
     R = transform.linear();
     T = transform.translation();
     std::cout<<"[Cvo ] the init guess for the transformation is \n"
-            <<transform.matrix()<<std::endl;
+    <<transform.matrix()<<std::endl;
     if (is_logging) {
-      auto & Tmat = transform.matrix();
-      fprintf(init_guess_file, "%.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f\n",
-              Tmat(0,0), Tmat(0,1), Tmat(0,2), Tmat(0,3),
-              Tmat(1,0), Tmat(1,1), Tmat(1,2), Tmat(1,3),
-              Tmat(2,0), Tmat(2,1), Tmat(2,2), Tmat(2,3)
-              );
-      fflush(init_guess_file);
+    auto & Tmat = transform.matrix();
+    fprintf(init_guess_file, "%.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f\n",
+    Tmat(0,0), Tmat(0,1), Tmat(0,2), Tmat(0,3),
+    Tmat(1,0), Tmat(1,1), Tmat(1,2), Tmat(1,3),
+    Tmat(2,0), Tmat(2,1), Tmat(2,2), Tmat(2,3)
+    );
+    fflush(init_guess_file);
     }
     return std::move(cvo_data);
-  }
+    }
   
-  float cvo::inner_product() const {
+    float cvo::inner_product() const {
     return A.sum()/num_fixed*1e6/num_moving;
-  }
-  float cvo::inner_product_normalized() const {
+    }
+    float cvo::inner_product_normalized() const {
     return A.sum()/A.nonZeros();
     // return A.sum()/num_fixed*1e6/num_moving;
-  }
-  int cvo::number_of_non_zeros_in_A() const{
+    }
+    int cvo::number_of_non_zeros_in_A() const{
     std::cout<<"num of non-zeros in A: "<<A.nonZeros()<<std::endl;
     return A.nonZeros();
-  }
+    }
   */
 }

@@ -25,5 +25,10 @@ ell_decay_start: 30 #60
 ell_decay_start_first_frame: 2000
 indicator_window_size: 30
 indicator_stable_threshold: 0.001
-is_ell_adaptive: False
-is_dense_kernel: False
+is_ell_adaptive: 0
+is_dense_kernel: 0
+is_full_ip_matrix: 0
+is_using_geometry: 1
+is_using_intensity: 0
+is_using_semantics: 0
+is_using_range_ell: 0

@@ -52,9 +52,11 @@ namespace cvo{
      *        the function will iterate MAX_ITER times unless break conditions are met
      *        return 0 if sucess. return -1 if fails
      */
-    int align(const CvoPointCloud& source_points,
+    int align(// inputs
+              const CvoPointCloud& source_points,
               const CvoPointCloud& target_points,
               const Eigen::Matrix4f & init_guess_transform,
+              // outputs
               Eigen::Ref<Eigen::Matrix4f> transform,
               double *registration_seconds=nullptr ) const;
 

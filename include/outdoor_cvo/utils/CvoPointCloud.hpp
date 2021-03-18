@@ -130,14 +130,11 @@ namespace cvo {
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> features_;   // rgb, gradient in [0,1]
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> normals_;  // surface normals
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> labels_; // number of points by number of classes
-    //Eigen::Matrix<float, Eigen::Dynamic, 9> covariance_;
 
     pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals_;
     Eigen::Matrix<float, Eigen::Dynamic, 2> types_; // type of the point using loam point selector, edge=(1,0), surface=(0,1)
     cv::Vec3f avg_pixel_color_pattern(const cv::Mat & raw, int u, int v, int w);
-    
 
-    //thrust::device_vector<float> covariance_;
     std::vector<float> covariance_;
     std::vector<float> eigenvalues_;
     //thrust::device_vector<float> eigenvalues_;
