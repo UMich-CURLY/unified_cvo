@@ -103,12 +103,15 @@ namespace cvo{
           host_cloud[i].label_distribution[j] = labels(i,j);
       }
       
+      if (normals.rows() > 0 && normals.cols()>0) {
+        for (int j = 0; j < 3; j++)
+          host_cloud[i].normal[j] = normals(i,j);
+      }
 
-      for (int j = 0; j < 3; j++)
-        host_cloud[i].normal[j] = normals(i,j);
-
-      memcpy(host_cloud[i].covariance, cvo_cloud.covariance().data()+ i*9, sizeof(float)*9  );
-      memcpy(host_cloud[i].cov_eigenvalues, cvo_cloud.eigenvalues().data() + i*3, sizeof(float)*3);
+      if (cvo_cloud.covariance().size() > 0 )
+        memcpy(host_cloud[i].covariance, cvo_cloud.covariance().data()+ i*9, sizeof(float)*9  );
+      if (cvo_cloud.eigenvalues().size() > 0 )
+        memcpy(host_cloud[i].cov_eigenvalues, cvo_cloud.eigenvalues().data() + i*3, sizeof(float)*3);
 
       //if (i == 1000) {
       //  printf("Total %d, Raw input from pcl at 1000th: \n", num_points);
@@ -446,10 +449,20 @@ namespace cvo{
     float c2 = cvo_params->c_ell * cvo_params->c_ell;
     float c_sigma2 = cvo_params->c_sigma * cvo_params->c_sigma;
     float s_ell = cvo_params->s_ell;
+    float s_sigma2 = cvo_params->s_sigma * cvo_params->s_sigma;
 
     CvoPoint * p_a =  &points_a[i];
     float a_to_sensor = sqrtf(p_a->x * p_a->x + p_a->y * p_a->y + p_a->z * p_a->z);
     float l = compute_range_ell(ell, a_to_sensor , 1, 80 );
+
+    float d2_thres=1, d2_c_thres=1, d2_s_thres=1;
+    if (cvo_params->is_using_geometry)
+      d2_thres = -2.0*l*l*log(cvo_params->sp_thres/sigma2);
+    if (cvo_params->is_using_intensity)
+      d2_c_thres = -2.0*c2*log(cvo_params->sp_thres/c_sigma2);
+    if (cvo_params->is_using_semantics)
+      d2_s_thres = -2.0*s_ell*s_ell*log(cvo_params->sp_thres/s_sigma2 );
+    
 
     float * label_a = nullptr;
     if (cvo_params->is_using_semantics)
@@ -463,18 +476,26 @@ namespace cvo{
 
       float a = 1, sk=1, ck=1, k=1;
       if (cvo_params->is_using_geometry) {
-        float d2 = (squared_dist( *p_b ,*p_a ));        
-        k= sigma2*exp(-d2/(2.0*l*l));
+        float d2 = (squared_dist( *p_b ,*p_a ));
+        if (d2 < d2_thres)
+          k= sigma2*exp(-d2/(2.0*l*l));
+        else continue;
       }
       //if (i==0)
       //  printf("geometric: a is %f, normal_ip is %f, final_a is %f\n", sigma2*exp(-d2/(2.0*l*l)), normal_ip, a );
       if (cvo_params->is_using_intensity) {
-        float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);        
-        ck = c_sigma2*exp(-d2_color/(2.0*c2 ));
+        float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
+        if (d2_color < d2_c_thres)
+          ck = c_sigma2*exp(-d2_color/(2.0*c2 ));
+        else
+          continue;
       }
       if (cvo_params->is_using_semantics) {
-        float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);        
-        sk = cvo_params->s_sigma*cvo_params->s_sigma*exp(-d2_semantic/(2.0*s_ell*s_ell));
+        float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
+        if (d2_semantic < d2_s_thres )
+          sk = cvo_params->s_sigma*cvo_params->s_sigma*exp(-d2_semantic/(2.0*s_ell*s_ell));
+        else
+          continue;
       }
       a = ck*k*sk;
       if (a > cvo_params->sp_thres){
@@ -510,7 +531,7 @@ namespace cvo{
     CvoPoint * points_fixed_raw = thrust::raw_pointer_cast (  points_fixed->points.data() );
     CvoPoint * points_moving_raw = thrust::raw_pointer_cast( points_moving->points.data() );
     
-    fill_in_A_mat_gpu<<<(points_fixed->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(params_gpu,
+    fill_in_A_mat_gpu<<<(points_fixed->points.size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(params_gpu,
                                                                                          points_fixed_raw,
                                                                                          fixed_size,
                                                                                          points_moving_raw,

@@ -339,7 +339,7 @@ namespace cvo{
       cv::FAST(left_gray,keypoints, 5,false);
 
       // for semantic
-      //int thresh = 4, num_want = 28000, num_min = 15000;
+      // int thresh = 4, num_want = 28000, num_min = 15000;
       //// for geometric
       int thresh = 4, num_want = 24000, num_min = 15000;
       while (keypoints.size() > num_want)  {

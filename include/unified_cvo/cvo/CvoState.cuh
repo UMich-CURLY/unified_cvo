@@ -16,7 +16,7 @@ namespace Eigen {
 
 namespace cvo {
 
-  const int CVO_POINT_NEIGHBORS = 400;  
+  const int CVO_POINT_NEIGHBORS = 512;  
   typedef pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES> CvoPoint;
   typedef perl_registration::cuPointCloud<CvoPoint> CvoPointCloudGPU;
 }
