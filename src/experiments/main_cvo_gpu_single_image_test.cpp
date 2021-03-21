@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
     printf("Start align... num_fixed is %d, num_moving is %d\n", source->num_points(), target->num_points());
 
     std::cout<<std::flush;
-    //cvo_align.align(*source, *target, init_guess_inv, result);
+    cvo_align.align(*source, *target, init_guess_inv, result);
     
     std::cout<<"Cvo align result for seq "<<seq_name<<" frame id "<<frame_name<<" is \n"<<result<<std::endl;
     

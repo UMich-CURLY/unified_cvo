@@ -481,8 +481,9 @@ namespace cvo{
           k= sigma2*exp(-d2/(2.0*l*l));
         else continue;
       }
-      //if (i==0)
-      //  printf("geometric: a is %f, normal_ip is %f, final_a is %f\n", sigma2*exp(-d2/(2.0*l*l)), normal_ip, a );
+      //if (i==0) {
+      //  printf("point_a is (%f,%f,%f), point_b is (%f,%f,%f), geometric: a is %f, \n", p_a->x, p_a->y, p_a->z, p_b->x, p_b->y, p_b->z, k );
+      //}
       if (cvo_params->is_using_intensity) {
         float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
         if (d2_color < d2_c_thres)
@@ -624,7 +625,7 @@ namespace cvo{
     ;
     //cudaDeviceSynchronize();
     if (debug_print)
-      printf("finsih compute_flow_gpu_no_eigen\n");
+      printf("finish compute_flow_gpu_no_eigen\n");
     auto end = chrono::system_clock::now();
     //std::cout<<"time for compute_gradient is "<<std::chrono::duration_cast<std::chrono::milliseconds>((end- start)).count()<<std::endl;
     

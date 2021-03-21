@@ -68,7 +68,7 @@ namespace cvo {
   inline void clear_SparseKernelMat(SparseKernelMat * A_host) {
     //SparseKernelMat A;
     //cudaMemcpy(&A, A_gpu, sizeof(SparseKernelMat), cudaMemcpyDeviceToHost);
-    
+    A_host->nonzero_sum = 0;
     cudaMemset(A_host->mat, 0, A_host->rows * A_host->cols * sizeof(float));
     cudaMemset(A_host->ind_row2col, -1, A_host->rows * A_host->cols * sizeof(int));
     cudaMemset(A_host->nonzeros, 0, A_host->rows * sizeof(unsigned int));
