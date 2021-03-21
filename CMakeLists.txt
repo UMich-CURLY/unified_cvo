@@ -19,7 +19,7 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 add_compile_options(-std=c++14)
 
 # Release Mode
-#set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Release)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -O3 -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -lmkl_intel_lp64 -lmkl_core -lmkl -liomp -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 #set(CMAKE_BUILD_TYPE Debug)
@@ -158,7 +158,7 @@ set (CVO_CPU_SOURCE
 
 
 include_directories(
-  ${PROJECT_SOURCE_DIR}/include/outdoor_cvo/
+  ${PROJECT_SOURCE_DIR}/include/unified_cvo/
   ${EIGEN_INCLUDE_DIR}
   ${TBB_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
