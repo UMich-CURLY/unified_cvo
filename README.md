@@ -3,19 +3,19 @@
 ### Dockerfile to help resolve dependencies
 [Docker file for building CVO](https://github.com/UMich-BipedLab/docker_images/tree/master/cvo_gpu)
 
-Follow it to first get a cuda10 environment. Then manually install the following dependencies from source inside your docker container.
+Follow it to first get a cuda10 environment. 
 
 ### Dependencies
 *  `cuda10.2` (already in docker)
 *  `gcc7` (already in docker)
 *  `SuiteParse` (already in docker)
-* `Sophus 1.0.0 release` (built from source)
-* `Eigen 3.3.7` (built from source)
+* `Sophus 1.0.0 release` (already in docker)
+* `Eigen 3.3.7` (already in docker)
 * `TBB` (already in docker)
 * `Boost 1.65` (already in docker)
 * `pcl 1.9.1` (built from source)
 * `OpenCV3` or `OpenCV4` (already in docker)
-* `GTSAM` (`default branch`, built from source)
+* `GTSAM` (`default branch`, already in docker)
 
 Note: 'pcl-1.9.1' need to be changed and compiled to get it working with cuda. 
 * `pcl/io/boost.h`: add `#include <boost/numeric/conversion/cast.hpp>` at the end of the file before `#endif`
