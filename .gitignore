@@ -50,3 +50,4 @@ build
 *.tar.gz
 *.ps
 *.pdf
+*.pyc
