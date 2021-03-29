@@ -342,6 +342,8 @@ namespace cvo{
       // int thresh = 4, num_want = 28000, num_min = 15000;
       //// for geometric
       int thresh = 4, num_want = 24000, num_min = 15000;
+      if (left_image.num_class() > 0)
+	      num_want = 28000;
       while (keypoints.size() > num_want)  {
         std::cout<<"selected "<<keypoints.size()<<" points more than "<<num_want<<std::endl;
         keypoints.clear();

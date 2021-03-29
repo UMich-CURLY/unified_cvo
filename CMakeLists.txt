@@ -1,6 +1,17 @@
-SET(PROJECT_NAME OUTDOOR_CVO)
+set(PROJECT_NAME UnifiedCvo)
+if (POLICY CMP0048)
+  cmake_policy(SET CMP0048 NEW)
+endif (POLICY CMP0048)
 
-PROJECT(${PROJECT_NAME})
+project(${PROJECT_NAME} VERSION 0.1)
+
+
+set(UnifiedCvo_VERSION 0.1)
+#set(${PROJECT_NAME}_VERSION 1.0)
+
+
+
+
 cmake_minimum_required(VERSION 3.8)
 option(${PROJECT_NAME}_ENABLE_CUDA "ENABLE_CUDA" ON)
 option(${PROJECT_NAME}_ENABLE_ACVO "ENABLE_ACVO" OFF)
@@ -16,7 +27,7 @@ if (${PROJECT_NAME}_ENABLE_CUDA)
 endif()
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
-add_compile_options(-std=c++14)
+#add_compile_options(-std=c++14)
 
 # Release Mode
 set(CMAKE_BUILD_TYPE Release)
@@ -29,9 +40,11 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(EXECUTABLE_OUTPUT_PATH bin)
-set(LIBRARY_OUTPUT_PATH lib)
+## build output directory
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY lib)
 LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+
 
 # required libraries
 find_package(SuiteParse REQUIRED)
@@ -157,7 +170,7 @@ set (CVO_CPU_SOURCE
   )
 
 
-include_directories(
+set (CVO_INCLUDE_DIRS
   ${PROJECT_SOURCE_DIR}/include/unified_cvo/
   ${EIGEN_INCLUDE_DIR}
   ${TBB_INCLUDE_DIRS}
@@ -170,7 +183,18 @@ include_directories(
   # thirdparty
   ${PROJECT_SOURCE_DIR}/thirdparty/libelas/
   ${PROJECT_SOURCE_DIR}/thirdparty/cugicp/
-) 
+  )
+
+include_directories(
+  ${CVO_INCLUDE_DIRS}
+  )
+
+set (CVO_PUBLIC_HEADERS
+  ${PROJECT_SOURCE_DIR}/include/unified_cvo/
+  ${PROJECT_SOURCE_DIR}/thirdparty/libelas/
+  ${PROJECT_SOURCE_DIR}/thirdparty/cugicp/  
+
+  )
 
 message("CXX_FLAGS are ${CMAKE_CXX_FLAGS}")
 message("CUDA_NVCC_FLAGS are ${CUDA_NVCC_FLAGS}")
@@ -312,6 +336,10 @@ endif()
 if (${PROJECT_NAME}_ENABLE_CUDA)
 add_library(cvo_gpu_img_lib ${CVO_GPU_SOURCE})
 target_link_libraries(cvo_gpu_img_lib PRIVATE lie_group_utils cvo_utils_lib  )
+target_include_directories(cvo_gpu_img_lib PUBLIC
+	$<BUILD_INTERFACE:${UnifiedCvo_SOURCE_DIR}/include> 
+	$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
+        $<INSTALL_INTERFACE:include> )
 target_compile_definitions(cvo_gpu_img_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
 set_target_properties(cvo_gpu_img_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
@@ -367,9 +395,9 @@ if(${PROJECT_NAME}_ENABLE_ACVO)
 #target_link_libraries(acvo_intensity_gpu_raw_lidar acvo_gpu_lidar_lib kitti cvo_utils_lib pose_graph_lib  boost_filesystem boost_system)
 
 
-add_executable(acvo_semantic_lidar_align_gpu ${PROJECT_SOURCE_DIR}/src/experiments/main_acvo_gpu_lidar_align.cpp)
-target_compile_definitions(acvo_semantic_lidar_align_gpu PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_SEMANTICS)
-target_link_libraries(acvo_semantic_lidar_align_gpu  acvo_gpu_semantic_lidar_lib cvo_cpu_semantic_lib cvo_utils_lib boost_filesystem boost_system kitti)
+#add_executable(acvo_semantic_lidar_align_gpu ${PROJECT_SOURCE_DIR}/src/experiments/main_acvo_gpu_lidar_align.cpp)
+#target_compile_definitions(acvo_semantic_lidar_align_gpu PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_SEMANTICS)
+#target_link_libraries(acvo_semantic_lidar_align_gpu  acvo_gpu_semantic_lidar_lib cvo_cpu_semantic_lib cvo_utils_lib boost_filesystem boost_system kitti)
 
 
 endif()
@@ -414,12 +442,73 @@ endif()
 #target_link_libraries(cvo_local_mapping cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES}  )
 
 #################################################################
+# install
+# Install the project in CMAKE_INSTALL_PREFIX (defaults to /usr/local on linux). 
+# To change the install location, run 
+#   cmake -DCMAKE_INSTALL_PREFIX=<desired-install-path> ..
+#################################################################
+
+# install directory
+set(UnifiedCvo_INCLUDE_DEST "include/unified_cvo")
+set(UnifiedCvo_LIB_DEST "lib/unified_cvo")
+#set(UNIFIED_CVO_BIN_DEST "bin/")
+
+install(
+    # targets to install
+    TARGETS cvo_gpu_img_lib lie_group_utils cvo_utils_lib elas 
+    # name of the CMake "export group" containing the targets we want to install
+    EXPORT UnifiedCvoTargets
+    # Dynamic, static library and include destination locations after running
+    # "make install"
+    LIBRARY DESTINATION ${UnifiedCvo_LIB_DEST}
+    ARCHIVE DESTINATION ${UnifiedCvo_LIB_DEST}
+    INCLUDES DESTINATION ${UnifiedCvo_INCLUDE_DEST}
+    )
+
+
+
+  install(
+    # The export we want to save (matches name defined above containing the
+    # install targets)
+    EXPORT UnifiedCvoTargets
+    # CMake file in which to store the export's information
+    FILE  UnifiedCvoTargets.cmake
+    # Namespace prepends all targets in the export (when we import later, we
+    # will use CMakeDemo::CMakeDemo)
+    NAMESPACE UnifiedCvo::
+    # where to place the resulting file (here, we're putting it with the library)
+    DESTINATION ${UnifiedCvo_LIB_DEST}
+    )  
+
+
+  install(DIRECTORY ${CVO_PUBLIC_HEADERS} 
+	  
+	  DESTINATION ${UnifiedCvo_INCLUDE_DEST})
+
+
+# Write a "version file" in case someone wants to only load a particular version of
+# CMakeDemo 
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+  UnifiedCvoConfigVersion.cmake
+  VERSION ${UnifiedCvo_VERSION}
+  COMPATIBILITY AnyNewerVersion
+  )
+  
+install(
+  FILES 
+  "cmake/UnifiedCvoConfig.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/UnifiedCvoConfigVersion.cmake"
+  DESTINATION ${UnifiedCvo_LIB_DEST}
+  )
+
+#################################################################
 # exporting libraries 
 #################################################################
-export(PACKAGE OUTDOOR_CVO)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
-set_target_properties(cvo_gpu_img_lib PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-set_target_properties(cvo_cpu_lib PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+#export(PACKAGE UNIFIED_CVO)
+#set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
+#set_target_properties(cvo_gpu_img_lib PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+#set_target_properties(cvo_cpu_lib PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 #get_property(cvo_include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 #get_property(cvo_library_dirs TARGET OUTDOOR_CVO PROPERTY LIBRARY_OUTPUT_DIRECTORY)
 #get_property(cvo_libraries TARGET OUTDOOR_CVO PROPERTY LIBRARY_OUTPUT_NAME)
@@ -429,5 +518,5 @@ set_target_properties(cvo_cpu_lib PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LI
 #message("cvo_libraries: " ${cvo_libraries})
 
 # Configure config file for local build tree
-configure_file(${PROJECT_SOURCE_DIR}/cmake/cvoConfig.cmake.in
-  "${PROJECT_BINARY_DIR}/cvoConfig.cmake" @ONLY)
+#configure_file(${PROJECT_SOURCE_DIR}/cmake/cvoConfig.cmake.in
+#  "${PROJECT_BINARY_DIR}/cvoConfig.cmake" @ONLY)

@@ -481,8 +481,6 @@ namespace cvo{
           k= sigma2*exp(-d2/(2.0*l*l));
         else continue;
       }
-      //if (i==0) {
-      //  printf("point_a is (%f,%f,%f), point_b is (%f,%f,%f), geometric: a is %f, \n", p_a->x, p_a->y, p_a->z, p_b->x, p_b->y, p_b->z, k );
       //}
       if (cvo_params->is_using_intensity) {
         float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
@@ -498,6 +496,8 @@ namespace cvo{
         else
           continue;
       }
+      //if (i==0) 
+      //  printf("point_a is (%f,%f,%f), point_b is (%f,%f,%f), k=%f,ck=%f, sk=%f \n", p_a->x, p_a->y, p_a->z, p_b->x, p_b->y, p_b->z, k, ck, sk );
       a = ck*k*sk;
       if (a > cvo_params->sp_thres){
         A_mat->mat[i * A_mat->cols + num_inds] = a;
