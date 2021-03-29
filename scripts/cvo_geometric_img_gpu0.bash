@@ -1,8 +1,8 @@
 export CUDA_VISIBLE_DEVICES=0
 cd build && make -j4 && cd .. && \
-for i in  07 
+#for i in  07 
 #for i in 00 01 02 03 04 05 06 07 08 09 10
-#for i in 01 10 07 02 05  04 06	
+for i in 08 09	
 do
 	echo "new seq $i"
         #gdb --ex run --args  \
