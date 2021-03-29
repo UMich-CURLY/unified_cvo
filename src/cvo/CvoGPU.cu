@@ -99,7 +99,7 @@ namespace cvo{
 
       if (cvo_cloud.num_classes() > 0) {
         labels.row(i).maxCoeff(&host_cloud[i].label);
-        for (int j = 0; j < NUM_CLASSES; j++)
+        for (int j = 0; j < cvo_cloud.num_classes(); j++)
           host_cloud[i].label_distribution[j] = labels(i,j);
       }
       
