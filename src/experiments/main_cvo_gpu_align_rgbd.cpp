@@ -8,7 +8,7 @@
 #include <boost/filesystem.hpp>
 //#include <opencv2/opencv.hpp>
 #include "dataset_handler/TumHandler.hpp"
-#include "graph_optimizer/Frame.hpp"
+//#include "graph_optimizer/Frame.hpp"
 #include "utils/Calibration.hpp"
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/CvoGPU.hpp"
@@ -56,11 +56,12 @@ int main(int argc, char *argv[]) {
 
   cv::Mat source_rgb, source_dep;
   tum.read_next_rgbd(source_rgb, source_dep);
-  std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_rgb, source_dep,
+  //std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_rgb, source_dep,
                                                     //19, semantics_source, 
-                                                    calib, 1));
+  //                                                  calib, 1));
   //0.2));
-  
+  std::shared_ptr<cvo::RawImage> source_raw(new cvo::RawImage(source_rgb));
+  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw, source_dep, calib, true));
   for (int i = start_frame; i<min(total_iters, start_frame+max_num)-1 ; i++) {
     
     // calculate initial guess
@@ -76,20 +77,20 @@ int main(int argc, char *argv[]) {
     }
 
 
-    std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, rgb, dep, calib,1));
-
+    //std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, rgb, dep, calib,1));
+    std::shared_ptr<cvo::RawImage> target_raw(new cvo::RawImage(rgb));
+    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, dep, calib, true));
+  
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
-    auto source_fr = source->points();
-    auto target_fr = target->points();
 
     Eigen::Matrix4f result, init_guess_inv;
     init_guess_inv = init_guess.inverse();
-    printf("Start align... num_fixed is %d, num_moving is %d\n", source_fr.num_points(), target_fr.num_points());
+    printf("Start align... num_fixed is %d, num_moving is %d\n", source->num_points(), target->num_points());
     std::cout<<std::flush;
-    cvo_align.align(source_fr, target_fr, init_guess_inv, result);
+    cvo_align.align(*source, *target, init_guess_inv, result);
     
     // get tf and inner product from cvo getter
-    double in_product = cvo_align.inner_product(source_fr, target_fr, result);
+    double in_product = cvo_align.inner_product(*source, *target, result);
     //double in_product_normalized = cvo_align.inner_product_normalized();
     //int non_zeros_in_A = cvo_align.number_of_non_zeros_in_A();
     std::cout<<"The gpu inner product between "<<i-1 <<" and "<< i <<" is "<<in_product<<"\n";

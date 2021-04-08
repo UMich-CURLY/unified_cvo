@@ -7,7 +7,6 @@
 #include "utils/data_type.hpp"
 #include "utils/RawImage.hpp"
 #include "utils/Calibration.hpp"
-#include "utils/LidarPointType.hpp"
 #include "utils/PointSegmentedDistribution.hpp"
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>

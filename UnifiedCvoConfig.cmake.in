@@ -1,0 +1,21 @@
+@PACKAGE_INIT@                                                                                                                                                                                             
+                                                                                                                                                                                                           
+include(CMakeFindDependencyMacro)                                                                                                                                                                          
+                                                                                                                                                                                                           
+find_dependency(PCL REQUIRED)
+#find_dependency(SuiteParse REQUIRED)
+find_dependency(Sophus REQUIRED)
+find_dependency(CUDA REQUIRED)
+#find_dependency(Eigen3 REQUIRED)
+find_dependency(TBB REQUIRED)
+find_dependency(Boost REQUIRED COMPONENTS system thread timer chrono)
+find_dependency(PCL REQUIRED)
+find_dependency(OpenCV REQUIRED)
+find_dependency(OpenMP)
+                                                                                                                                                                                                           
+#include("${CMAKE_CURRENT_LIST_DIR}/MathFunctionsTargets.cmake")                                                                                                                                           
+                                                                                                                                                                                                           
+#check_required_components(MathFunctions)                                                                                                                                                                  
+                                                                                                                                                                                                           
+include(${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake)                                                                                                                                             
+check_required_components(@PROJECT_NAME@)

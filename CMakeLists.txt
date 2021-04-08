@@ -1,18 +1,14 @@
 set(PROJECT_NAME UnifiedCvo)
+
 if (POLICY CMP0048)
   cmake_policy(SET CMP0048 NEW)
 endif (POLICY CMP0048)
+cmake_policy(SET CMP0060 NEW)
 
 project(${PROJECT_NAME} VERSION 0.1)
+set(${PROJECT_NAME}_VERSION 0.1)
 
-
-set(UnifiedCvo_VERSION 0.1)
-#set(${PROJECT_NAME}_VERSION 1.0)
-
-
-
-
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.0)
 option(${PROJECT_NAME}_ENABLE_CUDA "ENABLE_CUDA" ON)
 option(${PROJECT_NAME}_ENABLE_ACVO "ENABLE_ACVO" OFF)
 option(${PROJECT_NAME}_ENABLE_LIDAR "ENABLE_LIDAR" ON)
@@ -27,7 +23,6 @@ if (${PROJECT_NAME}_ENABLE_CUDA)
 endif()
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
-#add_compile_options(-std=c++14)
 
 # Release Mode
 set(CMAKE_BUILD_TYPE Release)
@@ -44,7 +39,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY lib)
 LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # required libraries
 find_package(SuiteParse REQUIRED)
@@ -54,13 +49,13 @@ message("Sophus dir: ${Sophus_INCLUDE_DIRS}")
 find_package(CUDA REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(TBB REQUIRED)
-find_package(Boost REQUIRED COMPONENTS system thread timer chrono)
+find_package(Boost REQUIRED COMPONENTS system thread timer chrono filesystem)
 find_package(PCL REQUIRED)
 find_package(OpenCV REQUIRED)
-find_package(GTSAM REQUIRED)
+#find_package(GTSAM REQUIRED)
 find_package(OpenMP)
-find_package(VTK REQUIRED)
-include(${VTK_USE_FILE})
+#find_package(VTK REQUIRED)
+#include(${VTK_USE_FILE})
 
 find_package(OpenMP)
 if (OPENMP_FOUND)
@@ -142,10 +137,10 @@ set(KITTI_HANDLER_SOURCE
   )
 
 # Sources files
-set(POSE_GRAPH_SOURCE
-  ${PROJECT_SOURCE_DIR}/src/graph_optimizer/Frame.cpp
-  ${PROJECT_SOURCE_DIR}/src/graph_optimizer/PoseGraph.cpp
-  )
+#set(POSE_GRAPH_SOURCE
+#  ${PROJECT_SOURCE_DIR}/src/graph_optimizer/Frame.cpp
+#  ${PROJECT_SOURCE_DIR}/src/graph_optimizer/PoseGraph.cpp
+#  )
 
 set(LIE_GROUP_SOURCE
   ${PROJECT_SOURCE_DIR}/src/cvo/LieGroup.cpp
@@ -171,7 +166,7 @@ set (CVO_CPU_SOURCE
 
 
 set (CVO_INCLUDE_DIRS
-  ${PROJECT_SOURCE_DIR}/include/unified_cvo/
+  ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/
   ${EIGEN_INCLUDE_DIR}
   ${TBB_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
@@ -179,18 +174,18 @@ set (CVO_INCLUDE_DIRS
   ${CSPARSE_INCLUDE_DIR}
   ${CHOLMOD_INCLUDE_DIR}
   ${Sophus_INCLUDE_DIRS}
-  ${GTSAM_INCLUDE_DIR}
+  #${GTSAM_INCLUDE_DIR}
   # thirdparty
   ${PROJECT_SOURCE_DIR}/thirdparty/libelas/
   ${PROJECT_SOURCE_DIR}/thirdparty/cugicp/
   )
 
-include_directories(
-  ${CVO_INCLUDE_DIRS}
-  )
+#include_directories(
+#  ${CVO_INCLUDE_DIRS}
+#  )
 
 set (CVO_PUBLIC_HEADERS
-  ${PROJECT_SOURCE_DIR}/include/unified_cvo/
+  ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/
   ${PROJECT_SOURCE_DIR}/thirdparty/libelas/
   ${PROJECT_SOURCE_DIR}/thirdparty/cugicp/  
 
@@ -200,19 +195,60 @@ message("CXX_FLAGS are ${CMAKE_CXX_FLAGS}")
 message("CUDA_NVCC_FLAGS are ${CUDA_NVCC_FLAGS}")
 
 add_library(elas SHARED ${ELAS_LIB_SOURCE})
+target_include_directories(elas PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	"$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+set_target_properties(elas PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 add_library(tum SHARED ${TUM_HANDLER_SOURCE})
+target_include_directories(tum PUBLIC
+  #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}>
+  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+  #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+
 add_library(kitti SHARED ${KITTI_HANDLER_SOURCE})
+target_include_directories(kitti PUBLIC
+  #$<BUILD_INTERFACE:${CMAE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}>
+  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+  #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(kitti PUBLIC opencv_core opencv_photo opencv_highgui opencv_features2d opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search pcl_common boost_filesystem
+  )
+
 
 if (${PROJECT_NAME}_ENABLE_CUDA)
-  add_library(cukdtree_lib SHARED ${CUKDTREE_LIB_SOURCE})
+add_library(cukdtree_lib SHARED ${CUKDTREE_LIB_SOURCE})
+target_include_directories(cukdtree_lib PUBLIC
+  #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+  #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
   set_target_properties(cukdtree_lib PROPERTIES LINKER_LANGUAGE CUDA  CUDA_SOURCE_PROPERTY_FORMAT OBJ ) 
 endif()  
 
 add_library(lie_group_utils SHARED ${LIE_GROUP_SOURCE})
+target_include_directories(lie_group_utils PUBLIC
+  #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}>
+  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+  #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${UnifiedCvo_VERSION}> )
 
+      
 add_library(cvo_utils_lib SHARED ${CVO_UTILS_SOURCE})
-target_link_libraries(cvo_utils_lib opencv_core opencv_photo opencv_highgui opencv_features2d elas opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search ${TBB_LIBRARIES})
+set_target_properties(cvo_utils_lib PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
+#add_dependencies(cvo_utils_lib elas)
+target_include_directories(cvo_utils_lib PUBLIC
+  #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/UnifiedCvo>
+  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"  
+  #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_utils_lib
+  PUBLIC opencv_core opencv_photo opencv_highgui opencv_features2d opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search pcl_common ${TBB_LIBRARIES}
+  PRIVATE
+  elas)
+
 
 #add_library(cvo_utils_range_ell_lib SHARED ${CVO_UTILS_SOURCE})
 #target_compile_definitions(cvo_utils_range_ell_lib PRIVATE -DIS_USING_RANGE_ELL)
@@ -220,6 +256,11 @@ target_link_libraries(cvo_utils_lib opencv_core opencv_photo opencv_highgui open
 
 
 add_library(bki_mapping_lib SHARED ${BKI_MAPPING_SOURCE})
+target_include_directories(bki_mapping_lib PUBLIC
+  #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+  #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"  
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(bki_mapping_lib cvo_utils_lib pcl_filters pcl_io pcl_search pcl_visualization )
 
 #if (${PROJECT_NAME}_ENABLE_CUDA)
@@ -230,6 +271,11 @@ target_link_libraries(bki_mapping_lib cvo_utils_lib pcl_filters pcl_io pcl_searc
 #############################################
 # CVO and Adaptive-CVO cpu
 add_library(cvo_cpu_lib SHARED ${CVO_CPU_SOURCE} )
+target_include_directories(cvo_cpu_lib PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+	"$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(cvo_cpu_lib PRIVATE  lie_group_utils ${TBB_LIBRARIES} pcl_io pcl_search pcl_visualization cxsparse)
 
 if (${PROJECT_NAME}_ENABLE_LIDAR)
@@ -243,16 +289,26 @@ endif()
 
 
 if (${PROJECT_NAME}_ENABLE_ACVO)
-add_library(acvo_cpu_lib SHARED ${ACVO_CPU_SOURCE} )
+  add_library(acvo_cpu_lib SHARED ${ACVO_CPU_SOURCE} )
+  target_include_directories(acvo_cpu_lib PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(acvo_cpu_lib PRIVATE  lie_group_utils ${TBB_LIBRARIES} pcl_io  cxsparse)
 
 add_library(acvo_cpu_semantic_lib SHARED ${ACVO_CPU_SOURCE} )
-target_compile_definitions(acvo_cpu_semantic_lib PRIVATE -DIS_USING_SEMANTICS)
+target_include_directories(acvo_cpu_semantic_lib PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+      target_compile_definitions(acvo_cpu_semantic_lib PRIVATE -DIS_USING_SEMANTICS)      
 target_link_libraries(acvo_cpu_semantic_lib lie_group_utils ${TBB_LIBRARIES} pcl_io  cxsparse)
 endif()
 
-add_library(pose_graph_lib SHARED ${POSE_GRAPH_SOURCE})
-target_link_libraries(pose_graph_lib PRIVATE cvo_utils_lib bki_mapping_lib cvo_cpu_lib opencv_core opencv_imgcodecs boost_filesystem  gtsam gtsam_unstable pcl_io pcl_search pcl_visualization)
+#add_library(pose_graph_lib SHARED ${POSE_GRAPH_SOURCE})
+#target_link_libraries(pose_graph_lib PRIVATE cvo_utils_lib bki_mapping_lib cvo_cpu_lib opencv_core opencv_imgcodecs boost_filesystem  gtsam gtsam_unstable pcl_io pcl_search pcl_visualization)
 
 #add_library(pose_graph_cov_lib SHARED ${POSE_GRAPH_SOURCE})
 #target_compile_definitions(pose_graph_cov_lib PRIVATE -DIS_USING_COVARIANCE)
@@ -288,7 +344,12 @@ endif()
 #############################################
 # Adaptive CVO GPU
 if (${PROJECT_NAME}_ENABLE_CUDA AND ${PROJECT_NAME}_ENABLE_ACVO)
-add_library(acvo_gpu_lib  ${ACVO_GPU_SOURCE})
+  add_library(acvo_gpu_lib  ${ACVO_GPU_SOURCE})
+  target_include_directories(acvo_gpu_lib PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+	"$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 set_target_properties(acvo_gpu_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   CUDA_SEPERABLE_COMPILATION ON 
@@ -297,6 +358,11 @@ target_compile_definitions(acvo_gpu_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMEN
 target_link_libraries(acvo_gpu_lib PRIVATE lie_group_utils cvo_utils_lib pcl_filters pcl_io pcl_search pcl_visualization)
 
 add_library(acvo_gpu_semantic_lib ${ACVO_GPU_SOURCE} )
+target_include_directories(acvo_gpu_semantic_lib PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_compile_definitions(acvo_gpu_semantic_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DIS_USING_SEMANTICS)
 target_link_libraries(acvo_gpu_semantic_lib PRIVATE  lie_group_utils cvo_utils_lib)
 set_target_properties(acvo_gpu_semantic_lib PROPERTIES
@@ -304,7 +370,12 @@ set_target_properties(acvo_gpu_semantic_lib PROPERTIES
   CUDA_SEPERABLE_COMPILATION ON
   COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 if (${PROJECT_NAME}_ENABLE_LIDAR)
-add_library(acvo_gpu_lidar_lib ${ACVO_GPU_SOURCE})
+  add_library(acvo_gpu_lidar_lib ${ACVO_GPU_SOURCE})
+  target_include_directories(acvo_gpu_lidar_lib PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+	"$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_compile_definitions(acvo_gpu_lidar_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1)
 target_link_libraries(acvo_gpu_lidar_lib PRIVATE  lie_group_utils cvo_utils_lib )
 set_target_properties(acvo_gpu_lidar_lib PROPERTIES POSITION_INDEPENDENT_CODE ON
@@ -313,6 +384,11 @@ set_target_properties(acvo_gpu_lidar_lib PROPERTIES POSITION_INDEPENDENT_CODE ON
 
 
 add_library(acvo_gpu_semantic_lidar_lib ${ACVO_GPU_SOURCE})
+target_include_directories(acvo_gpu_semantic_lidar_lib PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+	"$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_compile_definitions(acvo_gpu_semantic_lidar_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_USING_SEMANTICS)
 target_link_libraries(acvo_gpu_semantic_lidar_lib PRIVATE  lie_group_utils cvo_utils_lib)
 set_target_properties(acvo_gpu_semantic_lidar_lib PROPERTIES POSITION_INDEPENDENT_CODE ON
@@ -321,6 +397,11 @@ set_target_properties(acvo_gpu_semantic_lidar_lib PROPERTIES POSITION_INDEPENDEN
 
 
 add_library(acvo_gpu_geometric_lib ${ACVO_GPU_SOURCE})
+target_include_directories(acvo_gpu_geometric_lib PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_compile_definitions(acvo_gpu_geometric_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DIS_GEOMETRIC_ONLY)
 target_link_libraries(acvo_gpu_geometric_lib PRIVATE lie_group_utils cvo_utils_lib )
 set_target_properties(acvo_gpu_geometric_lib PROPERTIES POSITION_INDEPENDENT_CODE ON
@@ -334,13 +415,16 @@ endif()
 #####################################
 ## Non-Adaptive CVO GPU
 if (${PROJECT_NAME}_ENABLE_CUDA)
-add_library(cvo_gpu_img_lib ${CVO_GPU_SOURCE})
+add_library(cvo_gpu_img_lib  SHARED ${CVO_GPU_SOURCE})
+add_dependencies(cvo_gpu_img_lib cvo_utils_lib lie_group_utils)
 target_link_libraries(cvo_gpu_img_lib PRIVATE lie_group_utils cvo_utils_lib  )
+#set_target_properties(cvo_gpu_img_lib PROPERTIES PUBLIC_HEADER "${CVO_PUBLIC_HEADERS}")
 target_include_directories(cvo_gpu_img_lib PUBLIC
-	$<BUILD_INTERFACE:${UnifiedCvo_SOURCE_DIR}/include> 
-	$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
-        $<INSTALL_INTERFACE:include> )
-target_compile_definitions(cvo_gpu_img_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
+  #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/UnifiedCvo>
+  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
+  #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_compile_definitions(cvo_gpu_img_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
 set_target_properties(cvo_gpu_img_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   CUDA_SEPERABLE_COMPILATION ON
@@ -348,8 +432,14 @@ set_target_properties(cvo_gpu_img_lib PROPERTIES
 
 
 if(${PROJECT_NAME}_ENABLE_LIDAR)
-add_library(cvo_gpu_lidar_lib SHARED ${CVO_GPU_SOURCE})
-target_compile_definitions(cvo_gpu_lidar_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 )
+  add_library(cvo_gpu_lidar_lib SHARED ${CVO_GPU_SOURCE})
+target_include_directories(cvo_gpu_lidar_lib PUBLIC
+  #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/UnifiedCvo>
+  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
+  #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+add_dependencies(cvo_gpu_lidar_lib cvo_utils_lib lie_group_utils)
+target_compile_definitions(cvo_gpu_lidar_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 )
 target_link_libraries(cvo_gpu_lidar_lib PRIVATE lie_group_utils cvo_utils_lib)
 set_target_properties(cvo_gpu_lidar_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
@@ -403,36 +493,62 @@ if(${PROJECT_NAME}_ENABLE_ACVO)
 endif()
 
 add_executable(cvo_align_gpu_img ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_raw_image.cpp)
-target_compile_definitions(cvo_align_gpu_img PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
+target_include_directories(cvo_align_gpu_img PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(cvo_align_gpu_img cvo_gpu_img_lib cvo_utils_lib kitti  boost_filesystem boost_system)
 
 add_executable(cvo_align_gpu_semantic_img ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_semantic_image.cpp)
-target_compile_definitions(cvo_align_gpu_semantic_img PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
+target_include_directories(cvo_align_gpu_semantic_img PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(cvo_align_gpu_semantic_img cvo_gpu_img_lib cvo_utils_lib kitti  boost_filesystem boost_system)
 
 add_executable(cvo_align_gpu_rgbd ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_rgbd.cpp)
-target_compile_definitions(cvo_align_gpu_rgbd PRIVATE -DNUM_CLASSES=1 -DFEATURE_DIMENSIONS=5)
-target_link_libraries(cvo_align_gpu_rgbd cvo_gpu_img_lib cvo_cpu_lib pose_graph_lib tum cvo_utils_lib boost_filesystem boost_system)
+target_include_directories(cvo_align_gpu_rgbd PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_align_gpu_rgbd cvo_gpu_img_lib cvo_cpu_lib tum cvo_utils_lib boost_filesystem boost_system)
 
 if (${PROJECT_NAME}_ENABLE_LIDAR)
-
-add_executable(cvo_align_gpu_lidar_raw ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_geometric.cpp)
-target_compile_definitions(cvo_align_gpu_lidar_raw PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1)
+  add_executable(cvo_align_gpu_lidar_raw ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_geometric.cpp)
+  target_include_directories(cvo_align_gpu_lidar_raw PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(cvo_align_gpu_lidar_raw cvo_gpu_lidar_lib kitti cvo_utils_lib boost_filesystem boost_system)
-
-
 endif()
 
 add_executable(gicp_align_two ${PROJECT_SOURCE_DIR}/src/experiments/gicp_align_two.cpp)
+target_include_directories(gicp_align_two PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(gicp_align_two ${PCL_LIBRARIES})
 
 
 add_executable(cvo_single_semantic_test ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_single_image_test.cpp)
-target_compile_definitions(cvo_single_semantic_test PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
+target_include_directories(cvo_single_semantic_test PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(cvo_single_semantic_test cvo_gpu_img_lib cvo_utils_lib kitti  boost_filesystem boost_system)
 
 add_executable(cvo_indicator_in_sequence ${PROJECT_SOURCE_DIR}/src/experiments/main_indicator_in_sequence.cpp)
-target_compile_definitions(cvo_indicator_in_sequence PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5) # -DIS_USING_SEMANTICS
+target_include_directories(cvo_indicator_in_sequence PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(cvo_indicator_in_sequence cvo_gpu_img_lib cvo_cpu_lib cvo_utils_lib boost_filesystem boost_system kitti)
 
 
@@ -449,57 +565,74 @@ endif()
 #################################################################
 
 # install directory
-set(UnifiedCvo_INCLUDE_DEST "include/unified_cvo")
-set(UnifiedCvo_LIB_DEST "lib/unified_cvo")
+#set(${PROJECT_NAME}_TARGET_LIBS 
+set(${PROJECT_NAME}_INCLUDE_DEST "include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}")
+set(${PROJECT_NAME}_LIB_DEST "lib/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}")
 #set(UNIFIED_CVO_BIN_DEST "bin/")
+
+
+export(                                                                                                                                                                                                    
+  TARGETS    elas tum kitti lie_group_utils cvo_utils_lib cvo_gpu_img_lib
+  NAMESPACE  ${PROJECT_NAME}::        
+  FILE ${PROJECT_NAME}Targets.cmake                                                                                                                                                                     
+  )                                                                                                                                                                                                        
+          
 
 install(
     # targets to install
-    TARGETS cvo_gpu_img_lib lie_group_utils cvo_utils_lib elas 
+    TARGETS elas tum kitti lie_group_utils cvo_utils_lib cvo_gpu_img_lib 
     # name of the CMake "export group" containing the targets we want to install
-    EXPORT UnifiedCvoTargets
+    EXPORT ${PROJECT_NAME}Targets
     # Dynamic, static library and include destination locations after running
     # "make install"
-    LIBRARY DESTINATION ${UnifiedCvo_LIB_DEST}
-    ARCHIVE DESTINATION ${UnifiedCvo_LIB_DEST}
-    INCLUDES DESTINATION ${UnifiedCvo_INCLUDE_DEST}
+    LIBRARY DESTINATION ${${PROJECT_NAME}_LIB_DEST}
+    ARCHIVE DESTINATION ${${PROJECT_NAME}_LIB_DEST}
+    #INCLUDES DESTINATION ${${PROJECT_NAME}_INCLUDE_DEST}
+    PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_PREFIX}/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}" 
     )
-
-
+  
+  message("install_include dir is ${CMAKE_INSTALL_PREFIX}/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}")
+  
+  
 
   install(
     # The export we want to save (matches name defined above containing the
     # install targets)
-    EXPORT UnifiedCvoTargets
+    EXPORT ${PROJECT_NAME}Targets
     # CMake file in which to store the export's information
-    FILE  UnifiedCvoTargets.cmake
+    FILE  ${PROJECT_NAME}Targets.cmake
     # Namespace prepends all targets in the export (when we import later, we
     # will use CMakeDemo::CMakeDemo)
-    NAMESPACE UnifiedCvo::
+    NAMESPACE ${PROJECT_NAME}::
     # where to place the resulting file (here, we're putting it with the library)
-    DESTINATION ${UnifiedCvo_LIB_DEST}
+    DESTINATION cmake/ #${${PROJECT_NAME}_LIB_DEST}
     )  
 
 
   install(DIRECTORY ${CVO_PUBLIC_HEADERS} 
 	  
-	  DESTINATION ${UnifiedCvo_INCLUDE_DEST})
+	  DESTINATION ${${PROJECT_NAME}_INCLUDE_DEST})
 
 
-# Write a "version file" in case someone wants to only load a particular version of
-# CMakeDemo 
+# Write a "version file" in case someone wants to only load a particular version 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
-  UnifiedCvoConfigVersion.cmake
-  VERSION ${UnifiedCvo_VERSION}
+  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+  VERSION ${${PROJECT_NAME}_VERSION}
   COMPATIBILITY AnyNewerVersion
   )
+configure_package_config_file(                                                                                                                                                                             
+  ${PROJECT_NAME}Config.cmake.in                                                                                                                                                                           
+  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake                                                                                                                                                  
+  INSTALL_DESTINATION  cmake/                                                                                                                                                                              
+  PATH_VARS PROJECT_NAME                                                                                                                                                                                   
+  ) 
   
 install(
   FILES 
-  "cmake/UnifiedCvoConfig.cmake"
-  "${CMAKE_CURRENT_BINARY_DIR}/UnifiedCvoConfigVersion.cmake"
-  DESTINATION ${UnifiedCvo_LIB_DEST}
+  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+  DESTINATION cmake/ #${${PROJECT_NAME}_LIB_DEST}
   )
 
 #################################################################
