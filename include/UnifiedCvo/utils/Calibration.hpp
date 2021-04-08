@@ -24,7 +24,7 @@ namespace cvo {
         intrinsic_(1,2) = cy;
         std::cout<<"intrinsic: \n"<<intrinsic_<<"\n baseline: "<<baseline_<<std::endl;
         if (!infile.eof()) {
-          
+          infile >> cols >> rows;
           
         }
         infile.close();
@@ -56,6 +56,7 @@ namespace cvo {
           std::cout<<"calib files for stereo read!"<<std::endl;
           std::cout<<"intrinsic: \n"<<intrinsic_<<"\n baseline: "<<baseline_<<std::endl;
           if (!infile.eof()) {
+            infile >> cols >> rows;            
           }
           infile.close();
 
@@ -75,6 +76,7 @@ namespace cvo {
           std::cout<<"calib files for RGBD read!"<<std::endl;
           std::cout<<"intrinsic: \n"<<intrinsic_<<"\n scaling_factor_: "<<scaling_factor_<<std::endl;
           if (!infile.eof()) {
+            infile >> cols >> rows;            
           }
           infile.close();
 
@@ -100,8 +102,7 @@ namespace cvo {
         intrinsic_(1,2) = cy;
         std::cout<<"intrinsic: \n"<<intrinsic_<<"\n baseline: "<<baseline_<<std::endl;
         if (!infile.eof()) {
-          
-          
+          infile >> cols >> rows;          
         }
         infile.close();
 
@@ -130,6 +131,7 @@ namespace cvo {
           std::cout<<"calib files for stereo read!"<<std::endl;
           std::cout<<"intrinsic: \n"<<intrinsic_<<"\n baseline: "<<baseline_<<std::endl;
           if (!infile.eof()) {
+            infile >> cols >> rows;
           }
           infile.close();
 
@@ -149,6 +151,7 @@ namespace cvo {
           std::cout<<"calib files for RGBD read!"<<std::endl;
           std::cout<<"intrinsic: \n"<<intrinsic_<<"\n scaling_factor_: "<<scaling_factor_<<std::endl;
           if (!infile.eof()) {
+            infile >> cols >> rows;
           }
           infile.close();
 
@@ -161,15 +164,18 @@ namespace cvo {
 
     }
 
-    const Mat33f & intrinsic()const {return intrinsic_;}
+    const Eigen::Matrix3f & intrinsic()const {return intrinsic_;}
     float baseline()const { return  baseline_; }
     float scaling_factor()const {return scaling_factor_; }
-    const Mat34f & cam_frame_to_lidar_frame() {return cam_frame_to_lidar_frame_;}
+    const Eigen::Matrix<float, 3, 4> & cam_frame_to_lidar_frame() {return cam_frame_to_lidar_frame_;}
+    int image_cols() const {return cols;}
+    int image_rows() const {return rows;}
   private:
-    Mat33f intrinsic_;
+    Eigen::Matrix3f intrinsic_;
     float baseline_;
     float scaling_factor_;
-    Mat34f cam_frame_to_lidar_frame_;
+    Eigen::Matrix<float, 3, 4> cam_frame_to_lidar_frame_;
+    int cols, rows;
   };
   
 }

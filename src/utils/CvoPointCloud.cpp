@@ -17,6 +17,7 @@
 #include "utils/StaticStereo.hpp"
 #include "utils/CvoPixelSelector.hpp"
 #include "utils/LidarPointSelector.hpp"
+#include "utils/LidarPointType.hpp"
 //#include "opencv2/xfeatures2d.hpp"
 #include <opencv2/features2d.hpp>
 #include <opencv2/opencv.hpp>
