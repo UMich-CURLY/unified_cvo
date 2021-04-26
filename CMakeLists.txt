@@ -30,8 +30,9 @@ set(CMAKE_BUILD_TYPE Release)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -lmkl_intel_lp64 -lmkl_core -lmkl -liomp -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 #set(CMAKE_BUILD_TYPE Debug)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -g  -msse -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}   -march=native" )
 #set(BUILD_TYPE RelWithDebInfo)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -239,6 +240,7 @@ target_include_directories(lie_group_utils PUBLIC
 add_library(cvo_utils_lib SHARED ${CVO_UTILS_SOURCE})
 set_target_properties(cvo_utils_lib PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
 #add_dependencies(cvo_utils_lib elas)
+target_compile_definitions(cvo_utils_lib PUBLIC ${PCL_DEFINITIONS})   
 target_include_directories(cvo_utils_lib PUBLIC
   #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/UnifiedCvo>
   "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"  
@@ -418,13 +420,14 @@ if (${PROJECT_NAME}_ENABLE_CUDA)
 add_library(cvo_gpu_img_lib  SHARED ${CVO_GPU_SOURCE})
 add_dependencies(cvo_gpu_img_lib cvo_utils_lib lie_group_utils)
 target_link_libraries(cvo_gpu_img_lib PRIVATE lie_group_utils cvo_utils_lib  )
+#target_compile_definitions(cvo_gpu_img_lib ${PCL_DEFINITIONS})   
 #set_target_properties(cvo_gpu_img_lib PROPERTIES PUBLIC_HEADER "${CVO_PUBLIC_HEADERS}")
 target_include_directories(cvo_gpu_img_lib PUBLIC
   #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/UnifiedCvo>
   "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
   #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_compile_definitions(cvo_gpu_img_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
+target_compile_definitions(cvo_gpu_img_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 ${PCL_DEFINITIONS})
 set_target_properties(cvo_gpu_img_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   CUDA_SEPERABLE_COMPILATION ON

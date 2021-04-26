@@ -138,7 +138,82 @@ namespace cvo{
     return gpu_cloud;
   }
 
+  CvoPointCloudGPU::SharedPtr pcl_PointCloud_to_gpu(const pcl::PointCloud<CvoPoint> & cvo_cloud ) {
+    int num_points = cvo_cloud.size();
+    //const ArrayVec3f & positions = cvo_cloud.positions();
+    //const Eigen::Matrix<float, Eigen::Dynamic, FEATURE_DIMENSIONS> & features = cvo_cloud.features();
+    //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals = cvo_cloud.normals();
+    // const Eigen::Matrix<float, Eigen::Dynamic, 2> & types = cvo_cloud.types();
+    //auto & labels = cvo_cloud.labels();
+    // set basic informations for pcl_cloud
+    thrust::host_vector<CvoPoint> host_cloud;
+    host_cloud.resize(num_points);
 
+    //int actual_num = 0;
+    for(int i=0; i<num_points; ++i){
+      memcpy(&host_cloud[i], &cvo_cloud[i], sizeof(CvoPoint));
+      //std::copy(&)
+      /*
+      (host_cloud)[i].x = cvo_cloud[i].x;
+      (host_cloud)[i].y = cvo_cloud[i].y;
+      (host_cloud)[i].z = cvo_cloud[i].z;
+      (host_cloud)[i].r = cvo_cloud[i].r;
+      (host_cloud)[i].g = cvo_cloud[i].g;
+      (host_cloud)[i].b = cvo_cloud[i].b;
+
+
+      ///memcpy(host_cloud[i].features, features.row(i).data(), FEATURE_DIMENSIONS * sizeof(float));
+      for (int j = 0; j < FEATURE_DIMENSIONS; j++)
+        host_cloud[i].features[j] = features(i,j);
+
+      if (cvo_cloud.num_classes() > 0) {
+        labels.row(i).maxCoeff(&host_cloud[i].label);
+        for (int j = 0; j < cvo_cloud.num_classes(); j++)
+          host_cloud[i].label_distribution[j] = labels(i,j);
+      }
+      
+      if (normals.rows() > 0 && normals.cols()>0) {
+        for (int j = 0; j < 3; j++)
+          host_cloud[i].normal[j] = normals(i,j);
+      }
+
+      if (cvo_cloud.covariance().size() > 0 )
+        memcpy(host_cloud[i].covariance, cvo_cloud.covariance().data()+ i*9, sizeof(float)*9  );
+      if (cvo_cloud.eigenvalues().size() > 0 )
+        memcpy(host_cloud[i].cov_eigenvalues, cvo_cloud.eigenvalues().data() + i*3, sizeof(float)*3);
+
+      actual_num ++;
+      if (i == 1000) {
+        printf("Total %d, Raw input from pcl at 1000th: \n", num_points);
+        std::cout<<"pcl: \n";
+        print_point(cvo_cloud[i]);
+        std::cout<<"host_cloud\n";
+        print_point(host_cloud[i]);
+      }
+      
+      */
+    }
+    //gpu_cloud->points = host_cloud;
+    CvoPointCloudGPU::SharedPtr gpu_cloud(new CvoPointCloudGPU);
+    gpu_cloud->points = host_cloud;
+
+    /*
+      #ifdef IS_USING_COVARIANCE    
+      auto covariance = &cvo_cloud.covariance();
+      auto eigenvalues = &cvo_cloud.eigenvalues();
+      thrust::device_vector<float> cov_gpu(cvo_cloud.covariance());
+      thrust::device_vector<float> eig_gpu(cvo_cloud.eigenvalues());
+      copy_covariances<<<host_cloud.size()/256 +1, 256>>>(thrust::raw_pointer_cast(cov_gpu.data()),
+      thrust::raw_pointer_cast(eig_gpu.data()),
+      host_cloud.size(),
+      thrust::raw_pointer_cast(gpu_cloud->points.data()));
+      #endif    
+    */
+    return gpu_cloud;
+  }
+
+
+  
   CvoGPU::CvoGPU(const std::string & param_file) {
     // read_CvoParams(param_file.c_str(), &params);
     read_CvoParams_yaml(param_file.c_str(), &params);
@@ -631,10 +706,12 @@ namespace cvo{
     
     start = chrono::system_clock::now();
     // update them to class-wide variables
-    thrust::plus<double> plus_double;
-    thrust::plus<Eigen::Vector3d> plus_vector;
-    *omega = (thrust::reduce(cvo_state->omega_gpu.begin(), cvo_state->omega_gpu.end())).cast<float>();
-    *v = (thrust::reduce(cvo_state->v_gpu.begin(), cvo_state->v_gpu.end())).cast<float>();
+    //thrust::plus<double> plus_double;
+    //thrust::plus<Eigen::Vector3d> plus_vector;
+    
+    //(thrust::reduce(thrust::device, cvo_state->omega_gpu.begin(), cvo_state->omega_gpu.end(), Eigen::Vector3d(0,0,0)  ) );
+    *omega = (thrust::reduce(thrust::device, cvo_state->omega_gpu.begin(), cvo_state->omega_gpu.end(), Eigen::Vector3d(0,0,0) )).cast<float>();
+    *v = (thrust::reduce(thrust::device, cvo_state->v_gpu.begin(), cvo_state->v_gpu.end(), Eigen::Vector3d(0,0,0))).cast<float>();
     // normalize the gradient
     Eigen::Matrix<float, 6, 1> ov;
     ov.segment<3>(0) = *omega;
@@ -931,13 +1008,15 @@ namespace cvo{
     double E = thrust::reduce(cvo_state->E.begin(), cvo_state->E.end(), 0.0, plus_double);
     //Eigen::Vector4f p_coef(4);
     //p_coef << 4.0*float(E),3.0*float(D),2.0*float(C),float(B);
-    Eigen::Vector4d p_coef(4);
+    Eigen::Matrix<double, 4, 1, Eigen::DontAlign> p_coef;
+
+    //Eigen::VectorXd p_coef(4);
     p_coef << 4.0*(E),3.0*(D),2.0*(C),(B);
     if (debug_print)
       std::cout<<"BCDE is "<<p_coef.transpose()<<std::endl;
     
     // solve polynomial roots
-    //Eigen::VectorXcf rc = poly_solver(p_coef);
+    //Eigen::VectorXcd rc = poly_solver(p_coef);
     Eigen::Vector3cd rc = poly_solver_order3(p_coef);
     
     
@@ -954,7 +1033,7 @@ namespace cvo{
     }
     if (debug_print)
       std::cout<<"step size "<<temp_step<<"\n original_rc is \n"<< rc<<std::endl;
-    //if (temp_step == numeric_limits<double>::max() ) temp_step = params->min_step*100; 
+
     // if none of the roots are suitable, use min_step
     cvo_state->step = temp_step==numeric_limits<double>::max()? params->min_step:temp_step;
     // if step>0.8, just use 0.8 as step
@@ -964,15 +1043,7 @@ namespace cvo{
       cvo_state->step = params->min_step;
     else
       cvo_state->step = temp_step;
-    //cvo_state->step = temp_step > params->max_step ? params->max_step:temp_step;
-    //cvo_state->step = temp_step < params->min_step? params->min_step :temp_step;
-    //step *= 10;
-    // if none of the roots are suitable, use min_step
-    // cvo_state->step = temp_step==numeric_limits<float>::max()? params->min_step:temp_step;
-    // if step>0.8, just use 0.8 as step
-    // cvo_state->step = cvo_state->step>0.8 ? 0.8:cvo_state->step;
 
-    //cvo_state->step  = 0.005;
     if (debug_print) 
       std::cout<<"step size "<<cvo_state->step<<"\n";
         
@@ -1150,17 +1221,15 @@ namespace cvo{
     
     
   }
-  
-  int CvoGPU::align(// inputs
-                    const CvoPointCloud& source_points,
-                    const CvoPointCloud& target_points,
-                    const Eigen::Matrix4f & init_guess_transform,
-                    // outputs
-                    Eigen::Ref<Eigen::Matrix4f> transform,
-                    double *registration_seconds) const {
 
-    Mat33f R = init_guess_transform.block<3,3>(0,0);
-    Vec3f T= init_guess_transform.block<3,1>(0,3);
+  static  int align_impl(const CvoParams & params,
+                         const CvoParams * params_gpu,
+                         CvoState & cvo_state,
+                         const Eigen::Matrix4f & init_guess_transform,
+                         // output
+                         Eigen::Ref<Eigen::Matrix4f> transform,
+                         double * registration_seconds
+                         ) {
 
     std::ofstream ell_file("ell_history.txt");
     std::ofstream dist_change_file("dist_change_history.txt");
@@ -1168,17 +1237,9 @@ namespace cvo{
     std::ofstream step_file("step_history.txt");
     std::ofstream inner_product_file("inner_product_history.txt");
     
-    std::cout<<"[align] convert points to gpu\n"<<std::flush;
-    if (source_points.num_points() == 0 || target_points.num_points() == 0) {
-      std::cout<<"[align] point clouds inputs are empty\n";
-      return 0;
-    }
-    CvoPointCloudGPU::SharedPtr source_gpu = CvoPointCloud_to_gpu(source_points);
-    CvoPointCloudGPU::SharedPtr target_gpu = CvoPointCloud_to_gpu(target_points);
 
-    CvoState cvo_state(source_gpu, target_gpu, params);
-    std::cout<<"construct new cvo state..., init ell is "<<cvo_state.ell<<std::endl;
-
+    Mat33f R = init_guess_transform.block<3,3>(0,0);
+    Vec3f T= init_guess_transform.block<3,1>(0,3);    
     int num_moving = cvo_state.num_moving;
     int num_fixed = cvo_state.num_fixed;
     
@@ -1187,11 +1248,13 @@ namespace cvo{
     int iter = params.MAX_ITER;
     Eigen::Vector3f omega, v;
     auto start_all = chrono::system_clock::now();
+    auto end_all = chrono::system_clock::now();
     auto start = chrono::system_clock::now();
     auto end = chrono::system_clock::now();
     chrono::duration<double> t_transform_pcd = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_flow = chrono::duration<double>::zero();
     chrono::duration<double> t_compute_step = chrono::duration<double>::zero();
+    chrono::duration<double> t_all = chrono::duration<double>::zero();
 
     std::cout<<"Start iteration, init transform is \n";
     std::cout<<init_guess_transform<<std::endl;
@@ -1282,8 +1345,10 @@ namespace cvo{
       Eigen::Matrix3d dR = dtrans.block<3,3>(0,0).cast<double>();
       Eigen::Vector3d dT = dtrans.block<3,1>(0,3).cast<double>();
       T = (R.cast<double>() * dT + T.cast<double>()).cast<float>();
-      Eigen::AngleAxisd R_angle(R.cast<double>() * dR);
-      R = R_angle.toRotationMatrix().cast<float>(); // re-orthogonalization
+      //Eigen::Transform<double, 3>
+      //Eigen::AngleAxisd R_angle(R.cast<double>() * dR);
+      //R = R_angle.toRotationMatrix().cast<float>(); // re-orthogonalization
+      R = (R.cast<double>() * dR).cast<float>();
 
       // reduce ell, if the se3 distance is smaller than eps2, break
       double dist_this_iter = dist_se3(dR,dT);
@@ -1294,7 +1359,7 @@ namespace cvo{
           break; 
 	}
       }
-      float ip_curr = (float)((double)cvo_state.A_host.nonzero_sum / sqrt((double)source_points.num_points() * (double) target_points.num_points()));
+      float ip_curr = (float)((double)cvo_state.A_host.nonzero_sum / sqrt((double)cvo_state.num_fixed * (double) cvo_state.num_moving ));
       //float ip_curr = (float) this->inner_product(source_points, target_points, transform);
       bool need_decay_ell = A_sparsity_indicator_ell_update( indicator_start_queue,
                                                              indicator_end_queue,
@@ -1330,8 +1395,6 @@ namespace cvo{
           cvo_state.ell = params.ell_min;
       }
     }
-    auto end_all = chrono::system_clock::now();
-    chrono::duration<double> t_all = chrono::duration<double>::zero();
     t_all = end_all - start_all;
     std::cout<<"cvo # of iterations is "<<iter<<std::endl;
     std::cout<<"t_transform_pcd is "<<t_transform_pcd.count()<<"\n";
@@ -1353,6 +1416,60 @@ namespace cvo{
     step_file.close();
     inner_product_file.close();
     //}
+    return ret;
+  }
+
+  int CvoGPU::align(const pcl::PointCloud<CvoPoint>& source_points,
+                    const pcl::PointCloud<CvoPoint>& target_points,
+                    const Eigen::Matrix4f & init_guess_transform,
+                    // outputs
+                    Eigen::Ref<Eigen::Matrix4f> transform,
+                    double *registration_seconds) const {
+    
+
+    std::cout<<"[align] convert points to gpu\n"<<std::flush;
+    if (source_points.size() == 0 || target_points.size() == 0) {
+      std::cout<<"[align] point clouds inputs are empty\n";
+      return 0;
+    }
+    CvoPointCloudGPU::SharedPtr source_gpu = pcl_PointCloud_to_gpu(source_points);
+    CvoPointCloudGPU::SharedPtr target_gpu = pcl_PointCloud_to_gpu(target_points);
+
+    CvoState cvo_state(source_gpu, target_gpu, params);
+    std::cout<<"construct new cvo state..., init ell is "<<cvo_state.ell<<std::endl;
+
+    int ret = align_impl(params, params_gpu,
+                         cvo_state, init_guess_transform, 
+                         transform, registration_seconds);
+    std::cout<<"Result Transform is "<<transform<<std::endl;
+    return ret;
+    
+  }
+
+  
+  int CvoGPU::align(// inputs
+                    const CvoPointCloud& source_points,
+                    const CvoPointCloud& target_points,
+                    const Eigen::Matrix4f & init_guess_transform,
+                    // outputs
+                    Eigen::Ref<Eigen::Matrix4f> transform,
+                    double *registration_seconds) const {
+    std::cout<<"[align] convert points to gpu\n"<<std::flush;
+    if (source_points.num_points() == 0 || target_points.num_points() == 0) {
+      std::cout<<"[align] point clouds inputs are empty\n";
+      return 0;
+    }
+    CvoPointCloudGPU::SharedPtr source_gpu = CvoPointCloud_to_gpu(source_points);
+    CvoPointCloudGPU::SharedPtr target_gpu = CvoPointCloud_to_gpu(target_points);
+
+    CvoState cvo_state(source_gpu, target_gpu, params);
+
+    std::cout<<"construct new cvo state..., init ell is "<<cvo_state.ell<<std::endl;
+
+    int ret = align_impl(params, params_gpu,
+                         cvo_state, init_guess_transform,
+                         transform, registration_seconds);
+    std::cout<<"Result Transform is "<<transform<<std::endl;
     return ret;
   }
 

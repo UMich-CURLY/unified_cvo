@@ -11,7 +11,7 @@ namespace cvo {
     color_ = image.clone();
     cv::fastNlMeansDenoisingColored(color_,color_,10,10,7,21);
     //cv::fastNlMeansDenoising (color_, color_);
-    cv::imwrite("denoised.png", color_);
+    //cv::imwrite("denoised.png", color_);
     cv::Mat gray;
     cv::cvtColor(color_, gray, cv::COLOR_BGR2GRAY);
     gray.convertTo(gray, CV_32FC1);

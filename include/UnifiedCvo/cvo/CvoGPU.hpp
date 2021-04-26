@@ -5,7 +5,8 @@
 #include "cvo/CvoParams.hpp"
 
 #include "utils/CvoPointCloud.hpp"
-#include "utils/PointSegmentedDistribution.hpp"
+#include "utils/CvoPoint.hpp"
+//#include "utils/PointSegmentedDistribution.hpp"
 
 #include <vector>
 #include <string.h>
@@ -24,12 +25,13 @@
 #include <unsupported/Eigen/MatrixFunctions>
 #include <Eigen/StdVector>
 
+
+
 #define EIGEN_DEFAULT_DENSE_INDEX_TYPE int
 
-extern template struct pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS, NUM_CLASSES>;
+
 
 namespace cvo{
-  typedef pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS, NUM_CLASSES> CvoPoint;
   
   class CvoGPU{
 
@@ -39,7 +41,7 @@ namespace cvo{
     CvoParams params;
 
   public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     // constructor and destructor
     CvoGPU(const std::string & f);
@@ -59,6 +61,16 @@ namespace cvo{
               // outputs
               Eigen::Ref<Eigen::Matrix4f> transform,
               double *registration_seconds=nullptr ) const;
+
+    int align(// inputs
+              const pcl::PointCloud<CvoPoint>& source_points,
+              const pcl::PointCloud<CvoPoint>& target_points,
+              const Eigen::Matrix4f & init_guess_transform,
+              // outputs
+              Eigen::Ref<Eigen::Matrix4f> transform,
+              double *registration_seconds=nullptr ) const;
+
+    
 
     // callable after each align
     float inner_product(const CvoPointCloud& source_points,
@@ -83,24 +95,9 @@ namespace cvo{
 
   };
 
+  void CvoPointCloud_to_pcl(const CvoPointCloud & cvo_pcd,
+                            pcl::PointCloud<CvoPoint> & out_pcl);
   
 }
-
-
-POINT_CLOUD_REGISTER_POINT_STRUCT (cvo::CvoPoint,
-                                   (float, x, x)
-                                   (float, y, y)
-                                   (float, z, z)
-                                   (float, r, r)
-                                   (float, g, g)
-                                   (float, b, b)
-                                   (float[FEATURE_DIMENSIONS], features, features )
-                                   (int, label, label)
-                                   (float[NUM_CLASSES], label_distribution, label_distribution)
-                                   (float[3], normal, normal)
-                                   (float[9], covariance, covariance)
-                                   (float[3], cov_eigenvalues, cov_eigenvalues)
-                                   )
-
 
 

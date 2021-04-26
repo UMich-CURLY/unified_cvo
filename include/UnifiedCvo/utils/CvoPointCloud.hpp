@@ -93,7 +93,7 @@ namespace cvo {
     ~CvoPointCloud();
 
     int read_cvo_pointcloud_from_file(const std::string & filename, int feature_dim=5);
-    
+
     static void transform(const Eigen::Matrix4f& pose,
                           const CvoPointCloud & input,
                           CvoPointCloud & output);
@@ -102,7 +102,7 @@ namespace cvo {
     int num_points() const {return num_points_;}
     int num_classes() const {return num_classes_;}
     int feature_dimensions() const {return feature_dimensions_;}
-    const ArrayVec3f & positions() const {return positions_;}
+    const std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> & positions() const {return positions_;}
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & labels() const { return labels_;}
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & features() const {return features_;}
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals() const {return normals_;}
@@ -125,7 +125,7 @@ namespace cvo {
     int num_classes_;
     int feature_dimensions_;
     
-    ArrayVec3f positions_;  // points position. x,y,z
+    std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> positions_;  // points position. x,y,z
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> features_;   // rgb, gradient in [0,1]
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> normals_;  // surface normals
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> labels_; // number of points by number of classes

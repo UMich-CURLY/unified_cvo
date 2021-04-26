@@ -17,6 +17,7 @@ namespace pcl {
   template <unsigned int FEATURE_DIM, unsigned int NUM_CLASS>
   struct PointSegmentedDistribution
   {
+    // data
     PCL_ADD_POINT4D;                 
     PCL_ADD_RGB;
     float features[FEATURE_DIM];
@@ -27,6 +28,8 @@ namespace pcl {
     float cov_eigenvalues[3];
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW   // make sure our new allocators are aligned
 
+
+    // methods
 #ifdef __CUDACC__ 
     inline __host__ __device__ PointSegmentedDistribution() {
 #else
@@ -81,8 +84,10 @@ namespace pcl {
       memcpy(covariance, other.covariance, sizeof(float)*9);
       memcpy(cov_eigenvalues, other.cov_eigenvalues, sizeof(float)*3);
     }
+
     
-  } EIGEN_ALIGN16;                    // enforce SSE padding for correct memory alignment
+    };
+    //EIGEN_ALIGN16;                    // enforce SSE padding for correct memory alignment
     
 
     

@@ -18,5 +18,6 @@ namespace cvo {
     gtsam::Pose3 pose(q_gtsam, t_gtsam);
     return pose;
   }
+
   
 }

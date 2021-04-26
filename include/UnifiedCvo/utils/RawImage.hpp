@@ -14,6 +14,7 @@ namespace cvo {
     RawImage(const cv::Mat & left_image);
     RawImage(const cv::Mat & left_image, int num_classes, const std::vector<float> & semantic);
     RawImage();
+    ~RawImage() {}
 
     const std::vector<float> intensity() const { return intensity_; }
     const cv::Mat & color() const { return color_;}

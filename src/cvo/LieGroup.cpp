@@ -252,7 +252,7 @@ Eigen::MatrixXf Adjoint_SEK3(const Eigen::MatrixXf& X) {
   }
 
   
-  Eigen::Vector3cd poly_solver_order3(const Eigen::Vector4d& coef){
+Eigen::Vector3cd poly_solver_order3(const Eigen::Matrix<double, 4, 1, Eigen::DontAlign>& coef){
     // extract order
     int order = 3;
     Eigen::Vector3cd roots;
@@ -290,6 +290,24 @@ Eigen::VectorXcf poly_solver(const Eigen::VectorXf& coef){
   return roots;
 }
 
+
+Eigen::VectorXcd poly_solver(const Eigen::VectorXd& coef){
+  // extract order
+  int order = coef.size()-1;
+  Eigen::VectorXcd roots;
+    
+  // create M = diag(ones(n-1,1),-1)
+  Eigen::MatrixXd M = Eigen::MatrixXd::Zero(order,order);
+  M.bottomLeftCorner(order-1,order-1) = Eigen::MatrixXd::Identity(order-1,order-1);
+    
+  // M(1,:) = -p(2:n+1)./p(1)
+  M.row(0) = -(coef/coef(0)).segment(1,order).transpose();
+
+  // eigen(M) and get the answer
+  roots = M.eigenvalues();
+
+  return roots;
+}
 
 
 __attribute__((force_align_arg_pointer))
