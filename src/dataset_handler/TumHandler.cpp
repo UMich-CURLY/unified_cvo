@@ -28,6 +28,8 @@ namespace cvo {
 		cout<<"Tum contains "<<vstrRGBName.size()<<" files\n";
 	}
 
+  TumHandler::~TumHandler() {}
+  
 	int TumHandler::read_next_rgbd(cv::Mat & rgb_img, 
                         cv::Mat & dep_img){
 		

@@ -78,21 +78,24 @@ int main(int argc, char *argv[]) {
     std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, right, calib));
 
     Eigen::Matrix4f result, init_guess_inv;
-    Eigen::Matrix4f identity_init = Eigen::Matrix4f::Identity(); 
+    Eigen::Matrix4f identity_init = Eigen::Matrix4f::Identity();
+    init_guess_inv = init_guess.inverse();    
     
-    double in_product_pre = cvo_align.inner_product(*source, *target, init_guess);
-    std::cout<<"Theinit guess  inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_pre<<"\n";
-    double in_product_identity = cvo_align.inner_product(*source, *target, identity_init);
+    double in_product_pre_t2s = cvo_align.function_angle(*source, *target, init_guess_inv, false);
+    std::cout<<"The init guess function_angle from frame "<<i <<" to "<< i-1 <<" is "<<in_product_pre_t2s<<"\n";
+    
+    double in_product_identity = cvo_align.function_angle(*source, *target, identity_init);
     std::cout<<"The identity guess  inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_identity<<"\n";
     
     
-    init_guess_inv = init_guess.inverse();
+
     printf("Start align... num_fixed is %d, num_moving is %d\n", source->num_points(), target->num_points());
     std::cout<<std::flush;
     cvo_align.align(*source, *target, init_guess_inv, result);
+    //cvo_align.align(*source, *target, init_guess, result);
     
     // get tf and inner product from cvo getter
-    double in_product = cvo_align.inner_product(*source, *target, result);
+    double in_product = cvo_align.inner_product_cpu(*source, *target, result);
 
     //double in_product_normalized = cvo_align.inner_product_normalized();
     //int non_zeros_in_A = cvo_align.number_of_non_zeros_in_A();

@@ -1248,12 +1248,6 @@ namespace cvo{
     int iter = params.MAX_ITER;
     Eigen::Vector3f omega, v;
     auto start_all = chrono::system_clock::now();
-    auto end_all = chrono::system_clock::now();
-    auto start = chrono::system_clock::now();
-    auto end = chrono::system_clock::now();
-    chrono::duration<double> t_transform_pcd = chrono::duration<double>::zero();
-    chrono::duration<double> t_compute_flow = chrono::duration<double>::zero();
-    chrono::duration<double> t_compute_step = chrono::duration<double>::zero();
     chrono::duration<double> t_all = chrono::duration<double>::zero();
 
     std::cout<<"Start iteration, init transform is \n";
@@ -1285,11 +1279,8 @@ namespace cvo{
       }
 
       // transform point cloud
-      start = chrono::system_clock::now();
       transform_pointcloud_thrust(cvo_state.cloud_y_gpu_init, cvo_state.cloud_y_gpu,
                                   cvo_state.R_gpu, cvo_state.T_gpu, false ); 
-      end = std::chrono::system_clock::now();
-      t_transform_pcd += (end - start);
 
       if (k == 0 && debug_print ) {
         double dist_std = compute_std_dist_between_two_pc(cvo_state.cloud_x_gpu, cvo_state.cloud_y_gpu);
@@ -1297,36 +1288,28 @@ namespace cvo{
       }
 
       // update the inner product matrix
-      start = chrono::system_clock::now();
       se_kernel(params_gpu, cvo_state.cloud_x_gpu, cvo_state.cloud_y_gpu ,
                 cvo_state.ell, 
                 &cvo_state.A_host, cvo_state.A);
       cudaDeviceSynchronize();
-      auto end = chrono::system_clock::now();
       if (debug_print ) {
         std::cout<<"nonzeros in A "<<nonzeros(&cvo_state.A_host)<<std::endl;
-        std::cout<<"time for se_kernel is "
-                 <<std::chrono::duration_cast<std::chrono::milliseconds>((end- start)).count()<<std::endl;
+        //std::cout<<"time for se_kernel is "
+        //         <<std::chrono::duration_cast<std::chrono::milliseconds>((end- start)).count()<<std::endl;
         std::cout<<"A rows is "<<cvo_state.A_host.rows<<", A cols is "<<cvo_state.A_host.cols<<std::endl;
         
       }
 
       // compute omega and v
-      start = chrono::system_clock::now();
       compute_flow(&cvo_state, params_gpu, &omega, &v);
       if (debug_print) std::cout<<"iter "<<k<< "omega: \n"<<omega.transpose()<<"\nv: \n"<<v.transpose()<<std::endl;
       if (k == 0) {
         printf("iter=0: nonzeros in A is %d\n", cvo_state.A_host.nonzero_sum);
       }
-      end = std::chrono::system_clock::now();
-      t_compute_flow += (end - start);
 
       // compute indicator and change lenthscale if needed
       //float indicator = (double)cvo_state.A_host.nonzero_sum / (double)source_points.num_points() / (double) target_points.num_points();
-      start = chrono::system_clock::now();
       compute_step_size(&cvo_state, &params);
-      end = std::chrono::system_clock::now();
-      t_compute_step += (end -start);
       
       // stop if the step size is too small
       if (debug_print) printf("copy gradient to cpu...");
@@ -1359,6 +1342,7 @@ namespace cvo{
           break; 
 	}
       }
+      // approximate the inner product further more
       float ip_curr = (float)((double)cvo_state.A_host.nonzero_sum / sqrt((double)cvo_state.num_fixed * (double) cvo_state.num_moving ));
       //float ip_curr = (float) this->inner_product(source_points, target_points, transform);
       bool need_decay_ell = A_sparsity_indicator_ell_update( indicator_start_queue,
@@ -1377,29 +1361,21 @@ namespace cvo{
         inner_product_file<<ip_curr<<"\n"<<std::flush;
         //inner_product_file<<this->inner_product(source_points, target_points, transform)<<"\n"<<std::flush;
       }
-
-      if (debug_print) {
-        std::cout<<"dist: "<<dist_this_iter <<std::endl<<"check bounds....\n"<<std::flush;
-      }
-
+      if (debug_print)  std::cout<<"dist: "<<dist_this_iter <<std::endl<<"check bounds....\n";
       if(dist_this_iter<params.eps_2 ){
         iter = k;
-
         std::cout<<"break: dist: "<<dist_this_iter<<std::endl;
         break;
       }
-
       if (k>params.ell_decay_start && need_decay_ell  ) {
         cvo_state.ell = cvo_state.ell * params.ell_decay_rate;
         if (cvo_state.ell < params.ell_min)
           cvo_state.ell = params.ell_min;
       }
     }
+    auto end_all = chrono::system_clock::now();    
     t_all = end_all - start_all;
     std::cout<<"cvo # of iterations is "<<iter<<std::endl;
-    std::cout<<"t_transform_pcd is "<<t_transform_pcd.count()<<"\n";
-    std::cout<<"t_compute_flow is "<<t_compute_flow.count()<<"\n";
-    std::cout<<"t_compute_step is "<<t_compute_step.count()<<"\n"<<std::flush;
     std::cout<<"t_all is "<<t_all.count()<<"\n"<<std::flush;
     std::cout<<"non adaptive cvo ends. final ell is "<<cvo_state.ell<<", final iteration is "<<k
              <<"MAX_ITER is "<<params.MAX_ITER<<std::endl;
@@ -1469,7 +1445,7 @@ namespace cvo{
     int ret = align_impl(params, params_gpu,
                          cvo_state, init_guess_transform,
                          transform, registration_seconds);
-    std::cout<<"Result Transform is "<<transform<<std::endl;
+    //std::cout<<"Result Transform is "<<transform<<std::endl;
     return ret;
   }
 
@@ -1545,7 +1521,8 @@ namespace cvo{
     A_temp.setFromTriplets(A_trip_concur_.begin(), A_trip_concur_.end());
     A_temp.makeCompressed();
   }
-  
+
+  /*
   float CvoGPU::inner_product(const CvoPointCloud& source_points,
                               const CvoPointCloud& target_points,
                               const Eigen::Matrix4f & s2t_frame_transform
@@ -1576,11 +1553,11 @@ namespace cvo{
   
     return A_mat.sum()/fixed_positions.size()/moving_positions.size() ;
   }
-
-  float CvoGPU::indicator_value(const CvoPointCloud& source_points,
-                                const CvoPointCloud& target_points,
-                                const Eigen::Matrix4f & init_guess_transform,
-                                Eigen::Ref<Eigen::Matrix4f> transform) const {
+  */
+  float CvoGPU::inner_product_gpu(const CvoPointCloud& source_points,
+                                  const CvoPointCloud& target_points,
+                                  const Eigen::Matrix4f & init_guess_transform
+                                  ) const {
 
 
     Mat33f R = init_guess_transform.block<3,3>(0,0);
@@ -1601,14 +1578,13 @@ namespace cvo{
     cvo_state.reset_state_at_new_iter();
 
     // update transformation matrix to CvoState
+    Eigen::Matrix4f transform;
     update_tf(R, T, &cvo_state, transform);
 
     transform_pointcloud_thrust(cvo_state.cloud_y_gpu_init, cvo_state.cloud_y_gpu,
                                 cvo_state.R_gpu, cvo_state.T_gpu, false ); 
 
     // update the inner product matrix
-    // std::cout<<"cvo_state.ell = "<<cvo_state.ell<<std::endl;
-    // std::cout<<"params_gpu.sp_thres = "<<params_gpu.sp_thres<<std::endl;
     se_kernel(params_gpu, cvo_state.cloud_x_gpu, cvo_state.cloud_y_gpu,
               cvo_state.ell, 
               &cvo_state.A_host, cvo_state.A);
@@ -1619,42 +1595,48 @@ namespace cvo{
     
     // float ip_curr = (float)((double)cvo_state.A_host.nonzero_sum / (double)source_points.num_points() / (double) target_points.num_points());
     //float ip_curr = (float)((double)cvo_state.A_host.nonzero_sum / sqrt((double)source_points.num_points() * (double) target_points.num_points()));
-    float ip_curr = (float)((double)ip_value / sqrt((double)source_points.num_points() * (double) target_points.num_points()));
-    std::cout<<"--- indicator_value ---"<<std::endl;
-    std::cout<<"nonzero_sum = "<<(double)ip_value<<std::endl;
-    std::cout<<"source_points = "<<(double)source_points.num_points()<<std::endl;
-    std::cout<<"target_points = "<<(double) target_points.num_points()<<std::endl;
+    //float ip_curr = (float)((double)ip_value / sqrt((double)source_points.num_points() * (double) target_points.num_points()));
+    //std::cout<<"--- indicator_value ---"<<std::endl;
+    //std::cout<<"nonzero_sum = "<<(double)ip_value<<std::endl;
+    //std::cout<<"source_points = "<<(double)source_points.num_points()<<std::endl;
+    //std::cout<<"target_points = "<<(double) target_points.num_points()<<std::endl;
 
-    return ip_curr;
+    //return ip_curr;
+    return ip_value;
   }
 
   float CvoGPU::function_angle(const CvoPointCloud& source_points,
                                const CvoPointCloud& target_points,
-                               const Eigen::Matrix4f & s2t_frame_transform
+                               const Eigen::Matrix4f & t2s_frame_transform,
+                               bool is_approximate
                                ) const {
     if (source_points.num_points() == 0 || target_points.num_points() == 0) {
       return 0;
     }
 
     Eigen::Matrix4f identity = Eigen::Matrix4f::Identity();
-
-    float fxfz = real_inner_product(source_points, target_points, s2t_frame_transform);
-    float fx_norm = sqrt(real_inner_product(source_points, source_points, identity));
-    float fz_norm = sqrt(real_inner_product(target_points, target_points, identity));
-    float cosine_value = fxfz / (fx_norm * fz_norm);
-
-    std::cout<<"--- function_angle ---"<<std::endl;
+    float fxfz = 0, fx_norm = 0, fz_norm = 0, cosine_value = 0;
+    fxfz = inner_product_gpu(source_points, target_points, t2s_frame_transform);
+    if (is_approximate) {
+      fx_norm = sqrt(source_points.num_points());
+      fz_norm = sqrt(target_points.num_points());
+    } else {
+      fx_norm = sqrt(inner_product_gpu(source_points, source_points, identity));
+      fz_norm = sqrt(inner_product_gpu(target_points, target_points, identity));
+    }
+    cosine_value = fxfz / (fx_norm * fz_norm);    
+    /*std::cout<<"--- function_angle ---"<<std::endl;
     std::cout<<"fxfz = "<<fxfz<<std::endl;
     std::cout<<"fx_norm = "<<fx_norm<<std::endl;
     std::cout<<"fz_norm = "<<fz_norm<<std::endl;
     std::cout<<"cosine_value = "<<cosine_value<<std::endl;
-
+    */
     return cosine_value;
   }
 
-  float CvoGPU::real_inner_product(const CvoPointCloud& source_points,
+  float CvoGPU::inner_product_cpu(const CvoPointCloud& source_points,
                                    const CvoPointCloud& target_points,
-                                   const Eigen::Matrix4f & s2t_frame_transform
+                                   const Eigen::Matrix4f & t2s_frame_transform
                                    ) const {
     if (source_points.num_points() == 0 || target_points.num_points() == 0) {
       return 0;
@@ -1662,8 +1644,8 @@ namespace cvo{
     ArrayVec3f fixed_positions = source_points.positions();
     ArrayVec3f moving_positions = target_points.positions();
 
-    Eigen::Matrix3f rot = s2t_frame_transform.block<3,3>(0,0) ;
-    Eigen::Vector3f trans = s2t_frame_transform.block<3,1>(0,3) ;
+    Eigen::Matrix3f rot = t2s_frame_transform.block<3,3>(0,0) ;
+    Eigen::Vector3f trans = t2s_frame_transform.block<3,1>(0,3) ;
     // transform moving points
     tbb::parallel_for(int(0), target_points.num_points(), [&]( int j ){
       moving_positions[j] = (rot*moving_positions[j]+trans).eval();

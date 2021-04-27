@@ -42,6 +42,8 @@ namespace cvo {
     
   }
 
+  LyftHandler::~LyftHandler() {}
+  
   int LyftHandler::read_next_stereo(cv::Mat & left,
                                      cv::Mat & right) {
     if (curr_index >= names.size())

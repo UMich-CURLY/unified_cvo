@@ -40,6 +40,8 @@ namespace cvo {
     cout<<"Kitti contains "<<names.size()<<" files\n";
   }
 
+  KittiHandler::~KittiHandler() {}
+  
   int KittiHandler::read_next_stereo(cv::Mat & left,
                                      cv::Mat & right) {
     if (curr_index >= names.size())

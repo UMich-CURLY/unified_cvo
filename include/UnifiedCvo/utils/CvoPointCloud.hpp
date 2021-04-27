@@ -108,7 +108,7 @@ namespace cvo {
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals() const {return normals_;}
     //const Eigen::Matrix<float, Eigen::Dynamic, 9> & covariance() const {return covariance_;}
     const pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals() const {return cloud_with_normals_;}
-    const Eigen::Matrix<float, Eigen::Dynamic, 2> & types() const {return types_;}
+    //const Eigen::Matrix<float, Eigen::Dynamic, 2> & types() const {return types_;}
 
     const std::vector<float> & covariance()  const {return covariance_;}
     const std::vector<float> & eigenvalues() const {return eigenvalues_;}
@@ -131,7 +131,7 @@ namespace cvo {
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> labels_; // number of points by number of classes
 
     pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals_;
-    Eigen::Matrix<float, Eigen::Dynamic, 2> types_; // type of the point using loam point selector, edge=(1,0), surface=(0,1)
+    //Eigen::Matrix<float, Eigen::Dynamic, 2> types_; // type of the point using loam point selector, edge=(1,0), surface=(0,1)
     cv::Vec3f avg_pixel_color_pattern(const cv::Mat & raw, int u, int v, int w);
 
     std::vector<float> covariance_;

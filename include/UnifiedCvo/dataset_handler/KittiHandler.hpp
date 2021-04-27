@@ -9,6 +9,7 @@ namespace cvo{
   class KittiHandler : public DatasetHandler {
   public:
     KittiHandler(std::string kitti_folder, int data_type);
+    ~KittiHandler();
     int read_next_stereo(cv::Mat & left,
                          cv::Mat & right);
     int read_next_stereo(cv::Mat & left,

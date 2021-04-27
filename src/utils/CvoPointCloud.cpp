@@ -177,14 +177,14 @@ namespace cvo{
 
         int thresh = 9, num_want = 15000, num_min = 12000;
         while (keypoints.size() > num_want)  {
-          std::cout<<"selected "<<keypoints.size()<<" points more than "<<num_want<<std::endl;
+          //std::cout<<"selected "<<keypoints.size()<<" points more than "<<num_want<<std::endl;
           keypoints.clear();
           thresh++;
           cv::FAST(rgb_gray,keypoints, thresh,false);
           if (thresh == 13) break;
         }
         while (keypoints.size() < num_min ) {
-          std::cout<<"selected "<<keypoints.size()<<" points less than "<<num_min<<std::endl;
+          //std::cout<<"selected "<<keypoints.size()<<" points less than "<<num_min<<std::endl;
           keypoints.clear();
           thresh--;
           cv::FAST(rgb_gray,keypoints, thresh,false);
@@ -346,14 +346,14 @@ namespace cvo{
       if (left_image.num_class() > 0)
 	      num_want = 28000;
       while (keypoints.size() > num_want)  {
-        std::cout<<"selected "<<keypoints.size()<<" points more than "<<num_want<<std::endl;
+        //std::cout<<"selected "<<keypoints.size()<<" points more than "<<num_want<<std::endl;
         keypoints.clear();
         thresh++;
         cv::FAST(left_gray,keypoints, thresh,false);
         if (thresh == 50) break;
       }
       while (keypoints.size() < num_min ) {
-        std::cout<<"selected "<<keypoints.size()<<" points less than "<<num_min<<std::endl;
+        //std::cout<<"selected "<<keypoints.size()<<" points less than "<<num_min<<std::endl;
         keypoints.clear();
         thresh--;
         cv::FAST(left_gray,keypoints, thresh,false);

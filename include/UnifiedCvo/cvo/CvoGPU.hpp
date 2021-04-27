@@ -57,7 +57,7 @@ namespace cvo{
     int align(// inputs
               const CvoPointCloud& source_points,
               const CvoPointCloud& target_points,
-              const Eigen::Matrix4f & init_guess_transform,
+              const Eigen::Matrix4f & T_target_frame_to_source_frame,
               // outputs
               Eigen::Ref<Eigen::Matrix4f> transform,
               double *registration_seconds=nullptr ) const;
@@ -65,7 +65,7 @@ namespace cvo{
     int align(// inputs
               const pcl::PointCloud<CvoPoint>& source_points,
               const pcl::PointCloud<CvoPoint>& target_points,
-              const Eigen::Matrix4f & init_guess_transform,
+              const Eigen::Matrix4f & T_target_frame_to_source_frame,
               // outputs
               Eigen::Ref<Eigen::Matrix4f> transform,
               double *registration_seconds=nullptr ) const;
@@ -73,25 +73,25 @@ namespace cvo{
     
 
     // callable after each align
+    /*
     float inner_product(const CvoPointCloud& source_points,
                         const CvoPointCloud& target_points,
                         const Eigen::Matrix4f & source_frame_to_target_frame) const;
-
-    float indicator_value(const CvoPointCloud& source_points,
-                      const CvoPointCloud& target_points,
-                      const Eigen::Matrix4f & init_guess_transform,
-                      Eigen::Ref<Eigen::Matrix4f> transform) const;
+    */
+    float inner_product_gpu(const CvoPointCloud& source_points,
+                            const CvoPointCloud& target_points,
+                            const Eigen::Matrix4f & T_target_frame_to_source_frame
+                            ) const;
 
     float function_angle(const CvoPointCloud& source_points,
-                        const CvoPointCloud& target_points,
-                        const Eigen::Matrix4f & source_frame_to_target_frame) const;
+                         const CvoPointCloud& target_points,
+                         const Eigen::Matrix4f & T_target_frame_to_source_frame,
+                         bool is_approximate=true) const;
 
-    float real_inner_product(const CvoPointCloud& source_points,
-                             const CvoPointCloud& target_points,
-                             const Eigen::Matrix4f & source_frame_to_target_frame) const;
-
-    float label_only_inner_product(const CvoPointCloud & source_points,
-                                   const CvoPointCloud & target_points) const;
+    float inner_product_cpu(const CvoPointCloud& source_points,
+                            const CvoPointCloud& target_points,
+                            const Eigen::Matrix4f & T_target_frame_to_source_frame
+                            ) const;
 
   };
 

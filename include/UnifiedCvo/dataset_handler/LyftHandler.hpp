@@ -9,6 +9,7 @@ namespace cvo{
   class LyftHandler : public DatasetHandler {
   public:
     LyftHandler(std::string lyft_folder, int data_type);
+    ~LyftHandler();
     int read_next_stereo(cv::Mat & left,
                          cv::Mat & right);
     int read_next_stereo(cv::Mat & left,

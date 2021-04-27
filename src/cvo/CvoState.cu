@@ -65,7 +65,7 @@ namespace cvo {
     least_square_LHS(num_fixed, Eigen::Matrix<float, 6,6>::Zero()),
     least_square_RHS(num_fixed, Eigen::Matrix<float, 6,1>::Zero())
   {
-    std::cout<<"start construct CvoState\n";
+    //std::cout<<"start construct CvoState\n";
     // gpu raw
     //int A_rows = is_ell_adaptive?  source_points->size() : target_points->size();
     int A_rows = source_points->size() ;

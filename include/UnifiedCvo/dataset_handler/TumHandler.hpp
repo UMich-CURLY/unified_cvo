@@ -10,6 +10,7 @@ namespace cvo{
   class TumHandler : public DatasetHandler{
 		public:
 			TumHandler(std::string tum_folder);
+    ~TumHandler();
 			int read_next_rgbd(cv::Mat & rgb_img, 
                         cv::Mat & dep_img);
 
