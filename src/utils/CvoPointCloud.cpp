@@ -24,6 +24,13 @@
 //#include "mapping/bkioctomap.h"
 namespace cvo{
 
+  enum PointCloudType {
+    STEREO,
+    RGBD,
+    LIDAR
+  };
+
+
 
   // filter out sky or too-far-away pixels
   static bool is_good_point(const Vec3f & xyz, const Vec2i uv, int h, int w ) {
@@ -40,7 +47,7 @@ namespace cvo{
 
   // filter away pixels that are too far away
   static bool is_good_point(const Vec3f & xyz ) {
-    if (xyz.norm() > 70)
+    if (xyz.norm() > 55)
       return false;
 
     return true;
@@ -64,42 +71,23 @@ namespace cvo{
   }
 
   
-  
-  cv::Vec3f CvoPointCloud::avg_pixel_color_pattern(const cv::Mat & raw_buffer, int u, int v, int w){
-    cv::Vec3f result_cv;
-    result_cv[0] = result_cv[1] = result_cv[2] = 0;
-    for (int i = 0; i < 8; i++){
-      cv::Vec3f pattern;
-      int u_pattern = pixel_pattern[i][0]+u;
-      int v_pattern = pixel_pattern[i][1]+v;
-      std::cout<<"at pattern "<<" ("<<pixel_pattern[i][0]+u<<","<<pixel_pattern[i][1]+v<<"): ";
-      pattern = raw_buffer.at<cv::Vec3b>(v_pattern, u_pattern);
-      std::cout<<" is "<<pattern;
-      result_cv = result_cv + pattern;
-      std::cout<<std::endl;
-    }
-    std::cout<<"Result: "<<result_cv <<std::endl;
-    result_cv  = (result_cv / 8);
-
-    return result_cv;
-  }
-
-
   CvoPointCloud::CvoPointCloud(const std::string & filename) {
  
     std::ifstream infile;
     int total_num_points = 0;
     num_points_ = 0;
+
+    // count points first
     infile.open(filename);
     if (infile.is_open()) {
-      infile >> total_num_points >> num_classes_;
+      infile >> total_num_points >> feature_dimensions_ >>  num_classes_;
       for (int i =0; i < total_num_points ; i++) {
         Vec3f pos;
-        Vec5f feature;
+        float feature;
         VecXf label(num_classes_);
         infile >> pos(0) >> pos(1) >> pos(2);
-        for (int j = 0 ; j < 5; j++)
-          infile >> feature(j);
+        for (int j = 0 ; j < feature_dimensions_; j++)
+          infile >> feature;
         for (int j = 0; j < num_classes_; j++)
           infile >> label(j);
         if (is_good_point(pos))
@@ -112,43 +100,29 @@ namespace cvo{
     infile.open(filename);
     int good_point_ind = 0;
     if (infile.is_open()) {
-      infile >> total_num_points >> num_classes_;
+      infile >> total_num_points >> feature_dimensions_ >> num_classes_;
       positions_.resize(num_points_);
-      feature_dimensions_ = 5;
       features_.resize(num_points_, feature_dimensions_);
       labels_.resize(num_points_, num_classes_);
-
       for (int i =0; i < total_num_points ; i++) {
         Vec3f pos;        
         VecXf label(num_classes_);
         infile >> pos(0) >> pos(1) >> pos(2);
-        Vec5f feature;
-        float feature_1;
+        VecXf feature(feature_dimensions_);
 
-        if(feature_dimensions_==5){          
-          for (int j = 0 ; j < feature_dimensions_; j++)
-            infile >> feature(j);
-        }
-        else if(feature_dimensions_==1){          
-          infile >> feature_1;
-        } 
+        for (int j = 0 ; j < feature_dimensions_; j++)
+          infile >> feature(j);
         
         for (int j = 0; j < num_classes_; j++)
           infile >> label(j);
         if (is_good_point(pos)) {
-          positions_[ good_point_ind] = pos.transpose();
-          if(feature_dimensions_==5){
-            features_.row(good_point_ind ) = feature.transpose();
-          }
-          else if(feature_dimensions_==1){
-            features_(good_point_ind ) = feature_1;
-          } 
-          
+          positions_[ good_point_ind] = pos;
+          features_.row(good_point_ind ) = feature.transpose();
           labels_.row(good_point_ind ) = label.transpose();
           good_point_ind ++;
         }
       }
-      
+      positions_.resize(good_point_ind);
       infile.close();
     } else {
       printf("empty CvoPointCloud file!\n");
@@ -157,124 +131,6 @@ namespace cvo{
     }
     
   }
-  CvoPointCloud::CvoPointCloud(const RawImage & rgb_raw_image,
-                               const cv::Mat & depth_image,
-                               const Calibration &calib,
-                               const bool is_using_rgbd,
-                               PointSelectionMethod pt_selection_method){
-    if(is_using_rgbd){
-      int expected_points = 5000;
-      std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> output_uv;
-      cv::Mat  rgb_gray;
-      cv::cvtColor(rgb_raw_image.color(), rgb_gray, cv::COLOR_BGR2GRAY);  
-      if (pt_selection_method == CV_FAST) {
-
-        int minHessian = 400;
-        std::vector<cv::KeyPoint> keypoints;    
-        //auto detector = cv::xfeatures2d:: SURF::create( minHessian );
-        //auto detector =  cv::FastFeatureDetector::create();
-        cv::FAST(rgb_gray,keypoints, 5,false);
-
-        int thresh = 9, num_want = 15000, num_min = 12000;
-        while (keypoints.size() > num_want)  {
-          //std::cout<<"selected "<<keypoints.size()<<" points more than "<<num_want<<std::endl;
-          keypoints.clear();
-          thresh++;
-          cv::FAST(rgb_gray,keypoints, thresh,false);
-          if (thresh == 13) break;
-        }
-        while (keypoints.size() < num_min ) {
-          //std::cout<<"selected "<<keypoints.size()<<" points less than "<<num_min<<std::endl;
-          keypoints.clear();
-          thresh--;
-          cv::FAST(rgb_gray,keypoints, thresh,false);
-          if (thresh== 0) break;
-
-        }
-        std::cout<<"FAST selected "<<keypoints.size()<<std::endl;
-      
-        //detector->detect( left_gray, keypoints, cv::Mat() );
-        for (auto && kp: keypoints) {
-          Vec2i p;
-          p(0) = (int)kp.pt.x;
-          p(1) = (int)kp.pt.y;
-          output_uv.push_back(p);
-        }
-
-      } else {
-      
-        select_pixels(rgb_raw_image,
-                      expected_points,
-                      output_uv);
-      }
-      std::vector<int> good_point_ind;
-      int h = rgb_raw_image.color().rows;
-      int w = rgb_raw_image.color().cols;
-      Mat33f intrinsic = calib.intrinsic();
-
-      for (int i = 0; i < output_uv.size(); i++) {
-        auto uv = output_uv[i];
-        int u = uv(0);
-        int v = uv(1);
-        Vec3f xyz;
-
-        uint16_t dep = depth_image.at<uint16_t>(cv::Point(u, v));
-        
-        if(dep!=0 && !isnan(dep)){
-
-          // construct depth
-          xyz(2) = dep/calib.scaling_factor();
-            
-          // construct x and y
-          xyz(0) = (u-intrinsic(0,2)) * xyz(2) / intrinsic(0,0);
-          xyz(1) = (v-intrinsic(1,2)) * xyz(2) / intrinsic(1,1);
-            
-          // add point to pcd
-          good_point_ind.push_back(i);
-          positions_.push_back(xyz);
-
-        }
-      }
-
-      num_points_ = good_point_ind.size();
-      num_classes_ = rgb_raw_image.num_class();
-      feature_dimensions_ = 5;
-      features_.resize(num_points_, feature_dimensions_);
-      for (int i = 0; i < num_points_ ; i++) {
-        int u = output_uv[good_point_ind[i]](0);
-        int v = output_uv[good_point_ind[i]](1);
-        cv::Vec3b avg_pixel = rgb_raw_image.color().at<cv::Vec3b>(v,u);
-        auto & gradient = rgb_raw_image.gradient()[v * w + u];
-        features_(i,0) = ((float)(avg_pixel [0]) )/255.0;
-        features_(i,1) = ((float)(avg_pixel[1]) )/255.0;
-        features_(i,2) = ((float)(avg_pixel[2]) )/255.0;
-        features_(i,3) = gradient(0)/ 500.0 + 0.5;
-        features_(i,4) = gradient(1)/ 500.0 + 0.5;
-      }
-    }
-  }
-
-  CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc) {
-    num_points_ = pc->size();
-    num_classes_ = 0;
-    feature_dimensions_ = 3;
-
-    positions_.resize(pc->size());
-    features_.resize(num_points_, feature_dimensions_);
-    for (int i = 0; i < num_points_; i++) {
-      Eigen::Vector3f xyz;
-      auto & p = (*pc)[i];
-      xyz << p.x, p.y, p.z;
-      positions_[i] = xyz;
-
-      features_(i,0) = ((float)(int)p.r) / 255.0;
-      features_(i,1) = ((float)(int)p.g) / 255.0;
-      features_(i,2) = ((float)(int)p.b) / 255.0;
-      
-    }
-    
-  }
-  
 
 
   static void stereo_surface_sampling(const cv::Mat & left_gray,
@@ -286,7 +142,6 @@ namespace cvo{
                                       std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & final_selected_uv                   
                                       ) {
     selected_inds_map.resize(left_gray.total(), false);
-    std::cout<<"dso selected uv size is "<<dso_selected_uv.size()<<std::endl;
     for (auto && uv : dso_selected_uv) {
       int u = uv(0);
       int v = uv(1);
@@ -317,62 +172,65 @@ namespace cvo{
     //cv::imwrite("canny.png", detected_edges);    
     
   }
+
   
-  CvoPointCloud::CvoPointCloud(const RawImage & left_image,
-                               const cv::Mat & right_image,
-                               const Calibration & calib,
-                               PointSelectionMethod pt_selection_method) {
-    
-    cv::Mat  left_gray, right_gray;
-    cv::cvtColor(right_image, right_gray, cv::COLOR_BGR2GRAY);
-    cv::cvtColor(left_image.color(), left_gray, cv::COLOR_BGR2GRAY);
 
-    std::vector<float> left_disparity;
-    StaticStereo::disparity(left_gray, right_gray, left_disparity);
-    std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> output_uv;
-
+  
+  static void select_points_from_image(const RawImage & left_image,
+                                       PointCloudType pt_type,
+                                       CvoPointCloud::PointSelectionMethod pt_selection_method,
+                                       // result
+                                       std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv
+                                       )  {
+    cv::Mat left_gray;
+    if (left_image.channels() == 1)
+      left_gray = left_image.image();
+    else {
+      cv::cvtColor(left_image.image(), left_gray, cv::COLOR_BGR2GRAY);
+    }
     /*****************************************/
-    if (pt_selection_method == CV_FAST) {
+    if (pt_selection_method == CvoPointCloud::CV_FAST) {
       // using opencv FAST
       //-- Step 1: Detect the keypoints using SURF Detector
       int minHessian = 400;
       std::vector<cv::KeyPoint> keypoints;    
       cv::FAST(left_gray,keypoints, 5,false);
 
-      // for semantic
-      // int thresh = 4, num_want = 28000, num_min = 15000;
       //// for geometric
-      int thresh = 4, num_want = 24000, num_min = 15000;
-      if (left_image.num_class() > 0)
-	      num_want = 28000;
+      int thresh, num_want, num_min, break_thresh;
+      if (pt_type == RGBD) {
+        thresh = 9; num_want = 15000; num_min = 12000; break_thresh = 13;
+      } else if (pt_type == STEREO) {
+        thresh = 4; num_want = 24000; num_min = 15000; break_thresh = 50;
+        if (left_image.num_class() > 0)
+          num_want = 28000;
+      }
+        
       while (keypoints.size() > num_want)  {
-        //std::cout<<"selected "<<keypoints.size()<<" points more than "<<num_want<<std::endl;
         keypoints.clear();
         thresh++;
         cv::FAST(left_gray,keypoints, thresh,false);
-        if (thresh == 50) break;
+        if (thresh == break_thresh) break;
       }
       while (keypoints.size() < num_min ) {
-        //std::cout<<"selected "<<keypoints.size()<<" points less than "<<num_min<<std::endl;
         keypoints.clear();
         thresh--;
         cv::FAST(left_gray,keypoints, thresh,false);
         if (thresh== 0) break;
 
       }
-      std::cout<<"FAST selected "<<keypoints.size()<<std::endl;
     
       //detector->detect( left_gray, keypoints, cv::Mat() );
       for (auto && kp: keypoints) {
-        Vec2i p;
-        p(0) = (int)kp.pt.x;
-        p(1) = (int)kp.pt.y;
-        output_uv.push_back(p);
+        Vec2i xy;
+        xy(0) = (int)kp.pt.x;
+        xy(1) = (int)kp.pt.y;
+        output_uv.push_back(xy);
       }
       bool debug_plot = false;
       if (debug_plot) {
         std::cout<<"Number of selected points is "<<output_uv.size()<<"\n";
-        cv::Mat heatmap(left_image.color().rows, left_image.color().cols, CV_32FC1, cv::Scalar(0) );
+        cv::Mat heatmap(left_image.rows(), left_image.cols(), CV_32FC1, cv::Scalar(0) );
         int w = heatmap.cols;
         int h = heatmap.rows;
         for (int i = 0; i < output_uv.size(); i++) 
@@ -382,16 +240,15 @@ namespace cvo{
     } 
     /*****************************************/
     // using DSO semi dense point selector
-    else if (pt_selection_method == DSO_EDGES) {
-
-      int expected_points = 20000;
-      select_pixels(left_image,
-                    expected_points,
-                    output_uv);
+    else if (pt_selection_method == CvoPointCloud::DSO_EDGES) {
+      int expected_points = 5000;
+      dso_select_pixels(left_image,
+                        expected_points,
+                        output_uv);
     }
     //******************************************/
     // using canny or random point selection
-    else if (pt_selection_method == CANNY_EDGES) {
+    else if (pt_selection_method == CvoPointCloud::CANNY_EDGES) {
       std::vector<bool> selected_inds_map;
       std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> final_selected_uv;
       stereo_surface_sampling(left_gray, output_uv, true, false,
@@ -399,10 +256,10 @@ namespace cvo{
     }
     /********************************************/
     // using full point cloud
-    else if (pt_selection_method == FULL) {
+    else if (pt_selection_method == CvoPointCloud::FULL) {
       output_uv.clear();
-      for (int h = 0; h < left_image.color().cols; h++){
-        for (int w = 0; w < left_image.color().rows; w++){
+      for (int h = 0; h < left_image.cols(); h++){
+        for (int w = 0; w < left_image.rows(); w++){
           Vec2i uv;
           uv << h , w;
           output_uv.push_back(uv);
@@ -412,15 +269,130 @@ namespace cvo{
       std::cerr<<"This point selection method is not implemented.\n";
       return;
     }
-    /**********************************************/
-    //auto & pre_depth_selected_ind = final_selected_uv;
+
+  }
+
+  
+  CvoPointCloud::CvoPointCloud(const RawImage & rgb_raw_image,
+                               const std::vector<uint16_t> & depth_image,
+                               const Calibration &calib,
+                               PointSelectionMethod pt_selection_method){
+ 
+    std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> output_uv;
+    select_points_from_image(rgb_raw_image, RGBD, pt_selection_method, output_uv);
+      
+    std::vector<int> good_point_ind;
+    int h = rgb_raw_image.rows();
+    int w = rgb_raw_image.cols();
+    //positions_.resize(output_uv.size());
+    Mat33f intrinsic = calib.intrinsic();
+
+    for (int i = 0; i < output_uv.size(); i++) {
+      auto uv = output_uv[i];
+      int u = uv(0);
+      int v = uv(1);
+      Vec3f xyz;
+
+      //uint16_t dep = depth_image.at<uint16_t>(cv::Point(u, v));
+      uint16_t dep = depth_image[v * w + u];
+        
+      if(dep!=0 && !isnan(dep)){
+
+        // construct depth
+        xyz(2) = dep/calib.scaling_factor();
+            
+        // construct x and y
+        xyz(0) = (u-intrinsic(0,2)) * xyz(2) / intrinsic(0,0);
+        xyz(1) = (v-intrinsic(1,2)) * xyz(2) / intrinsic(1,1);
+            
+        // add point to pcd
+        good_point_ind.push_back(i);
+        //positions_[i] = xyz;
+        positions_.push_back(xyz);
+      }
+    }
+
+    num_points_ = good_point_ind.size();
+    num_classes_ = rgb_raw_image.num_class();
+    feature_dimensions_ = rgb_raw_image.channels() + 2;
+    features_.resize(num_points_, feature_dimensions_);
+    for (int i = 0; i < num_points_ ; i++) {
+      int u = output_uv[good_point_ind[i]](0);
+      int v = output_uv[good_point_ind[i]](1);
+      if (rgb_raw_image.channels() == 3) {
+        cv::Vec3b avg_pixel = rgb_raw_image.image().at<cv::Vec3b>(v,u);
+        float gradient_0 = rgb_raw_image.gradient()[v * w + u];
+        float gradient_1 = rgb_raw_image.gradient()[v * w + u + 1];
+        features_(i,0) = ((float)(avg_pixel [0]) )/255.0;
+        features_(i,1) = ((float)(avg_pixel[1]) )/255.0;
+        features_(i,2) = ((float)(avg_pixel[2]) )/255.0;
+        features_(i,3) = gradient_0/ 500.0 + 0.5;
+        features_(i,4) = gradient_1/ 500.0 + 0.5;
+      } else if (rgb_raw_image.channels() == 1) {
+        uint8_t avg_pixel = rgb_raw_image.image().at<uint8_t>(v,u);
+        float gradient_0 = rgb_raw_image.gradient()[v * w + u];
+        float gradient_1 = rgb_raw_image.gradient()[v * w + u + 1];
+        features_(i,0) = ((float)(avg_pixel) )/255.0;
+        features_(i,1) = gradient_0/ 500.0 + 0.5;
+        features_(i,2) = gradient_1/ 500.0 + 0.5;          
+      } else {
+        std::cerr<<"CvoPointCloud: channel unknown\n";
+      }
+    }
+ 
+  }
+
+  CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc) {
+    num_points_ = pc->size();
+    num_classes_ = 0;
+    feature_dimensions_ = 3;
+
+    positions_.resize(pc->size());
+    features_.resize(num_points_, feature_dimensions_);
+    for (int i = 0; i < num_points_; i++) {
+      Eigen::Vector3f xyz;
+      auto & p = (*pc)[i];
+      xyz << p.x, p.y, p.z;
+      positions_[i] = xyz;
+
+      features_(i,0) = ((float)(int)p.r) / 255.0;
+      features_(i,1) = ((float)(int)p.g) / 255.0;
+      features_(i,2) = ((float)(int)p.b) / 255.0;
+      
+    }
+    
+  }
+  
+
+  
+  CvoPointCloud::CvoPointCloud(const RawImage & left_image,
+                               const cv::Mat & right_image,
+                               const Calibration & calib,
+                               PointSelectionMethod pt_selection_method) {
+
+    cv::Mat  left_gray, right_gray;
+    if (left_image.channels() == 3)
+      cv::cvtColor(left_image.image(), left_gray, cv::COLOR_BGR2GRAY);
+    else
+      left_gray = left_image.image();
+
+    if (right_image.channels() == 3)
+      cv::cvtColor(right_image, right_gray, cv::COLOR_BGR2GRAY);
+    else
+      right_gray = right_image;
+    std::vector<float> left_disparity;
+    StaticStereo::disparity(left_gray, right_gray, left_disparity);
+    
+    std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> output_uv;    
+    select_points_from_image(left_image, STEREO, pt_selection_method, output_uv);    
     auto & pre_depth_selected_ind = output_uv;
     std::vector<int> good_point_ind;
-    int h = left_image.color().rows;
-    int w = left_image.color().cols;
-    cv::Mat depth_map(h, w, CV_32F, cv::Scalar(0));
-    bool is_recording_depth_map = true;
-    static unsigned int depth_map_counter = 0;    
+    int h = left_image.rows();
+    int w = left_image.cols();
+    //cv::Mat depth_map(h, w, CV_32F, cv::Scalar(0));
+    //bool is_recording_depth_map = true;
+    //static unsigned int depth_map_counter = 0;
+    //positions_.resize(pre_depth_selected_ind.size());
     for (int i = 0; i < pre_depth_selected_ind.size(); i++) {
       auto uv = pre_depth_selected_ind[i];
       Vec3f xyz;
@@ -448,7 +420,8 @@ namespace cvo{
         good_point_ind.push_back(i);
         //good_point_xyz.push_back(xyz);
         positions_.push_back(xyz);
-        
+        //positions_[i] = xyz;
+        //std::cout<<"xyz: "<<xyz.transpose()<<std::endl;
       }
     }
      
@@ -457,18 +430,30 @@ namespace cvo{
     num_classes_ = left_image.num_class();
     if (num_classes_ )
       labels_.resize(num_points_, num_classes_);
-    feature_dimensions_ = 5;
+    feature_dimensions_ = left_image.channels() + 2;
     features_.resize(num_points_, feature_dimensions_);
     for (int i = 0; i < num_points_ ; i++) {
       int u = pre_depth_selected_ind[good_point_ind[i]](0);
       int v = pre_depth_selected_ind[good_point_ind[i]](1);
-      cv::Vec3b avg_pixel = left_image.color().at<cv::Vec3b>(v,u);
-      auto & gradient = left_image.gradient()[v * w + u];
-      features_(i,0) = ((float)(avg_pixel [0]) )/255.0;
-      features_(i,1) = ((float)(avg_pixel[1]) )/255.0;
-      features_(i,2) = ((float)(avg_pixel[2]) )/255.0;
-      features_(i,3) = gradient(0)/ 500.0 + 0.5;
-      features_(i,4) = gradient(1)/ 500.0 + 0.5;
+      if (left_image.channels() == 3) {
+        cv::Vec3b avg_pixel = left_image.image().at<cv::Vec3b>(v,u);
+        float gradient_0 = left_image.gradient()[v * w + u];
+        float gradient_1 = left_image.gradient()[v * w + u + 1];
+        features_(i,0) = ((float)(avg_pixel [0]) )/255.0;
+        features_(i,1) = ((float)(avg_pixel[1]) )/255.0;
+        features_(i,2) = ((float)(avg_pixel[2]) )/255.0;
+        features_(i,3) = gradient_0/ 500.0 + 0.5;
+        features_(i,4) = gradient_1/ 500.0 + 0.5;
+      } else if (left_image.channels() == 1) {
+        uint8_t avg_pixel = left_image.image().at<uint8_t>(v,u);
+        float gradient_0 = left_image.gradient()[v * w + u];
+        float gradient_1 = left_image.gradient()[v * w + u + 1];
+        features_(i,0) = ((float)(avg_pixel) )/255.0;
+        features_(i,1) = gradient_0/ 500.0 + 0.5;
+        features_(i,2) = gradient_1/ 500.0 + 0.5;          
+      } else {
+        std::cerr<<"CvoPointCloud: channel unknown\n";
+      }
 
       if (num_classes_) {
         labels_.row(i) = Eigen::Map<const VecXf_row>((left_image.semantic_image().data()+ (v * w + u)*num_classes_), num_classes_);
@@ -529,14 +514,14 @@ namespace cvo{
     // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
     feature_dimensions_ = 1;
     features_.resize(num_points_, feature_dimensions_);
-    normals_.resize(num_points_,3);
+    //normals_.resize(num_points_,3);
     //types_.resize(num_points_, 2);
-
+    positions_.resize(num_points_);
     for (int i = 0; i < num_points_ ; i++) {
       Vec3f xyz;
       int idx = selected_indexes[i];
       xyz << pc->points[idx].x, pc->points[idx].y, pc->points[idx].z;
-      positions_.push_back(xyz);
+      positions_[i] = xyz;
       features_(i, 0) = pc->points[idx].intensity;
 
     }
@@ -610,6 +595,8 @@ namespace cvo{
     feature_dimensions_ = 1;
     features_.resize(num_points_, feature_dimensions_);
     labels_.resize(num_points_, num_classes_);
+    positions_.resize(num_points_);
+    int actual_ids = 0;
     for (int i = 0; i < num_points_ ; i++) {
       Vec3f xyz;
       int idx = selected_indexes[i];
@@ -620,17 +607,19 @@ namespace cvo{
       // std::cout<<"pc_out (x,y,z,i)=("<<pc_out->points[i].x<<","<<pc_out->points[i].y<<","<<pc_out->points[i].z<<","<<pc_out->points[i].intensity<<"; output pointcloud (index,x,y,z,i)=("<<idx<<", "<<pc->points[idx].x<<","<<pc->points[idx].y<<","<<pc->points[idx].z<<","<<pc->points[idx].intensity<<")"<<std::endl;
       
       xyz << pc->points[idx].x, pc->points[idx].y, pc->points[idx].z;
-      positions_.push_back(xyz);
-      features_(i, 0) = pc->points[idx].intensity;
+      positions_[actual_ids] = (xyz);
+      features_(actual_ids, 0) = pc->points[idx].intensity;
 
       // add one-hot semantic labels
       VecXf_row one_hot_label;
       one_hot_label = VecXf_row::Zero(1,num_classes_);
       one_hot_label[semantic_out[i]] = 1;
 
-      labels_.row(i) = one_hot_label;
+      labels_.row(actual_ids) = one_hot_label;
       int max_class = 0;
-      labels_.row(i).maxCoeff(&max_class);
+      labels_.row(actual_ids).maxCoeff(&max_class);
+
+      actual_ids ++;
 
     }
     std::cout<<"Construct Cvo PointCloud, num of points is "<<num_points_<<" from "<<pc->size()<<" input points "<<std::endl;
@@ -645,11 +634,11 @@ namespace cvo{
     
   }
 
-  int CvoPointCloud::read_cvo_pointcloud_from_file(const std::string & filename, int feature_dim) {
+  int CvoPointCloud::read_cvo_pointcloud_from_file(const std::string & filename) {
     std::ifstream infile(filename);
-    feature_dimensions_ = feature_dim;
     if (infile.is_open()) {
       infile>> num_points_;
+      infile >> feature_dimensions_;
       infile>> num_classes_;
       positions_.clear();
       positions_.resize(num_points_);
@@ -661,16 +650,16 @@ namespace cvo{
         infile >> u >>v;
         float idepth;
         infile >> idepth;
-        for (int j = 0; j <5 ; j++)
+        for (int j = 0; j < feature_dimensions_ ; j++)
           infile >> features_(i, j);
-        features_(i,0) = features_(i,0) / 255.0;
-        features_(i,1) = features_(i,1) / 255.0;
-        features_(i,2) = features_(i,2) / 255.0;
-        features_(i,3) = features_(i,3) / 500.0 + 0.5;
-        features_(i,4) = features_(i,4) / 500.0 + 0.5;
+        //features_(i,0) = features_(i,0) / 255.0;
+        //features_(i,1) = features_(i,1) / 255.0;
+        //features_(i,2) = features_(i,2) / 255.0;
+        //features_(i,3) = features_(i,3) / 500.0 + 0.5;
+        //features_(i,4) = features_(i,4) / 500.0 + 0.5;
         
         for (int j = 0; j < 3; j++)
-          infile >> positions_[i](j);
+          infile >> positions_[i]( j);
         for (int j = 0; j < num_classes_; j++)
           infile >> labels_(i, j);
       }
@@ -718,9 +707,9 @@ namespace cvo{
 
     for (int i = 0; i < num_points_; i++) {
       pcl::PointXYZRGB p;
-      p.x = positions_[i](0);
-      p.y = positions_[i](1);
-      p.z = positions_[i](2);
+      p.x = positions_[i]( 0);
+      p.y = positions_[i]( 1);
+      p.z = positions_[i]( 2);
       
       uint8_t b = static_cast<uint8_t>(std::min(255, (int)(features_(i,0) * 255) ) );
       uint8_t g = static_cast<uint8_t>(std::min(255, (int)(features_(i,1) * 255) ) );
@@ -745,9 +734,9 @@ namespace cvo{
     pcl::PointCloud<pcl::PointXYZ> pc;
     for (int i = 0; i < num_points_; i++) {
       pcl::PointXYZ p;
-      p.x = positions_[i](0);
-      p.y = positions_[i](1);
-      p.z = positions_[i](2);
+      p.x = positions_[i]( 0);
+      p.y = positions_[i]( 1);
+      p.z = positions_[i]( 2);
       pc.push_back(p);
     }
     pcl::io::savePCDFileASCII(name, pc); 

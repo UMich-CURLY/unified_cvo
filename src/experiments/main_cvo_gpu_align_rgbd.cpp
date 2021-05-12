@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
   string cvo_param_file(argv[2]);
   string calib_file;
   calib_file = string(argv[1] ) +"/cvo_calib.txt"; 
-  cvo::Calibration calib(calib_file,1);
+  cvo::Calibration calib(calib_file, cvo::Calibration::RGBD);
   std::ofstream accum_output(argv[3]);
   int start_frame = std::stoi(argv[4]);
   tum.set_start_index(start_frame);
@@ -56,12 +56,14 @@ int main(int argc, char *argv[]) {
 
   cv::Mat source_rgb, source_dep;
   tum.read_next_rgbd(source_rgb, source_dep);
+  std::vector<uint16_t> source_dep_data(source_dep.total());
+  source_dep_data.assign(source_dep.data, source_dep.data + source_dep.total());
   //std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_rgb, source_dep,
                                                     //19, semantics_source, 
   //                                                  calib, 1));
   //0.2));
   std::shared_ptr<cvo::RawImage> source_raw(new cvo::RawImage(source_rgb));
-  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw, source_dep, calib, true));
+  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw, source_dep_data, calib));
   for (int i = start_frame; i<min(total_iters, start_frame+max_num)-1 ; i++) {
     
     // calculate initial guess
@@ -75,11 +77,14 @@ int main(int argc, char *argv[]) {
       std::cout<<"finish all files\n";
       break;
     }
+    std::vector<uint16_t> target_dep_data(dep.total());
+    target_dep_data.assign(dep.data, dep.data + dep.total());
+    
 
 
     //std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, rgb, dep, calib,1));
     std::shared_ptr<cvo::RawImage> target_raw(new cvo::RawImage(rgb));
-    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, dep, calib, true));
+    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, target_dep_data, calib));
   
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
 

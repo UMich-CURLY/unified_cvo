@@ -34,6 +34,12 @@ namespace cvo {
                                         Eigen::Ref<Vec3f> result
                                         );
 
+    TraceStatus pt_depth_from_disparity(int h, int w, int u, int v,
+                                        const std::vector<float> & disparity,
+                                        const Eigen::Matrix3f & intrinsic,
+                                        float baseline,
+                                        Eigen::Ref<Vec3f> result
+                                        );
 
   }
   

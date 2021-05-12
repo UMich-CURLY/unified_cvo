@@ -75,7 +75,7 @@ namespace cvo{
     int num_points = cvo_cloud.num_points();
     const ArrayVec3f & positions = cvo_cloud.positions();
     const Eigen::Matrix<float, Eigen::Dynamic, FEATURE_DIMENSIONS> & features = cvo_cloud.features();
-    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals = cvo_cloud.normals();
+    //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals = cvo_cloud.normals();
     // const Eigen::Matrix<float, Eigen::Dynamic, 2> & types = cvo_cloud.types();
     auto & labels = cvo_cloud.labels();
     // set basic informations for pcl_cloud
@@ -87,7 +87,7 @@ namespace cvo{
       (host_cloud)[i].x = positions[i](0);
       (host_cloud)[i].y = positions[i](1);
       (host_cloud)[i].z = positions[i](2);
-      if (FEATURE_DIMENSIONS >= 3) {
+      if (FEATURE_DIMENSIONS == 5) {
         (host_cloud)[i].r = (uint8_t)std::min(255.0, (features(i,0) * 255.0));
         (host_cloud)[i].g = (uint8_t)std::min(255.0, (features(i,1) * 255.0));
         (host_cloud)[i].b = (uint8_t)std::min(255.0, (features(i,2) * 255.0));
@@ -103,15 +103,15 @@ namespace cvo{
           host_cloud[i].label_distribution[j] = labels(i,j);
       }
       
-      if (normals.rows() > 0 && normals.cols()>0) {
-        for (int j = 0; j < 3; j++)
-          host_cloud[i].normal[j] = normals(i,j);
-      }
+      //if (normals.rows() > 0 && normals.cols()>0) {
+      //  for (int j = 0; j < 3; j++)
+      //    host_cloud[i].normal[j] = normals(i,j);
+      //}
 
-      if (cvo_cloud.covariance().size() > 0 )
-        memcpy(host_cloud[i].covariance, cvo_cloud.covariance().data()+ i*9, sizeof(float)*9  );
-      if (cvo_cloud.eigenvalues().size() > 0 )
-        memcpy(host_cloud[i].cov_eigenvalues, cvo_cloud.eigenvalues().data() + i*3, sizeof(float)*3);
+      //if (cvo_cloud.covariance().size() > 0 )
+      //  memcpy(host_cloud[i].covariance, cvo_cloud.covariance().data()+ i*9, sizeof(float)*9  );
+      //if (cvo_cloud.eigenvalues().size() > 0 )
+      //  memcpy(host_cloud[i].cov_eigenvalues, cvo_cloud.eigenvalues().data() + i*3, sizeof(float)*3);
 
       //if (i == 1000) {
       //  printf("Total %d, Raw input from pcl at 1000th: \n", num_points);
@@ -500,6 +500,11 @@ namespace cvo{
   }
 
 
+  __global__
+  void fill_in_A_mat_cukdtree(const CvoParams *cvo_params) {
+    
+  }
+  
   
 
   __global__
@@ -1247,8 +1252,12 @@ namespace cvo{
 
     int iter = params.MAX_ITER;
     Eigen::Vector3f omega, v;
-    auto start_all = chrono::system_clock::now();
-    chrono::duration<double> t_all = chrono::duration<double>::zero();
+    //auto start_all = chrono::system_clock::now();
+    //chrono::duration<double> t_all = chrono::duration<double>::zero();
+    cudaEvent_t cuda_start, cuda_stop;                                                                              
+    cudaEventCreate(&cuda_start);                                                                              
+    cudaEventCreate(&cuda_stop);                                                                               
+    cudaEventRecord(cuda_start, 0);
 
     std::cout<<"Start iteration, init transform is \n";
     std::cout<<init_guess_transform<<std::endl;
@@ -1373,15 +1382,26 @@ namespace cvo{
           cvo_state.ell = params.ell_min;
       }
     }
-    auto end_all = chrono::system_clock::now();    
-    t_all = end_all - start_all;
+    cudaEventRecord(cuda_stop, 0);                                                                             
+    cudaEventSynchronize(cuda_stop);                                                                           
+    float elapsedTime, totalTime;                                                                     
+    cudaEventElapsedTime(&elapsedTime, cuda_start, cuda_stop);                                                    
+    cudaEventDestroy(cuda_start);                                                                              
+    cudaEventDestroy(cuda_stop);                                                                               
+    totalTime = elapsedTime/(1000);                                                             
+    //printf("2D: thrust min element = %d, max element = %d\n", minele, maxele);                            
+    //printf("2D: thrust time = %f\n", totalTime2d);  
+    //auto end_all = chrono::system_clock::now();    
+    //t_all = end_all - start_all;
     std::cout<<"cvo # of iterations is "<<iter<<std::endl;
-    std::cout<<"t_all is "<<t_all.count()<<"\n"<<std::flush;
+    //std::cout<<"t_all is "<<t_all.count()<<"\n"<<std::flush;
+    std::cout<<"t_all is "<<totalTime<<"\n"<<std::flush;
     std::cout<<"non adaptive cvo ends. final ell is "<<cvo_state.ell<<", final iteration is "<<k
              <<"MAX_ITER is "<<params.MAX_ITER<<std::endl;
 
     if (registration_seconds)
-      *registration_seconds = t_all.count();
+      //*registration_seconds = t_all.count();
+      *registration_seconds = (double) totalTime;//t_all.count();
 
     update_tf(R, T, &cvo_state, transform);
 
@@ -1448,80 +1468,6 @@ namespace cvo{
     //std::cout<<"Result Transform is "<<transform<<std::endl;
     return ret;
   }
-
-  void se_kernel_init_ell_cpu(const CvoPointCloud* cloud_a, const CvoPointCloud* cloud_b, \
-                              cloud_t* cloud_a_pos, cloud_t* cloud_b_pos, \
-                              Eigen::SparseMatrix<float,Eigen::RowMajor>& A_temp,
-                              tbb::concurrent_vector<Trip_t> & A_trip_concur_,
-                              const CvoParams & params
-                              ) {
-    bool debug_print = false;
-    A_trip_concur_.clear();
-    const float s2= params.sigma*params.sigma;
-
-    const float l = params.ell_min;
-
-    // convert k threshold to d2 threshold (so that we only need to calculate k when needed)
-    const float d2_thres = -2.0*l*l*log(params.sp_thres/s2);
-    if (debug_print ) std::cout<<"l is "<<l<<",d2_thres is "<<d2_thres<<std::endl;
-    const float d2_c_thres = -2.0*params.c_ell*params.c_ell*log(params.sp_thres/params.c_sigma/params.c_sigma);
-    if (debug_print) std::cout<<"d2_c_thres is "<<d2_c_thres<<std::endl;
-    
-    typedef KDTreeVectorOfVectorsAdaptor<cloud_t, float>  kd_tree_t;
-    kd_tree_t mat_index(3 , (*cloud_b_pos), 10  );
-    mat_index.index->buildIndex();
-    // loop through points
-    tbb::parallel_for(int(0),cloud_a->num_points(),[&](int i){
-        //for(int i=0; i<num_fixed; ++i){
-        const float search_radius = d2_thres;
-        std::vector<std::pair<size_t,float>>  ret_matches;
-        nanoflann::SearchParams params_flann;
-        //params.sorted = false;
-        const size_t nMatches = mat_index.index->radiusSearch(&(*cloud_a_pos)[i](0), search_radius, ret_matches, params_flann);
-        Eigen::Matrix<float,Eigen::Dynamic,1> feature_a = cloud_a->features().row(i).transpose();
-        Eigen::VectorXf label_a;
-        if (params.is_using_semantics)
-          label_a = cloud_a->labels().row(i);
-        
-        // for(int j=0; j<num_moving; j++){
-        for(size_t j=0; j<nMatches; ++j){
-          int idx = ret_matches[j].first;
-          float d2 = ret_matches[j].second;
-          // d2 = (x-y)^2
-          float k = 1;
-          float ck = 1;
-          float sk = 1;
-          float d2_color = 0;
-          float d2_semantic = 0;
-          float a = 1;
-
-          Eigen::VectorXf label_b;
-          if (params.is_using_semantics) {
-            label_b = cloud_b->labels().row(idx);
-            d2_semantic = ((label_a-label_b).squaredNorm());            
-            sk = params.s_sigma*params.s_sigma*exp(-d2_semantic/(2.0*params.s_ell*params.s_ell));
-          }
-
-          if (params.is_using_geometry) {
-            k = s2*exp(-d2/(2.0*l*l));            
-          } 
-
-          if (params.is_using_intensity) {
-            Eigen::Matrix<float,Eigen::Dynamic,1> feature_b = cloud_b->features().row(idx).transpose();            
-            d2_color = ((feature_a-feature_b).squaredNorm());
-            ck = params.c_sigma*params.c_sigma*exp(-d2_color/(2.0*params.c_ell*params.c_ell));
-          }
-          a = ck*k*sk;
-          if (a > params.sp_thres){
-            A_trip_concur_.push_back(Trip_t(i,idx,a));
-          }
-        }
-      });
-
-    A_temp.setFromTriplets(A_trip_concur_.begin(), A_trip_concur_.end());
-    A_temp.makeCompressed();
-  }
-
   /*
   float CvoGPU::inner_product(const CvoPointCloud& source_points,
                               const CvoPointCloud& target_points,
@@ -1554,20 +1500,16 @@ namespace cvo{
     return A_mat.sum()/fixed_positions.size()/moving_positions.size() ;
   }
   */
-  float CvoGPU::inner_product_gpu(const CvoPointCloud& source_points,
-                                  const CvoPointCloud& target_points,
-                                  const Eigen::Matrix4f & init_guess_transform
-                                  ) const {
 
+  static float inner_product_impl (CvoPointCloudGPU::SharedPtr source_gpu,
+                                   CvoPointCloudGPU::SharedPtr target_gpu,
+                                   const Eigen::Matrix4f & init_guess_transform,
+                                   const CvoParams & params,
+                                   const CvoParams * params_gpu) {
 
     Mat33f R = init_guess_transform.block<3,3>(0,0);
     Vec3f T= init_guess_transform.block<3,1>(0,3);
-
-    CvoPointCloudGPU::SharedPtr source_gpu = CvoPointCloud_to_gpu(source_points);
-    CvoPointCloudGPU::SharedPtr target_gpu = CvoPointCloud_to_gpu(target_points);
-
-    assert(source_gpu != nullptr && target_gpu != nullptr);
-
+    
     CvoState cvo_state(source_gpu, target_gpu, params);
 
     int num_moving = cvo_state.num_moving;
@@ -1592,19 +1534,37 @@ namespace cvo{
 
 
     float ip_value = A_sum(&cvo_state.A_host);
-    
-    // float ip_curr = (float)((double)cvo_state.A_host.nonzero_sum / (double)source_points.num_points() / (double) target_points.num_points());
-    //float ip_curr = (float)((double)cvo_state.A_host.nonzero_sum / sqrt((double)source_points.num_points() * (double) target_points.num_points()));
-    //float ip_curr = (float)((double)ip_value / sqrt((double)source_points.num_points() * (double) target_points.num_points()));
-    //std::cout<<"--- indicator_value ---"<<std::endl;
-    //std::cout<<"nonzero_sum = "<<(double)ip_value<<std::endl;
-    //std::cout<<"source_points = "<<(double)source_points.num_points()<<std::endl;
-    //std::cout<<"target_points = "<<(double) target_points.num_points()<<std::endl;
-
-    //return ip_curr;
     return ip_value;
   }
+  
+  float CvoGPU::inner_product_gpu(const CvoPointCloud& source_points,
+                                  const CvoPointCloud& target_points,
+                                  const Eigen::Matrix4f & init_guess_transform
+                                  ) const {
 
+    CvoPointCloudGPU::SharedPtr source_gpu = CvoPointCloud_to_gpu(source_points);
+    CvoPointCloudGPU::SharedPtr target_gpu = CvoPointCloud_to_gpu(target_points);
+
+    
+    return inner_product_impl(source_gpu, target_gpu, init_guess_transform, params, params_gpu
+                              );
+  }
+
+  float CvoGPU::inner_product_gpu(const pcl::PointCloud<CvoPoint>& source_points_pcl,
+                                  const pcl::PointCloud<CvoPoint>& target_points_pcl,
+                                  const Eigen::Matrix4f & init_guess_transform
+                                  ) const {
+ 
+    CvoPointCloudGPU::SharedPtr source_gpu = pcl_PointCloud_to_gpu(source_points_pcl);
+    CvoPointCloudGPU::SharedPtr target_gpu = pcl_PointCloud_to_gpu(target_points_pcl);
+
+
+    return inner_product_impl(source_gpu, target_gpu, init_guess_transform, params, params_gpu);
+  }
+
+
+
+  
   float CvoGPU::function_angle(const CvoPointCloud& source_points,
                                const CvoPointCloud& target_points,
                                const Eigen::Matrix4f & t2s_frame_transform,
@@ -1634,31 +1594,30 @@ namespace cvo{
     return cosine_value;
   }
 
-  float CvoGPU::inner_product_cpu(const CvoPointCloud& source_points,
-                                   const CvoPointCloud& target_points,
-                                   const Eigen::Matrix4f & t2s_frame_transform
-                                   ) const {
-    if (source_points.num_points() == 0 || target_points.num_points() == 0) {
+  float CvoGPU::function_angle(const pcl::PointCloud<CvoPoint>& source_points_pcl,
+                               const pcl::PointCloud<CvoPoint>& target_points_pcl,
+                               const Eigen::Matrix4f & t2s_frame_transform,
+                               bool is_approximate
+                               ) const {
+
+    if (source_points_pcl.size() == 0 || target_points_pcl.size() == 0) {
       return 0;
     }
-    ArrayVec3f fixed_positions = source_points.positions();
-    ArrayVec3f moving_positions = target_points.positions();
 
-    Eigen::Matrix3f rot = t2s_frame_transform.block<3,3>(0,0) ;
-    Eigen::Vector3f trans = t2s_frame_transform.block<3,1>(0,3) ;
-    // transform moving points
-    tbb::parallel_for(int(0), target_points.num_points(), [&]( int j ){
-      moving_positions[j] = (rot*moving_positions[j]+trans).eval();
-    });
+    Eigen::Matrix4f identity = Eigen::Matrix4f::Identity();
+    float fxfz = 0, fx_norm = 0, fz_norm = 0, cosine_value = 0;
+    fxfz = inner_product_gpu(source_points_pcl, target_points_pcl, t2s_frame_transform);
+    if (is_approximate) {
+      fx_norm = sqrt(source_points_pcl.size());
+      fz_norm = sqrt(target_points_pcl.size());
+    } else {
+      fx_norm = sqrt(inner_product_gpu(source_points_pcl, source_points_pcl, identity));
+      fz_norm = sqrt(inner_product_gpu(target_points_pcl, target_points_pcl, identity));
+    }
+    cosine_value = fxfz / (fx_norm * fz_norm);    
 
-    Eigen::SparseMatrix<float,Eigen::RowMajor> A_mat;
-    tbb::concurrent_vector<Trip_t> A_trip_concur_;
-    A_trip_concur_.reserve(target_points.num_points() * 20);
-    A_mat.resize(source_points.num_points(), target_points.num_points());
-    A_mat.setZero();
-    se_kernel_init_ell_cpu(&source_points, &target_points, &fixed_positions, &moving_positions, A_mat, A_trip_concur_ , params );
+    return cosine_value;
 
-    return A_mat.sum();
   }
 
 

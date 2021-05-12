@@ -381,9 +381,10 @@ namespace cvo{
         const size_t nMatches = mat_index.index->radiusSearch(&(*cloud_a_pos)[i](0), search_radius, ret_matches, params);
 
         Eigen::Matrix<float,Eigen::Dynamic,1> feature_a = cloud_a->features().row(i).transpose();
-
+#ifdef IS_USING_NORMALS
         Eigen::Matrix<float,Eigen::Dynamic,1> normal_a = cloud_a->normals().row(i).transpose();
-
+#endif
+        
 #ifdef IS_USING_SEMANTICS        
         Eigen::VectorXf label_a = cloud_a->labels().row(i);
 #endif
@@ -402,7 +403,9 @@ namespace cvo{
           float a = 0;
           if(d2<d2_thres){
             Eigen::Matrix<float,Eigen::Dynamic,1> feature_b = cloud_b->features().row(idx).transpose();
+#ifdef IS_USING_NORMALS            
             Eigen::Matrix<float,Eigen::Dynamic,1> normal_b = cloud_b->normals().row(idx).transpose();
+#endif            
             d2_color = ((feature_a-feature_b).squaredNorm());
             // d2_normal = ((normal_a-normal_b).squaredNorm());
 #ifdef IS_USING_SEMANTICS            

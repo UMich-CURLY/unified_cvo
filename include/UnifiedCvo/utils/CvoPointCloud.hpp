@@ -16,11 +16,21 @@ namespace semantic_bki {
   class SemanticBKIOctoMap;
 }
 
+namespace pcl {
+  struct CvoPoint;
+}
+
 
 namespace cvo {
 
 
-  class CvoPointCloud{
+  class
+#ifdef __CUDACC__
+  __align__(16)
+#else
+    alignas(16)
+#endif    
+  CvoPointCloud{
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
@@ -45,9 +55,8 @@ namespace cvo {
 
     // Constructor for rgbd image
     CvoPointCloud(const RawImage & rgb_raw_image,
-                  const cv::Mat & depth_image,
+                  const std::vector<uint16_t> & depth_image,
                   const Calibration &calib,
-                  const bool is_using_rgbd,
                   PointSelectionMethod pt_selection_method=CV_FAST);
     
     CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
@@ -65,6 +74,8 @@ namespace cvo {
                   int beam_num,
                   PointSelectionMethod pt_selection_method=LOAM);
 
+    
+    
 
     // Not recommended: Image Gradient is empty
     CvoPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc);    
@@ -92,7 +103,7 @@ namespace cvo {
     
     ~CvoPointCloud();
 
-    int read_cvo_pointcloud_from_file(const std::string & filename, int feature_dim=5);
+    int read_cvo_pointcloud_from_file(const std::string & filename);
 
     static void transform(const Eigen::Matrix4f& pose,
                           const CvoPointCloud & input,
@@ -102,16 +113,16 @@ namespace cvo {
     int num_points() const {return num_points_;}
     int num_classes() const {return num_classes_;}
     int feature_dimensions() const {return feature_dimensions_;}
+    //const Eigen::Matrix<float, Eigen::Dynamic, 3> & positions() const {return positions_;}
     const std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> & positions() const {return positions_;}
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & labels() const { return labels_;}
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & features() const {return features_;}
-    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals() const {return normals_;}
+    //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals() const {return normals_;}
     //const Eigen::Matrix<float, Eigen::Dynamic, 9> & covariance() const {return covariance_;}
-    const pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals() const {return cloud_with_normals_;}
+    //const pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals() const {return cloud_with_normals_;}
     //const Eigen::Matrix<float, Eigen::Dynamic, 2> & types() const {return types_;}
-
-    const std::vector<float> & covariance()  const {return covariance_;}
-    const std::vector<float> & eigenvalues() const {return eigenvalues_;}
+    //const std::vector<float> & covariance()  const {return covariance_;}
+    //const std::vector<float> & eigenvalues() const {return eigenvalues_;}
 
     // for visualization via pcl_viewer
     void write_to_color_pcd(const std::string & name) const;
@@ -126,16 +137,17 @@ namespace cvo {
     int feature_dimensions_;
     
     std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> positions_;  // points position. x,y,z
+    //Eigen::Matrix<float, Eigen::Dynamic, 3> positions_;
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> features_;   // rgb, gradient in [0,1]
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> normals_;  // surface normals
+    //Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> normals_;  // surface normals
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> labels_; // number of points by number of classes
 
     pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals_;
     //Eigen::Matrix<float, Eigen::Dynamic, 2> types_; // type of the point using loam point selector, edge=(1,0), surface=(0,1)
     cv::Vec3f avg_pixel_color_pattern(const cv::Mat & raw, int u, int v, int w);
 
-    std::vector<float> covariance_;
-    std::vector<float> eigenvalues_;
+    //std::vector<float> covariance_;
+    //std::vector<float> eigenvalues_;
     //thrust::device_vector<float> eigenvalues_;
     //perl_registration::cuPointCloud<CvoPoint>::SharedPtr pc_gpu;
     //void compute_covarianes(pcl::PointCloud<pcl::PointXYZI> & pc_raw);

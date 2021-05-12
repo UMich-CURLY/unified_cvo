@@ -85,8 +85,8 @@ namespace cvo
     gradHistFrame = &raw_image;
     const float * mapmax0 = raw_image.gradient_square().data();
 
-    int w = raw_image.color().cols;
-    int h = raw_image.color().rows;
+    int w = raw_image.cols();
+    int h = raw_image.rows();
 
     int w32 = w/32;
     int h32 = h/32;
@@ -243,7 +243,7 @@ namespace cvo
     int numHaveSub = numHave;
     if(quotia < 0.95)
     {
-      int wh=raw_image.color().total();
+      int wh=raw_image.image().total();
       int rn=0;
       unsigned char charTH = 255*quotia;
       for(int i=0;i<wh;i++)
@@ -283,10 +283,10 @@ namespace cvo
     //float * mapmax1 = ptr_fr->abs_squared_grad[1];
     //float * mapmax2 = ptr_fr->abs_squared_grad[2];
 
-    int w = raw_image.color().cols;
+    int w = raw_image.cols();
     int w1 = w/2;
     int w2 = w/4;
-    int h = raw_image.color().rows;
+    int h = raw_image.rows();
     // memset(map_out, 0, h * w * sizeof(float));
     // output_uv.clear();
       
@@ -361,7 +361,8 @@ namespace cvo
                     if(ag0 > pixelTH0*thFactor)
                     {
                       //Vec2f ag0d = map0[idx].tail<2> ();
-                      Vec2f ag0d = grad0[idx];
+                      Vec2f ag0d;
+                      ag0d << grad0[idx*2], grad0[idx*2+1];
                       float dirNorm = fabsf((float)(ag0d.dot(dir2)));
                       if(!setting_selectDirectionDistribution) dirNorm = ag0;
 
@@ -426,12 +427,12 @@ namespace cvo
 
 
 
-  void select_pixels(const RawImage & raw_image,
-                     int num_want,
-                     // output
-                     std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv ) {
-    PixelSelector selector(raw_image.color().cols, raw_image.color().rows);
-    std::vector<float> heat_map(raw_image.color().total(), 0);
+  void dso_select_pixels(const RawImage & raw_image,
+                         int num_want,
+                         // output
+                         std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv ) {
+    PixelSelector selector(raw_image.cols(), raw_image.rows());
+    std::vector<float> heat_map(raw_image.image().total(), 0);
     selector.makeHeatMaps(raw_image,static_cast<float> (num_want), heat_map.data(), output_uv, 3, 0);
     int times = 1;
     while (output_uv.size() > num_want)  {
@@ -455,7 +456,7 @@ namespace cvo
     bool debug_plot = true;
     if (debug_plot) {
       std::cout<<"Number of selected points is "<<output_uv.size()<<"\n";
-      cv::Mat heatmap(raw_image.color().rows, raw_image.color().cols, CV_32FC1, heat_map.data());
+      cv::Mat heatmap(raw_image.rows(), raw_image.cols(), CV_32FC1, heat_map.data());
       int w = heatmap.cols;
       int h = heatmap.rows;
       for (int i = 0; i < output_uv.size(); i++) {

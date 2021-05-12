@@ -20,10 +20,21 @@ namespace cvo{
 
 
     
-    void disparity(const cv::Mat & left_gray,
-                   const cv::Mat & right_gray,
+    void disparity(const cv::Mat & left_in,
+                   const cv::Mat & right_in,
                    std::vector<float> & output_left_disparity)  {
 
+      auto cvt_if_color = [] (const cv::Mat& input) -> cv::Mat {
+        cv::Mat ret;
+        if (input.channels() == 1)
+          ret = input;
+        else
+          cv::cvtColor(input, ret, cv::COLOR_BGR2GRAY);
+        return ret;
+      };
+      cv::Mat left_gray = cvt_if_color(left_in);
+      cv::Mat right_gray = cvt_if_color(right_in);
+      
       int32_t width = left_gray.cols;
       int32_t height = left_gray.rows;
       output_left_disparity.resize(width*height);
@@ -48,7 +59,7 @@ namespace cvo{
         cv::Mat disp_left(height, width, CV_8UC1, vis.data());
         //cv::namedWindow("Disparity left", )
         cv::imshow("Left disparity", disp_left);
-        cv::waitKey(100);
+        cv::waitKey();
       }
     }
   
@@ -59,28 +70,42 @@ namespace cvo{
                                         const Vec2i & input,
                                         Eigen::Ref<Vec3f> result
                                         )  {
-      Vec3f bl;
-      bl << calib.baseline(), 0, 0;
+
       int u = input(0);
       int v = input(1);
-      int h = left.color().rows;
-      int w = left.color().cols;
+      int h = left.rows();
+      int w = left.cols();
 
+      return pt_depth_from_disparity(h, w, u, v, disparity,calib.intrinsic(),
+                                     calib.baseline(), result);
+
+    }
+
+    TraceStatus pt_depth_from_disparity(int h, int w, int u, int v,
+                                        const std::vector<float> & disparity,
+                                        const Eigen::Matrix3f & intrinsic,
+                                        float baseline,
+                                        // output
+                                        Eigen::Ref<Vec3f> result
+                                        )  {
+      //Vec3f bl;
+      //bl << baseline, 0, 0;
       if ( u < 1 || u > w-2 || v < 1 || v > h -2 )
         return TraceStatus::OOB;
 
       if (disparity[w * v + u] <= 0.05)
         return TraceStatus::OUTLIER;
       
-      float depth = std::abs(calib.baseline()) * calib.intrinsic()(0,0) / disparity[w * v + u];
+      float depth = std::abs(baseline) * intrinsic(0,0) / disparity[w * v + u];
 
       result << static_cast<float>(u), static_cast<float>(v), 1.0;
       
-      result = (calib.intrinsic().inverse() * result * depth).eval();
+      result = (intrinsic.inverse() * result * depth).eval();
 
       return TraceStatus::GOOD;
     
     }
+    
   }
   
   

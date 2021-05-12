@@ -34,10 +34,10 @@
 
 namespace cvo
 {
-  void select_pixels(const RawImage & raw_image,
-                     int num_want,
-                     // output
-                     std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv );
+  void dso_select_pixels(const RawImage & raw_image,
+                         int num_want,
+                         // output
+                         std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv );
 
   pcl::PointCloud<pcl::Normal>::Ptr
   compute_pcd_normals(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in, float radius);

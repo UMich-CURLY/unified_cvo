@@ -159,6 +159,7 @@ set (ACVO_CPU_SOURCE
 set (CVO_GPU_SOURCE
   ${PROJECT_SOURCE_DIR}/src/cvo/CvoGPU.cu
   ${PROJECT_SOURCE_DIR}/src/cvo/CvoState.cu
+  ${PROJECT_SOURCE_DIR}/src/cvo/CvoGPU.cpp
   )
 
 set (CVO_CPU_SOURCE
@@ -417,7 +418,7 @@ endif()
 #####################################
 ## Non-Adaptive CVO GPU
 if (${PROJECT_NAME}_ENABLE_CUDA)
-add_library(cvo_gpu_img_lib  SHARED ${CVO_GPU_SOURCE})
+add_library(cvo_gpu_img_lib SHARED ${CVO_GPU_SOURCE})
 add_dependencies(cvo_gpu_img_lib cvo_utils_lib lie_group_utils)
 target_link_libraries(cvo_gpu_img_lib PRIVATE lie_group_utils cvo_utils_lib  )
 #target_compile_definitions(cvo_gpu_img_lib ${PCL_DEFINITIONS})   
@@ -427,7 +428,7 @@ target_include_directories(cvo_gpu_img_lib PUBLIC
   "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
   #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_compile_definitions(cvo_gpu_img_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 ${PCL_DEFINITIONS})
+target_compile_definitions(cvo_gpu_img_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DCUDA_BLOCK_SIZE=1024 -DCVO_POINT_NEIGHBORS=512 ${PCL_DEFINITIONS})
 set_target_properties(cvo_gpu_img_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   CUDA_SEPERABLE_COMPILATION ON
@@ -442,7 +443,7 @@ target_include_directories(cvo_gpu_lidar_lib PUBLIC
   #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 add_dependencies(cvo_gpu_lidar_lib cvo_utils_lib lie_group_utils)
-target_compile_definitions(cvo_gpu_lidar_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 )
+target_compile_definitions(cvo_gpu_lidar_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DCUDA_BLOCK_SIZE=1024 -DCVO_POINT_NEIGHBORS=512)
 target_link_libraries(cvo_gpu_lidar_lib PRIVATE lie_group_utils cvo_utils_lib)
 set_target_properties(cvo_gpu_lidar_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
@@ -554,7 +555,11 @@ target_include_directories(cvo_indicator_in_sequence PUBLIC
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(cvo_indicator_in_sequence cvo_gpu_img_lib cvo_cpu_lib cvo_utils_lib boost_filesystem boost_system kitti)
 
-
+add_executable(cu_kd_tree_test ${PROJECT_SOURCE_DIR}/src/experiments/cu_kd_tree_test.cu)
+target_include_directories(cu_kd_tree_test PUBLIC
+      "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                  
+  )
+target_link_libraries(cu_kd_tree_test cvo_utils_lib cukdtree_lib ${PCL_LIBRARIES})
 endif()
 
 #add_executable(cvo_local_mapping ${PROJECT_SOURCE_DIR}/src/main_local_mapping.cpp )

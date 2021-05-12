@@ -2,9 +2,9 @@
 
 #include "cvo/SparseKernelMat.cuh"
 #include "cvo/CvoState.cuh"
-#include "cvo/KDTreeVectorOfVectorsAdaptor.h"
+
 #include "cvo/LieGroup.h"
-#include "cvo/nanoflann.hpp"
+
 #include "cvo/CvoParams.hpp"
 #include "utils/PointSegmentedDistribution.hpp"
 #include "cupointcloud/point_types.h"
@@ -22,6 +22,8 @@
 #include <thrust/sequence.h>
 #include <thrust/copy.h>
 
+#define EIGEN_DEFAULT_DENSE_INDEX_TYPE int
+
 #define GpuErrorCheck(ans) { gpu_assert((ans), __FILE__, __LINE__); }
 inline void gpu_assert(cudaError_t code, const char *file, int line, bool abort=true)
 {
@@ -35,7 +37,7 @@ inline void gpu_assert(cudaError_t code, const char *file, int line, bool abort=
 
 
 namespace cvo {
-  const int CUDA_BLOCK_SIZE = 128;
+  //const int CUDA_BLOCK_SIZE = 1024 ;//128;
   CvoPointCloudGPU::SharedPtr CvoPointCloud_to_gpu(const CvoPointCloud& cvo_cloud );
   CvoPointCloudGPU::SharedPtr pcl_PointCloud_to_gpu(const pcl::PointCloud<CvoPoint> & cvo_cloud );  
 

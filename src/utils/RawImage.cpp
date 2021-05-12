@@ -5,18 +5,31 @@
 
 namespace cvo {
   RawImage::RawImage(const cv::Mat & image)
-    : gradient_(image.total()),
+    : gradient_(image.total() * 2, 0),
       gradient_square_(image.total(), 0) {
     num_class_ = 0;
-    color_ = image.clone();
-    cv::fastNlMeansDenoisingColored(color_,color_,10,10,7,21);
+    image_ = image.clone();
+    rows_ = image.rows;
+    cols_ = image.cols;
+    channels_ = image.channels();
+    if (channels_==3)
+      cv::fastNlMeansDenoisingColored(image_,image_,10,10,7,21);
+    else if (channels_ == 1)
+      cv::fastNlMeansDenoising(image_,image_,10,7,21);
+    else {
+      std::cerr<<"Image channels should be 1 or 3!\n";
+      return;
+    }
     //cv::fastNlMeansDenoising (color_, color_);
-    //cv::imwrite("denoised.png", color_);
-    cv::Mat gray;
-    cv::cvtColor(color_, gray, cv::COLOR_BGR2GRAY);
-    gray.convertTo(gray, CV_32FC1);
-    intensity_.resize(color_.total());
-    memcpy(intensity_.data(), gray.data, sizeof(float) * color_.total());
+    intensity_.resize(image_.total());
+    cv::Mat gray;    
+    if (channels_ == 3) {
+      cv::cvtColor(image_, gray, cv::COLOR_BGR2GRAY);
+      gray.convertTo(gray, CV_32FC1);
+    } else {
+      image.convertTo(gray, CV_32FC1);
+    }
+    memcpy(intensity_.data(), gray.data, sizeof(float) * image_.total());      
     compute_image_gradient();
   }
 
@@ -33,26 +46,27 @@ namespace cvo {
 
   void RawImage::compute_image_gradient() {
 
-    int h = color_.rows;
-    int w = color_.cols;
 
     // calculate gradient
     // we skip the first row&col and the last row&col
-    for(int idx=w; idx<w*(h-1); idx++) {
-      if (idx % w == 0 || idx%w == w-1) {
-        gradient_[idx] << 0 ,0;
+
+    for(int idx=cols_; idx<cols_*(rows_-1); idx++) {
+      if (idx % cols_ == 0 || idx%cols_ == cols_-1) {
+        gradient_[idx * 2] = 0;
+        gradient_[idx * 2 + 1] = 0;
         gradient_square_[idx] = 0;
         continue;
       }
                 
       float dx = 0.5f*( intensity_[idx+1] - intensity_[idx-1] );
-      float dy = 0.5f*( intensity_[idx+w] - intensity_[idx-w] );
+      float dy = 0.5f*( intensity_[idx+cols_] - intensity_[idx-cols_] );
 
       // if it's not finite, set to 0
       if(!std::isfinite(dx)) dx=0;
       if(!std::isfinite(dy)) dy=0;
                 
-      gradient_[idx] << dx, dy;
+      gradient_[2*idx] = dx;
+      gradient_[2*idx+1] = dy;
       gradient_square_[idx] = dx*dx+dy*dy;
 
     }

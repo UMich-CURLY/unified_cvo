@@ -27,7 +27,7 @@
 
 
 
-#define EIGEN_DEFAULT_DENSE_INDEX_TYPE int
+
 
 
 
@@ -72,23 +72,25 @@ namespace cvo{
 
     
 
-    // callable after each align
-    /*
-    float inner_product(const CvoPointCloud& source_points,
-                        const CvoPointCloud& target_points,
-                        const Eigen::Matrix4f & source_frame_to_target_frame) const;
-    */
-    float inner_product_gpu(const CvoPointCloud& source_points,
-                            const CvoPointCloud& target_points,
-                            const Eigen::Matrix4f & T_target_frame_to_source_frame
-                            ) const;
-
     float function_angle(const CvoPointCloud& source_points,
                          const CvoPointCloud& target_points,
                          const Eigen::Matrix4f & T_target_frame_to_source_frame,
                          bool is_approximate=true) const;
+    float function_angle(const pcl::PointCloud<CvoPoint>& source_points,
+                         const pcl::PointCloud<CvoPoint>& target_points,
+                         const Eigen::Matrix4f & T_target_frame_to_source_frame,
+                         bool is_approximate=true) const;
 
-    float inner_product_cpu(const CvoPointCloud& source_points,
+    
+    float inner_product_gpu(const CvoPointCloud& source_points,
+                            const CvoPointCloud& target_points,
+                            const Eigen::Matrix4f & T_target_frame_to_source_frame
+                            ) const;
+    float inner_product_gpu(const pcl::PointCloud<CvoPoint>& source_points_pcl,
+                            const pcl::PointCloud<CvoPoint>& target_points_pcl,
+                            const Eigen::Matrix4f & init_guess_transform
+                            ) const;
+   float inner_product_cpu(const CvoPointCloud& source_points,
                             const CvoPointCloud& target_points,
                             const Eigen::Matrix4f & T_target_frame_to_source_frame
                             ) const;
