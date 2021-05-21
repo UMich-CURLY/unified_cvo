@@ -5,10 +5,12 @@
 
 #include <chrono>
 
-#define KDTREE_K_SIZE 20
+
 
 namespace perl_registration {
 
+  const int KDTREE_K_SIZE = 512;
+  
 struct TreeNode {
   int point;
   int axis;
@@ -101,7 +103,7 @@ class cuKdTree {
   size_t n_tree_points_;
 
   static constexpr int stage_pivot = 13;
-  static constexpr int thread_num = 32;
+  static constexpr int thread_num = 512;
 
   std::chrono::time_point<std::chrono::high_resolution_clock> t1_;
   std::chrono::time_point<std::chrono::high_resolution_clock> t2_;

@@ -32,6 +32,7 @@ namespace cvo {
     ~CvoState();
 
     void reset_state_at_new_iter();
+    void reset_state_at_new_iter(int num_neighbors);
         
     // shared between cpu && gpu
     double dl;
@@ -54,7 +55,10 @@ namespace cvo {
     std::shared_ptr<CvoPointCloudGPU> cloud_y_gpu;
     std::shared_ptr<CvoPointCloudGPU> cloud_y_gpu_init;
     //perl_registration::cuKdTree<CvoPoint>::SharedPtr kdtree_fixed_points;
-    //perl_registration::cuKdTree<CvoPoint>::SharedPtr kdtree_moving_points;
+    perl_registration::cuKdTree<CvoPoint>::SharedPtr kdtree_moving_points;
+    std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu_transformed_kdtree;
+    thrust::device_vector<int> kdtree_inds_results;
+    
     thrust::device_vector<double> partial_dl_gradient;
     thrust::device_vector<double> partial_dl_Ayy;
     //thrust::device_vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> omega_gpu;

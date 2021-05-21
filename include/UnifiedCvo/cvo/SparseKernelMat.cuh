@@ -56,7 +56,6 @@ namespace cvo {
     
   }
 
-
   inline float A_sum(SparseKernelMat * A_host) {
      thrust::device_ptr<float> A_ptr = thrust::device_pointer_cast(A_host->mat);
      thrust::device_vector<float> v(A_ptr, A_ptr + A_host->rows * A_host->cols );
@@ -65,6 +64,16 @@ namespace cvo {
     
   }
 
+
+  inline float A_sum(SparseKernelMat * A_host, int num_neighbors) {
+     thrust::device_ptr<float> A_ptr = thrust::device_pointer_cast(A_host->mat);
+     thrust::device_vector<float> v(A_ptr, A_ptr + A_host->rows * num_neighbors );
+     return thrust::reduce(v.begin(), v.end());
+    
+    
+  }
+
+  
   inline void clear_SparseKernelMat(SparseKernelMat * A_host) {
     //SparseKernelMat A;
     //cudaMemcpy(&A, A_gpu, sizeof(SparseKernelMat), cudaMemcpyDeviceToHost);
@@ -75,6 +84,18 @@ namespace cvo {
     cudaMemset(A_host->max_index, -1, A_host->rows * sizeof(int));
   }
 
+  inline void clear_SparseKernelMat(SparseKernelMat * A_host, int num_neighbors) {
+    //SparseKernelMat A;
+    //cudaMemcpy(&A, A_gpu, sizeof(SparseKernelMat), cudaMemcpyDeviceToHost);
+    A_host->nonzero_sum = 0;
+    cudaMemset(A_host->mat, 0, A_host->rows * num_neighbors* sizeof(float));
+    cudaMemset(A_host->ind_row2col, -1, A_host->rows * num_neighbors * sizeof(int));
+    cudaMemset(A_host->nonzeros, 0, A_host->rows * sizeof(unsigned int));
+    cudaMemset(A_host->max_index, -1, A_host->rows * sizeof(int));
+  }
+
+
+  
   inline SparseKernelMat * init_SparseKernelMat_gpu(int row, int col, SparseKernelMat & A_host) {
     SparseKernelMat *A_out; //= new SparseKernelMat;
     cudaMalloc((void **)&A_out, sizeof(SparseKernelMat));

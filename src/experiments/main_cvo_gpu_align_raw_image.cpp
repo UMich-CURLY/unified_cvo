@@ -61,8 +61,10 @@ int main(int argc, char *argv[]) {
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw, source_right, calib));
   std::cout<<"write to opcd\n";
   source->write_to_color_pcd("source.pcd");
-  
-  for (int i = start_frame; i<min(total_iters, start_frame+max_num)-1 ; i++) {
+
+  double total_time = 0;
+  int i = start_frame;
+  for (; i<min(total_iters, start_frame+max_num)-1 ; i++) {
     
     // calculate initial guess
     std::cout<<"\n\n\n\n============================================="<<std::endl;
@@ -95,7 +97,10 @@ int main(int argc, char *argv[]) {
 
     printf("Start align... num_fixed is %d, num_moving is %d\n", source->num_points(), target->num_points());
     std::cout<<std::flush;
-    cvo_align.align(*source, *target, init_guess_inv, result);
+
+    double this_time = 0;
+    cvo_align.align(*source, *target, init_guess_inv, result, &this_time);
+    total_time += this_time;
     //cvo_align.align(*source, *target, init_guess, result);
     
     // get tf and inner product from cvo getter
@@ -138,6 +143,7 @@ int main(int argc, char *argv[]) {
 
   }
 
+  std::cout<<"Average registration time is "<<total_time / (i - start_frame + 1)<<std::endl;
 
   accum_output.close();
 

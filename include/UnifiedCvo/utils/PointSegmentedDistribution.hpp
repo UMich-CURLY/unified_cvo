@@ -15,7 +15,14 @@ namespace pcl {
 
 
   template <unsigned int FEATURE_DIM, unsigned int NUM_CLASS>
-  struct PointSegmentedDistribution
+  struct
+#ifdef __CUDACC__
+  __align__(16)
+#else
+    alignas(16)
+#endif  
+
+  PointSegmentedDistribution
   {
     // data
     PCL_ADD_POINT4D;                 

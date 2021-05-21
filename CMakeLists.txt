@@ -75,8 +75,9 @@ set(CMAKE_CXX_FLAGS
 )
 
 find_package(CUDA)
-set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_61,code=sm_61  -gencode arch=compute_52,code=sm_52 -gencode arch=compute_75,code=sm_75"  )
-foreach(flag IN LISTS " -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -fPIC"  )
+#set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_61,code=sm_61  -gencode arch=compute_52,code=sm_52 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_86,code=sm_86 "  )
+set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda -gencode arch=compute_75,code=sm_75 -gencode arch=compute_86,code=sm_86 "  )
+foreach(flag IN LISTS " -use_fast_math -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -fPIC"  )
   add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${flag}>")
 endforeach()
 
@@ -221,13 +222,15 @@ target_link_libraries(kitti PUBLIC opencv_core opencv_photo opencv_highgui openc
 
 
 if (${PROJECT_NAME}_ENABLE_CUDA)
-add_library(cukdtree_lib SHARED ${CUKDTREE_LIB_SOURCE})
-target_include_directories(cukdtree_lib PUBLIC
-  #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
-  #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
-  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
-  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-  set_target_properties(cukdtree_lib PROPERTIES LINKER_LANGUAGE CUDA  CUDA_SOURCE_PROPERTY_FORMAT OBJ ) 
+  add_library(cukdtree_lib SHARED ${CUKDTREE_LIB_SOURCE})
+  target_compile_definitions(cukdtree_lib PUBLIC -DCVO_POINT_NEIGHBORS=256)  
+  target_include_directories(cukdtree_lib PUBLIC
+    #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+    #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+    "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+    $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+  set_target_properties(cukdtree_lib PROPERTIES LINKER_LANGUAGE CUDA  CUDA_SOURCE_PROPERTY_FORMAT OBJ )
+
 endif()  
 
 add_library(lie_group_utils SHARED ${LIE_GROUP_SOURCE})
@@ -428,7 +431,7 @@ target_include_directories(cvo_gpu_img_lib PUBLIC
   "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
   #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_compile_definitions(cvo_gpu_img_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DCUDA_BLOCK_SIZE=1024 -DCVO_POINT_NEIGHBORS=512 ${PCL_DEFINITIONS})
+target_compile_definitions(cvo_gpu_img_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=256 ${PCL_DEFINITIONS})
 set_target_properties(cvo_gpu_img_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   CUDA_SEPERABLE_COMPILATION ON
@@ -443,7 +446,7 @@ target_include_directories(cvo_gpu_lidar_lib PUBLIC
   #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 add_dependencies(cvo_gpu_lidar_lib cvo_utils_lib lie_group_utils)
-target_compile_definitions(cvo_gpu_lidar_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DCUDA_BLOCK_SIZE=1024 -DCVO_POINT_NEIGHBORS=512)
+target_compile_definitions(cvo_gpu_lidar_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=256)
 target_link_libraries(cvo_gpu_lidar_lib PRIVATE lie_group_utils cvo_utils_lib)
 set_target_properties(cvo_gpu_lidar_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON

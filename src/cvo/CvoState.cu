@@ -76,7 +76,7 @@ namespace cvo {
     if (cvo_params.is_full_ip_matrix)
       A_cols = Axx_cols = target_points->size();
     else 
-      A_cols = Axx_cols = CVO_POINT_NEIGHBORS;
+      A_cols = Axx_cols = cvo_params.nearest_neighbors_max;
     
     A = init_SparseKernelMat_gpu(A_rows, A_cols, A_host);
     if(is_ell_adaptive) {
@@ -92,6 +92,21 @@ namespace cvo {
     cloud_x_gpu = source_points;
     cloud_y_gpu_init = target_points;
     cloud_y_gpu.reset(new CvoPointCloudGPU(num_moving ) );
+
+    if (cvo_params.is_using_kdtree) {
+      kdtree_moving_points.reset(new perl_registration::cuKdTree<CvoPoint> );
+      kdtree_moving_points->SetInputCloud(cloud_y_gpu_init);
+      cloud_x_gpu_transformed_kdtree.reset(new CvoPointCloudGPU(num_fixed));
+      kdtree_inds_results.resize(cvo_params.is_using_kdtree * num_fixed);
+    }
+    cudaDeviceSynchronize();    
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) { 
+      fprintf(stderr, "Failed to run CvoState Init %s .\n", cudaGetErrorString(err)); 
+      exit(EXIT_FAILURE); 
+    }
+    
+    
 
   }
 
@@ -118,6 +133,26 @@ namespace cvo {
       cudaMemset( (void*)Axx_host.ind_row2col , -1 , sizeof(int )* Axx_host.rows * Axx_host.cols);
       cudaMemset( (void*)Ayy_host.mat, 0, sizeof(float) * Ayy_host.rows * Ayy_host.cols  );
       cudaMemset( (void*)Ayy_host.ind_row2col , -1 , sizeof(int )* Ayy_host.rows * Ayy_host.cols );
+    }
+
+    if (kdtree_moving_points) {
+      cudaMemset(thrust::raw_pointer_cast(kdtree_inds_results.data()), -1, sizeof(int) * kdtree_inds_results.size()   );
+    }
+  }
+
+  void CvoState::reset_state_at_new_iter (int num_neighbors) {
+
+    clear_SparseKernelMat(&A_host, num_neighbors);
+    
+    if (is_ell_adaptive) {
+      cudaMemset( (void*)Axx_host.mat, 0, sizeof(float) * Axx_host.rows * num_neighbors  );
+      cudaMemset( (void*)Axx_host.ind_row2col , -1 , sizeof(int )* Axx_host.rows * num_neighbors);
+      cudaMemset( (void*)Ayy_host.mat, 0, sizeof(float) * Ayy_host.rows * num_neighbors );
+      cudaMemset( (void*)Ayy_host.ind_row2col , -1 , sizeof(int )* Ayy_host.rows * num_neighbors );
+    }
+
+    if (kdtree_moving_points) {
+      cudaMemset(thrust::raw_pointer_cast(kdtree_inds_results.data()), -1, sizeof(int) * kdtree_inds_results.size()   );
     }
   }
 

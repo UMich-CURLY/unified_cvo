@@ -19,11 +19,11 @@ void run_test() {
   std::mt19937 gen(rd());
   pcl::PointCloud<pcl::PointXYZ> pc;
 
-  for (size_t i = 0; i < 12500; i++) {
-    pcl::PointXYZ p(d(gen), d(gen), d(gen));
+  for (size_t i = 0; i < 100; i++) {
+    pcl::PointXYZ p(i , 0, 0);
     pc.push_back(p);
   }
-  int loops = 100;
+  int loops = 1;
 
   auto d_pc = std::make_shared<
       perl_registration::cuPointCloud<perl_registration::cuPointXYZ>>(pc);
@@ -37,18 +37,20 @@ void run_test() {
   perl_registration::cuKdTree<perl_registration::cuPointXYZ> kd_tree;
   kd_tree.SetInputCloud(d_pc);
   
-  for (int i = 0 ; i < loops; i++) {
+
     
-    pcl::PointCloud<pcl::PointXYZ> query;
-    pcl::PointXYZ q(d(gen), d(gen), d(gen));
-    query.push_back(q);
-    auto d_query = std::make_shared<
-      perl_registration::cuPointCloud<perl_registration::cuPointXYZ>>(query);
+  pcl::PointCloud<pcl::PointXYZ> query;
+  pcl::PointXYZ q(0, 1, 0);
+  query.push_back(q);
+  pcl::PointXYZ q2 (10.5,2,2);
+  query.push_back(q2);
+  auto d_query = std::make_shared<
+    perl_registration::cuPointCloud<perl_registration::cuPointXYZ>>(query);
     
-    thrust::device_vector<int> results;
-    kd_tree.NearestKSearch(d_query, KDTREE_K_SIZE, results);
-    r = results[0];
-  }
+  thrust::device_vector<int> results;
+  kd_tree.NearestKSearch(d_query, 3, results);
+    //r = results[0];
+
   cudaEventRecord(stop, 0);
   cudaEventSynchronize(stop);
   float elapsedTime2d, totalTime2d;
@@ -58,12 +60,16 @@ void run_test() {
   totalTime2d = elapsedTime2d/(1000*loops);
   printf("2D: thrust time = %f\n", totalTime2d);
 
-  perl_registration::cuPointXYZ p = d_pc->points[r];
+  for (int i = 0 ; i < 6; i++) {
+    perl_registration::cuPointXYZ p = d_pc->points[i];
 
-  std::cout << "cuKdTREE\n";
-  std::cout << "Nearest Neighbor is Index " << r
-            << " and has cordinates x: " << p.x << " y: " << p.y
-            << " z: " << p.z << std::endl;
+
+    std::cout << "cuKdTREE\n";
+    std::cout << "Nearest Neighbor is Index  " << results[i] 
+              << " and has cordinates x: " << p.x << " y: " << p.y
+              << " z: " << p.z << std::endl <<"\n";
+  }
+  
   /*
   std::cout<<"PCL\n";
   pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;

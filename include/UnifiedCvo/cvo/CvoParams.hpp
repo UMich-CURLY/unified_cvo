@@ -32,14 +32,17 @@ namespace cvo {
     float max_step;
     float step;         // integration step size
 
+    int nearest_neighbors_max;
     float ell_decay_rate;
-
+    
     float ell_decay_rate_first_frame;
     int ell_decay_start;
     int ell_decay_start_first_frame;
     
     int indicator_window_size;
     float indicator_stable_threshold;
+
+    
     int is_pcl_visualization_on;
     int is_using_least_square;
     
@@ -51,6 +54,7 @@ namespace cvo {
     int is_using_intensity;
     int is_using_semantics;
     int is_using_range_ell;
+    int is_using_kdtree;
     CvoParams() :
       ell_init_first_frame(0.5),
       ell_init(0.5),
@@ -84,7 +88,9 @@ namespace cvo {
       is_using_geometry(1),
       is_using_intensity(0),
       is_using_semantics(0),
-      is_using_range_ell(0)
+      is_using_range_ell(0),
+      is_using_kdtree(0),
+      nearest_neighbors_max(512)
     {}
     
   };
@@ -135,6 +141,8 @@ namespace cvo {
     params->is_using_intensity = (int) fs["is_using_intensity"];
     params->is_using_semantics = (int) fs["is_using_semantics"];
     params->is_using_range_ell = (int) fs["is_using_range_ell"];
+    params->is_using_kdtree = (int) fs["is_using_kdtree"];
+    params->nearest_neighbors_max = (int)fs["nearest_neighbors_max"];
     
     std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<", indicator window size is "<<params->indicator_window_size<<std::endl;
     fs.release();
