@@ -48,7 +48,7 @@ namespace cvo{
   typedef Eigen::Triplet<float> Trip_t;
 
   static bool is_logging = false;
-  static bool debug_print = true;
+  static bool debug_print = false;
 
 
   
