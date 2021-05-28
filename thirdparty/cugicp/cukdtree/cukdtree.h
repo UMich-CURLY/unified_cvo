@@ -9,7 +9,7 @@
 
 namespace perl_registration {
 
-  const int KDTREE_K_SIZE = 512;
+  const int KDTREE_K_SIZE = 32;
   
 struct TreeNode {
   int point;

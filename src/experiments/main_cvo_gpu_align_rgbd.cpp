@@ -56,14 +56,17 @@ int main(int argc, char *argv[]) {
 
   cv::Mat source_rgb, source_dep;
   tum.read_next_rgbd(source_rgb, source_dep);
-  std::vector<uint16_t> source_dep_data(source_dep.total());
-  source_dep_data.assign(source_dep.data, source_dep.data + source_dep.total());
+  std::vector<uint16_t> source_dep_data(source_dep.begin<uint16_t>(), source_dep.end<uint16_t>());
+
   //std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_rgb, source_dep,
                                                     //19, semantics_source, 
   //                                                  calib, 1));
   //0.2));
   std::shared_ptr<cvo::RawImage> source_raw(new cvo::RawImage(source_rgb));
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw, source_dep_data, calib));
+
+  source->write_to_color_pcd("source.pcd");
+  
   for (int i = start_frame; i<min(total_iters, start_frame+max_num)-1 ; i++) {
     
     // calculate initial guess
@@ -77,15 +80,14 @@ int main(int argc, char *argv[]) {
       std::cout<<"finish all files\n";
       break;
     }
-    std::vector<uint16_t> target_dep_data(dep.total());
-    target_dep_data.assign(dep.data, dep.data + dep.total());
-    
+    std::vector<uint16_t> target_dep_data(dep.begin<uint16_t>(), dep.end<uint16_t>());    
 
 
     //std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, rgb, dep, calib,1));
     std::shared_ptr<cvo::RawImage> target_raw(new cvo::RawImage(rgb));
     std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, target_dep_data, calib));
-  
+    if (i == 0)
+      target->write_to_color_pcd("target.pcd");  
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
 
     Eigen::Matrix4f result, init_guess_inv;

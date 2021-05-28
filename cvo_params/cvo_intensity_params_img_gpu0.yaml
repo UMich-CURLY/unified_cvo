@@ -19,6 +19,7 @@ min_step: 0.000001
 max_step: 0.01
 eps: 0.00005
 eps_2: 0.000012
+nearest_neighbors_max: 256
 ell_decay_rate: 0.95 #0.98
 ell_decay_rate_first_frame: 0.99
 ell_decay_start: 60 #300 #60
@@ -32,3 +33,5 @@ is_using_geometry: 1
 is_using_intensity: 1
 is_using_semantics: 0
 is_using_range_ell: 0
+is_using_kdtree: 0
+
