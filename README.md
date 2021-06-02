@@ -59,11 +59,25 @@ target_compile_definitions(cvo_align_gpu_img PRIVATE -DNUM_CLASSES=19 -DFEATURE_
 target_link_libraries(cvo_align_gpu_img cvo_gpu_img_lib cvo_utils_lib kitti  boost_filesystem boost_system) 
 ```
 
-#### Example calibration file (cvo_calib.txt)     fx fy cx cy  baseline  image_width image_height
+#### Example [experiment code for TUM RGB-D](https://github.com/UMich-CURLY/unified_cvo/blob/release/src/experiments/main_cvo_gpu_align_rgbd.cpp) 
+```
+add_executable(cvo_align_gpu_rgbd ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_rgbd.cpp)
+target_include_directories(cvo_align_gpu_rgbd PUBLIC
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_align_gpu_rgbd cvo_gpu_img_lib cvo_cpu_lib tum cvo_utils_lib boost_filesystem boost_system)
+```
+
+#### Example stereo calibration file (cvo_calib.txt)     fx fy cx cy  baseline  image_width image_height
 
 `707.0912 707.0912 601.8873 183.1104 0.54 1226 370`
 
-#### Example [parameter file for geometry registration](https://github.com/UMich-CURLY/unified_cvo/blob/release/cvo_params/cvo_geometric_params_img_gpu0.yaml): 
+#### Example rgbd calibration file (cvo_calib.txt)     fx fy cx cy  depth_scale  image_width image_height
+
+`707.0912 707.0912 601.8873 183.1104 5000 1226 370`
+
+
+#### Example [parameter file for geometry stereo registration](https://github.com/UMich-CURLY/unified_cvo/blob/release/cvo_params/cvo_geometric_params_img_gpu0.yaml): 
 
 ```%YAML:1.0                                                                                                                                
 ---                                                                                                                                   
