@@ -32,3 +32,5 @@ is_using_geometry: 1
 is_using_intensity: 1
 is_using_semantics: 1
 is_using_range_ell: 0
+is_using_kdtree: 0
+nearest_neighbors_max: 256
