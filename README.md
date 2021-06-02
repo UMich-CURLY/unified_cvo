@@ -1,7 +1,7 @@
 # Unified CVO (Continuous Visual Odometry)
 
 ### Dockerfile to help resolve dependencies
-[Docker file for building CVO](https://github.com/UMich-BipedLab/docker_images/tree/master/cvo_gpu)
+[Docker file for building CVO](https://github.com/UMich-CURLY/docker_images/tree/master/cvo_gpu)
 
 Follow it to first get a cuda10 environment. 
 
@@ -15,7 +15,6 @@ Follow it to first get a cuda10 environment.
 * `Boost 1.65` (already in docker)
 * `pcl 1.9.1` (built from source)
 * `OpenCV3` or `OpenCV4` (already in docker)
-* `GTSAM` (`default branch`, already in docker)
 
 Note: 'pcl-1.9.1' need to be changed and compiled to get it working with cuda. 
 * `pcl/io/boost.h`: add `#include <boost/numeric/conversion/cast.hpp>` at the end of the file before `#endif`
@@ -45,7 +44,7 @@ Compile the CvoGPU library for a customized stereo point cloud with 5 dimension 
 ```
 add_library(cvo_gpu_img_lib ${CVO_GPU_SOURCE})                                                               
 target_link_libraries(cvo_gpu_img_lib PRIVATE lie_group_utils cvo_utils_lib  )                               
-target_compile_definitions(cvo_gpu_img_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)                  
+target_compile_definitions(cvo_gpu_img_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)   # Note: Change FEATURE_DIMENSIONS to 3 (intensity, gradient_x, gradient_y) if you are using a monochrome stereo camera                
 set_target_properties(cvo_gpu_img_lib PROPERTIES                                                               
 POSITION_INDEPENDENT_CODE ON                                                                                 
 CUDA_SEPERABLE_COMPILATION ON                                                                                 
@@ -92,14 +91,16 @@ ell_decay_rate_first_frame: 0.99
 ell_decay_start: 60                                                                                                                           
 ell_decay_start_first_frame: 600  #2000                                                                                                                 
 indicator_window_size: 50                                                                                                                        
-indicator_stable_threshold: 0.001 #0.002                                                                                                                
+indicator_stable_threshold: 0.001 #0.002 
+nearest_neighbors_max: 256 
 is_ell_adaptive: 0                                                                                                                           
 is_dense_kernel: 0                                                                                                                           
 is_full_ip_matrix: 0                                                                                                                          
 is_using_geometry: 1            # if geoemtric kernel is computed k(x,z)                                                                                                                       
 is_using_intensity: 0           # if color kernel is computed <l_x, l_z>. Enable it if using color info                                                                                                              
 is_using_semantics: 0           # if semantic kernel is computed. Enable it if using semantics                                                                                                                        
-is_using_range_ell: 0 ```
+is_using_range_ell: 0 
+is_using_kdtree: 0
 ```
 
 #### Headers 
