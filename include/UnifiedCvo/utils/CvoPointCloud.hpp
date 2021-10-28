@@ -34,7 +34,6 @@ namespace cvo {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
-
     enum PointSelectionMethod {
       CV_FAST,
       RANDOM,
@@ -75,10 +74,11 @@ namespace cvo {
                   PointSelectionMethod pt_selection_method=LOAM);
 
     
+    CvoPointCloud(const CvoPointCloud & to_copy);
     
-
     // Not recommended: Image Gradient is empty
-    CvoPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc);    
+    template <typename PointT>
+    CvoPointCloud(const pcl::PointCloud<PointT> & pc);    
 
     /*
     CvoPointCloud(pcl::PointCloud<pcl::PointXYZIR>::Ptr pc,
@@ -111,6 +111,7 @@ namespace cvo {
 
     // getters
     int num_points() const {return num_points_;}
+    int size() const {return num_points_;}
     int num_classes() const {return num_classes_;}
     int feature_dimensions() const {return feature_dimensions_;}
     //const Eigen::Matrix<float, Eigen::Dynamic, 3> & positions() const {return positions_;}
@@ -124,7 +125,7 @@ namespace cvo {
     //const std::vector<float> & covariance()  const {return covariance_;}
     //const std::vector<float> & eigenvalues() const {return eigenvalues_;}
 
-    // for visualization via pcl_viewer
+    void export_to_color_pcd(pcl::PointCloud<pcl::PointXYZRGB> & output) const;
     void write_to_color_pcd(const std::string & name) const;
     void write_to_label_pcd(const std::string & name) const;
     void write_to_pcd(const std::string & name) const;

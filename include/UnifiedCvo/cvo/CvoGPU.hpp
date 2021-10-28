@@ -6,7 +6,7 @@
 
 #include "utils/CvoPointCloud.hpp"
 #include "utils/CvoPoint.hpp"
-//#include "utils/PointSegmentedDistribution.hpp"
+#include "utils/CvoFrame.hpp"
 
 #include <vector>
 #include <string.h>
@@ -24,11 +24,6 @@
 #include <Eigen/Cholesky> 
 #include <unsupported/Eigen/MatrixFunctions>
 #include <Eigen/StdVector>
-
-
-
-
-
 
 
 namespace cvo{
@@ -49,11 +44,6 @@ namespace cvo{
     CvoParams & get_params() {return params;}
     void write_params(CvoParams * p_cpu);
     
-    /**
-     * @brief align two rgbd pointcloud
-     *        the function will iterate MAX_ITER times unless break conditions are met
-     *        return 0 if sucess. return -1 if fails
-     */
     int align(// inputs
               const CvoPointCloud& source_points,
               const CvoPointCloud& target_points,
@@ -69,6 +59,16 @@ namespace cvo{
               // outputs
               Eigen::Ref<Eigen::Matrix4f> transform,
               double *registration_seconds=nullptr ) const;
+
+    int align(// inputs
+              //const std::vector<pcl::PointCloud<CvoPoint>> & pcs,
+              //const std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> & poses_in,
+              std::vector<CvoFrame::Ptr> & frames,  // point clouds, poses, the outputs are within
+              const std::list<std::pair<CvoFrame::Ptr, CvoFrame::Ptr>> & edges,
+              // outputs
+              //std::vector<Eigen::Ref<Eigen::Matrix4f>> poses_out,
+              double *registration_seconds=nullptr
+              ) const;
 
     
 
@@ -90,7 +90,7 @@ namespace cvo{
                             const pcl::PointCloud<CvoPoint>& target_points_pcl,
                             const Eigen::Matrix4f & init_guess_transform
                             ) const;
-   float inner_product_cpu(const CvoPointCloud& source_points,
+    float inner_product_cpu(const CvoPointCloud& source_points,
                             const CvoPointCloud& target_points,
                             const Eigen::Matrix4f & T_target_frame_to_source_frame
                             ) const;

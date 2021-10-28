@@ -700,7 +700,7 @@ namespace cvo{
 
   void cvo::compute_step_size(){
     // compute skew matrix
-    Eigen::Matrix3f omega_hat = skew(omega);
+    Eigen::Matrix3f omega_hat = skew<float, Eigen::ColMajor>(omega);
     
     // compute xi*z+v, xi^2*z+xi*v, xi^3*z+xi^2*v, xi^4*z+xi^3*v
     Eigen::MatrixXf xiz(num_moving,3);

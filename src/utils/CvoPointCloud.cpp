@@ -342,16 +342,17 @@ namespace cvo{
  
   }
 
-  CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc) {
-    num_points_ = pc->size();
+  template <>
+  CvoPointCloud::CvoPointCloud<pcl::PointXYZRGB>(const pcl::PointCloud<pcl::PointXYZRGB> & pc) {
+    num_points_ = pc.size();
     num_classes_ = 0;
     feature_dimensions_ = 3;
 
-    positions_.resize(pc->size());
+    positions_.resize(pc.size());
     features_.resize(num_points_, feature_dimensions_);
     for (int i = 0; i < num_points_; i++) {
       Eigen::Vector3f xyz;
-      auto & p = (*pc)[i];
+      auto & p = (pc)[i];
       xyz << p.x, p.y, p.z;
       positions_[i] = xyz;
 
@@ -362,7 +363,8 @@ namespace cvo{
     }
     
   }
-  
+
+  //template CvoPointCloud::CvoPointCloud<pcl::PointXYZRGB>(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc);
 
   
   CvoPointCloud::CvoPointCloud(const RawImage & left_image,
@@ -462,6 +464,16 @@ namespace cvo{
       }
 
     }
+  }
+
+  CvoPointCloud::CvoPointCloud(const CvoPointCloud & input) {
+    num_points_ = input.num_points_;
+    num_classes_ = input.num_classes_;
+    feature_dimensions_ = input.feature_dimensions_;
+
+    positions_ = input.positions_;
+    features_ = input.features_;
+    labels_ = input.labels_;
   }
   
 
@@ -683,6 +695,13 @@ namespace cvo{
 
   void CvoPointCloud::write_to_color_pcd(const std::string & name) const {
     pcl::PointCloud<pcl::PointXYZRGB> pc;
+    export_to_color_pcd(pc);
+    pcl::io::savePCDFileASCII(name ,pc);  
+  }
+
+  void CvoPointCloud::export_to_color_pcd(pcl::PointCloud<pcl::PointXYZRGB> & pc)  const {
+    /*
+
     std::unordered_map<int, std::tuple<uint8_t, uint8_t, uint8_t>> label2color;
     label2color[0]  =std::make_tuple(128, 64,128 ); // road
     label2color[1]  =std::make_tuple(244, 35,232 ); // sidewalk
@@ -704,7 +723,7 @@ namespace cvo{
     label2color[17]  =std::make_tuple( 0,  0,230 ); // background
     label2color[18]  =std::make_tuple(119, 11, 32 ); // background
 
-
+    */
     for (int i = 0; i < num_points_; i++) {
       pcl::PointXYZRGB p;
       p.x = positions_[i]( 0);
@@ -727,8 +746,8 @@ namespace cvo{
       p.rgb = *reinterpret_cast<float*>(&rgb);
       pc.push_back(p);
     }
-    pcl::io::savePCDFileASCII(name ,pc);  
-  }
+    
+  }  
 
   void CvoPointCloud::write_to_pcd(const std::string & name) const {
     pcl::PointCloud<pcl::PointXYZ> pc;

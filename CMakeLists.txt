@@ -25,10 +25,10 @@ endif()
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # Release Mode
-set(CMAKE_BUILD_TYPE Release)
+#set(CMAKE_BUILD_TYPE Release)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -O3 -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -lmkl_intel_lp64 -lmkl_core -lmkl -liomp -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
-#set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Debug)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -g  -msse -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}   -march=native" )
 #set(BUILD_TYPE RelWithDebInfo)
@@ -53,7 +53,7 @@ find_package(TBB REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread timer chrono filesystem)
 find_package(PCL REQUIRED)
 find_package(OpenCV REQUIRED)
-#find_package(GTSAM REQUIRED)
+find_package(Ceres REQUIRED)
 find_package(OpenMP)
 #find_package(VTK REQUIRED)
 #include(${VTK_USE_FILE})
@@ -166,6 +166,10 @@ set (CVO_GPU_SOURCE
 set (CVO_CPU_SOURCE
   ${PROJECT_SOURCE_DIR}/src/cvo/Cvo.cpp
   )
+
+set (CVO_IRLS_SOURCE
+  ${PROJECT_SOURCE_DIR}/src/cvo/IRLS_State_CPU.cpp
+  ${PROJECT_SOURCE_DIR}/src/cvo/IRLS.cpp)
 
 
 set (CVO_INCLUDE_DIRS
@@ -282,7 +286,17 @@ target_include_directories(cvo_cpu_lib PUBLIC
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
 	"$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_link_libraries(cvo_cpu_lib PRIVATE  lie_group_utils ${TBB_LIBRARIES} pcl_io pcl_search pcl_visualization cxsparse)
+      target_link_libraries(cvo_cpu_lib PRIVATE  lie_group_utils ${TBB_LIBRARIES} pcl_io pcl_search pcl_visualization cxsparse)
+
+add_library(cvo_irls_lib SHARED ${CVO_IRLS_SOURCE} )
+target_include_directories(cvo_irls_lib PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+	"$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+      target_link_libraries(cvo_irls_lib PRIVATE  lie_group_utils ${TBB_LIBRARIES} pcl_io pcl_search pcl_visualization cxsparse Ceres::ceres)
+
+    
 
 if (${PROJECT_NAME}_ENABLE_LIDAR)
 #add_library(cvo_cpu_loam_lib SHARED ${CVO_CPU_SOURCE} )
@@ -423,7 +437,7 @@ endif()
 if (${PROJECT_NAME}_ENABLE_CUDA)
 add_library(cvo_gpu_img_lib SHARED ${CVO_GPU_SOURCE})
 add_dependencies(cvo_gpu_img_lib cvo_utils_lib lie_group_utils)
-target_link_libraries(cvo_gpu_img_lib PRIVATE lie_group_utils cvo_utils_lib  )
+target_link_libraries(cvo_gpu_img_lib PRIVATE lie_group_utils cvo_utils_lib cvo_irls_lib )
 #target_compile_definitions(cvo_gpu_img_lib ${PCL_DEFINITIONS})   
 #set_target_properties(cvo_gpu_img_lib PROPERTIES PUBLIC_HEADER "${CVO_PUBLIC_HEADERS}")
 target_include_directories(cvo_gpu_img_lib PUBLIC
@@ -447,7 +461,7 @@ target_include_directories(cvo_gpu_lidar_lib PUBLIC
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 add_dependencies(cvo_gpu_lidar_lib cvo_utils_lib lie_group_utils)
 target_compile_definitions(cvo_gpu_lidar_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=256)
-target_link_libraries(cvo_gpu_lidar_lib PRIVATE lie_group_utils cvo_utils_lib)
+target_link_libraries(cvo_gpu_lidar_lib PRIVATE lie_group_utils cvo_utils_lib cvo_irls_lib)
 set_target_properties(cvo_gpu_lidar_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
     CUDA_SEPERABLE_COMPILATION ON
@@ -506,6 +520,15 @@ target_include_directories(cvo_align_gpu_img PUBLIC
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(cvo_align_gpu_img cvo_gpu_img_lib cvo_utils_lib kitti  boost_filesystem boost_system)
+
+add_executable(cvo_irls_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_pcd.cpp)
+target_include_directories(cvo_irls_pcd PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_irls_pcd cvo_gpu_img_lib cvo_irls_lib cvo_utils_lib kitti  boost_filesystem boost_system)
+
 
 add_executable(cvo_align_gpu_semantic_img ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_semantic_image.cpp)
 target_include_directories(cvo_align_gpu_semantic_img PUBLIC

@@ -4,12 +4,16 @@
 #include "cvo/nanoflann.hpp"
 #include "cvo/CvoParams.hpp"
 #include "cvo/CvoGPU.hpp"
-#include <tbb/tbb.h>
+#include "cvo/IRLS_State.hpp"
+#include "cvo/IRLS_State_CPU.hpp"
 #include "cvo/KDTreeVectorOfVectorsAdaptor.h"
+#include "cvo/IRLS.hpp"
+#include <tbb/tbb.h>
+#include <memory>
 #include <pcl/point_cloud.h>
 #include <Eigen/Dense>
 #include <cstdlib>
-
+#include <chrono>
 
 namespace cvo {
   typedef Eigen::Triplet<float> Trip_t;
@@ -184,6 +188,58 @@ namespace cvo {
 
     return A_mat.sum();
   }
+
+
+  static
+  void align_multi_cpu_impl(std::vector<CvoFrame::Ptr> & frames,
+                            const std::list<std::pair<CvoFrame::Ptr, CvoFrame::Ptr>> & edges,
+                            const CvoParams & params
+                            ) {
+    std::list<BinaryState::Ptr> binary_states;
+    for (auto && p : edges) {
+      auto & f1 = p.first;
+      auto & f2 = p.second;
+      BinaryStateCPU::Ptr new_binary_state(new BinaryStateCPU(f1, f2, &params));
+      binary_states.push_back(std::dynamic_pointer_cast<BinaryState>(new_binary_state));
+    }
+
+    CvoBatchIRLS batch_irls_problem(frames, binary_states, frames[0].get(), &params);
+
+    batch_irls_problem.solve();
+  }
+
+  
+  int CvoGPU::align(// inputs
+                    //const std::vector<pcl::PointCloud<CvoPoint>> & pcs,
+                    //const std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> & poses_in,
+                    std::vector<CvoFrame::Ptr> & frames,
+                    const std::list<std::pair<CvoFrame::Ptr, CvoFrame::Ptr>> & edges,
+                    // outputs
+                    //std::vector<Eigen::Ref<Eigen::Matrix4f>> poses_out,
+                    double *registration_seconds
+            
+                    ) const {
+
+
+    if (params.is_using_cpu) {
+      
+      auto start = std::chrono::system_clock::now();
+      
+      align_multi_cpu_impl(frames, edges, params);
+      
+      auto end = std::chrono::system_clock::now();
+      auto t_all = end - start;
+      if (registration_seconds)
+        *registration_seconds = (double)t_all.count();
+      return 0;
+    }
+    else {
+      std::cerr<<"Not implemented ERR\n";
+      return -1;
+    }
+    
+  }
+
 
 
 }

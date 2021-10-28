@@ -1810,12 +1810,6 @@ namespace cvo{
       fz_norm = sqrt(inner_product_gpu(target_points, target_points, identity));
     }
     cosine_value = fxfz / (fx_norm * fz_norm);    
-    /*std::cout<<"--- function_angle ---"<<std::endl;
-    std::cout<<"fxfz = "<<fxfz<<std::endl;
-    std::cout<<"fx_norm = "<<fx_norm<<std::endl;
-    std::cout<<"fz_norm = "<<fz_norm<<std::endl;
-    std::cout<<"cosine_value = "<<cosine_value<<std::endl;
-    */
     return cosine_value;
   }
 
@@ -1846,56 +1840,14 @@ namespace cvo{
   }
 
 
-  /*
-  
-  
-    void CvoGPU::transform_pcd(CvoData & cvo_data, const & Mat33f R, const & Vec3f &T) {
+  void fill_in_A_mat_multi_impl (// input
+                                 const CvoParams * cvo_params,
+                                 CvoPoint ** points_all,
+                                 int * start_ind_all,
+                                 int num_neighbors,
+                                 float ell_curr,
+                                 // output
+                                 SparseKernelMat * A_mat) {
     
-    tbb::parallel_for(int(0), cvo_data.num_moving, [&]( int j ){
-    (cvo_data.cloud_y)[j] = R*cvo_data.ptr_moving_pcd->positions()[j]+T;
-    });
-    
-    }
-    std::unique_ptr<CvoData> cvo::set_pcd(const CvoPointCloud& source_points,
-    const CvoPointCloud& target_points,
-    const Eigen::Matrix4f & init_guess_transform,
-    bool is_using_init_guess,
-    float ell_init_val,
-    Eigen::Ref<Mat33f> R,
-    Eigen::Ref<Vec3f> T
-    ) const  {
-    std::unique_ptr<CvoData> cvo_data(new CvoData(source_points, target_points,ell_init_val));
-    // std::cout<<"fixed[0] \n"<<ptr_fixed_pcd->positions()[0]<<"\nmoving[0] "<<ptr_moving_pcd->positions()[0]<<"\n";
-    // std::cout<<"fixed[0] \n"<<(*cloud_x)[0]<<"\nmoving[0] "<<(*cloud_y)[0]<<"\n";
-    // std::cout<<"fixed[0] features \n "<<ptr_fixed_pcd->features().row(0)<<"\n  moving[0] feature "<<ptr_moving_pcd->features().row(0)<<"\n";
-    // std::cout<<"init cvo: \n"<<transform.matrix()<<std::endl;
-    Aff3f transform = init_guess_transform;
-    R = transform.linear();
-    T = transform.translation();
-    std::cout<<"[Cvo ] the init guess for the transformation is \n"
-    <<transform.matrix()<<std::endl;
-    if (is_logging) {
-    auto & Tmat = transform.matrix();
-    fprintf(init_guess_file, "%.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f\n",
-    Tmat(0,0), Tmat(0,1), Tmat(0,2), Tmat(0,3),
-    Tmat(1,0), Tmat(1,1), Tmat(1,2), Tmat(1,3),
-    Tmat(2,0), Tmat(2,1), Tmat(2,2), Tmat(2,3)
-    );
-    fflush(init_guess_file);
-    }
-    return std::move(cvo_data);
-    }
-  
-    float cvo::inner_product() const {
-    return A.sum()/num_fixed*1e6/num_moving;
-    }
-    float cvo::inner_product_normalized() const {
-    return A.sum()/A.nonZeros();
-    // return A.sum()/num_fixed*1e6/num_moving;
-    }
-    int cvo::number_of_non_zeros_in_A() const{
-    std::cout<<"num of non-zeros in A: "<<A.nonZeros()<<std::endl;
-    return A.nonZeros();
-    }
-  */
+  }
 }

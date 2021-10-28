@@ -56,7 +56,8 @@ namespace cvo{
 #define MatToDynamic(x) MatXX(x)
 
 
-
+  typedef Eigen::Matrix<double, 3, 4, Eigen::RowMajor> Mat34d_row;
+  typedef Eigen::Matrix<double, 4, 4, Eigen::RowMajor> Mat44d_row;
   typedef Eigen::Matrix<double,CPARS,10> MatC10;
   typedef Eigen::Matrix<double,10,10> Mat1010;
   typedef Eigen::Matrix<double,13,13> Mat1313;
@@ -101,6 +102,9 @@ namespace cvo{
   typedef Eigen::Vector2i Vec2i;
   typedef Eigen::Vector3i Vec3i;
 
+  typedef Eigen::Matrix<double, 1, 4> Vec4d_row;
+  typedef Eigen::Matrix<double, 1, 12> Vec12d_row;
+  
 
   typedef Eigen::Matrix<double,4,9> Mat49;
   typedef Eigen::Matrix<double,8,9> Mat89;

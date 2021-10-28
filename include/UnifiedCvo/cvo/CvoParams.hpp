@@ -55,6 +55,8 @@ namespace cvo {
     int is_using_semantics;
     int is_using_range_ell;
     int is_using_kdtree;
+
+    int is_using_cpu;
     CvoParams() :
       ell_init_first_frame(0.5),
       ell_init(0.5),
@@ -90,6 +92,7 @@ namespace cvo {
       is_using_semantics(0),
       is_using_range_ell(0),
       is_using_kdtree(0),
+      is_using_cpu(1),
       nearest_neighbors_max(512)
     {}
     
@@ -142,6 +145,12 @@ namespace cvo {
     params->is_using_semantics = (int) fs["is_using_semantics"];
     params->is_using_range_ell = (int) fs["is_using_range_ell"];
     params->is_using_kdtree = (int) fs["is_using_kdtree"];
+
+    //if (fs.find("is_using_cpu") != fs.end()) {
+    params->is_using_cpu = (int) fs["is_using_cpu"];
+    //} else
+    //  params->is_using_cpu = 1;
+    
     params->nearest_neighbors_max = (int)fs["nearest_neighbors_max"];
     
     std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<", indicator window size is "<<params->indicator_window_size<<std::endl;
