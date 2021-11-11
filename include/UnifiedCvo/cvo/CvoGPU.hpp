@@ -61,12 +61,9 @@ namespace cvo{
               double *registration_seconds=nullptr ) const;
 
     int align(// inputs
-              //const std::vector<pcl::PointCloud<CvoPoint>> & pcs,
-              //const std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> & poses_in,
               std::vector<CvoFrame::Ptr> & frames,  // point clouds, poses, the outputs are within
               const std::list<std::pair<CvoFrame::Ptr, CvoFrame::Ptr>> & edges,
               // outputs
-              //std::vector<Eigen::Ref<Eigen::Matrix4f>> poses_out,
               double *registration_seconds=nullptr
               ) const;
 

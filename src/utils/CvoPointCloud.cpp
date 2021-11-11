@@ -241,7 +241,7 @@ namespace cvo{
     /*****************************************/
     // using DSO semi dense point selector
     else if (pt_selection_method == CvoPointCloud::DSO_EDGES) {
-      int expected_points = 5000;
+      int expected_points = 800;
       dso_select_pixels(left_image,
                         expected_points,
                         output_uv);
@@ -740,10 +740,14 @@ namespace cvo{
       //  auto r = std::get<0>(c);
       //  auto g = std::get<1>(c);
       //  auto b = std::get<2>(c);
-          
+      //if (i == 0)
+      //  std::cout<<"export to pcd: color r is "<< (int )r <<std::endl;
       // }
-      uint32_t rgb = ((uint32_t) r << 16 |(uint32_t) g << 8  | (uint32_t) b ) ;
-      p.rgb = *reinterpret_cast<float*>(&rgb);
+      //uint32_t rgb = ((uint32_t) r << 16 |(uint32_t) g << 8  | (uint32_t) b ) ;
+      //p.rgb = *reinterpret_cast<float*>(&rgb);
+      p.r = r;
+      p.g = g;
+      p.b = b;
       pc.push_back(p);
     }
     

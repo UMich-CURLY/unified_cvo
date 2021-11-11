@@ -28,8 +28,8 @@ class LocalParameterizationSE3 : public ceres::LocalParameterization {
     
     Eigen::Map<Eigen::Matrix<double, 6, 1> const> const delta(delta_raw);
     Eigen::Matrix<double, 6, 1> delta_norm = delta;
-    delta_norm.head(3) = delta.head(3).normalized();
-    delta_norm.tail(3) = delta.tail(3).normalized();
+    //delta_norm.head(3) = delta.head(3).normalized();
+    //delta_norm.tail(3) = delta.tail(3).normalized();
     
     //std::cout<<"delta is "<<delta_norm.transpose()<<std::endl;    
     Mat34d_row exp_delta = Exp_SE3<double, Eigen::RowMajor>(delta_norm, false);

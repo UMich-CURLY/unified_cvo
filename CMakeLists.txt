@@ -25,10 +25,10 @@ endif()
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # Release Mode
-#set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Release)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -O3 -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -lmkl_intel_lp64 -lmkl_core -lmkl -liomp -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
-set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_BUILD_TYPE Debug)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -g  -msse -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}   -march=native" )
 #set(BUILD_TYPE RelWithDebInfo)
@@ -530,6 +530,16 @@ target_include_directories(cvo_irls_pcd PUBLIC
 target_link_libraries(cvo_irls_pcd cvo_gpu_img_lib cvo_irls_lib cvo_utils_lib kitti  boost_filesystem boost_system)
 
 
+add_executable(cvo_irls_tum ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_tum.cpp)
+target_include_directories(cvo_irls_tum PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_irls_tum cvo_gpu_img_lib cvo_irls_lib cvo_utils_lib tum boost_filesystem boost_system)
+
+
+
 add_executable(cvo_align_gpu_semantic_img ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_semantic_image.cpp)
 target_include_directories(cvo_align_gpu_semantic_img PUBLIC
 	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
@@ -606,7 +616,7 @@ set(${PROJECT_NAME}_LIB_DEST "lib/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}")
 
 
 export(                                                                                                                                                                                                    
-  TARGETS    elas tum kitti lie_group_utils cvo_utils_lib cvo_gpu_img_lib
+  TARGETS    elas tum kitti lie_group_utils cvo_utils_lib cvo_gpu_img_lib cvo_irls_lib
   NAMESPACE  ${PROJECT_NAME}::        
   FILE ${PROJECT_NAME}Targets.cmake                                                                                                                                                                     
   )                                                                                                                                                                                                        
@@ -614,7 +624,7 @@ export(
 
 install(
     # targets to install
-    TARGETS elas tum kitti lie_group_utils cvo_utils_lib cvo_gpu_img_lib 
+    TARGETS elas tum kitti lie_group_utils cvo_utils_lib cvo_gpu_img_lib cvo_irls_lib
     # name of the CMake "export group" containing the targets we want to install
     EXPORT ${PROJECT_NAME}Targets
     # Dynamic, static library and include destination locations after running

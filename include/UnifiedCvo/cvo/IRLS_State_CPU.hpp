@@ -22,7 +22,7 @@ namespace cvo {
                    );
 
     // update 
-    virtual void update_inner_product();
+    virtual int update_inner_product();
 
     void update_ell();
 

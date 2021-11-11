@@ -1,10 +1,10 @@
 #pragma once
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
-#include <gtsam/geometry/Pose3.h>
+///#include <gtsam/geometry/Pose3.h>
 #include "utils/data_type.hpp"
 namespace cvo {
-
+  /*
   inline
   gtsam::Pose3 affine3f_to_pose3(const Eigen::Affine3f & aff) {
     //auto aff_mat = aff.matrix();
@@ -18,6 +18,6 @@ namespace cvo {
     gtsam::Pose3 pose(q_gtsam, t_gtsam);
     return pose;
   }
-
+  */
   
 }

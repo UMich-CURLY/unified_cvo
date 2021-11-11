@@ -19,9 +19,9 @@ void read_graph_file(std::string &graph_file_path,
                      std::vector<std::pair<int, int>> & edges) {
   std::ifstream graph_file(graph_file_path);
   
-  int num_frames;
-  graph_file>>num_frames;
-  //frame_inds.resize(num_frames);
+  int num_frames, num_edges;
+  graph_file>>num_frames >> num_edges;
+  frame_inds.resize(num_frames);
   std::cout<<"Frame indices include ";
   for (int i = 0; i < num_frames; i++) {
     graph_file >> frame_inds[i];
@@ -29,7 +29,7 @@ void read_graph_file(std::string &graph_file_path,
   }
   std::cout<<"\nEdges include ";
 
-  while (!graph_file.eof()) {
+  for (int i =0; i < num_edges; i++ ) {
     std::pair<int, int> p;
     graph_file >> p.first >> p.second;
     edges.push_back(p);
@@ -68,12 +68,15 @@ void read_pose_file(std::string & gt_fname,
     }
     Eigen::Map<cvo::Mat34d_row> pose(pose_v);
     poses_all[curr_frame_ind] = pose;
-    if (curr_frame_ind == 2) {
-      std::cout<<"read: line "<<frame_inds[curr_frame_ind]<<" pose is "<<poses_all[curr_frame_ind]<<std::endl;
-    }
+    //if (curr_frame_ind == 2) {
+    //  std::cout<<"read: line "<<frame_inds[curr_frame_ind]<<" pose is "<<poses_all[curr_frame_ind]<<std::endl;
+    //}
     
     line_ind ++;
     curr_frame_ind++;
+    //if (line_ind == frame_inds.size())
+    if (curr_frame_ind == frame_inds.size())
+      break;
   }
 
 
@@ -130,6 +133,7 @@ int main(int argc, char** argv) {
     pcl::io::loadPCDFile<pcl::PointXYZRGB> (frame_fname, *cloud);
 
     std::shared_ptr<cvo::CvoPointCloud> pc (new cvo::CvoPointCloud(*cloud));
+    std::cout<<"Load "<<frame_fname<<", "<<pc->positions().size()<<" number of points\n";
     pcs.push_back(pc);
 
     cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrame(pc.get(), tracking_poses[i].data()));
@@ -143,7 +147,7 @@ int main(int argc, char** argv) {
   for (int i = 0; i < edge_inds.size(); i++) {
     int first_ind = id_to_index[edge_inds[i].first];
     int second_ind = id_to_index[edge_inds[i].second];
-    
+    std::cout<<"first ind "<<first_ind<<", second ind "<<second_ind<<std::endl;
     std::pair<cvo::CvoFrame::Ptr, cvo::CvoFrame::Ptr> p(frames[first_ind], frames[second_ind]);
     edges.push_back(p);
   }

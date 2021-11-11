@@ -62,6 +62,8 @@ namespace cvo {
 
     auto & pc1 = frame1->points->positions();
     auto & pc2 = frame2->points->positions();
+
+    std::cout<<"Nonzeros is "<<ip_mat_.nonZeros()<<std::endl;
     
     for (int k=0; k<ip_mat_.outerSize(); ++k)
     {
@@ -106,7 +108,7 @@ namespace cvo {
     ell_ = params->ell_init;
     iter_ = 0;
 
-    pc1_kdtree_.reset(new Kdtree(3 /*dim*/, frame1->points->positions(), 10 /* max leaf */ ));
+    pc1_kdtree_.reset(new Kdtree(3 /*dim*/, frame1->points->positions(), 20 /* max leaf */ ));
     pc1_kdtree_->index->buildIndex();
   }
 
@@ -126,7 +128,7 @@ namespace cvo {
                  //, mstd::vector<Eigen::Triplet<double>> & nonzero_list
                  ) {
 
-
+    ip_mat_gradient_prefix.setZero();
     
     const float d2_thresh = -2 * ell * ell * log(sp_thresh);
     const float d2_c_thresh = -2.0*0.05*0.05*log(sp_thresh);    
@@ -155,8 +157,8 @@ namespace cvo {
         float ck = 1;
         float a = 1;
         if(d2<d2_thresh){
-          Eigen::VectorXf feature_b = color_pc2.col(idx);          
-          Eigen::VectorXf feature_a = color_pc1.col(i);
+          Eigen::VectorXf feature_b = color_pc2.row(idx);          
+          Eigen::VectorXf feature_a = color_pc1.row(i);
           float d2_color = (feature_a-feature_b).squaredNorm();
             
           if(d2_color<d2_c_thresh){
@@ -197,7 +199,7 @@ namespace cvo {
   }
 
 
-  void BinaryStateCPU::update_inner_product() {
+  int BinaryStateCPU::update_inner_product() {
 
     /*
     if (iter_ && iter_ % 10 == 0 ) {
@@ -219,7 +221,10 @@ namespace cvo {
               (float)ell_, (float)params_->sp_thres,(float) params_->sigma, iter_,
               ip_mat_
               );
-    
+    if (ip_mat_.nonZeros() == 0)
+      return -1;
+    else
+      return 0;
     
   }
 

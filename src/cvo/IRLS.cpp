@@ -53,7 +53,7 @@ namespace cvo {
     poses_curr.resize(frames.size());
     for (int i = 0; i < frames.size(); i++) {
       Mat34d_row pose_eigen = Eigen::Map<Mat34d_row>(frames[i]->pose_vec);
-      Sophus::SE3d pose(pose_eigen.block<3,3>(0,0), pose_eigen.block<3,1>(0,0));
+      Sophus::SE3d pose(pose_eigen.block<3,3>(0,0), pose_eigen.block<3,1>(0,3));
       poses_curr[i] = pose;
     }
   }
@@ -63,7 +63,7 @@ namespace cvo {
                              std::vector<Sophus::SE3d> & poses_new) {
     double change = 0;
     for (int i = 0; i < poses_old.size(); i++) {
-      change += (poses_old[i].inverse() * poses_new[i]).log().squaredNorm();
+      change += (poses_old[i].inverse() * poses_new[i]).log().norm();
     }
     return change;
   }
@@ -77,18 +77,28 @@ namespace cvo {
     while (!converged) {
 
       std::cout<<"\n\n==============================================================\n";
-      std::cout << "Iter "<<iter_<< ": Solved Ceres problem, ell is " <<ell<<std::endl<<std::flush;
+      std::cout << "Iter "<<iter_<< ": Solved Ceres problem, ell is " <<ell<<"\nPoses are\n"<<std::flush;
+      for (auto && frame: *frames_){
+        std::cout<<Eigen::Map<Mat34d_row>(frame->pose_vec)<<std::endl<<"\n";
+      }
 
       std::vector<Sophus::SE3d> poses_old(frames_->size());
       pose_snapshot(*frames_, poses_old);
 
       ceres::Problem problem;
       LocalParameterizationSE3 * se3_parameterization = new LocalParameterizationSE3();
-      
+
+      std::vector<int> invalid_factors(states_->size());
+      int counter = 0;
       for (auto && state : *states_) {
-        state->update_inner_product();
-        state->add_residual_to_problem(problem);
+        int invalid_ip_mat = state->update_inner_product();
+        //invalid_factors[counter] = invalid_ip_mat;
+        if (!invalid_ip_mat) {
+          state->add_residual_to_problem(problem);
+          counter++;
+        }
       }
+      if (counter == 0) break;
       for (auto && frame : *frames_) {
         problem.SetParameterization(frame->pose_vec, (se3_parameterization));
       }
@@ -109,18 +119,23 @@ namespace cvo {
       std::vector<Sophus::SE3d> poses_new(frames_->size());
       pose_snapshot(*frames_, poses_new);
       double param_change = change_of_all_poses(poses_old, poses_new);
-      if ( iter_ > 200 && param_change < 1e-9) {
+      std::cout<<"Update is "<<param_change<<std::endl;
+      if (param_change < 1e-9 ) {
+        if (ell > params_->ell_min) {
+          ell *= params_->ell_decay_rate;
+          std::cout<<"Reduce ell to "<<ell<<std::endl;          
+          for (auto && state : *states_) 
+            std::dynamic_pointer_cast<BinaryStateCPU>(state)->update_ell();
+        } else {
+          converged = true;
+          std::cout<<"End: pose change is "<<param_change<<std::endl;          
+        }
+      }
+      if ( iter_ > 200) {
         converged = true;
-        std::cout<<"End: pose change is "<<param_change<<std::endl;
       }
       
       iter_++;
-      if (iter_ % 10 == 0 && ell > params_->ell_min) {
-        ell *= params_->ell_decay_rate;
-        for (auto && state : *states_) {
-          std::dynamic_pointer_cast<BinaryStateCPU>(state)->update_ell();
-        }
-      }
         
     }
     

@@ -228,9 +228,9 @@ namespace cvo {
       align_multi_cpu_impl(frames, edges, params);
       
       auto end = std::chrono::system_clock::now();
-      auto t_all = end - start;
+      std::chrono::duration<double, std::milli> t_all = end - start;
       if (registration_seconds)
-        *registration_seconds = (double)t_all.count();
+        *registration_seconds = (double)t_all.count() / 1000;
       return 0;
     }
     else {

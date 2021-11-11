@@ -13,7 +13,7 @@ namespace cvo {
 
     typedef std::shared_ptr<BinaryState> Ptr;
     
-    virtual void update_inner_product() {}
+    virtual int update_inner_product() { return 0; }
 
     virtual void add_residual_to_problem(ceres::Problem & problem) {}
                                          // ceres::LocalParameterization * parameterization);

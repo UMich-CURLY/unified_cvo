@@ -112,3 +112,6 @@ Point Selector and Cvo PointCloud constructor: `include/unified_cvo/utils/CvoPoi
 
 
 
+#### Multi-frame registration TUM demo
+
+Script: `bash scripts/cvo_irls_tum.bash`
