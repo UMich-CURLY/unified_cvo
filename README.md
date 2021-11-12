@@ -30,10 +30,9 @@ Please see [this dock](https://github.com/autowarefoundation/autoware/issues/209
 ```
 mkdir build
 cd build
-cmake ..
-make -j
+cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${YOUR_INSTALL_DIR} 
+make -j4
 ```
-
 
 
 ### How to use the library?
@@ -115,3 +114,21 @@ Point Selector and Cvo PointCloud constructor: `include/unified_cvo/utils/CvoPoi
 #### Multi-frame registration TUM demo
 
 Script: `bash scripts/cvo_irls_tum.bash`
+
+
+#### Install this library and import from cmake
+* Install this library: `make install`
+* In your own repository's `CMakeLists.txt`:
+ ```
+ find_package(UnifiedCvo REQUIRED ) 
+ target_link_libraries(${YOUR_LIBRARY_NAME}                                                                                                                                                                              
+ PUBLIC                                                                                                                                     ${YOUR_OTHER_LINKED_LIBRARIES}                                                                                             
+ UnifiedCvo::cvo_utils_lib
+ UnifiedCvo::lie_group_utils
+ UnifiedCvo::cvo_gpu_img_lib 
+ UnifiedCvo::cvo_irls_lib
+ UnifiedCvo::elas
+ UnifiedCvo::tum
+ UnifiedCvo::kitti
+ ) 
+ ```
