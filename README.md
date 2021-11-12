@@ -34,6 +34,14 @@ cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${YOUR_INSTALL_DIR}
 make -j4
 ```
 
+### Demo
+#### Frame-to-Frame Registration Demo on Kitti
+* GeometricCVO: `bash scripts/kitti_geometric_stereo.bash`
+* ColorCvo:     `bash scripts/kitti_intensity_stereo.bash`
+* SemanticCvo:  `bash scripts/cvo_semantic_img_oct26_gpu0.bash`
+
+#### Multi-Frame Registration Demo on TUM
+* ColorCvo: `bash scripts/cvo_irls_tum.bash`
 
 ### How to use the library?
 
@@ -108,12 +116,6 @@ Core Library: `include/unified_cvo/cvo/CvoGPU.hpp`
 Customized PCL PointCloud: `include/unified_cvo/utils/PointSegmentedDistribution.hpp`.  This customized point definition takes number of classes and number of intensity channels as template arguments. These two are specified as target compiler definitions in the CMakeLists.txt
 
 Point Selector and Cvo PointCloud constructor: `include/unified_cvo/utils/CvoPointCloud.hpp` 
-
-
-
-#### Multi-frame registration TUM demo
-
-Script: `bash scripts/cvo_irls_tum.bash`
 
 
 #### Install this library and import from cmake
