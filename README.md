@@ -1,7 +1,7 @@
 # Unified CVO (Continuous Visual Odometry)
 
 ### Dockerfile to help resolve dependencies
-[Docker file for building CVO](https://github.com/UMich-BipedLab/docker_images/tree/master/cvo_gpu)
+[Docker file for building CVO](https://github.com/UMich-CURLY/docker_images/tree/master/cvo_gpu)
 
 Follow it to first get a cuda10 environment. 
 
