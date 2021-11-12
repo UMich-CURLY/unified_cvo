@@ -1,5 +1,7 @@
 # Unified CVO (Continuous Visual Odometry)
 
+This repository provides the GPU implementation for CVO (Continuous Visual Odometry). 
+
 ### Dockerfile to help resolve dependencies
 [Docker file for building CVO](https://github.com/UMich-CURLY/docker_images/tree/master/cvo_gpu)
 
@@ -133,4 +135,19 @@ Point Selector and Cvo PointCloud constructor: `include/unified_cvo/utils/CvoPoi
  UnifiedCvo::tum
  UnifiedCvo::kitti
  ) 
+ ```
+ 
+ ### Citations
+ If you find this repository useful, please cite 
+ ```
+ @INPROCEEDINGS{9561929,
+  author={Zhang, Ray and Lin, Tzu-Yuan and Lin, Chien Erh and Parkison, Steven A. and Clark, William and Grizzle, Jessy W. and Eustice, Ryan M. and Ghaffari, Maani},
+  booktitle={2021 IEEE International Conference on Robotics and Automation (ICRA)}, 
+  title={A New Framework for Registration of Semantic Point Clouds from Stereo and RGB-D Cameras}, 
+  year={2021},
+  volume={},
+  number={},
+  pages={12214-12221},
+  doi={10.1109/ICRA48506.2021.9561929}}
+
  ```
