@@ -1793,7 +1793,8 @@ namespace cvo{
   float CvoGPU::function_angle(const CvoPointCloud& source_points,
                                const CvoPointCloud& target_points,
                                const Eigen::Matrix4f & t2s_frame_transform,
-                               bool is_approximate
+                               bool is_approximate,
+                               bool is_gpu
                                ) const {
     if (source_points.num_points() == 0 || target_points.num_points() == 0) {
       return 0;
@@ -1801,13 +1802,21 @@ namespace cvo{
 
     Eigen::Matrix4f identity = Eigen::Matrix4f::Identity();
     float fxfz = 0, fx_norm = 0, fz_norm = 0, cosine_value = 0;
-    fxfz = inner_product_gpu(source_points, target_points, t2s_frame_transform);
+    if (is_gpu)
+      fxfz = inner_product_gpu(source_points, target_points, t2s_frame_transform);
+    else
+      fxfz = inner_product_cpu(source_points, target_points, t2s_frame_transform);
     if (is_approximate) {
       fx_norm = sqrt(source_points.num_points());
       fz_norm = sqrt(target_points.num_points());
     } else {
-      fx_norm = sqrt(inner_product_gpu(source_points, source_points, identity));
-      fz_norm = sqrt(inner_product_gpu(target_points, target_points, identity));
+      if (is_gpu) {
+        fx_norm = sqrt(inner_product_gpu(source_points, source_points, identity));
+        fz_norm = sqrt(inner_product_gpu(target_points, target_points, identity));
+      } else {
+        fx_norm = sqrt(inner_product_cpu(source_points, source_points, identity));
+        fz_norm = sqrt(inner_product_cpu(target_points, target_points, identity));        
+      }
     }
     cosine_value = fxfz / (fx_norm * fz_norm);    
     return cosine_value;

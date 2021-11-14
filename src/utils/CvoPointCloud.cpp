@@ -837,5 +837,40 @@ namespace cvo{
     });
   }
 
+  void CvoPointCloud::reserve(int num_points, int num_classes, int feature_dims) {
+    num_points_ = num_points;
+    num_classes_ = num_classes;
+    feature_dimensions_ = feature_dims;
+    
+    positions_.resize(num_points_);
+    if (feature_dims)
+      features_.resize(num_points_, feature_dimensions_);
+    if (num_classes_)
+      labels_.resize(num_points_, num_classes_);
+    
+  }
+  
+  int CvoPointCloud::add_point(int index, const Eigen::Vector3f & xyz, const Eigen::VectorXf & feature, const Eigen::VectorXf & label) {
+    
+    if (index >= num_points_) return -1;
+    if (positions_.size() < num_points_ ||
+        features_.rows() < num_points_ ||
+        labels_.rows() < num_points_ ||
+        features_.cols() != feature_dimensions_ ||
+        labels_.cols() != num_classes_
+        ) {
+      std::cerr<<"CvoPointCloud must be reserved before add_point\n";
+      return -1;
+    }
+
+    positions_[index] = xyz;
+    if (feature_dimensions_)
+      features_.row(index) = feature.transpose();
+    if (num_classes_)
+      labels_.row(index) = label;
+    return 0;
+  }
+
+
 
 }

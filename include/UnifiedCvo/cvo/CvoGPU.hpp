@@ -72,7 +72,8 @@ namespace cvo{
     float function_angle(const CvoPointCloud& source_points,
                          const CvoPointCloud& target_points,
                          const Eigen::Matrix4f & T_target_frame_to_source_frame,
-                         bool is_approximate=true) const;
+                         bool is_approximate=true,
+                         bool is_gpu=true) const;
     float function_angle(const pcl::PointCloud<CvoPoint>& source_points,
                          const pcl::PointCloud<CvoPoint>& target_points,
                          const Eigen::Matrix4f & T_target_frame_to_source_frame,
