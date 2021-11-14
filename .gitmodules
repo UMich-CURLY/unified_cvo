@@ -1,3 +1,3 @@
 [submodule "evaluate_ate_scale"]
 	path = evaluate_ate_scale
-	url = https://github.com/raulmur/evaluate_ate_scale
+	url = git@github.com:zeroAska/evaluate_ate_scale.git
