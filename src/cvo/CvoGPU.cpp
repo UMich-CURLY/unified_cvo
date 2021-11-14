@@ -105,7 +105,7 @@ namespace cvo {
     if (debug_print) std::cout<<"d2_c_thres is "<<d2_c_thres<<std::endl;
     
     typedef KDTreeVectorOfVectorsAdaptor<cloud_t, float>  kd_tree_t;
-    kd_tree_t mat_index(3 , (*cloud_b_pos), 10  );
+    kd_tree_t mat_index(3 , (*cloud_b_pos), 50  );
     mat_index.index->buildIndex();
     // loop through points
     tbb::parallel_for(int(0),cloud_a->num_points(),[&](int i){
@@ -171,9 +171,10 @@ namespace cvo {
     }
     ArrayVec3f fixed_positions = source_points.positions();
     ArrayVec3f moving_positions = target_points.positions();
-    
-    Eigen::Matrix3f rot = t2s_frame_transform.block<3,3>(0,0) ;
-    Eigen::Vector3f trans = t2s_frame_transform.block<3,1>(0,3) ;
+
+    Eigen::Matrix4f s2t_frame_transform  = t2s_frame_transform.inverse();
+    Eigen::Matrix3f rot = s2t_frame_transform.block<3,3>(0,0) ;
+    Eigen::Vector3f trans = s2t_frame_transform.block<3,1>(0,3) ;
     // transform moving points
     tbb::parallel_for(int(0), target_points.num_points(), [&]( int j ){
       moving_positions[j] = (rot*moving_positions[j]+trans).eval();

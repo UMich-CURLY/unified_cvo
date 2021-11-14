@@ -26,7 +26,7 @@ Note: 'pcl-1.9.1' need to be changed and compiled to get it working with cuda.
 pcl/point_cloud.h:586100 error: template-id ‘getMapping’ used as a declarator
 friend boost::shared_ptr& detail::getMapping(pcl::PointCloud &p);
 ```
-Please see [this dock](https://github.com/autowarefoundation/autoware/issues/2094) for reference
+Please see [this doc](https://github.com/autowarefoundation/autoware/issues/2094) for reference
 
 ### Compile
 ```

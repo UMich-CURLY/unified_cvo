@@ -1818,7 +1818,8 @@ namespace cvo{
         fz_norm = sqrt(inner_product_cpu(target_points, target_points, identity));        
       }
     }
-    cosine_value = fxfz / (fx_norm * fz_norm);    
+    cosine_value = fxfz / (fx_norm * fz_norm);
+    std::cout<<"fxfz is "<<fxfz<<", fx_norm is "<<fx_norm<<", fz_norm is "<<fz_norm<<std::endl;
     return cosine_value;
   }
 
@@ -1849,14 +1850,4 @@ namespace cvo{
   }
 
 
-  void fill_in_A_mat_multi_impl (// input
-                                 const CvoParams * cvo_params,
-                                 CvoPoint ** points_all,
-                                 int * start_ind_all,
-                                 int num_neighbors,
-                                 float ell_curr,
-                                 // output
-                                 SparseKernelMat * A_mat) {
-    
-  }
 }

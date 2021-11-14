@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
     init_guess_inv = init_guess.inverse();
 
     // compute indicator value and store in file 
-    float indicator_value = cvo_align.function_angle(*source, *target, init_guess_inv, false);
+    float indicator_value = cvo_align.function_angle(*source, *target, init_guess_inv, false, false);
     std::cout<<"indicator value = "<<indicator_value<<std::endl;
 
     indicator_file << i+1 << " " << indicator_value<<"\n"<<std::flush;
