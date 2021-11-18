@@ -1,6 +1,6 @@
 # Unified CVO (Continuous Visual Odometry)
 
-This repository provides the GPU implementation for CVO (Continuous Visual Odometry). 
+This repository provides the GPU implementation for CVO (Continuous Visual Odometry).  It can perform pure geometric point cloud registration, color-based registration, and semantic-based registration. Details are in the [paper](https://arxiv.org/abs/2012.03683)
 
 
 
