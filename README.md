@@ -2,6 +2,15 @@
 
 This repository provides the GPU implementation for CVO (Continuous Visual Odometry). 
 
+
+
+Stacked point clouds based on the result trajectory from the proposed frame to frame registration
+![The stacked pointcloud based on CVO's trajectory](https://github.com/UMich-CURLY/unified_cvo/raw/multiframe/results/stacked_pointcloud.png "Stacked Point Cloud after registration")
+
+[Video](https://drive.google.com/file/d/1GA-2eS9ZE28c4t0BafaiTUJT93WHbFvt/view?usp=sharing) on test results of KITTI and TUM:
+[![Test results of KITTI and TUM](https://github.com/UMich-CURLY/unified_cvo/raw/multiframe/results/TUM_featureless.png)](https://drive.google.com/file/d/1GA-2eS9ZE28c4t0BafaiTUJT93WHbFvt/view?usp=sharing)
+
+
 ### Dockerfile to help resolve dependencies
 [Docker file for building CVO](https://github.com/UMich-CURLY/docker_images/tree/master/cvo_gpu)
 
@@ -17,7 +26,7 @@ Follow it to first get a cuda10 environment.
 * `Boost 1.65` (already in docker)
 * `pcl 1.9.1` (built from source)
 * `OpenCV3` or `OpenCV4` (already in docker)
-* `GTSAM` (`default branch`, already in docker)
+* `Ceres` (already in docker)
 
 Note: 'pcl-1.9.1' need to be changed and compiled to get it working with cuda. 
 * `pcl/io/boost.h`: add `#include <boost/numeric/conversion/cast.hpp>` at the end of the file before `#endif`
