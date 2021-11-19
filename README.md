@@ -4,7 +4,7 @@ This repository provides the GPU implementation for CVO (Continuous Visual Odome
 
 
 
-Stacked point clouds based on the result trajectory from the proposed frame to frame registration
+Stacked point clouds based on the resulting frame-to-frame trajectory:
 ![The stacked pointcloud based on CVO's trajectory](https://github.com/UMich-CURLY/unified_cvo/raw/multiframe/results/stacked_pointcloud.png "Stacked Point Cloud after registration")
 
 [Video](https://drive.google.com/file/d/1GA-2eS9ZE28c4t0BafaiTUJT93WHbFvt/view?usp=sharing) on test results of KITTI and TUM:
