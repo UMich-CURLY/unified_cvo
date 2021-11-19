@@ -17,7 +17,7 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/transforms.h>
 #include <pcl/impl/instantiate.hpp>
-
+#include <sophus/se3.hpp>
 #include <thrust/functional.h>
 #include <thrust/transform.h>
 #include <thrust/device_vector.h>
@@ -1423,7 +1423,9 @@ namespace cvo{
     
   }
 
-  static  int align_impl(const CvoParams & params,
+  static
+  __attribute__((force_align_arg_pointer)) 
+  int align_impl(const CvoParams & params,
                          const CvoParams * params_gpu,
                          CvoState & cvo_state,
                          const Eigen::Matrix4f & init_guess_transform,
@@ -1553,7 +1555,12 @@ namespace cvo{
       R = (R.cast<double>() * dR).cast<float>();
 
       // reduce ell, if the se3 distance is smaller than eps2, break
-      double dist_this_iter = dist_se3(dR,dT);
+      Eigen::Matrix4d dRT = Eigen::Matrix4d::Identity();
+      dRT.block<3,3>(0,0) = dR;
+      dRT.block<3,1>(0,3) = dT;
+      Sophus::SE3d dRT_sophus(dRT);
+      double dist_this_iter = dRT_sophus.log().norm();
+      //double dist_this_iter = dist_se3(dR,dT);
       if (debug_print)  {
         std::cout<<"just computed distk. dR "<<dR<<"\n dt is "<<dT<<std::endl;
 	std::cout<<"dist: "<<dist_this_iter <<std::endl<<"check bounds....\n";
@@ -1729,7 +1736,9 @@ namespace cvo{
   }
   */
 
-  static float inner_product_impl (CvoPointCloudGPU::SharedPtr source_gpu,
+  static
+  __attribute__((force_align_arg_pointer)) 
+  float inner_product_impl (CvoPointCloudGPU::SharedPtr source_gpu,
                                    CvoPointCloudGPU::SharedPtr target_gpu,
                                    const Eigen::Matrix4f & init_guess_transform,
                                    const CvoParams & params,

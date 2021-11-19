@@ -221,9 +221,10 @@ namespace cvo {
               (float)ell_, (float)params_->sp_thres,(float) params_->sigma, iter_,
               ip_mat_
               );
-    if (ip_mat_.nonZeros() == 0)
+    if (ip_mat_.nonZeros() == 0) {
+      std::cout<<"zero ip mat\n";
       return -1;
-    else
+    } else
       return 0;
     
   }

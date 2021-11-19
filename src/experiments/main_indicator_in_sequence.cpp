@@ -73,8 +73,8 @@ int main(int argc, char *argv[]) {
   // start the iteration
   cv::Mat source_left, source_right;
   std::vector<float> semantics_source;
-  kitti.read_next_stereo(source_left, source_right, 19, semantics_source);
-  // kitti.read_next_stereo(source_left, source_right);
+  //kitti.read_next_stereo(source_left, source_right, 19, semantics_source);
+  kitti.read_next_stereo(source_left, source_right);
   std::shared_ptr<cvo::RawImage> source_raw(new cvo::RawImage(source_left));
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw, source_right, calib));
   Eigen::Matrix4f source_tf = TFs[0];
@@ -89,8 +89,8 @@ int main(int argc, char *argv[]) {
     cv::Mat left, right;
 
     vector<float> semantics_target;
-    if (kitti.read_next_stereo(left, right, 19, semantics_target) != 0) {
-    // if (kitti.read_next_stereo(left, right) != 0) {
+    //if (kitti.read_next_stereo(left, right, 19, semantics_target) != 0) {
+    if (kitti.read_next_stereo(left, right) != 0) {
       std::cout<<"finish all files\n";
       break;
     }

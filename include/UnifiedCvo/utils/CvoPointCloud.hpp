@@ -132,7 +132,7 @@ namespace cvo {
     void write_to_txt(const std::string & name) const;
     void write_to_intensity_pcd(const std::string & name) const;
 
-    void reserve(int num_points, int num_classes, int feature_dims);
+    void reserve(int num_points, int feature_dims, int num_classes);
     int add_point(int index, const Eigen::Vector3f & xyz, const Eigen::VectorXf & feature, const Eigen::VectorXf & label);
    
   private:

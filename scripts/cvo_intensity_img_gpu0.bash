@@ -6,8 +6,9 @@ for i in  05
 #for i in  05  04 06	
 do
 	echo "new seq $i"
-#	gdb -ex run --args \
-      ./build/bin/cvo_align_gpu_img /home/rayzhang/media/Samsung_T5/kitti/$i cvo_params/cvo_intensity_params_img_gpu0.yaml \
+      #./build/bin/cvo_align_gpu_img /home/rayzhang/media/Samsung_T5/kitti/$i cvo_params/cvo_intensity_params_img_gpu0.yaml \
+	gdb -ex run --args \
+      ./build/bin/cvo_align_gpu_img /home/rayzhang/media/Samsung_T5/kitti_stereo/dataset/sequences/kitti/$i cvo_params/cvo_intensity_params_img_gpu0.yaml \
                                        cvo_intensity_img_gpu0_$i.txt 0 3
 
  	

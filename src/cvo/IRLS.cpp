@@ -72,7 +72,7 @@ namespace cvo {
     
     int iter_ = 0;
     bool converged = false;
-    double ell = params_->ell_init;
+    double ell = params_->ell_init_first_frame;
     
     while (!converged) {
 
@@ -87,6 +87,11 @@ namespace cvo {
 
       ceres::Problem problem;
       LocalParameterizationSE3 * se3_parameterization = new LocalParameterizationSE3();
+      for (auto & frame : *frames_) {
+        std::cout<<"Frame number of points "<<frame->points->num_points()<<std::endl;
+        problem.AddParameterBlock(frame->pose_vec, 12, se3_parameterization);
+      }
+      
 
       std::vector<int> invalid_factors(states_->size());
       int counter = 0;

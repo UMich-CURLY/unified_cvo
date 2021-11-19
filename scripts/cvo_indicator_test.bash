@@ -49,6 +49,6 @@ do
                                                 cvo_params/cvo_intensity_params_img_gpu0.yaml \
                                                 $i \
                                                 $method \
-                                                results/cvo_geometric_img_gpu0_oct23/$i.txt
+                                                results/cvo_intensity_img_gpu0_oct25_best/$i.txt
      done 
 done
