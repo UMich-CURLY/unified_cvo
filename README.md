@@ -160,3 +160,13 @@ Point Selector and Cvo PointCloud constructor: `include/unified_cvo/utils/CvoPoi
   doi={10.1109/ICRA48506.2021.9561929}}
 
  ```
+ and 
+ 
+```
+@article{clark2020nonparametric,
+  title={Nonparametric Continuous Sensor Registration},
+  author={Clark, William and Ghaffari, Maani and Bloch, Anthony},
+  journal={arXiv preprint arXiv:2001.04286},
+  year={2020}
+}
+```
