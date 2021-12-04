@@ -133,7 +133,6 @@ nearest_neighbors_max: 512
 
 ```
 
-```
 
 #### Headers 
 
