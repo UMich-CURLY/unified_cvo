@@ -57,6 +57,25 @@ make -j4
 #### Multi-Frame Registration Demo on TUM
 * ColorCvo: `bash scripts/cvo_irls_tum.bash`
 
+
+### Install this library and import from cmake when using it in another repository
+* Install this library: `make install`
+* In your own repository's `CMakeLists.txt`:
+ ```
+ find_package(UnifiedCvo REQUIRED ) 
+ target_link_libraries(${YOUR_LIBRARY_NAME}                                                                                                                                                                              
+ PUBLIC                                                                                                                                     ${YOUR_OTHER_LINKED_LIBRARIES}                                                                                             
+ UnifiedCvo::cvo_utils_lib
+ UnifiedCvo::lie_group_utils
+ UnifiedCvo::cvo_gpu_img_lib 
+ UnifiedCvo::cvo_irls_lib
+ UnifiedCvo::elas
+ UnifiedCvo::tum
+ UnifiedCvo::kitti
+ ) 
+ ```
+
+
 ### How to use the library?
 
 Compile the CvoGPU library for a customized stereo point cloud with 5 dimension color channels (r,g,b, gradient_x, gradient_y) and 19 semantic classes:
@@ -143,22 +162,7 @@ Customized PCL PointCloud: `include/unified_cvo/utils/PointSegmentedDistribution
 Point Selector and Cvo PointCloud constructor: `include/unified_cvo/utils/CvoPointCloud.hpp` . Ways of contructing it are available 
 
 
-#### Install this library and import from cmake
-* Install this library: `make install`
-* In your own repository's `CMakeLists.txt`:
- ```
- find_package(UnifiedCvo REQUIRED ) 
- target_link_libraries(${YOUR_LIBRARY_NAME}                                                                                                                                                                              
- PUBLIC                                                                                                                                     ${YOUR_OTHER_LINKED_LIBRARIES}                                                                                             
- UnifiedCvo::cvo_utils_lib
- UnifiedCvo::lie_group_utils
- UnifiedCvo::cvo_gpu_img_lib 
- UnifiedCvo::cvo_irls_lib
- UnifiedCvo::elas
- UnifiedCvo::tum
- UnifiedCvo::kitti
- ) 
- ```
+
  
  ### Citations
  If you find this repository useful, please cite 
