@@ -205,7 +205,7 @@ init_guess <<
 
     std::cout<<std::flush;
     double time_curr = 0;
-    cvo_align.align(*source, *target, init_guess_inv, result, &time_curr);
+    cvo_align.align(*source, *target, init_guess_inv, result,nullptr, &time_curr);
     total_time += time_curr;
     
     // get tf and inner product from cvo getter

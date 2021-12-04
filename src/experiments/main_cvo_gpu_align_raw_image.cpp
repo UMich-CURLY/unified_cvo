@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
     std::cout<<std::flush;
 
     double this_time = 0;
-    cvo_align.align(*source, *target, init_guess_inv, result, &this_time);
+    cvo_align.align(*source, *target, init_guess_inv, result, nullptr,&this_time);
     total_time += this_time;
     //cvo_align.align(*source, *target, init_guess, result);
     
@@ -121,6 +121,11 @@ int main(int argc, char *argv[]) {
       cvo::CvoPointCloud t_target;
       cvo::CvoPointCloud::transform(result, *target, t_target);
       t_target.write_to_color_pcd("t_target.pcd");
+
+      cvo::Association association;
+      Eigen::Matrix4f T_t2s = init_guess.inverse();
+      std::cout<<"compute association\n";
+      cvo_align.compute_association_gpu(*source, *target, T_t2s, association );
     }
     
     // log accumulated pose

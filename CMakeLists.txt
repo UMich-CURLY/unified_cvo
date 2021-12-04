@@ -55,6 +55,7 @@ find_package(PCL REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Ceres REQUIRED)
 find_package(OpenMP)
+find_package(yaml-cpp)
 #find_package(VTK REQUIRED)
 #include(${VTK_USE_FILE})
 
@@ -159,6 +160,7 @@ set (ACVO_CPU_SOURCE
 
 set (CVO_GPU_SOURCE
   ${PROJECT_SOURCE_DIR}/src/cvo/CvoGPU.cu
+  ${PROJECT_SOURCE_DIR}/src/cvo/CvoGPU_impl.cu
   ${PROJECT_SOURCE_DIR}/src/cvo/CvoState.cu
   ${PROJECT_SOURCE_DIR}/src/cvo/CvoGPU.cpp
   )
@@ -294,7 +296,7 @@ target_include_directories(cvo_irls_lib PUBLIC
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
 	"$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-      target_link_libraries(cvo_irls_lib PRIVATE  lie_group_utils ${TBB_LIBRARIES} pcl_io pcl_search pcl_visualization cxsparse Ceres::ceres)
+      target_link_libraries(cvo_irls_lib PRIVATE  lie_group_utils ${TBB_LIBRARIES} pcl_io pcl_search pcl_visualization cxsparse Ceres::ceres yaml-cpp)
 
     
 
@@ -437,7 +439,7 @@ endif()
 if (${PROJECT_NAME}_ENABLE_CUDA)
 add_library(cvo_gpu_img_lib SHARED ${CVO_GPU_SOURCE})
 add_dependencies(cvo_gpu_img_lib cvo_utils_lib lie_group_utils)
-target_link_libraries(cvo_gpu_img_lib PRIVATE lie_group_utils cvo_utils_lib cvo_irls_lib )
+target_link_libraries(cvo_gpu_img_lib PRIVATE lie_group_utils cvo_utils_lib cvo_irls_lib yaml-cpp)
 #target_compile_definitions(cvo_gpu_img_lib ${PCL_DEFINITIONS})   
 #set_target_properties(cvo_gpu_img_lib PROPERTIES PUBLIC_HEADER "${CVO_PUBLIC_HEADERS}")
 target_include_directories(cvo_gpu_img_lib PUBLIC
@@ -461,7 +463,7 @@ target_include_directories(cvo_gpu_lidar_lib PUBLIC
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 add_dependencies(cvo_gpu_lidar_lib cvo_utils_lib lie_group_utils)
 target_compile_definitions(cvo_gpu_lidar_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=256)
-target_link_libraries(cvo_gpu_lidar_lib PRIVATE lie_group_utils cvo_utils_lib cvo_irls_lib)
+target_link_libraries(cvo_gpu_lidar_lib PRIVATE lie_group_utils cvo_utils_lib cvo_irls_lib yaml-cpp)
 set_target_properties(cvo_gpu_lidar_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
     CUDA_SEPERABLE_COMPILATION ON

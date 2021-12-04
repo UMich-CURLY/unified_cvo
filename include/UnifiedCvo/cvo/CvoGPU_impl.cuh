@@ -1,5 +1,5 @@
 #pragma once
-
+#include "cvo/Association.hpp"
 #include "cvo/SparseKernelMat.cuh"
 #include "cvo/CvoState.cuh"
 
@@ -88,4 +88,11 @@ namespace cvo {
                                    std::shared_ptr<CvoPointCloudGPU> transformed_cloud,
                                    Mat33f * R_gpu, Vec3f * T_gpu
                                    ) ;
+
+  void gpu_association_to_cpu(const SparseKernelMat & association_gpu,
+                              Association & association_cpu,
+                              int num_source,
+                              int num_target,
+                              int num_neighbors=-1
+                              );
 }

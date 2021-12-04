@@ -3,7 +3,7 @@
 #pragma once
 #include "utils/data_type.hpp"
 #include "cvo/CvoParams.hpp"
-
+#include "cvo/Association.hpp"
 #include "utils/CvoPointCloud.hpp"
 #include "utils/CvoPoint.hpp"
 #include "utils/CvoFrame.hpp"
@@ -50,6 +50,7 @@ namespace cvo{
               const Eigen::Matrix4f & T_target_frame_to_source_frame,
               // outputs
               Eigen::Ref<Eigen::Matrix4f> transform,
+              Association * association=nullptr,
               double *registration_seconds=nullptr ) const;
 
     int align(// inputs
@@ -58,6 +59,7 @@ namespace cvo{
               const Eigen::Matrix4f & T_target_frame_to_source_frame,
               // outputs
               Eigen::Ref<Eigen::Matrix4f> transform,
+              Association * association=nullptr,              
               double *registration_seconds=nullptr ) const;
 
     int align(// inputs
@@ -92,6 +94,14 @@ namespace cvo{
                             const CvoPointCloud& target_points,
                             const Eigen::Matrix4f & T_target_frame_to_source_frame
                             ) const;
+
+
+    void compute_association_gpu(const CvoPointCloud& source_points,
+                                 const CvoPointCloud& target_points,
+                                 const Eigen::Matrix4f & T_target_frame_to_source_frame,
+                                 // output
+                                 Association & association
+                                 ) const;
 
   };
 

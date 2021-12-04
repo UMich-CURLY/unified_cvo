@@ -2,8 +2,8 @@
 #include <cstdio>
 #include <iostream>
 #include <fstream>
-#include <opencv2/core.hpp>
-
+//#include <opencv2/core.hpp>
+#include <yaml-cpp/yaml.h>
 namespace cvo {
 
   
@@ -55,8 +55,9 @@ namespace cvo {
     int is_using_semantics;
     int is_using_range_ell;
     int is_using_kdtree;
-
-    int is_using_cpu;
+    int is_exporting_association;
+    int multiframe_using_cpu;
+    
     CvoParams() :
       ell_init_first_frame(0.5),
       ell_init(0.5),
@@ -92,19 +93,21 @@ namespace cvo {
       is_using_semantics(0),
       is_using_range_ell(0),
       is_using_kdtree(0),
-      is_using_cpu(1),
+      is_exporting_association(0),
+      multiframe_using_cpu(1),
       nearest_neighbors_max(512)
     {}
     
   };
 
-  inline void read_CvoParams_yaml(const char *filename, CvoParams * params) {
+  /*
+    inline void read_CvoParams_yaml(const char *filename, CvoParams * params) {
     cv::FileStorage fs;
     std::cout<<"open "<<filename<<std::endl;
     fs.open(std::string(filename), cv::FileStorage::READ );
     if (!fs.isOpened()) {
-      std::cerr << "Failed to open CvoParam file " << filename << std::endl;
-      return;
+    std::cerr << "Failed to open CvoParam file " << filename << std::endl;
+    return;
     }
 
     params->ell_init_first_frame = (float) fs["ell_init_first_frame"];
@@ -145,7 +148,7 @@ namespace cvo {
     params->is_using_semantics = (int) fs["is_using_semantics"];
     params->is_using_range_ell = (int) fs["is_using_range_ell"];
     params->is_using_kdtree = (int) fs["is_using_kdtree"];
-
+    params->is_exporting_association = (int) fs["is_exporting_association"];
     //if (fs.find("is_using_cpu") != fs.end()) {
     params->is_using_cpu = (int) fs["is_using_cpu"];
     //} else
@@ -156,7 +159,93 @@ namespace cvo {
     std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<", indicator window size is "<<params->indicator_window_size<<std::endl;
     fs.release();
     return;
-  }
+    }
+  */
+
+
+  inline void read_CvoParams_yaml(const char *filename, CvoParams * params) {
+    YAML::Node fs = YAML::LoadFile(filename);
+    std::cout<<"open "<<filename<<std::endl;
+
+    if (fs["ell_init_first_frame"]) 
+      params->ell_init_first_frame = fs["ell_init_first_frame"].as<float>();
+    if (fs["ell_init"])
+      params->ell_init = fs["ell_init"].as<float>();
+    if (fs["ell_min"])
+      params->ell_min = fs["ell_min"].as<float>();
+    if (fs["min_ell_iter_limit"])
+      params->min_ell_iter_limit = fs["min_ell_iter_limit"].as<int>();
+    if (fs["ell_max"])
+      params->ell_max = fs["ell_max"].as<float>();
+    if (fs["dl"])
+      params->dl = fs["dl"].as<double>();
+    if(fs["dl_step"])
+      params->dl_step =  fs["dl_step"].as<double>();
+    if (fs["sigma"])
+      params->sigma = fs["sigma"].as<float>();
+    if (fs["sp_thres"])
+      params->sp_thres = fs["sp_thres"].as<float>();
+    if (fs["c"])
+      params->c = fs["c"].as<float>();
+    if (fs["d"])
+      params->d = fs["d"].as<float>();
+    if (fs["c_ell"])
+      params->c_ell = fs["c_ell"].as<float>();
+    if (fs["c_sigma"])
+      params->c_sigma = fs["c_sigma"].as<float>();
+    if (fs["s_ell"])
+      params->s_ell = fs["s_ell"].as<float>();
+    if (fs["s_sigma"])
+      params->s_sigma = fs["s_sigma"].as<float>();
+    if (fs["MAX_ITER"])
+      params->MAX_ITER = fs["MAX_ITER"].as<int>();
+    if (fs["eps"])
+      params->eps = fs["eps"].as<float>();
+    if (fs["eps_2"])
+      params->eps_2 = fs["eps_2"].as<float>();
+    if (fs["min_step"])
+      params->min_step = fs["min_step"].as<float>();
+    if (fs["max_step"])
+      params->max_step = fs["max_step"].as<float>();
+    if (fs["ell_decay_rate"])
+      params->ell_decay_rate = fs["ell_decay_rate"].as<float>();
+    if (fs["ell_decay_rate_first_frame"])
+      params->ell_decay_rate_first_frame = fs["ell_decay_rate_first_frame"].as<float>();
+    if (fs["ell_decay_start"])
+      params->ell_decay_start = fs["ell_decay_start"].as<int>();
+    if (fs["ell_decay_start_first_frame"])
+      params->ell_decay_start_first_frame = fs["ell_decay_start_first_frame"].as<int>();
+    if (fs["indicator_window_size"])
+      params->indicator_window_size = fs["indicator_window_size"].as<int>();
+    if (fs["indicator_stable_threshold"])
+      params->indicator_stable_threshold = fs["indicator_stable_threshold"].as<float>();
+    if (fs["is_pcl_visualization_on"])
+      params->is_pcl_visualization_on = fs["is_pcl_visualization_on"].as<int>();
+    if (fs["is_using_least_square"])
+      params->is_using_least_square = fs["is_using_least_square"].as<int>();
+    if (fs["is_full_ip_matrix"])
+      params->is_full_ip_matrix = fs["is_full_ip_matrix"].as<int>();
+    if (fs["is_using_geometry"])
+      params->is_using_geometry = fs["is_using_geometry"].as<int>();
+    if (fs["is_using_intensity"])
+      params->is_using_intensity = fs["is_using_intensity"].as<int>();
+    if (fs["is_using_semantics"])
+      params->is_using_semantics = fs["is_using_semantics"].as<int>();
+    if (fs["is_using_range_ell"])
+      params->is_using_range_ell = fs["is_using_range_ell"].as<int>();
+    if (fs["is_using_kdtree"])
+      params->is_using_kdtree = fs["is_using_kdtree"].as<int>();
+    if (fs["is_exporting_association"])
+      params->is_exporting_association = fs["is_exporting_association"].as<int>();
+    if (fs["multiframe_using_cpu"])
+      params->multiframe_using_cpu = fs["multiframe_using_cpu"].as<int>();
+    if (fs["nearest_neighbors_max"])
+      params->nearest_neighbors_max = fs["nearest_neighbors_max"].as<int>();
+    
+    std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<", indicator window size is "<<params->indicator_window_size<<std::endl;
+
+    return;
+    }
 
   
 }

@@ -27,6 +27,8 @@ Follow it to first get a cuda10 environment.
 * `pcl 1.9.1` (built from source)
 * `OpenCV3` or `OpenCV4` (already in docker)
 * `Ceres` (already in docker)
+* `Openmp` (already in docker)
+* `yaml-cpp 0.7.0`
 
 Note: 'pcl-1.9.1' need to be changed and compiled to get it working with cuda. 
 * `pcl/io/boost.h`: add `#include <boost/numeric/conversion/cast.hpp>` at the end of the file before `#endif`
@@ -117,7 +119,18 @@ is_full_ip_matrix: 0
 is_using_geometry: 1            # if geoemtric kernel is computed k(x,z)                                                                                                                       
 is_using_intensity: 0           # if color kernel is computed <l_x, l_z>. Enable it if using color info                                                                                                              
 is_using_semantics: 0           # if semantic kernel is computed. Enable it if using semantics                                                                                                                        
-is_using_range_ell: 0 ```
+is_using_range_ell: 0
+
+is_using_kdtree: 0
+
+is_exporting_association: 0
+
+multiframe_using_cpu: 1
+
+nearest_neighbors_max: 512
+
+```
+
 ```
 
 #### Headers 

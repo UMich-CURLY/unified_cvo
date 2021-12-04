@@ -190,6 +190,39 @@ namespace cvo {
     return A_mat.sum();
   }
 
+  /*
+  void CvoGPU::compute_association_gpu(const CvoPointCloud& source_points,
+                                       const CvoPointCloud& target_points,
+                                       const Eigen::Matrix4f & t2s_frame_transform,
+                                       // output
+                                       Association & association                                       
+                                       ) const {
+    
+    if (source_points.num_points() == 0 || target_points.num_points() == 0) {
+      return;
+    }
+    ArrayVec3f fixed_positions = source_points.positions();
+    ArrayVec3f moving_positions = target_points.positions();
+
+    Eigen::Matrix4f s2t_frame_transform  = t2s_frame_transform.inverse();
+    Eigen::Matrix3f rot = s2t_frame_transform.block<3,3>(0,0) ;
+    Eigen::Vector3f trans = s2t_frame_transform.block<3,1>(0,3) ;
+    // transform moving points
+    tbb::parallel_for(int(0), target_points.num_points(), [&]( int j ){
+      moving_positions[j] = (rot*moving_positions[j]+trans).eval();
+    });
+    Eigen::SparseMatrix<float, Eigen::RowMajor> A_mat;
+    tbb::concurrent_vector<Trip_t> A_trip_concur_;
+    A_trip_concur_.reserve(target_points.num_points() * 20);
+    A_mat.resize(source_points.num_points(), target_points.num_points());
+    A_mat.setZero();
+    se_kernel_init_ell_cpu(&source_points, &target_points, &fixed_positions, &moving_positions, A_mat, A_trip_concur_ , params );
+    A_mat_out = A_mat;
+    return;
+    
+  }
+  */
+
 
   static
   void align_multi_cpu_impl(std::vector<CvoFrame::Ptr> & frames,
@@ -222,7 +255,7 @@ namespace cvo {
                     ) const {
 
 
-    if (params.is_using_cpu) {
+    if (params.multiframe_using_cpu) {
       
       auto start = std::chrono::system_clock::now();
       
@@ -241,6 +274,34 @@ namespace cvo {
     
   }
 
+
+
+  template <>
+  CvoPointCloud::CvoPointCloud<CvoPoint>(const pcl::PointCloud<CvoPoint> & pc) {
+    num_points_ = pc.size();
+    num_classes_ = NUM_CLASSES;
+    feature_dimensions_ = FEATURE_DIMENSIONS;
+
+    positions_.resize(pc.size());
+    features_.resize(num_points_, feature_dimensions_);
+    labels_.resize(num_points_, num_classes_);
+    for (int i = 0; i < num_points_; i++) {
+      Eigen::Vector3f xyz;
+      auto & p = (pc)[i];
+      xyz << p.x, p.y, p.z;
+      positions_[i] = xyz;
+
+      for (int j = 0 ; j < FEATURE_DIMENSIONS; j++) {
+        features_(i, j) = pc[i].features[j];
+      }
+      for (int j = 0 ; j < NUM_CLASSES; j++) {
+        labels_(i, j) = pc[i].label_distribution[j];
+      }
+      
+    }
+    
+  }
+  
 
 
 }

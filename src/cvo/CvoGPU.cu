@@ -1,5 +1,6 @@
 #include "cvo/CvoGPU.hpp"
 #include "cvo/SparseKernelMat.cuh"
+#include "cvo/Association.hpp"
 #include "cvo/CvoGPU_impl.cuh"
 #include "cvo/CvoState.cuh"
 #include "cvo/KDTreeVectorOfVectorsAdaptor.h"
@@ -52,168 +53,6 @@ namespace cvo{
 
 
   
-
-  
-  __global__
-  void copy_covariances(// inputs
-                        const float * covariance,
-                        const float * eigenvalues,
-                        int num_points,
-                        // outputs
-                        CvoPoint * points_gpu
-                        ) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i > num_points - 1) {
-      return;
-    }
-    memcpy(points_gpu[i].covariance, covariance+i*9, 9*sizeof(float));
-    memcpy(points_gpu[i].cov_eigenvalues, eigenvalues+i*3, 3*sizeof(float));
-    
-  }
-  
-   
-  CvoPointCloudGPU::SharedPtr CvoPointCloud_to_gpu(const CvoPointCloud & cvo_cloud ) {
-    int num_points = cvo_cloud.num_points();
-    const ArrayVec3f & positions = cvo_cloud.positions();
-    const Eigen::Matrix<float, Eigen::Dynamic, FEATURE_DIMENSIONS> & features = cvo_cloud.features();
-    //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals = cvo_cloud.normals();
-    // const Eigen::Matrix<float, Eigen::Dynamic, 2> & types = cvo_cloud.types();
-    auto & labels = cvo_cloud.labels();
-    // set basic informations for pcl_cloud
-    thrust::host_vector<CvoPoint> host_cloud;
-    host_cloud.resize(num_points);
-
-    int actual_num = 0;
-    for(int i=0; i<num_points; ++i){
-      (host_cloud)[i].x = positions[i](0);
-      (host_cloud)[i].y = positions[i](1);
-      (host_cloud)[i].z = positions[i](2);
-      if (FEATURE_DIMENSIONS == 5) {
-        (host_cloud)[i].r = (uint8_t)std::min(255.0, (features(i,0) * 255.0));
-        (host_cloud)[i].g = (uint8_t)std::min(255.0, (features(i,1) * 255.0));
-        (host_cloud)[i].b = (uint8_t)std::min(255.0, (features(i,2) * 255.0));
-      }
-
-      ///memcpy(host_cloud[i].features, features.row(i).data(), FEATURE_DIMENSIONS * sizeof(float));
-      for (int j = 0; j < FEATURE_DIMENSIONS; j++)
-        host_cloud[i].features[j] = features(i,j);
-
-      if (cvo_cloud.num_classes() > 0) {
-        labels.row(i).maxCoeff(&host_cloud[i].label);
-        for (int j = 0; j < cvo_cloud.num_classes(); j++)
-          host_cloud[i].label_distribution[j] = labels(i,j);
-      }
-      
-      //if (normals.rows() > 0 && normals.cols()>0) {
-      //  for (int j = 0; j < 3; j++)
-      //    host_cloud[i].normal[j] = normals(i,j);
-      //}
-
-      //if (cvo_cloud.covariance().size() > 0 )
-      //  memcpy(host_cloud[i].covariance, cvo_cloud.covariance().data()+ i*9, sizeof(float)*9  );
-      //if (cvo_cloud.eigenvalues().size() > 0 )
-      //  memcpy(host_cloud[i].cov_eigenvalues, cvo_cloud.eigenvalues().data() + i*3, sizeof(float)*3);
-      /*
-      if (i == 1) {
-        printf("Total %d, Raw input from pcl at 1000th: \n", num_points);
-        std::cout<<"Before conversion: "<<positions[i].transpose()<<"\n";
-        print_point(host_cloud[i]);
-        }*/
-      actual_num ++;
-    }
-    //gpu_cloud->points = host_cloud;
-    CvoPointCloudGPU::SharedPtr gpu_cloud(new CvoPointCloudGPU);
-    gpu_cloud->points = host_cloud;
-
-    /*
-      #ifdef IS_USING_COVARIANCE    
-      auto covariance = &cvo_cloud.covariance();
-      auto eigenvalues = &cvo_cloud.eigenvalues();
-      thrust::device_vector<float> cov_gpu(cvo_cloud.covariance());
-      thrust::device_vector<float> eig_gpu(cvo_cloud.eigenvalues());
-      copy_covariances<<<host_cloud.size()/256 +1, 256>>>(thrust::raw_pointer_cast(cov_gpu.data()),
-      thrust::raw_pointer_cast(eig_gpu.data()),
-      host_cloud.size(),
-      thrust::raw_pointer_cast(gpu_cloud->points.data()));
-      #endif    
-    */
-    return gpu_cloud;
-  }
-
-  CvoPointCloudGPU::SharedPtr pcl_PointCloud_to_gpu(const pcl::PointCloud<CvoPoint> & cvo_cloud ) {
-    int num_points = cvo_cloud.size();
-    //const ArrayVec3f & positions = cvo_cloud.positions();
-    //const Eigen::Matrix<float, Eigen::Dynamic, FEATURE_DIMENSIONS> & features = cvo_cloud.features();
-    //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals = cvo_cloud.normals();
-    // const Eigen::Matrix<float, Eigen::Dynamic, 2> & types = cvo_cloud.types();
-    //auto & labels = cvo_cloud.labels();
-    // set basic informations for pcl_cloud
-    thrust::host_vector<CvoPoint> host_cloud;
-    host_cloud.resize(num_points);
-
-    //int actual_num = 0;
-    for(int i=0; i<num_points; ++i){
-      memcpy(&host_cloud[i], &cvo_cloud[i], sizeof(CvoPoint));
-      //std::copy(&)
-      /*
-      (host_cloud)[i].x = cvo_cloud[i].x;
-      (host_cloud)[i].y = cvo_cloud[i].y;
-      (host_cloud)[i].z = cvo_cloud[i].z;
-      (host_cloud)[i].r = cvo_cloud[i].r;
-      (host_cloud)[i].g = cvo_cloud[i].g;
-      (host_cloud)[i].b = cvo_cloud[i].b;
-
-
-      ///memcpy(host_cloud[i].features, features.row(i).data(), FEATURE_DIMENSIONS * sizeof(float));
-      for (int j = 0; j < FEATURE_DIMENSIONS; j++)
-        host_cloud[i].features[j] = features(i,j);
-
-      if (cvo_cloud.num_classes() > 0) {
-        labels.row(i).maxCoeff(&host_cloud[i].label);
-        for (int j = 0; j < cvo_cloud.num_classes(); j++)
-          host_cloud[i].label_distribution[j] = labels(i,j);
-      }
-      
-      if (normals.rows() > 0 && normals.cols()>0) {
-        for (int j = 0; j < 3; j++)
-          host_cloud[i].normal[j] = normals(i,j);
-      }
-
-      if (cvo_cloud.covariance().size() > 0 )
-        memcpy(host_cloud[i].covariance, cvo_cloud.covariance().data()+ i*9, sizeof(float)*9  );
-      if (cvo_cloud.eigenvalues().size() > 0 )
-        memcpy(host_cloud[i].cov_eigenvalues, cvo_cloud.eigenvalues().data() + i*3, sizeof(float)*3);
-
-      actual_num ++;
-      if (i == 1000) {
-        printf("Total %d, Raw input from pcl at 1000th: \n", num_points);
-        std::cout<<"pcl: \n";
-        print_point(cvo_cloud[i]);
-        std::cout<<"host_cloud\n";
-        print_point(host_cloud[i]);
-      }
-      
-      */
-    }
-    //gpu_cloud->points = host_cloud;
-    CvoPointCloudGPU::SharedPtr gpu_cloud(new CvoPointCloudGPU);
-    gpu_cloud->points = host_cloud;
-
-    /*
-      #ifdef IS_USING_COVARIANCE    
-      auto covariance = &cvo_cloud.covariance();
-      auto eigenvalues = &cvo_cloud.eigenvalues();
-      thrust::device_vector<float> cov_gpu(cvo_cloud.covariance());
-      thrust::device_vector<float> eig_gpu(cvo_cloud.eigenvalues());
-      copy_covariances<<<host_cloud.size()/256 +1, 256>>>(thrust::raw_pointer_cast(cov_gpu.data()),
-      thrust::raw_pointer_cast(eig_gpu.data()),
-      host_cloud.size(),
-      thrust::raw_pointer_cast(gpu_cloud->points.data()));
-      #endif    
-    */
-    return gpu_cloud;
-  }
-
 
   
   CvoGPU::CvoGPU(const std::string & param_file) {
@@ -354,6 +193,40 @@ namespace cvo{
     //if (debug_print) std::cout<<"transform mat R"<<transform.block<3,3>(0,0)<<"\nT: "<<transform.block<3,1>(0,3)<<std::endl;
   }
 
+  void update_tf(const Mat33f & R, const Vec3f & T,
+                 // outputs
+                 CvoState * cvo_state
+                 )  {
+    // transform = [R', -R'*T; 0,0,0,1]
+    Mat33f R_inv = R.transpose();
+    Vec3f T_inv = -R_inv * T;
+    
+    cudaMemcpy(cvo_state->R_gpu->data(), R_inv.data(), sizeof(Eigen::Matrix3f), cudaMemcpyHostToDevice);
+    cudaMemcpy(cvo_state->T_gpu->data(), T_inv.data(), sizeof(Eigen::Vector3f), cudaMemcpyHostToDevice );
+    //if (debug_print) std::cout<<"R,T is "<<R<<std::endl<<T<<std::endl;
+    //if (debug_print) std::cout<<"transform mat R"<<transform.block<3,3>(0,0)<<"\nT: "<<transform.block<3,1>(0,3)<<std::endl;
+  }
+  
+
+  /*
+  void update_tf(const Mat33f & R, const Vec3f & T,
+                 // outputs
+                 CvoState * cvo_state,
+                 Eigen::Ref<Eigen::Matrix<float,3,4>> transform
+                 )  {
+    // transform = [R', -R'*T; 0,0,0,1]
+    Mat33f R_inv = R.transpose();
+    Vec3f T_inv = -R_inv * T;
+    
+    transform.block<3,3>(0,0) = R_inv;
+    transform.block<3,1>(0,3) = T_inv;
+
+    cudaMemcpy(cvo_state->R_gpu->data(), R_inv.data(), sizeof(Eigen::Matrix3f), cudaMemcpyHostToDevice);
+    cudaMemcpy(cvo_state->T_gpu->data(), T_inv.data(), sizeof(Eigen::Vector3f), cudaMemcpyHostToDevice );
+    //if (debug_print) std::cout<<"R,T is "<<R<<std::endl<<T<<std::endl;
+    //if (debug_print) std::cout<<"transform mat R"<<transform.block<3,3>(0,0)<<"\nT: "<<transform.block<3,1>(0,3)<<std::endl;
+  }
+  */
 
   typedef KDTreeVectorOfVectorsAdaptor<cloud_t, float>  kd_tree_t;
 
@@ -439,7 +312,7 @@ namespace cvo{
     // point a in the first point cloud
     CvoPoint * p_a =  &points_a[i];
 
-    A_mat->max_index[i] = -1;
+    //A_mat->max_index[i] = -1;
     float curr_max_ip = cvo_params->sp_thres;
     
     float d2_thres = -2.0*log(sp_thres/sigma_square);
@@ -488,10 +361,10 @@ namespace cvo{
       if (a > cvo_params->sp_thres){
         A_mat->mat[i * A_mat->cols + num_inds] = a;
         A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
-        if (a > curr_max_ip) {
-          curr_max_ip = a;
-          A_mat->max_index[i] = ind_b;
-        }
+        //if (a > curr_max_ip) {
+        //  curr_max_ip = a;
+        //  A_mat->max_index[i] = ind_b;
+        //}
         
         num_inds++;
       }
@@ -517,7 +390,7 @@ namespace cvo{
     if (i > a_size - 1)
       return;
     
-    A_mat->max_index[i] = -1;
+    //A_mat->max_index[i] = -1;
     float curr_max_ip = cvo_params->sp_thres;
 
     float sigma2= cvo_params->sigma * cvo_params->sigma;
@@ -580,10 +453,10 @@ namespace cvo{
       if (a > cvo_params->sp_thres){
         A_mat->mat[i * num_neighbors + num_inds] = a;
         A_mat->ind_row2col[i * num_neighbors + num_inds] = ind_b;
-        if (a > curr_max_ip) {
-          curr_max_ip = a;
-          A_mat->max_index[i] = ind_b;
-        }
+        //if (a > curr_max_ip) {
+        //  curr_max_ip = a;
+        //  A_mat->max_index[i] = ind_b;
+        //}
         
         num_inds++;
       }
@@ -655,7 +528,7 @@ namespace cvo{
     if (i > a_size - 1)
       return;
     
-    A_mat->max_index[i] = -1;
+    //A_mat->max_index[i] = -1;
     float curr_max_ip = cvo_params->sp_thres;
 
     float sigma2= cvo_params->sigma * cvo_params->sigma;
@@ -712,16 +585,17 @@ namespace cvo{
         else
           continue;
       }
-      //if (i==0) 
-      //  printf("point_a is (%f,%f,%f), point_b is (%f,%f,%f), k=%f,ck=%f, sk=%f \n", p_a->x, p_a->y, p_a->z, p_b->x, p_b->y, p_b->z, k, ck, sk );
       a = ck*k*sk;
       if (a > cvo_params->sp_thres){
         A_mat->mat[i * num_neighbors + num_inds] = a;
         A_mat->ind_row2col[i * num_neighbors + num_inds] = ind_b;
-        if (a > curr_max_ip) {
-          curr_max_ip = a;
-          A_mat->max_index[i] = ind_b;
-        }
+        //if (i==10) 
+        //  printf("point_a is (%f,%f,%f), point_b with index %d is (%f,%f,%f), k=%f,ck=%f, sk=%f \n", p_a->x, p_a->y, p_a->z, ind_b,  p_b->x, p_b->y, p_b->z,  k, ck, sk );
+        
+        //if (a > curr_max_ip) {
+        //  curr_max_ip = a;
+        //  A_mat->max_index[i] = ind_b;
+        //}
         
         num_inds++;
       }
@@ -1426,14 +1300,15 @@ namespace cvo{
   static
   __attribute__((force_align_arg_pointer)) 
   int align_impl(const CvoParams & params,
-                         const CvoParams * params_gpu,
-                         CvoState & cvo_state,
-                         const Eigen::Matrix4f & init_guess_transform,
-                         // output
-                         Eigen::Ref<Eigen::Matrix4f> transform,
-                         double * registration_seconds
-                         ) {
-
+                 const CvoParams * params_gpu,
+                 CvoState & cvo_state,
+                 const Eigen::Matrix4f & init_guess_transform,
+                 // output
+                 Eigen::Ref<Eigen::Matrix4f> transform,
+                 Association * association_mat,
+                 double * registration_seconds
+                 ) {
+    
     std::ofstream ell_file;
     std::ofstream dist_change_file;
     std::ofstream transform_file;
@@ -1634,6 +1509,13 @@ namespace cvo{
     std::cout<<"non adaptive cvo ends. final ell is "<<cvo_state.ell<<", final iteration is "<<k
              <<"MAX_ITER is "<<params.MAX_ITER<<std::endl;
 
+
+    if (params.is_exporting_association && association_mat)
+      gpu_association_to_cpu(cvo_state.A_host, *association_mat,
+                             cvo_state.num_fixed,
+                             cvo_state.num_moving,
+                             num_neighbors);
+
     if (registration_seconds)
       //*registration_seconds = t_all.count();
       *registration_seconds = (double) totalTime;//t_all.count();
@@ -1655,6 +1537,7 @@ namespace cvo{
                     const Eigen::Matrix4f & init_guess_transform,
                     // outputs
                     Eigen::Ref<Eigen::Matrix4f> transform,
+                    Association * association_mat,                    
                     double *registration_seconds) const {
     
 
@@ -1671,7 +1554,9 @@ namespace cvo{
 
     int ret = align_impl(params, params_gpu,
                          cvo_state, init_guess_transform, 
-                         transform, registration_seconds);
+                         transform,
+                         association_mat,
+                         registration_seconds);
     std::cout<<"Result Transform is "<<transform<<std::endl;
     return ret;
     
@@ -1684,6 +1569,7 @@ namespace cvo{
                     const Eigen::Matrix4f & init_guess_transform,
                     // outputs
                     Eigen::Ref<Eigen::Matrix4f> transform,
+                    Association * association_mat,
                     double *registration_seconds) const {
     std::cout<<"[align] convert points to gpu\n"<<std::flush;
     if (source_points.num_points() == 0 || target_points.num_points() == 0) {
@@ -1699,7 +1585,9 @@ namespace cvo{
 
     int ret = align_impl(params, params_gpu,
                          cvo_state, init_guess_transform,
-                         transform, registration_seconds);
+                         transform,
+                         association_mat,
+                         registration_seconds);
     //std::cout<<"Result Transform is "<<transform<<std::endl;
     return ret;
   }
@@ -1737,25 +1625,29 @@ namespace cvo{
   */
 
   static
-  __attribute__((force_align_arg_pointer)) 
+  //  __attribute__((force_align_arg_pointer)) 
   float inner_product_impl (CvoPointCloudGPU::SharedPtr source_gpu,
-                                   CvoPointCloudGPU::SharedPtr target_gpu,
-                                   const Eigen::Matrix4f & init_guess_transform,
-                                   const CvoParams & params,
-                                   const CvoParams * params_gpu) {
+                            CvoPointCloudGPU::SharedPtr target_gpu,
+                            const Eigen::Matrix4f & init_guess_transform,
+                            const CvoParams & params,
+                            const CvoParams * params_gpu,
+                            Association * association_output=nullptr) {
 
     Mat33f R = init_guess_transform.block<3,3>(0,0);
     Vec3f T= init_guess_transform.block<3,1>(0,3);
     
     CvoState cvo_state(source_gpu, target_gpu, params);
-
+    
+    //Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
     Eigen::Vector3f omega, v;
 
     cvo_state.reset_state_at_new_iter();
 
     // update transformation matrix to CvoState
-    Eigen::Matrix4f transform;
-    update_tf(R, T, &cvo_state, transform);
+    //Eigen::Matrix<float,3,4> transform;
+
+    //update_tf(R, T, &cvo_state, transform);
+    update_tf(R, T, &cvo_state);
 
     transform_pointcloud_thrust(cvo_state.cloud_y_gpu_init, cvo_state.cloud_y_gpu,
                                 cvo_state.R_gpu, cvo_state.T_gpu, false ); 
@@ -1768,6 +1660,14 @@ namespace cvo{
 
 
     float ip_value = A_sum(&cvo_state.A_host);
+
+
+    if (association_output) {
+      gpu_association_to_cpu(cvo_state.A_host, *association_output,
+                             cvo_state.num_fixed,
+                             cvo_state.num_moving);
+    }
+    
     return ip_value;
   }
   
@@ -1780,7 +1680,8 @@ namespace cvo{
     CvoPointCloudGPU::SharedPtr target_gpu = CvoPointCloud_to_gpu(target_points);
 
     
-    return inner_product_impl(source_gpu, target_gpu, init_guess_transform, params, params_gpu
+    return inner_product_impl(source_gpu, target_gpu, init_guess_transform, params, params_gpu,
+                              nullptr
                               );
   }
 
@@ -1793,7 +1694,8 @@ namespace cvo{
     CvoPointCloudGPU::SharedPtr target_gpu = pcl_PointCloud_to_gpu(target_points_pcl);
 
 
-    return inner_product_impl(source_gpu, target_gpu, init_guess_transform, params, params_gpu);
+    return inner_product_impl(source_gpu, target_gpu, init_guess_transform, params, params_gpu,
+                              nullptr);
   }
 
 
@@ -1857,6 +1759,42 @@ namespace cvo{
     return cosine_value;
 
   }
+
+
+  void CvoGPU::compute_association_gpu(const CvoPointCloud& source_points,
+                                       const CvoPointCloud& target_points,
+                                       const Eigen::Matrix4f & T_target_frame_to_source_frame,
+                                       // output
+                                       Association & association
+                                       ) const {
+
+    if (source_points.num_points() == 0 || target_points.num_points() == 0)
+      return;
+
+    CvoPointCloudGPU::SharedPtr source_gpu = CvoPointCloud_to_gpu(source_points);
+    CvoPointCloudGPU::SharedPtr target_gpu = CvoPointCloud_to_gpu(target_points);
+    inner_product_impl(source_gpu, target_gpu, T_target_frame_to_source_frame, params, params_gpu,
+                       &association);
+
+    /*
+    // for debugging
+    //for (int k=0; k<association.pairs.outerSize(); ++k) {
+    std::cout<<"association result for i==10: ";
+    for (Eigen::SparseMatrix<float, Eigen::RowMajor>::InnerIterator it(association.pairs,10); it; ++it) {
+      //double grad_prefix = it.value();
+      float val = it.value();
+      int idx1 = it.row();   // row index
+      int idx2 = it.col();   // col index (here it is equal to k)
+      std::cout<<"j = "<<idx2<<" with value "<<val<<",  ";
+    }
+    std::cout<<std::endl;
+      //}
+      */
+
+    
+    
+  }
+  
 
 
 }
