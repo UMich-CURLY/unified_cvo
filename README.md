@@ -15,6 +15,8 @@ Stacked point clouds based on the resulting frame-to-frame trajectory:
 [Video](https://drive.google.com/file/d/1GA-2eS9ZE28c4t0BafaiTUJT93WHbFvt/view?usp=sharing) on test results of KITTI and TUM:
 [![Test results of KITTI and TUM](https://github.com/UMich-CURLY/unified_cvo/raw/multiframe/results/TUM_featureless.png)](https://drive.google.com/file/d/1GA-2eS9ZE28c4t0BafaiTUJT93WHbFvt/view?usp=sharing)
 
+---
+
 ### Dependencies
 We recommend using this [Dockerfile](https://github.com/UMich-CURLY/docker_images/tree/master/cvo_gpu) to get a cuda environment with the following dependencies installed. 
 
@@ -48,6 +50,8 @@ cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${YOUR_INSTALL_DIR}
 make -j4
 ```
 
+---
+
 ### Demo
 #### Frame-to-Frame Registration Demo on Kitti
 * GeometricCVO: `bash scripts/kitti_geometric_stereo.bash`
@@ -57,6 +61,7 @@ make -j4
 #### Multi-Frame Registration Demo on TUM
 * ColorCvo: `bash scripts/cvo_irls_tum.bash`
 
+---
 
 ### Install this library and import from cmake when using it in another repository
 * Install this library: `make install`
@@ -75,6 +80,7 @@ make -j4
  ) 
  ```
 
+---
 
 ### How to use the library?
 
@@ -162,7 +168,7 @@ Customized PCL PointCloud: `include/unified_cvo/utils/PointSegmentedDistribution
 Point Selector and Cvo PointCloud constructor: `include/unified_cvo/utils/CvoPointCloud.hpp` . Ways of contructing it are available 
 
 
-
+---
  
  ### Citations
  If you find this repository useful, please cite 
