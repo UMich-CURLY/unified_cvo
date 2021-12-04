@@ -101,13 +101,13 @@ target_link_libraries(cvo_align_gpu_img cvo_gpu_img_lib cvo_utils_lib kitti  boo
 ```
 
 #### Example calibration file (cvo_calib.txt)     
-Calibration files are required for each data sequence. Note that for different sequences, the calibrations could be different. We assume the input images are already rectified.
+Calibration files are required for each data sequence. Note that for different sequences, the calibrations could be different. We assume the input images are already rectified. 
 
-* Stereo camera: fx fy cx cy  baseline  image_width image_height
-  `707.0912 707.0912 601.8873 183.1104 0.54 1226 370`
+* Stereo camera format: `fx fy cx cy  baseline  image_width image_height`. Then you `cvo_calib.txt` file in the sequence's folder should contain  `707.0912 707.0912 601.8873 183.1104 0.54 1226 370`
   
-* RGB-D camera:  fx fy cx cy  depthscale image_width image_height
-  `517.3 516.5 318.6 255.3 5000.0 640 480`
+* RGB-D camera format:  `fx fy cx cy  depthscale image_width image_height`. Then you `cvo_calib.txt` file in the sequence's folder should contain `517.3 516.5 318.6 255.3 5000.0 640 480`
+
+
 
 #### Example [parameter file for geometry registration](https://github.com/UMich-CURLY/unified_cvo/blob/release/cvo_params/cvo_geometric_params_img_gpu0.yaml): 
 
