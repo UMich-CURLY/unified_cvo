@@ -18,7 +18,7 @@ Stacked point clouds based on the resulting frame-to-frame trajectory:
 ---
 
 ### Dependencies
-We recommend using this [Dockerfile](https://github.com/UMich-CURLY/docker_images/tree/master/cvo_gpu) to get a cuda environment with the following dependencies installed. 
+We recommend using this [Dockerfile](https://github.com/UMich-CURLY/docker_images/tree/master/cvo_gpu) to get a prebuilt environment with all the following dependencies. 
 
 *  `cuda 10 or 11`  (already in docker)
 *  `gcc7` (already in docker)
@@ -33,7 +33,7 @@ We recommend using this [Dockerfile](https://github.com/UMich-CURLY/docker_image
 * `Openmp` (already in docker)
 * `yaml-cpp 0.7.0` (already in docker)
 
-Note: As show in above dockerfile, 'pcl-1.9.1' need to be changed and compiled to get it working with cuda. 
+Note: As specified in the above [Dockerfile](https://github.com/UMich-CURLY/docker_images/tree/master/cvo_gpu) , 'pcl-1.9.1' need to be changed and compiled to get it working with cuda. 
 * `pcl/io/boost.h`: add `#include <boost/numeric/conversion/cast.hpp>` at the end of the file before `#endif`
 * `pcl/point_cloud.h`: Some meet the error 
 ```
