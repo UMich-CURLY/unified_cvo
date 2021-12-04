@@ -34,6 +34,6 @@ is_using_intensity: 1
 is_using_semantics: 0
 is_using_range_ell: 0
 is_using_kdtree: 0
-is_using_cpu: 1
+multiframe_using_cpu: 1
 nearest_neighbors_max: 512
 
