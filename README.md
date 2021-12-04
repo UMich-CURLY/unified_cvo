@@ -1,6 +1,11 @@
 # Unified CVO (Continuous Visual Odometry)
 
-This repository provides the GPU implementation for CVO (Continuous Visual Odometry).  It can perform pure geometric point cloud registration, color-based registration, and semantic-based registration. Details are in the [A New Framework for Registration of Semantic Point Clouds from Stereo and RGB-D Cameras](https://arxiv.org/abs/2012.03683) and [Nonparametric Continuous Sensor Registration](https://arxiv.org/abs/2001.04286)
+This repository is an implementation for CVO (Continuous Visual Odometry).  It can perform pure geometric point cloud registration, color-based registration, and semantic-based registration. It is tested in KITTI stereo and Tum RGB-D dataset. Details are in the [A New Framework for Registration of Semantic Point Clouds from Stereo and RGB-D Cameras](https://arxiv.org/abs/2012.03683) and [Nonparametric Continuous Sensor Registration](https://arxiv.org/abs/2001.04286). 
+
+Specifically, this repository provides:
+* GPU implentation of goemetric, color, and semantic based registration
+* CPU and GPU implementation of `cos` function angle computation that measures the overlap of two point clouds
+* Soft data association between any two pairs of points in the two point clouds
 
 
 
@@ -10,27 +15,23 @@ Stacked point clouds based on the resulting frame-to-frame trajectory:
 [Video](https://drive.google.com/file/d/1GA-2eS9ZE28c4t0BafaiTUJT93WHbFvt/view?usp=sharing) on test results of KITTI and TUM:
 [![Test results of KITTI and TUM](https://github.com/UMich-CURLY/unified_cvo/raw/multiframe/results/TUM_featureless.png)](https://drive.google.com/file/d/1GA-2eS9ZE28c4t0BafaiTUJT93WHbFvt/view?usp=sharing)
 
-
-### Dockerfile to help resolve dependencies
-[Docker file for building CVO](https://github.com/UMich-CURLY/docker_images/tree/master/cvo_gpu)
-
-Follow it to first get a cuda10 environment. 
-
 ### Dependencies
-*  `cuda10.2` (already in docker)
+We recommend using this [Dockerfile](https://github.com/UMich-CURLY/docker_images/tree/master/cvo_gpu) to get a cuda environment with the following dependencies installed. 
+
+*  `cuda 10 or 11`  (already in docker)
 *  `gcc7` (already in docker)
 *  `SuiteParse` (already in docker)
 * `Sophus 1.0.0 release` (already in docker)
 * `Eigen 3.3.7` (already in docker)
 * `TBB` (already in docker)
 * `Boost 1.65` (already in docker)
-* `pcl 1.9.1` (built from source)
+* `pcl 1.9.1` (already in docker)
 * `OpenCV3` or `OpenCV4` (already in docker)
 * `Ceres` (already in docker)
 * `Openmp` (already in docker)
-* `yaml-cpp 0.7.0`
+* `yaml-cpp 0.7.0` (already in docker)
 
-Note: 'pcl-1.9.1' need to be changed and compiled to get it working with cuda. 
+Note: As show in above dockerfile, 'pcl-1.9.1' need to be changed and compiled to get it working with cuda. 
 * `pcl/io/boost.h`: add `#include <boost/numeric/conversion/cast.hpp>` at the end of the file before `#endif`
 * `pcl/point_cloud.h`: Some meet the error 
 ```
@@ -80,9 +81,14 @@ target_compile_definitions(cvo_align_gpu_img PRIVATE -DNUM_CLASSES=19 -DFEATURE_
 target_link_libraries(cvo_align_gpu_img cvo_gpu_img_lib cvo_utils_lib kitti  boost_filesystem boost_system) 
 ```
 
-#### Example calibration file (cvo_calib.txt)     fx fy cx cy  baseline  image_width image_height
+#### Example calibration file (cvo_calib.txt)     
+Calibration files are required for each data sequence. Note that for different sequences, the calibrations could be different. We assume the input images are already rectified.
 
-`707.0912 707.0912 601.8873 183.1104 0.54 1226 370`
+* Stereo camera: fx fy cx cy  baseline  image_width image_height
+  `707.0912 707.0912 601.8873 183.1104 0.54 1226 370`
+  
+* RGB-D camera:  fx fy cx cy  depthscale image_width image_height
+  `517.3 516.5 318.6 255.3 5000.0 640 480`
 
 #### Example [parameter file for geometry registration](https://github.com/UMich-CURLY/unified_cvo/blob/release/cvo_params/cvo_geometric_params_img_gpu0.yaml): 
 
@@ -120,13 +126,9 @@ is_using_geometry: 1            # if geoemtric kernel is computed k(x,z)
 is_using_intensity: 0           # if color kernel is computed <l_x, l_z>. Enable it if using color info                                                                                                              
 is_using_semantics: 0           # if semantic kernel is computed. Enable it if using semantics                                                                                                                        
 is_using_range_ell: 0
-
 is_using_kdtree: 0
-
 is_exporting_association: 0
-
 multiframe_using_cpu: 1
-
 nearest_neighbors_max: 512
 
 ```
@@ -135,11 +137,11 @@ nearest_neighbors_max: 512
 
 #### Headers 
 
-Core Library: `include/unified_cvo/cvo/CvoGPU.hpp`
+Core Library: `include/unified_cvo/cvo/CvoGPU.hpp`. This header file is the main interfacing of using the library. The `align` functions perform the registration. The `function_angle` functions measure the overlap of the two point clouds. 
 
-Customized PCL PointCloud: `include/unified_cvo/utils/PointSegmentedDistribution.hpp`.  This customized point definition takes number of classes and number of intensity channels as template arguments. These two are specified as target compiler definitions in the CMakeLists.txt
+Customized PCL PointCloud: `include/unified_cvo/utils/PointSegmentedDistribution.hpp`.  This customized point definition takes number of classes and number of intensity channels as template arguments. These two are specified as target compiler definitions in the `CMakeLists.txt`
 
-Point Selector and Cvo PointCloud constructor: `include/unified_cvo/utils/CvoPointCloud.hpp` 
+Point Selector and Cvo PointCloud constructor: `include/unified_cvo/utils/CvoPointCloud.hpp` . Ways of contructing it are available 
 
 
 #### Install this library and import from cmake
