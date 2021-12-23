@@ -29,11 +29,12 @@ namespace pcl {
     PCL_ADD_RGB;
     float features[FEATURE_DIM];
     int   label;
-    float label_distribution[NUM_CLASS]; 
+    float label_distribution[NUM_CLASS];
+    float geometric_type[2]; // edge: 0; surface: 1
     float normal[3];
     float covariance[9];
     float cov_eigenvalues[3];
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW   // make sure our new allocators are aligned
+    //EIGEN_MAKE_ALIGNED_OPERATOR_NEW   // make sure our new allocators are aligned
 
 
     // methods
@@ -51,6 +52,7 @@ namespace pcl {
       this->b = 0;
       memset(features, 0, sizeof(float) * FEATURE_DIM);
       memset(label_distribution, 0, sizeof(float) * NUM_CLASS);
+      memset(geometric_type, 0, sizeof(float)*2);
       memset(normal, 0, sizeof(float)*3);
       memset(covariance, 0, sizeof(float)*9);
       memset(cov_eigenvalues, 0, sizeof(float)*3);
@@ -77,7 +79,7 @@ namespace pcl {
 #ifdef __CUDACC__
     __host__ __device__ 
 #endif
-    PointSegmentedDistribution(const PointSegmentedDistribution & other) {
+      PointSegmentedDistribution(const PointSegmentedDistribution<FEATURE_DIM, NUM_CLASS> & other) {
       this->x = other.x;
       this->y = other.y;
       this->z = other.z;
@@ -87,6 +89,7 @@ namespace pcl {
       this->b = other.b;
       memcpy(features, other.features, sizeof(float) * FEATURE_DIM);
       memcpy(label_distribution, other.label_distribution, sizeof(float) * NUM_CLASS);
+      memcpy(geometric_type, other.geometric_type, sizeof(float)*2);      
       memcpy(normal, other.normal, sizeof(float)*3);
       memcpy(covariance, other.covariance, sizeof(float)*9);
       memcpy(cov_eigenvalues, other.cov_eigenvalues, sizeof(float)*3);
@@ -140,11 +143,15 @@ namespace pcl {
       for (int i = 0; i < FEATURE_DIM; i++)
         std::cout<<p.features[i]<<", ";
       std::cout<<std::endl;
+      std::cout<<"the semantic distribution is ";
       for (int i = 0; i < NUM_CLASS; i++)
         std::cout<<p.label_distribution[i]<<", ";
       std::cout<<std::endl;
+      std::cout<<"geometric type is ";
+      for (int i = 0; i < 2; i++)
+        std::cout<<p.geometric_type[i]<<" ";
 
-      std::cout<<"covariance matrix is \n";
+      std::cout<<"\ncovariance matrix is \n";
       for (int i = 0; i < 9; i++) {
         if (i && i%3==0) std::cout<<std::endl;
         std::cout<<p.covariance[i]<<"  ";

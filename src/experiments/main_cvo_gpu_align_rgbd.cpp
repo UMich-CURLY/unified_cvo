@@ -64,7 +64,9 @@ int main(int argc, char *argv[]) {
   std::shared_ptr<cvo::RawImage> source_raw(new cvo::RawImage(source_rgb));
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw,
                                                                     source_dep_data,
-                                                                    calib));
+                                                                    calib
+                                                                    //,cvo::CvoPointCloud::CANNY_EDGES
+                                                                    ));
                                                                     //19, semantics_source, 
                                                                     //                                                                    cvo::CvoPointCloud::CV_FAST));
   
@@ -89,7 +91,9 @@ int main(int argc, char *argv[]) {
 
     //std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, rgb, dep, calib,1));
     std::shared_ptr<cvo::RawImage> target_raw(new cvo::RawImage(rgb));
-    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, target_dep_data, calib));
+    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, target_dep_data, calib
+                                                                      //,cvo::CvoPointCloud::CANNY_EDGES
+                                                                      ));
     //if (i == 0)
     //  target->write_to_color_pcd("target.pcd");  
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
@@ -101,7 +105,7 @@ int main(int argc, char *argv[]) {
     cvo_align.align(*source, *target, init_guess_inv, result);
     
     // get tf and inner product from cvo getter
-    double in_product = cvo_align.inner_product_cpu(*source, *target, result);
+    double in_product = cvo_align.inner_product_cpu(*source, *target, result, ell_init);
     //double in_product_normalized = cvo_align.inner_product_normalized();
     //int non_zeros_in_A = cvo_align.number_of_non_zeros_in_A();
     std::cout<<"The gpu inner product between "<<i-1 <<" and "<< i <<" is "<<in_product<<"\n";

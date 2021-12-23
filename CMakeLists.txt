@@ -529,7 +529,7 @@ target_include_directories(cvo_irls_pcd PUBLIC
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_link_libraries(cvo_irls_pcd cvo_gpu_img_lib cvo_irls_lib cvo_utils_lib kitti  boost_filesystem boost_system)
+target_link_libraries(cvo_irls_pcd cvo_gpu_img_lib cvo_irls_lib cvo_utils_lib boost_filesystem boost_system)
 
 
 add_executable(cvo_irls_tum ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_tum.cpp)

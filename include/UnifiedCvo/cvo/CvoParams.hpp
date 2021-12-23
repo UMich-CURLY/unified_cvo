@@ -56,7 +56,15 @@ namespace cvo {
     int is_using_range_ell;
     int is_using_kdtree;
     int is_exporting_association;
+    int is_using_geometric_type;
+
+    // for multiframe registration
     int multiframe_using_cpu;
+    int multiframe_max_iters;
+    float multiframe_ell_init;
+    float multiframe_ell_min;
+    float multiframe_ell_decay_rate;
+    int multiframe_iterations_per_ell;
     
     CvoParams() :
       ell_init_first_frame(0.5),
@@ -93,9 +101,15 @@ namespace cvo {
       is_using_semantics(0),
       is_using_range_ell(0),
       is_using_kdtree(0),
+      is_using_geometric_type(0),
       is_exporting_association(0),
       multiframe_using_cpu(1),
-      nearest_neighbors_max(512)
+      multiframe_max_iters(200),      
+      nearest_neighbors_max(512),
+      multiframe_ell_init(0.15),
+      multiframe_ell_min(0.05),
+      multiframe_ell_decay_rate(0.7),
+      multiframe_iterations_per_ell(8)
     {}
     
   };
@@ -235,12 +249,26 @@ namespace cvo {
       params->is_using_range_ell = fs["is_using_range_ell"].as<int>();
     if (fs["is_using_kdtree"])
       params->is_using_kdtree = fs["is_using_kdtree"].as<int>();
+    if (fs["is_using_geometric_type"])
+      params->is_using_geometric_type = fs["is_using_geometric_type"].as<int>();
     if (fs["is_exporting_association"])
       params->is_exporting_association = fs["is_exporting_association"].as<int>();
-    if (fs["multiframe_using_cpu"])
-      params->multiframe_using_cpu = fs["multiframe_using_cpu"].as<int>();
     if (fs["nearest_neighbors_max"])
       params->nearest_neighbors_max = fs["nearest_neighbors_max"].as<int>();
+    if (fs["multiframe_using_cpu"])
+      params->multiframe_using_cpu = fs["multiframe_using_cpu"].as<int>();
+    if (fs["multiframe_ell_init"])
+      params->multiframe_ell_init = fs["multiframe_ell_init"].as<float>();
+    if (fs["multiframe_max_iters"])
+      params->multiframe_max_iters = fs["multiframe_max_iters"].as<int>();
+    if (fs["multiframe_ell_min"])
+      params->multiframe_ell_min = fs["multiframe_ell_min"].as<float>();
+    if (fs["multiframe_ell_decay_rate"])
+      params->multiframe_ell_decay_rate = fs["multiframe_ell_decay_rate"].as<float>();
+    if (fs["multiframe_iterations_per_ell"])
+      params->multiframe_iterations_per_ell = fs["multiframe_iterations_per_ell"].as<int>();
+
+    
     
     std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<", indicator window size is "<<params->indicator_window_size<<std::endl;
 

@@ -64,7 +64,7 @@ namespace cvo{
 
   }
   
-  void CvoGPU::write_params(CvoParams * p_cpu) {
+  void CvoGPU::write_params(const CvoParams * p_cpu) {
     //params = *p_cpu;
     cudaMemcpy( (void*)params_gpu, p_cpu, sizeof(CvoParams), cudaMemcpyHostToDevice  );
     
@@ -232,10 +232,11 @@ namespace cvo{
 
 
   __device__
-  float mahananobis_distance( const CvoPoint & p_a,const  CvoPoint &p_b) {
-    const Eigen::Matrix3f cov_a = Eigen::Map<const Eigen::Matrix3f>(p_a.covariance);
-    const Eigen::Matrix3f cov_b = Eigen::Map<const Eigen::Matrix3f>(p_b.covariance);
-    Eigen::Matrix3f cov = cov_a + cov_b;
+  float mahananobis_distance( const CvoPoint & p_a,const  CvoPoint &p_b,
+                              const Eigen::Matrix3f & kernel_inv) {
+    //const Eigen::Matrix3f cov_a = Eigen::Map<const Eigen::Matrix3f>(p_a.covariance);
+    //const Eigen::Matrix3f cov_b = Eigen::Map<const Eigen::Matrix3f>(p_b.covariance);
+    //Eigen::Matrix3f cov = cov_a + cov_b;
 
     Eigen::Vector3f a;
     a << p_a.x,p_a.y, p_a.z;
@@ -245,12 +246,8 @@ namespace cvo{
     Eigen::Vector3f dist = a-b;
     //float cov_inv[9];
     //Eigen::Matrix3f cov_curr_inv = Eigen::Map<Eigen::Matrix3f>(cov_inv);
-    
-    Eigen::Matrix3f cov_curr_inv = Inverse(cov) ;
 
-
-
-    return (dist.transpose() * cov_curr_inv * dist).value()/100;
+    return (dist.transpose() * kernel_inv * dist).value();
 
     
   }
@@ -285,6 +282,20 @@ namespace cvo{
     
   }
 
+  __device__
+  float compute_geometric_type_ip(const float * geo_type_a,
+                                  const float * geo_type_b,
+                                  int size
+                                  ) {
+    float norm2_a = square_norm(geo_type_a, size);
+    float norm2_b = square_norm(geo_type_b, size);
+    float dot_ab = dot(geo_type_a, geo_type_b, size);
+    //printf("norm2_a=%f, norm2_b=%f, dot_ab=%f\n", norm2_a, norm2_b, dot_ab);
+    float geo_sim = dot_ab / sqrt(norm2_a * norm2_b);
+    
+    return geo_sim;
+  }
+
   __global__
   void fill_in_A_mat_gpu_dense_mat_kernel(// input
                                           const CvoParams * cvo_params,
@@ -293,7 +304,7 @@ namespace cvo{
                                           CvoPoint * points_b,
                                           int b_size,
                                           int num_neighbors,
-                                          float ell_curr,
+                                          Eigen::Matrix3f * kernel_inv,
                                           // output
                                           SparseKernelMat * A_mat // the inner product matrix!
                                           ) {
@@ -308,69 +319,92 @@ namespace cvo{
     float s_ell_square = cvo_params->s_ell*cvo_params->s_ell;
     float sp_thres = cvo_params->sp_thres;
     float c_sigma_square = cvo_params->c_sigma*cvo_params->c_sigma;
+    float s_sigma_square = cvo_params->s_sigma*cvo_params->s_sigma;
 
     // point a in the first point cloud
     CvoPoint * p_a =  &points_a[i];
 
     //A_mat->max_index[i] = -1;
-    float curr_max_ip = cvo_params->sp_thres;
+    //float curr_max_ip = cvo_params->sp_thres;
     
-    float d2_thres = -2.0*log(sp_thres/sigma_square);
-    float d2_c_thres = -2.0*c_ell_square*log(sp_thres/c_sigma_square);
-
-
+    float d2_thres=1, d2_c_thres=1, d2_s_thres=1;
+    //if (cvo_params->is_using_geometry)
+    //  d2_thres = -2.0*l*l*log(cvo_params->sp_thres/sigma2);
+    if (cvo_params->is_using_intensity)
+      d2_c_thres = -2.0*c_ell_square*log(sp_thres/c_sigma_square);
+    if (cvo_params->is_using_semantics)
+      d2_s_thres = -2.0*s_ell_square*log(sp_thres/s_sigma_square);
+    
     float * label_a = p_a ->label_distribution;
 
     unsigned int num_inds = 0;
-    for (int j = 0; j < num_neighbors ; j++) {
-      int ind_b = j + i * num_neighbors;
+
+    for (int j = 0; j < b_size ; j++) {
+      int ind_b = j;
       if (num_inds == num_neighbors) break;
       CvoPoint * p_b = &points_b[ind_b];
-      float d2 = mahananobis_distance(*p_a, *p_b);
 
-      float ell_shrink_ratio = ell_curr / cvo_params->ell_init;
+
+      //float ell_shrink_ratio = ell_curr / cvo_params->ell_init;
       
       //float d2 = eigenvalue_distance(*p_a, *p_b, ell_shrink_ratio)  ;
       //if (i == 0 && j == 0) {
       //  float d2_l2 = squared_dist(*p_a, *p_b) / 0.25;
       //  printf("i==%d, ell is %f, mahananobis_distance is %f, while d2_l2 is %f\n", i,ell_curr, d2, d2_l2);
       //}
-      
 
-      float d2_iso =  squared_dist(*p_a, *p_b) / ell_curr / ell_curr;
+      //float d2_iso =  squared_dist(*p_a, *p_b) / ell_curr / ell_curr;
       //float d2_iso =  squared_dist(*p_a, *p_b) / cvo_params->ell_init / cvo_params->ell_init;
       //d2 = d2 < d2_iso ? d2 : d2_iso;
 
-      float l = ell_curr;
-      float a = 1, sk=1, ck=1, k=1;
+      // float l = ell_curr;
+      float a = 1, sk=1, ck=1, k=1, geo_sim = 1;
+
+      if (cvo_params->is_using_geometric_type) {
+        geo_sim = compute_geometric_type_ip(p_a->geometric_type,
+                                            p_b->geometric_type,
+                                            2
+                                            );
+        if(geo_sim < 0.01)
+          continue;        
+      }
+      
       if (cvo_params->is_using_geometry) {
-        k= cvo_params->sigma * cvo_params->sigma*exp(-d2/(2.0*l*l));
+        //if (i == 0)
+        //  printf("computing mahanobis_dist");
+        float d2 = mahananobis_distance(*p_a, *p_b, *kernel_inv);        
+        //k= cvo_params->sigma * cvo_params->sigma*exp(-d2/(2.0*l*l));
+        k = sigma_square * exp(-d2 / 2.0);
       }
       //if (i==0)
-      //  printf("geometric: a is %f, normal_ip is %f, final_a is %f\n", sigma2*exp(-d2/(2.0*l*l)), normal_ip, a );
+      //  printf("i==%d, geometric: k is %f\n", i, k); 
       if (cvo_params->is_using_intensity) {
         float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
-        
-        ck = cvo_params->c_sigma * cvo_params->c_sigma*exp(-d2_color/(2.0*c_ell_square ));
+        if (d2_color < d2_c_thres)
+          ck = c_sigma_square* exp(-d2_color/(2.0*c_ell_square ));
+        else
+          continue;
       }
       if (cvo_params->is_using_semantics) {
-        float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);        
-        sk = cvo_params->s_sigma*cvo_params->s_sigma*exp(-d2_semantic/(2.0*s_ell_square));
+        float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
+        if (d2_semantic < d2_s_thres)
+          sk = s_sigma_square * exp(-d2_semantic/(2.0*s_ell_square));
+        else
+          continue;
       }
-      a = ck*k*sk;
+      a = ck*k*sk*geo_sim;
       if (a > cvo_params->sp_thres){
-        A_mat->mat[i * A_mat->cols + num_inds] = a;
-        A_mat->ind_row2col[i * A_mat->cols + num_inds] = ind_b;
-        //if (a > curr_max_ip) {
-        //  curr_max_ip = a;
-        //  A_mat->max_index[i] = ind_b;
-        //}
+        A_mat->mat[i * num_neighbors + num_inds] = a;
+        A_mat->ind_row2col[i * num_neighbors + num_inds] = ind_b;
         
         num_inds++;
+        //if (i == 4058)
+        //  printf("i==%d, j==%d, num_inds of %d, a is %f\n", i,ind_b, num_inds, a );        
       }
 
 
     }
+    //printf("max row num is %d, num_inds of %d is %d\n", a_size, i, num_inds );
     A_mat->nonzeros[i] = num_inds;
   }
 
@@ -424,7 +458,18 @@ namespace cvo{
       //if (i <= 1)
       //  printf("p_a is (%f, %f, %f), p_b is (%f, %f, %f\n)", p_a->x,p_a->y, p_a->z, p_b->x, p_b->y, p_b->z);
 
-      float a = 1, sk=1, ck=1, k=1;
+      float a = 1, sk=1, ck=1, k=1, geo_sim=1;
+      if (cvo_params->is_using_geometric_type) {
+        geo_sim = compute_geometric_type_ip(p_a->geometric_type,
+                                            p_b->geometric_type,
+                                            2
+                                            );
+
+
+        if(geo_sim < 0.01)
+          continue;
+      }
+      
       if (cvo_params->is_using_geometry) {
         float d2 = (squared_dist( *p_b ,*p_a ));
         if (d2 < d2_thres)
@@ -442,11 +487,11 @@ namespace cvo{
       if (cvo_params->is_using_semantics) {
         float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
         if (d2_semantic < d2_s_thres )
-          sk = cvo_params->s_sigma*cvo_params->s_sigma*exp(-d2_semantic/(2.0*s_ell*s_ell));
+          sk = s_sigma2*exp(-d2_semantic/(2.0*s_ell*s_ell));
         else
           continue;
       }
-      a = ck*k*sk;      
+      a = ck*k*sk*geo_sim;      
       //if (i==0) 
       //   printf("point_a is (%f,%f,%f), point_b is (%f,%f,%f), k=%f,ck=%f, sk=%f, a=%f, \n", p_a->x, p_a->y, p_a->z, p_b->x, p_b->y, p_b->z, k, ck, sk,a );
 
@@ -563,7 +608,20 @@ namespace cvo{
       //if (j == 0)
       //  printf("p_a is (%f, %f, %f), p_b is (%f, %f, %f\n)", p_a->x,p_a->y, p_a->z, p_b->x, p_b->y, p_b->z);
 
-      float a = 1, sk=1, ck=1, k=1;
+      float a = 1, sk=1, ck=1, k=1, geo_sim=1;
+      if (cvo_params->is_using_geometric_type) {
+        geo_sim = compute_geometric_type_ip(p_a->geometric_type,
+                                            p_b->geometric_type,
+                                            2
+                                            );
+
+        //if (i == 0 )
+        //  printf("p_a is (%f, %f, %f), p_b is (%f, %f, %f), geo_sim is %f\n", p_a->x,p_a->y, p_a->z, p_b->x, p_b->y, p_b->z, geo_sim);
+        
+        if(geo_sim < 0.01)
+          continue;        
+      }
+      
       if (cvo_params->is_using_geometry) {
         float d2 = (squared_dist( *p_b ,*p_a ));
         if (d2 < d2_thres)
@@ -585,7 +643,7 @@ namespace cvo{
         else
           continue;
       }
-      a = ck*k*sk;
+      a = ck*k*sk*geo_sim;
       if (a > cvo_params->sp_thres){
         A_mat->mat[i * num_neighbors + num_inds] = a;
         A_mat->ind_row2col[i * num_neighbors + num_inds] = ind_b;
@@ -684,9 +742,59 @@ namespace cvo{
                                                                                                 // output
                                                                                                 A_mat_gpu // the kernel mat
                                                                                                 );
+    cudaDeviceSynchronize();    
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) { 
+        fprintf(stderr, "Failed to run fill_in_A_mat_gpu %s .\n", cudaGetErrorString(err)); 
+        exit(EXIT_FAILURE); 
+    }
 
     compute_nonzeros(A_mat);
   }
+
+  static
+  void se_kernel_dense(// input
+                       const CvoParams * params_gpu,
+                       std::shared_ptr<CvoPointCloudGPU> points_fixed,
+                       std::shared_ptr<CvoPointCloudGPU> points_moving,
+                       int num_neighbors,
+                       const Eigen::Matrix3f & kernel_inv_cpu,
+                       // output
+                       SparseKernelMat * A_mat,
+                       SparseKernelMat * A_mat_gpu
+                       )  {
+    
+    auto start = chrono::system_clock::now();
+    int fixed_size = points_fixed->points.size();
+    CvoPoint * points_fixed_raw = thrust::raw_pointer_cast (  points_fixed->points.data() );
+    CvoPoint * points_moving_raw = thrust::raw_pointer_cast( points_moving->points.data() );
+
+    Eigen::Matrix3f * kernel_inv_gpu;
+    cudaMalloc((void**)&kernel_inv_gpu, sizeof(Eigen::Matrix3f));
+    cudaMemcpy(kernel_inv_gpu, &kernel_inv_cpu, sizeof(decltype(kernel_inv_cpu)), cudaMemcpyHostToDevice);
+    //std::cout<<"Start fill_in_A_mat_gpu_dense_mat_kernel\n"<<std::endl;
+    fill_in_A_mat_gpu_dense_mat_kernel<<<(points_fixed->points.size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(params_gpu,
+                                                                                                                 points_fixed_raw,
+                                                                                                                 fixed_size,
+                                                                                                                 points_moving_raw,
+                                                                                                                 points_moving->points.size(),
+                                                                                                                 num_neighbors,
+                                                                                                                 kernel_inv_gpu,
+                                                                                                                 // output
+                                                                                                                 A_mat_gpu // the kernel mat
+                                                                                                                 );
+    cudaDeviceSynchronize();    
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) { 
+        fprintf(stderr, "Failed to run fill_in_A_mat_gpu_dense_mat_kernel %s .\n", cudaGetErrorString(err)); 
+        exit(EXIT_FAILURE); 
+    }
+    
+    compute_nonzeros(A_mat);
+    cudaFree(kernel_inv_gpu);
+
+  }
+  
 
   __global__ void compute_flow_gpu_no_eigen(const CvoParams * cvo_params,
                                             CvoPoint * cloud_x, CvoPoint * cloud_y,
@@ -1557,7 +1665,7 @@ namespace cvo{
                          transform,
                          association_mat,
                          registration_seconds);
-    std::cout<<"Result Transform is "<<transform<<std::endl;
+    //std::cout<<"Result Transform is "<<transform<<std::endl;
     return ret;
     
   }
@@ -1631,6 +1739,9 @@ namespace cvo{
                             const Eigen::Matrix4f & init_guess_transform,
                             const CvoParams & params,
                             const CvoParams * params_gpu,
+                            bool is_using_isotropic_kernel,
+                            float curr_ell,
+                            const Eigen::Matrix3f * non_isotropic_kernel,
                             Association * association_output=nullptr) {
 
     Mat33f R = init_guess_transform.block<3,3>(0,0);
@@ -1653,9 +1764,20 @@ namespace cvo{
                                 cvo_state.R_gpu, cvo_state.T_gpu, false ); 
 
     // update the inner product matrix
-    se_kernel(params_gpu, cvo_state.cloud_x_gpu, cvo_state.cloud_y_gpu,
-              params.nearest_neighbors_max, cvo_state.ell, 
-              &cvo_state.A_host, cvo_state.A);
+    if (is_using_isotropic_kernel)
+      se_kernel(params_gpu, cvo_state.cloud_x_gpu, cvo_state.cloud_y_gpu,
+                params.nearest_neighbors_max, curr_ell, //cvo_state.ell, 
+                &cvo_state.A_host, cvo_state.A);
+    else {
+      assert (non_isotropic_kernel != nullptr);
+      Eigen::Matrix3f kernel_inv = non_isotropic_kernel->inverse();
+      se_kernel_dense(// input
+                      params_gpu,  cvo_state.cloud_x_gpu, cvo_state.cloud_y_gpu,
+                      params.nearest_neighbors_max,
+                      kernel_inv,
+                      // output
+                      &cvo_state.A_host, cvo_state.A);                      
+    }
     cudaDeviceSynchronize();
 
 
@@ -1673,7 +1795,8 @@ namespace cvo{
   
   float CvoGPU::inner_product_gpu(const CvoPointCloud& source_points,
                                   const CvoPointCloud& target_points,
-                                  const Eigen::Matrix4f & init_guess_transform
+                                  const Eigen::Matrix4f & init_guess_transform,
+                                  float ell
                                   ) const {
 
     CvoPointCloudGPU::SharedPtr source_gpu = CvoPointCloud_to_gpu(source_points);
@@ -1681,13 +1804,15 @@ namespace cvo{
 
     
     return inner_product_impl(source_gpu, target_gpu, init_guess_transform, params, params_gpu,
+                              true, ell, nullptr,
                               nullptr
                               );
   }
 
   float CvoGPU::inner_product_gpu(const pcl::PointCloud<CvoPoint>& source_points_pcl,
                                   const pcl::PointCloud<CvoPoint>& target_points_pcl,
-                                  const Eigen::Matrix4f & init_guess_transform
+                                  const Eigen::Matrix4f & init_guess_transform,
+                                  float ell
                                   ) const {
  
     CvoPointCloudGPU::SharedPtr source_gpu = pcl_PointCloud_to_gpu(source_points_pcl);
@@ -1695,6 +1820,7 @@ namespace cvo{
 
 
     return inner_product_impl(source_gpu, target_gpu, init_guess_transform, params, params_gpu,
+                              true, ell, nullptr,
                               nullptr);
   }
 
@@ -1704,6 +1830,7 @@ namespace cvo{
   float CvoGPU::function_angle(const CvoPointCloud& source_points,
                                const CvoPointCloud& target_points,
                                const Eigen::Matrix4f & t2s_frame_transform,
+                               float ell,
                                bool is_approximate,
                                bool is_gpu
                                ) const {
@@ -1714,19 +1841,19 @@ namespace cvo{
     Eigen::Matrix4f identity = Eigen::Matrix4f::Identity();
     float fxfz = 0, fx_norm = 0, fz_norm = 0, cosine_value = 0;
     if (is_gpu)
-      fxfz = inner_product_gpu(source_points, target_points, t2s_frame_transform);
+      fxfz = inner_product_gpu(source_points, target_points, t2s_frame_transform, ell);
     else
-      fxfz = inner_product_cpu(source_points, target_points, t2s_frame_transform);
+      fxfz = inner_product_cpu(source_points, target_points, t2s_frame_transform, ell);
     if (is_approximate) {
       fx_norm = sqrt(source_points.num_points());
       fz_norm = sqrt(target_points.num_points());
     } else {
       if (is_gpu) {
-        fx_norm = sqrt(inner_product_gpu(source_points, source_points, identity));
-        fz_norm = sqrt(inner_product_gpu(target_points, target_points, identity));
+        fx_norm = sqrt(inner_product_gpu(source_points, source_points, identity, ell));
+        fz_norm = sqrt(inner_product_gpu(target_points, target_points, identity, ell));
       } else {
-        fx_norm = sqrt(inner_product_cpu(source_points, source_points, identity));
-        fz_norm = sqrt(inner_product_cpu(target_points, target_points, identity));        
+        fx_norm = sqrt(inner_product_cpu(source_points, source_points, identity, ell));
+        fz_norm = sqrt(inner_product_cpu(target_points, target_points, identity, ell));        
       }
     }
     cosine_value = fxfz / (fx_norm * fz_norm);
@@ -1737,6 +1864,7 @@ namespace cvo{
   float CvoGPU::function_angle(const pcl::PointCloud<CvoPoint>& source_points_pcl,
                                const pcl::PointCloud<CvoPoint>& target_points_pcl,
                                const Eigen::Matrix4f & t2s_frame_transform,
+                               float ell,
                                bool is_approximate
                                ) const {
 
@@ -1746,13 +1874,13 @@ namespace cvo{
 
     Eigen::Matrix4f identity = Eigen::Matrix4f::Identity();
     float fxfz = 0, fx_norm = 0, fz_norm = 0, cosine_value = 0;
-    fxfz = inner_product_gpu(source_points_pcl, target_points_pcl, t2s_frame_transform);
+    fxfz = inner_product_gpu(source_points_pcl, target_points_pcl, t2s_frame_transform, ell);
     if (is_approximate) {
       fx_norm = sqrt(source_points_pcl.size());
       fz_norm = sqrt(target_points_pcl.size());
     } else {
-      fx_norm = sqrt(inner_product_gpu(source_points_pcl, source_points_pcl, identity));
-      fz_norm = sqrt(inner_product_gpu(target_points_pcl, target_points_pcl, identity));
+      fx_norm = sqrt(inner_product_gpu(source_points_pcl, source_points_pcl, identity, ell));
+      fz_norm = sqrt(inner_product_gpu(target_points_pcl, target_points_pcl, identity, ell));
     }
     cosine_value = fxfz / (fx_norm * fz_norm);    
 
@@ -1764,6 +1892,7 @@ namespace cvo{
   void CvoGPU::compute_association_gpu(const CvoPointCloud& source_points,
                                        const CvoPointCloud& target_points,
                                        const Eigen::Matrix4f & T_target_frame_to_source_frame,
+                                       float lengthscale,
                                        // output
                                        Association & association
                                        ) const {
@@ -1773,9 +1902,14 @@ namespace cvo{
 
     CvoPointCloudGPU::SharedPtr source_gpu = CvoPointCloud_to_gpu(source_points);
     CvoPointCloudGPU::SharedPtr target_gpu = CvoPointCloud_to_gpu(target_points);
-    inner_product_impl(source_gpu, target_gpu, T_target_frame_to_source_frame, params, params_gpu,
-                       &association);
 
+    //CvoParams params_tmp = params;
+    //params_tmp.ell_init = params.ell_min;
+    //this->write_params(&params_tmp);
+    inner_product_impl(source_gpu, target_gpu, T_target_frame_to_source_frame, params, params_gpu,
+                       true, lengthscale, nullptr,
+                       &association);
+    //this->write_params(&params);
     /*
     // for debugging
     //for (int k=0; k<association.pairs.outerSize(); ++k) {
@@ -1790,10 +1924,82 @@ namespace cvo{
     std::cout<<std::endl;
       //}
       */
+  }
 
+  static
+  //  __attribute__((force_align_arg_pointer)) 
+  void inner_product_non_isotropic_impl (CvoPointCloudGPU::SharedPtr source_gpu,
+                                         CvoPointCloudGPU::SharedPtr target_gpu,
+                                         const Eigen::Matrix4f & init_guess_transform,
+                                         const CvoParams & params,
+                                         const CvoParams * params_gpu,
+                                         //bool is_using_isotropic_kernel,
+                                         //float curr_ell,
+                                         const Eigen::Matrix3f * non_isotropic_kernel,
+                                         Association * association_output=nullptr) {
     
+    Mat33f R = init_guess_transform.block<3,3>(0,0);
+    Vec3f T= init_guess_transform.block<3,1>(0,3);
+    
+    CvoState cvo_state(source_gpu, target_gpu, params);
+    
+    //Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+    Eigen::Vector3f omega, v;
+
+    cvo_state.reset_state_at_new_iter();
+
+    // update transformation matrix to CvoState
+    //Eigen::Matrix<float,3,4> transform;
+
+    //update_tf(R, T, &cvo_state, transform);
+    update_tf(R, T, &cvo_state);
+
+    transform_pointcloud_thrust(cvo_state.cloud_y_gpu_init, cvo_state.cloud_y_gpu,
+                                cvo_state.R_gpu, cvo_state.T_gpu, false ); 
+
+
+    assert (non_isotropic_kernel != nullptr);
+    Eigen::Matrix3f kernel_inv = non_isotropic_kernel->inverse();
+    se_kernel_dense(// input
+                    params_gpu,  cvo_state.cloud_x_gpu, cvo_state.cloud_y_gpu,
+                    params.nearest_neighbors_max,
+                    kernel_inv,
+                    // output
+                    &cvo_state.A_host, cvo_state.A);                      
+
+    cudaDeviceSynchronize();
+
+    gpu_association_to_cpu(cvo_state.A_host, *association_output,
+                           cvo_state.num_fixed,
+                           cvo_state.num_moving);
+    
+    return;
+  }
+
+  
+
+  void CvoGPU::compute_association_gpu(const CvoPointCloud& source_points,
+                                       const CvoPointCloud& target_points,
+                                       const Eigen::Matrix4f & T_target_frame_to_source_frame,
+                                       const Eigen::Matrix3f & non_isotropic_kernel,
+                                       // output
+                                       Association & association
+                                       ) const {
+    if (source_points.num_points() == 0 || target_points.num_points() == 0)
+      return;
+
+    CvoPointCloudGPU::SharedPtr source_gpu = CvoPointCloud_to_gpu(source_points);
+    CvoPointCloudGPU::SharedPtr target_gpu = CvoPointCloud_to_gpu(target_points);
+
+    //CvoParams params_tmp = params;
+    //params_tmp.ell_init = params.ell_min;
+    //this->write_params(&params_tmp);
+    inner_product_non_isotropic_impl(source_gpu, target_gpu, T_target_frame_to_source_frame, params, params_gpu,
+                                     &non_isotropic_kernel,
+                                     &association);
     
   }
+  
   
 
 

@@ -38,10 +38,16 @@ namespace cvo {
       CV_FAST,
       RANDOM,
       DSO_EDGES,
+      DSO_EDGES_WITH_RANDOM,
       LIDAR_EDGES,
       CANNY_EDGES,
       LOAM,
       FULL
+    };
+
+    enum GeometryType {
+      EDGE,
+      SURFACE
     };
 
     const int pixel_pattern[8][2] = {{0,0}, {-1, 0},{-1,-1}, {-1,1}, {0,1},{0,-1},{1,1},{1,0} };
@@ -118,6 +124,7 @@ namespace cvo {
     const std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> & positions() const {return positions_;}
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & labels() const { return labels_;}
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & features() const {return features_;}
+    const std::vector<float> & geometric_types() const {return geometric_types_;}
     //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals() const {return normals_;}
     //const Eigen::Matrix<float, Eigen::Dynamic, 9> & covariance() const {return covariance_;}
     //const pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals() const {return cloud_with_normals_;}
@@ -125,7 +132,9 @@ namespace cvo {
     //const std::vector<float> & covariance()  const {return covariance_;}
     //const std::vector<float> & eigenvalues() const {return eigenvalues_;}
 
-    void export_to_color_pcd(pcl::PointCloud<pcl::PointXYZRGB> & output) const;
+    template<typename PointT>
+    void export_to_pcd(pcl::PointCloud<PointT> & output) const;
+    
     void write_to_color_pcd(const std::string & name) const;
     void write_to_label_pcd(const std::string & name) const;
     void write_to_pcd(const std::string & name) const;
@@ -133,7 +142,7 @@ namespace cvo {
     void write_to_intensity_pcd(const std::string & name) const;
 
     void reserve(int num_points, int feature_dims, int num_classes);
-    int add_point(int index, const Eigen::Vector3f & xyz, const Eigen::VectorXf & feature, const Eigen::VectorXf & label);
+    int add_point(int index, const Eigen::Vector3f & xyz, const Eigen::VectorXf & feature, const Eigen::VectorXf & label, const float * geometric_type = nullptr);
    
   private:
     int num_points_;
@@ -150,6 +159,8 @@ namespace cvo {
     //Eigen::Matrix<float, Eigen::Dynamic, 2> types_; // type of the point using loam point selector, edge=(1,0), surface=(0,1)
     cv::Vec3f avg_pixel_color_pattern(const cv::Mat & raw, int u, int v, int w);
 
+    std::vector<float> geometric_types_;
+    
     //std::vector<float> covariance_;
     //std::vector<float> eigenvalues_;
     //thrust::device_vector<float> eigenvalues_;

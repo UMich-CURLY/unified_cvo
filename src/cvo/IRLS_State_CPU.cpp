@@ -105,7 +105,7 @@ namespace cvo {
     //Mat34d_row identity_34 = identity.block<3,4>(0,0);
     //transform_pcd(identity_34, pc1->points->positions(), pc1_curr_);
 
-    ell_ = params->ell_init;
+    ell_ = params->multiframe_ell_init;
     iter_ = 0;
 
     pc1_kdtree_.reset(new Kdtree(3 /*dim*/, frame1->points->positions(), 20 /* max leaf */ ));
@@ -120,6 +120,7 @@ namespace cvo {
                  const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>& color_pc2,
                  std::shared_ptr<BinaryStateCPU::Kdtree> mat_index,
                  float ell,
+                 float c_ell,
                  float sp_thresh,
                  float sigma,
                  int iter,
@@ -131,7 +132,7 @@ namespace cvo {
     ip_mat_gradient_prefix.setZero();
     
     const float d2_thresh = -2 * ell * ell * log(sp_thresh);
-    const float d2_c_thresh = -2.0*0.05*0.05*log(sp_thresh);    
+    const float d2_c_thresh = -2.0*c_ell*c_ell*log(sp_thresh);    
     const float s2 = sigma * sigma;
     
     // typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> >, double>  kd_tree_t;
@@ -194,8 +195,8 @@ namespace cvo {
   }
 
   void BinaryStateCPU::update_ell() {
-    if (ell_ >(double) params_->ell_min)
-      ell_ = ell_ * (double) params_->ell_decay_rate;     
+    if (ell_ >(double) params_->multiframe_ell_min)
+      ell_ = ell_ * (double) params_->multiframe_ell_decay_rate;     
   }
 
 
@@ -218,7 +219,11 @@ namespace cvo {
     se_kernel(frame1->points->positions(), pc2_curr_,
               frame1->points->features(), frame2->points->features(),
               pc1_kdtree_,
-              (float)ell_, (float)params_->sp_thres,(float) params_->sigma, iter_,
+              (float)ell_,
+              params_->c_ell,
+              (float)params_->sp_thres,(float) params_->sigma,
+
+              iter_,
               ip_mat_
               );
     if (ip_mat_.nonZeros() == 0) {

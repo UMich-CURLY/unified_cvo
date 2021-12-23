@@ -94,7 +94,9 @@ void read_pose_file(std::string & gt_fname,
     cvo::Mat34d_row pose = pose_sophus.matrix().block<3,4>(0,0);
     
     //Eigen::Map<cvo::Mat34d_row> pose(pose_v);
-    poses_all[curr_frame_ind] = pose;
+    poses_all[curr_frame_ind] = pose;    
+    //Eigen::Matrix<double, 4,4, Eigen::RowMajor> pose_id = Eigen::Matrix<double, 4,4, Eigen::RowMajor>::Identity();
+    //poses_all[curr_frame_ind] = pose_id.block<3,4>(0,0);    
     timestamps[curr_frame_ind] = timestamp;
     //if (curr_frame_ind == 2) {
     //  std::cout<<"read: line "<<frame_inds[curr_frame_ind]<<" pose is "<<poses_all[curr_frame_ind]<<std::endl;
@@ -140,7 +142,7 @@ void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string 
     cvo::CvoPointCloud::transform(pose_f, *ptr->points, new_pc);
 
     pcl::PointCloud<pcl::PointXYZRGB> pc_curr;
-    new_pc.export_to_color_pcd(pc_curr);
+    new_pc.export_to_pcd(pc_curr);
 
     pc_all += pc_curr;
   }
@@ -189,7 +191,7 @@ int main(int argc, char** argv) {
     tum.read_next_rgbd(rgb, depth);
     vector<uint16_t> depth_data(depth.begin<uint16_t>(), depth.end<uint16_t>());
     std::shared_ptr<cvo::RawImage> raw(new cvo::RawImage(rgb));
-    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(*raw, depth_data, calib, cvo::CvoPointCloud::DSO_EDGES));
+    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(*raw, depth_data, calib, cvo::CvoPointCloud::CANNY_EDGES));
     std::shared_ptr<cvo::CvoPointCloud> pc_full(new cvo::CvoPointCloud(*raw, depth_data, calib, cvo::CvoPointCloud::FULL));
     std::cout<<"Load "<<curr_frame_id<<", "<<pc->positions().size()<<" number of points\n";
     pcs.push_back(pc);
@@ -201,8 +203,10 @@ int main(int argc, char** argv) {
     frames_full.push_back(new_full_frame);
     id_to_index[curr_frame_id] = i;
   }
+  std::string f_name_full("before_BA_full.pcd");
   std::string f_name("before_BA.pcd");
-  write_transformed_pc(frames_full, f_name);
+  write_transformed_pc(frames_full, f_name_full);
+  write_transformed_pc(frames, f_name);
 
   // read edges to construct graph
   std::list<std::pair<cvo::CvoFrame::Ptr, cvo::CvoFrame::Ptr>> edges;
@@ -219,10 +223,12 @@ int main(int argc, char** argv) {
 
   std::cout<<"Align ends. Total time is "<<time<<" seconds."<<std::endl;
   f_name="after_BA.pcd";
+  f_name_full="after_BA_full.pcd";
   for (int i = 0; i < frames.size(); i++) {
     memcpy(frames_full[i]->pose_vec, frames[i]->pose_vec, sizeof(double)*12);
   }
-  write_transformed_pc(frames_full, f_name);
+  write_transformed_pc(frames_full, f_name_full);
+  write_transformed_pc(frames, f_name);
 
   std::string traj_out("traj_out.txt");
   write_traj_file(traj_out,

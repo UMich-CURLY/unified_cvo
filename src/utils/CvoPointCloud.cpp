@@ -137,38 +137,72 @@ namespace cvo{
                                       const std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & dso_selected_uv,
                                       bool is_using_canny,
                                       bool is_using_uniform_rand,
+                                      int expected_points,
                                       // output
-                                      std::vector<bool> & selected_inds_map,
-                                      std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & final_selected_uv                   
+                                      std::vector<float> & edge_or_surface,
+                                      std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & final_selected_uv
+                    
                                       ) {
-    selected_inds_map.resize(left_gray.total(), false);
+    /*    selected_inds_map.resize(left_gray.total(), -1);
     for (auto && uv : dso_selected_uv) {
       int u = uv(0);
       int v = uv(1);
-      selected_inds_map[v * left_gray.cols + u]  = true;
-    }
+      selected_inds_map[v * left_gray.cols + u]  = 0;
+      }*/
     // canny
     cv::Mat detected_edges;
     if (is_using_canny)
       cv::Canny( left_gray, detected_edges, 50, 50*3, 3 );
-
+    int counter = 0;
+    std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> tmp_uvs_canny, tmp_uvs_surface;
     for (int r = 0 ; r < left_gray.rows; r++) {
       for (int c = 0; c < left_gray.cols; c++) {
         // using Canny
-        if (is_using_canny &&  detected_edges.at<uint8_t>(r, c) > 0) 
-          selected_inds_map[r * left_gray.cols + c] = true;
+        if (is_using_canny &&  detected_edges.at<uint8_t>(r, c) > 0)  {
+          // selected_inds_map[r * left_gray.cols + c] = EDGE;
+          tmp_uvs_canny.push_back(Vec2i(c, r));
+        }
 
-        // using uniform sampling
-        if (is_using_uniform_rand && r > left_gray.rows * 1 /3  &&  rand() % 50 == 0) 
-          selected_inds_map[r * left_gray.cols + c] = true;
-
-        if (selected_inds_map[r * left_gray.cols + c])
-          final_selected_uv.push_back(Vec2i(c, r));                    
       }
       
     }
+    for (int r = 0 ; r < left_gray.rows; r++) {
+      for (int c = 0; c < left_gray.cols; c++) {
+        
+        // using uniform sampling
+        if ( (!is_using_canny || detected_edges.at<uint8_t>(r, c) == 0 ) &&
+            is_using_uniform_rand &&
+            //r > left_gray.rows   &&
+            rand() % 10 == 0)  {
+          //selected_inds_map[r * left_gray.cols + c] = SURFACE;
+          tmp_uvs_surface.push_back(Vec2i(c, r));
+        }
 
-    //std::cout<<" final selected uv size is "<<final_selected_uv.size()<<std::endl;
+      }
+      
+    }
+    std::cout<<"Canny size "<<tmp_uvs_canny.size()<<", surface size "<<tmp_uvs_surface.size()<<"\n";
+    int total_selected_canny = tmp_uvs_canny.size();
+    int total_selected_surface = tmp_uvs_surface.size();
+    for (int i = 0; i < tmp_uvs_canny.size(); i++) {
+      if (rand() % total_selected_canny < expected_points  * 3 / 4  ) {
+        final_selected_uv.push_back(tmp_uvs_canny[i]);
+        edge_or_surface.push_back(1.0);
+        edge_or_surface.push_back(0.0);
+      }
+    }
+    for (int i = 0; i < tmp_uvs_surface.size(); i++) {
+      if (rand() % total_selected_surface < expected_points * 1 / 4 ) {
+        final_selected_uv.push_back(tmp_uvs_surface[i]);
+        edge_or_surface.push_back(0.0);
+        edge_or_surface.push_back(1.0);
+        
+      }
+      
+    }
+    
+
+    std::cout<<" final selected uv size is "<<final_selected_uv.size()<<std::endl;
     //cv::imwrite("canny.png", detected_edges);    
     
   }
@@ -180,7 +214,9 @@ namespace cvo{
                                        PointCloudType pt_type,
                                        CvoPointCloud::PointSelectionMethod pt_selection_method,
                                        // result
+                                       std::vector<float> & edge_or_surface,
                                        std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv
+
                                        )  {
     cv::Mat left_gray;
     if (left_image.channels() == 1)
@@ -226,6 +262,8 @@ namespace cvo{
         xy(0) = (int)kp.pt.x;
         xy(1) = (int)kp.pt.y;
         output_uv.push_back(xy);
+        edge_or_surface.push_back(1);
+        edge_or_surface.push_back(0);
       }
       bool debug_plot = false;
       if (debug_plot) {
@@ -245,24 +283,39 @@ namespace cvo{
       dso_select_pixels(left_image,
                         expected_points,
                         output_uv);
+      edge_or_surface.resize(output_uv.size() * 2);
+      for (int i = 0; i < output_uv.size(); i++) {
+        edge_or_surface[i*2] = 0.8;
+        edge_or_surface[i*2 +1]=0.2;
+      }
+      
     }
     //******************************************/
     // using canny or random point selection
     else if (pt_selection_method == CvoPointCloud::CANNY_EDGES) {
-      std::vector<bool> selected_inds_map;
+      //std::vector<bool> selected_inds_map;
       std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> final_selected_uv;
-      stereo_surface_sampling(left_gray, output_uv, true, false,
-                              selected_inds_map, final_selected_uv);
+      int expected_points = 3000;
+      stereo_surface_sampling(left_gray, output_uv, true, true, expected_points,
+                              edge_or_surface, output_uv);
+
+
+      
+      
     }
     /********************************************/
     // using full point cloud
     else if (pt_selection_method == CvoPointCloud::FULL) {
+
       output_uv.clear();
       for (int h = 0; h < left_image.cols(); h++){
         for (int w = 0; w < left_image.rows(); w++){
           Vec2i uv;
           uv << h , w;
           output_uv.push_back(uv);
+          edge_or_surface.push_back(0.5);
+          edge_or_surface.push_back(0.5);
+
         }
       }
     } else {
@@ -279,7 +332,10 @@ namespace cvo{
                                PointSelectionMethod pt_selection_method){
  
     std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> output_uv;
-    select_points_from_image(rgb_raw_image, RGBD, pt_selection_method, output_uv);
+    std::vector<float> geometry;
+    select_points_from_image(rgb_raw_image, RGBD, pt_selection_method,
+                             geometry,
+                             output_uv);
       
     std::vector<int> good_point_ind;
     int h = rgb_raw_image.rows();
@@ -309,6 +365,8 @@ namespace cvo{
         good_point_ind.push_back(i);
         //positions_[i] = xyz;
         positions_.push_back(xyz);
+        geometric_types_.push_back(geometry[i*2]);
+        geometric_types_.push_back(geometry[i*2+1]);
       }
     }
 
@@ -364,6 +422,30 @@ namespace cvo{
     
   }
 
+  /*
+  template <>
+  CvoPointCloud::CvoPointCloud<CvoPoint>(const pcl::PointCloud<CvoPoint> & pc) {
+    num_points_ = pc.size();
+    num_classes_ = 0;
+    feature_dimensions_ = ;
+
+    positions_.resize(pc.size());
+    features_.resize(num_points_, feature_dimensions_);
+    for (int i = 0; i < num_points_; i++) {
+      Eigen::Vector3f xyz;
+      auto & p = (pc)[i];
+      xyz << p.x, p.y, p.z;
+      positions_[i] = xyz;
+
+      features_(i,0) = ((float)(int)p.r) / 255.0;
+      features_(i,1) = ((float)(int)p.g) / 255.0;
+      features_(i,2) = ((float)(int)p.b) / 255.0;
+      
+    }
+    
+    }*/
+
+  
   //template CvoPointCloud::CvoPointCloud<pcl::PointXYZRGB>(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc);
 
   
@@ -385,8 +467,11 @@ namespace cvo{
     std::vector<float> left_disparity;
     StaticStereo::disparity(left_gray, right_gray, left_disparity);
     
-    std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> output_uv;    
-    select_points_from_image(left_image, STEREO, pt_selection_method, output_uv);    
+    std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> output_uv;
+    std::vector<float> geometry;
+    select_points_from_image(left_image, STEREO, pt_selection_method,
+                             geometry,
+                             output_uv);    
     auto & pre_depth_selected_ind = output_uv;
     std::vector<int> good_point_ind;
     int h = left_image.rows();
@@ -424,6 +509,8 @@ namespace cvo{
         positions_.push_back(xyz);
         //positions_[i] = xyz;
         //std::cout<<"xyz: "<<xyz.transpose()<<std::endl;
+        geometric_types_.push_back(geometry[i*2]);
+        geometric_types_.push_back(geometry[i*2+1]);
       }
     }
      
@@ -474,6 +561,7 @@ namespace cvo{
     positions_ = input.positions_;
     features_ = input.features_;
     labels_ = input.labels_;
+    geometric_types_ = input.geometric_types_;
   }
   
 
@@ -529,6 +617,9 @@ namespace cvo{
     //normals_.resize(num_points_,3);
     //types_.resize(num_points_, 2);
     positions_.resize(num_points_);
+
+
+    
     for (int i = 0; i < num_points_ ; i++) {
       Vec3f xyz;
       int idx = selected_indexes[i];
@@ -536,6 +627,9 @@ namespace cvo{
       positions_[i] = xyz;
       features_(i, 0) = pc->points[idx].intensity;
 
+      // TODO: change geometric_types
+      geometric_types_.push_back(1.0);
+      geometric_types_.push_back(0.0);
     }
 
     //#if  defined(IS_USING_COVARIANCE)  && defined(__CUDACC__)
@@ -631,7 +725,13 @@ namespace cvo{
       int max_class = 0;
       labels_.row(actual_ids).maxCoeff(&max_class);
 
+      // TODO: change geometric_types
+      geometric_types_.push_back(1.0);
+      geometric_types_.push_back(0.0);
+      
+
       actual_ids ++;
+
 
     }
     std::cout<<"Construct Cvo PointCloud, num of points is "<<num_points_<<" from "<<pc->size()<<" input points "<<std::endl;
@@ -699,13 +799,8 @@ namespace cvo{
   }
 
 
-  void CvoPointCloud::write_to_color_pcd(const std::string & name) const {
-    pcl::PointCloud<pcl::PointXYZRGB> pc;
-    export_to_color_pcd(pc);
-    pcl::io::savePCDFileASCII(name ,pc);  
-  }
-
-  void CvoPointCloud::export_to_color_pcd(pcl::PointCloud<pcl::PointXYZRGB> & pc)  const {
+  template <>
+  void CvoPointCloud::export_to_pcd<pcl::PointXYZRGB>(pcl::PointCloud<pcl::PointXYZRGB> & pc)  const {
     /*
 
     std::unordered_map<int, std::tuple<uint8_t, uint8_t, uint8_t>> label2color;
@@ -757,7 +852,13 @@ namespace cvo{
       pc.push_back(p);
     }
     
-  }  
+  }
+
+  void CvoPointCloud::write_to_color_pcd(const std::string & name) const {
+    pcl::PointCloud<pcl::PointXYZRGB> pc;
+    export_to_pcd<pcl::PointXYZRGB>(pc);
+    pcl::io::savePCDFileASCII(name ,pc);  
+  }
 
   void CvoPointCloud::write_to_pcd(const std::string & name) const {
     pcl::PointCloud<pcl::PointXYZ> pc;
@@ -841,6 +942,7 @@ namespace cvo{
     tbb::parallel_for(int(0), input.num_points(), [&](int j) {
       output.positions_[j] = (pose.block(0, 0, 3, 3) * input.positions()[j] + pose.block(0, 3, 3, 1)).eval();
     });
+    output.geometric_types_ = input.geometric_types_;
   }
 
   void CvoPointCloud::reserve(int num_points, int feature_dims, int num_classes) {
@@ -853,10 +955,10 @@ namespace cvo{
       features_.resize(num_points_, feature_dimensions_);
     if (num_classes_)
       labels_.resize(num_points_, num_classes_);
-    
+    geometric_types_ .resize(num_points*2);
   }
   
-  int CvoPointCloud::add_point(int index, const Eigen::Vector3f & xyz, const Eigen::VectorXf & feature, const Eigen::VectorXf & label) {
+  int CvoPointCloud::add_point(int index, const Eigen::Vector3f & xyz, const Eigen::VectorXf & feature, const Eigen::VectorXf & label, const float * geometry_type) {
     
     if (index >= num_points_) return -1;
     if (positions_.size() < num_points_ ||
@@ -875,6 +977,10 @@ namespace cvo{
       features_.row(index) = feature.transpose();
     if (num_classes_)
       labels_.row(index) = label;
+    if (geometry_type) {
+      geometric_types_[index*2] = (geometry_type[0]);
+      geometric_types_[index*2+1] = (geometry_type[1]);
+    }
     return 0;
   }
 

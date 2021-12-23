@@ -95,7 +95,7 @@ void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string 
     cvo::CvoPointCloud::transform(pose_f, *ptr->points, new_pc);
 
     pcl::PointCloud<pcl::PointXYZRGB> pc_curr;
-    new_pc.export_to_color_pcd(pc_curr);
+    new_pc.export_to_pcd(pc_curr);
 
     pc_all += pc_curr;
   }

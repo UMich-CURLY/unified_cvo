@@ -50,6 +50,9 @@ namespace cvo {
         for (int j = 0; j < cvo_cloud.num_classes(); j++)
           pcl_cloud[i].label_distribution[j] = labels(i,j);
       }
+
+      pcl_cloud[i].geometric_type[0] = cvo_cloud.geometric_types()[i*2];
+      pcl_cloud[i].geometric_type[1] = cvo_cloud.geometric_types()[i*2+1];
       
       //if (normals.rows() > 0 && normals.cols()>0) {
       //  for (int j = 0; j < 3; j++)
@@ -90,13 +93,14 @@ namespace cvo {
                               cloud_t* cloud_a_pos, cloud_t* cloud_b_pos, \
                               Eigen::SparseMatrix<float,Eigen::RowMajor>& A_temp,
                               tbb::concurrent_vector<Trip_t> & A_trip_concur_,
-                              const CvoParams & params
+                              const CvoParams & params,
+                              float ell
                               ) {
     bool debug_print = false;
     A_trip_concur_.clear();
     const float s2= params.sigma*params.sigma;
 
-    const float l = params.ell_min;
+    const float l = ell;
 
     // convert k threshold to d2 threshold (so that we only need to calculate k when needed)
     const float d2_thres = -2.0*l*l*log(params.sp_thres/s2);
@@ -130,9 +134,22 @@ namespace cvo {
           float sk = 1;
           float d2_color = 0;
           float d2_semantic = 0;
+          float geo_sim=1;
           float a = 1;
 
           Eigen::VectorXf label_b;
+          /*
+//TODO: add geometric_types
+          if (params.is_using_geometric_type) {
+            geo_sim = ( p_a->geometric_type[0] * p_a->geometric_type[0] +
+                        p_a->geometric_type[1] * p_a->geometric_type[1] ) /
+              sqrt( square_norm(p_a->geometric_type, 2) *
+                    square_norm(p_a->geometric_type, 2));
+            if(geo_sim < 0.01)
+              continue;        
+              }*/
+          
+          
           if (params.is_using_semantics) {
             label_b = cloud_b->labels().row(idx);
             d2_semantic = ((label_a-label_b).squaredNorm());            
@@ -148,7 +165,7 @@ namespace cvo {
             d2_color = ((feature_a-feature_b).squaredNorm());
             ck = params.c_sigma*params.c_sigma*exp(-d2_color/(2.0*params.c_ell*params.c_ell));
           }
-          a = ck*k*sk;
+          a = ck*k*sk*geo_sim;
           if (a > params.sp_thres){
             A_trip_concur_.push_back(Trip_t(i,idx,a));
           }
@@ -164,7 +181,8 @@ namespace cvo {
     
   float CvoGPU::inner_product_cpu(const CvoPointCloud& source_points,
                                   const CvoPointCloud& target_points,
-                                  const Eigen::Matrix4f & t2s_frame_transform
+                                  const Eigen::Matrix4f & t2s_frame_transform,
+                                  float ell
                                   ) const {
     if (source_points.num_points() == 0 || target_points.num_points() == 0) {
       return 0;
@@ -185,7 +203,7 @@ namespace cvo {
     A_trip_concur_.reserve(target_points.num_points() * 20);
     A_mat.resize(source_points.num_points(), target_points.num_points());
     A_mat.setZero();
-    se_kernel_init_ell_cpu(&source_points, &target_points, &fixed_positions, &moving_positions, A_mat, A_trip_concur_ , params );
+    se_kernel_init_ell_cpu(&source_points, &target_points, &fixed_positions, &moving_positions, A_mat, A_trip_concur_ , params, ell );
 
     return A_mat.sum();
   }
@@ -261,6 +279,7 @@ namespace cvo {
       
       align_multi_cpu_impl(frames, edges, params);
       
+
       auto end = std::chrono::system_clock::now();
       std::chrono::duration<double, std::milli> t_all = end - start;
       if (registration_seconds)
@@ -275,6 +294,41 @@ namespace cvo {
   }
 
 
+  template <>
+  void CvoPointCloud::export_to_pcd<CvoPoint>(pcl::PointCloud<CvoPoint> & pc)  const {
+
+    for (int i = 0; i < num_points_; i++) {
+      CvoPoint p;
+      p.x = positions_[i]( 0);
+      p.y = positions_[i]( 1);
+      p.z = positions_[i]( 2);
+      
+      uint8_t b = static_cast<uint8_t>(std::min(255, (int)(features_(i,0) * 255) ) );
+      uint8_t g = static_cast<uint8_t>(std::min(255, (int)(features_(i,1) * 255) ) );
+      uint8_t r = static_cast<uint8_t>(std::min(255, (int)(features_(i,2) * 255)));
+
+      for (int j = 0; j < this->feature_dimensions_; j++)
+        p.features[j] = features_(i,j);
+
+      if (this->num_classes() > 0) {
+        //labels_.row(i).maxCoeff(p.label);
+        p.label = labels_.row(i).maxCoeff();
+        for (int j = 0; j < this->num_classes(); j++)
+          p.label_distribution[j] = labels_(i,j);
+      }
+      p.r = r;
+      p.g = g;
+      p.b = b;
+
+      p.geometric_type[0] = geometric_types_[i*2];
+      p.geometric_type[1] = geometric_types_[i*2+1];
+      
+      pc.push_back(p);
+    }
+    
+  }  
+
+
 
   template <>
   CvoPointCloud::CvoPointCloud<CvoPoint>(const pcl::PointCloud<CvoPoint> & pc) {
@@ -285,11 +339,14 @@ namespace cvo {
     positions_.resize(pc.size());
     features_.resize(num_points_, feature_dimensions_);
     labels_.resize(num_points_, num_classes_);
+    geometric_types_.resize(num_points_*2);
     for (int i = 0; i < num_points_; i++) {
       Eigen::Vector3f xyz;
       auto & p = (pc)[i];
       xyz << p.x, p.y, p.z;
       positions_[i] = xyz;
+
+      
 
       for (int j = 0 ; j < FEATURE_DIMENSIONS; j++) {
         features_(i, j) = pc[i].features[j];
@@ -297,6 +354,9 @@ namespace cvo {
       for (int j = 0 ; j < NUM_CLASSES; j++) {
         labels_(i, j) = pc[i].label_distribution[j];
       }
+
+      geometric_types_[i*2] = p.geometric_type[0];
+      geometric_types_[i*2+1] = p.geometric_type[1];
       
     }
     

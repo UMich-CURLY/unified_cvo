@@ -70,6 +70,9 @@ namespace cvo {
       }
 
       ///memcpy(host_cloud[i].features, features.row(i).data(), FEATURE_DIMENSIONS * sizeof(float));
+      for (int j = 0; j < 2; j++)
+        host_cloud[i].geometric_type[j] = cvo_cloud.geometric_types()[i*2+j];
+      
       for (int j = 0; j < FEATURE_DIMENSIONS; j++)
         host_cloud[i].features[j] = features(i,j);
 
@@ -199,8 +202,8 @@ namespace cvo {
     int rows = association_gpu.rows;
     int cols = num_neighbors == -1? association_gpu.cols : num_neighbors;
 
-    association_cpu.source_inliers.resize(rows, false);
-    association_cpu.target_inliers.resize(num_target, false);
+    //association_cpu.source_inliers.resize(rows, false);
+    //association_cpu.target_inliers.resize(num_target, false);
 
     if (association_gpu.nonzero_sum == 0)
       return;
@@ -220,25 +223,30 @@ namespace cvo {
     ///association_cpu.pairs.reserve(association_gpu.nonzero_sum);
     association_cpu.pairs.resize(rows,cols);
 
+    //std::cout<<"Construct the CPU association:\n";
     //tbb::mutex mutex;
     //tbb::parallel_for(int(0), rows, [&]( int i ){
-#pragma omp parallel for    
+    #pragma omp parallel for    
     for (int i = 0; i < rows; i++) {
 
   
       if (nonzeros[i] > 0) {
-        association_cpu.source_inliers[i] = true;
+        //association_cpu.source_inliers[i] = true;
+        association_cpu.source_inliers.push_back(i);
         
         for (int j = 0 ; j < cols; j++) {
           if (ind_row2col[i * cols + j] == -1) {
             break;
           }
           
-#pragma omp critical
+          #pragma omp critical
           {
             int ind_target = ind_row2col[i*cols+j];
-            association_cpu.target_inliers[ind_target] = true;
+            //association_cpu.target_inliers[ind_target] = true;
+            association_cpu.target_inliers.push_back(ind_target);
             association_cpu.pairs.insert(i, ind_target) = inner_product[i*cols+j];
+            //if (i == 4058)
+            //  std::cout<<"Association: i=="<<i<<", j=="<<ind_target<<", a=="<<inner_product[i*cols+j]<<std::endl;
           }
           
         }

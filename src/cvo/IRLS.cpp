@@ -72,7 +72,7 @@ namespace cvo {
     
     int iter_ = 0;
     bool converged = false;
-    double ell = params_->ell_init_first_frame;
+    double ell = params_->multiframe_ell_init;
     
     while (!converged) {
 
@@ -115,7 +115,7 @@ namespace cvo {
       options.parameter_tolerance = 1e-8;
       options.line_search_direction_type = ceres::BFGS;
       options.num_threads = 24;
-      options.max_num_iterations = 2;
+      options.max_num_iterations = params_->multiframe_iterations_per_ell;
       ceres::Solver::Summary summary;
       ceres::Solve(options, &problem, &summary);
 
@@ -125,9 +125,9 @@ namespace cvo {
       pose_snapshot(*frames_, poses_new);
       double param_change = change_of_all_poses(poses_old, poses_new);
       std::cout<<"Update is "<<param_change<<std::endl;
-      if (param_change < 1e-9 ) {
-        if (ell > params_->ell_min) {
-          ell *= params_->ell_decay_rate;
+      if (param_change < 1e-5 ) {
+        if (ell > params_->multiframe_ell_min) {
+          ell = ell *  params_->multiframe_ell_decay_rate;
           std::cout<<"Reduce ell to "<<ell<<std::endl;          
           for (auto && state : *states_) 
             std::dynamic_pointer_cast<BinaryStateCPU>(state)->update_ell();
@@ -136,7 +136,7 @@ namespace cvo {
           std::cout<<"End: pose change is "<<param_change<<std::endl;          
         }
       }
-      if ( iter_ > 200) {
+      if ( iter_ > params_->multiframe_max_iters) {
         converged = true;
       }
       

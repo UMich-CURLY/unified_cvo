@@ -45,7 +45,7 @@ namespace cvo{
     CvoGPU(const std::string & f);
     ~CvoGPU();
     CvoParams & get_params() {return params;}
-    void write_params(CvoParams * p_cpu);
+    void write_params(const CvoParams * p_cpu);
 
     
     /**
@@ -114,6 +114,7 @@ namespace cvo{
      * @param target_points The second point cloud
      * @param T_target_frame_to_source_frame The transformation from the second frame to the 
      *                                       first frame.
+     * @param ell The lengthscale used for the evaluation
      * @param is_approximate If true, it uses <f(X), f(Y)>/|X|/|Y|. othewise, it uses 
      *                       <f(X), f(Y)> / ||f(X)|| / ||f(Y)||
      * @param is_gpu If true, running this on gpu, otherwise on cpu
@@ -122,6 +123,7 @@ namespace cvo{
     float function_angle(const CvoPointCloud& source_points,
                          const CvoPointCloud& target_points,
                          const Eigen::Matrix4f & T_target_frame_to_source_frame,
+                         float ell,
                          bool is_approximate=true,
                          bool is_gpu=true) const;
 
@@ -134,6 +136,7 @@ namespace cvo{
      * @param target_points The second point cloud
      * @param T_target_frame_to_source_frame The transformation from the second frame to the 
      *                                       first frame.
+     * @param ell The lengthscale used for the evaluation
      * @param is_approximate If true, it uses <f(X), f(Y)>/|X|/|Y|. othewise, it uses 
      *                       <f(X), f(Y)> / ||f(X)|| / ||f(Y)||
      * @return the float number of this cos calcuation
@@ -141,6 +144,7 @@ namespace cvo{
     float function_angle(const pcl::PointCloud<CvoPoint>& source_points,
                          const pcl::PointCloud<CvoPoint>& target_points,
                          const Eigen::Matrix4f & T_target_frame_to_source_frame,
+                         float ell,
                          bool is_approximate=true) const;
 
 
@@ -151,30 +155,54 @@ namespace cvo{
      * @param target_points The second point cloud
      * @param T_target_frame_to_source_frame The transformation from the second frame to the 
      *                                       first frame.
+     * @param lengthscale The lengthscale used for the evaluation
      * @param association This is the resulting association, containing the inliers of the 
      *                    registration as well as all pairs of associated points 
      */
     void compute_association_gpu(const CvoPointCloud& source_points,
                                  const CvoPointCloud& target_points,
                                  const Eigen::Matrix4f & T_target_frame_to_source_frame,
+                                 float lengthscale,
                                  // output
                                  Association & association
                                  ) const;
 
+    /**
+     * @brief the inner product <f(X), f(Y)> will return all the pairs of points {(x_i, y_j)}
+     *        that are close and have similar appearance.
+     * @param source_points The first point cloud
+     * @param target_points The second point cloud
+     * @param T_target_frame_to_source_frame The transformation from the second frame to the 
+     *                                       first frame.
+     * @param non_isotropic_kernel The geometric kernel for geometric association
+     * @param association This is the resulting association, containing the inliers of the 
+     *                    registration as well as all pairs of associated points 
+     */
+    void compute_association_gpu(const CvoPointCloud& source_points,
+                                 const CvoPointCloud& target_points,
+                                 const Eigen::Matrix4f & T_target_frame_to_source_frame,
+                                 const Eigen::Matrix3f & non_isotropic_kernel,
+                                 // output
+                                 Association & association
+                                 ) const;
+    
 
     
     /// The below are helper functions
     float inner_product_gpu(const CvoPointCloud& source_points,
                             const CvoPointCloud& target_points,
-                            const Eigen::Matrix4f & T_target_frame_to_source_frame
+                            const Eigen::Matrix4f & T_target_frame_to_source_frame,
+                            float ell
                             ) const;
     float inner_product_gpu(const pcl::PointCloud<CvoPoint>& source_points_pcl,
                             const pcl::PointCloud<CvoPoint>& target_points_pcl,
-                            const Eigen::Matrix4f & init_guess_transform
+                            const Eigen::Matrix4f & init_guess_transform,
+                            float ell
                             ) const;
     float inner_product_cpu(const CvoPointCloud& source_points,
                             const CvoPointCloud& target_points,
-                            const Eigen::Matrix4f & T_target_frame_to_source_frame
+                            const Eigen::Matrix4f & T_target_frame_to_source_frame,
+                            float ell
                             ) const;
 
 
