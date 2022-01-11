@@ -8,10 +8,10 @@ namespace cvo {
   
   CvoBatchIRLS::CvoBatchIRLS(//const std::vector<Mat34d_row, Eigen::aligned_allocator<Mat34d_row>> & init_poses,
                              const std::vector<CvoFrame::Ptr> &  frames,
+                             const std::vector<bool> & pivot_flags,                             
                              const std::list<BinaryState::Ptr> & states,
-                             CvoFrame * const pivot_frame,
                              const CvoParams * params
-                             ) : pivot_(pivot_frame),
+                             ) : pivot_flags_(&pivot_flags),
                                  states_(&states),
                                  frames_(&frames),
                                  params_(params) {
@@ -104,16 +104,25 @@ namespace cvo {
         }
       }
       if (counter == 0) break;
-      for (auto && frame : *frames_) {
-        problem.SetParameterization(frame->pose_vec, (se3_parameterization));
+      //   for (auto && frame : *frames_) {
+      for (int k = 0; k < frames_->size(); k++) {
+        problem.SetParameterization(frames_->at(k)->pose_vec, se3_parameterization);
+        if (pivot_flags_->at(k))
+          problem.SetParameterBlockConstant(frames_->at(k)->pose_vec);          
       }
-      problem.SetParameterBlockConstant(pivot_->pose_vec);
+
 
       ceres::Solver::Options options;
       options.function_tolerance = 1e-8;
       options.gradient_tolerance = 1e-8;
       options.parameter_tolerance = 1e-8;
-      options.line_search_direction_type = ceres::BFGS;
+      //options.line_search_direction_type = ceres::BFGS;
+    options.sparse_linear_algebra_library_type = ceres::SUITE_SPARSE;
+    options.linear_solver_type = ceres::SPARSE_SCHUR;
+    options.preconditioner_type = ceres::JACOBI;
+    options.visibility_clustering_type = ceres::CANONICAL_VIEWS;
+    
+      
       options.num_threads = 24;
       options.max_num_iterations = params_->multiframe_iterations_per_ell;
       ceres::Solver::Summary summary;

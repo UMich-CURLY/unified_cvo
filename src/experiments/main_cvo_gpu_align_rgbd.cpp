@@ -14,6 +14,7 @@
 #include "cvo/CvoGPU.hpp"
 #include "cvo/Cvo.hpp"
 #include "cvo/CvoParams.hpp"
+#include "utils/ImageRGBD.hpp"
 using namespace std;
 using namespace boost::filesystem;
 
@@ -61,9 +62,8 @@ int main(int argc, char *argv[]) {
   //std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_rgb, source_dep,
                                                     //19, semantics_source, 
   //                                                  calib, 1));
-  std::shared_ptr<cvo::RawImage> source_raw(new cvo::RawImage(source_rgb));
+  std::shared_ptr<cvo::ImageRGBD> source_raw(new cvo::ImageRGBD(source_rgb, source_dep_data));
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw,
-                                                                    source_dep_data,
                                                                     calib
                                                                     //,cvo::CvoPointCloud::CANNY_EDGES
                                                                     ));
@@ -90,8 +90,8 @@ int main(int argc, char *argv[]) {
 
 
     //std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, rgb, dep, calib,1));
-    std::shared_ptr<cvo::RawImage> target_raw(new cvo::RawImage(rgb));
-    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, target_dep_data, calib
+    std::shared_ptr<cvo::ImageRGBD> target_raw(new cvo::ImageRGBD(rgb, target_dep_data));
+    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, calib
                                                                       //,cvo::CvoPointCloud::CANNY_EDGES
                                                                       ));
     //if (i == 0)

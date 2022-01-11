@@ -7,7 +7,7 @@
 #include <cmath>
 #include <boost/filesystem.hpp>
 #include "dataset_handler/KittiHandler.hpp"
-#include "utils/RawImage.hpp"
+#include "utils/ImageStereo.hpp"
 #include "utils/Calibration.hpp"
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/CvoGPU.hpp"
@@ -75,8 +75,8 @@ int main(int argc, char *argv[]) {
   std::vector<float> semantics_source;
   //kitti.read_next_stereo(source_left, source_right, 19, semantics_source);
   kitti.read_next_stereo(source_left, source_right);
-  std::shared_ptr<cvo::RawImage> source_raw(new cvo::RawImage(source_left));
-  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw, source_right, calib));
+  std::shared_ptr<cvo::ImageStereo> source_raw(new cvo::ImageStereo(source_left, source_right));
+  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw, calib));
   Eigen::Matrix4f source_tf = TFs[0];
   std::cout<<"source point cloud has been generated\n";
   
@@ -94,8 +94,8 @@ int main(int argc, char *argv[]) {
       std::cout<<"finish all files\n";
       break;
     }
-    std::shared_ptr<cvo::RawImage> target_raw(new cvo::RawImage(left));
-    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, right, calib));
+    std::shared_ptr<cvo::ImageStereo> target_raw(new cvo::ImageStereo(left, right));
+    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, calib));
 
     // get initial guess from transformation file
     Eigen::Matrix4f target_tf = TFs[i+1];  

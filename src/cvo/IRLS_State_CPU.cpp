@@ -111,18 +111,34 @@ namespace cvo {
     pc1_kdtree_.reset(new Kdtree(3 /*dim*/, frame1->points->positions(), 20 /* max leaf */ ));
     pc1_kdtree_->index->buildIndex();
   }
+  /*
+  static
+  float compute_geometric_type_ip(const float * geo_type_a,
+                                  const float * geo_type_b,
+                                  int size
+                                  ) {
+    float norm2_a = square_norm(geo_type_a, size);
+    float norm2_b = square_norm(geo_type_b, size);
+    float dot_ab = dot(geo_type_a, geo_type_b, size);
+    //printf("norm2_a=%f, norm2_b=%f, dot_ab=%f\n", norm2_a, norm2_b, dot_ab);
+    float geo_sim = dot_ab / sqrt(norm2_a * norm2_b);
+    
+    return geo_sim;
+  }
+  */
 
   static
   void se_kernel(// input
-                 const std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f> > &pc1,
-                 const std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f> > &pc2,
-                 const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>& color_pc1,
-                 const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>& color_pc2,
+                 //const std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f> > &pc1,
+                 //const std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f> > &pc2,
+                 //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>& color_pc1,
+                 //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>& color_pc2,
+                 const CvoPointCloud & pc1_cvo,
+                 const CvoPointCloud & pc2_cvo,
+                 const std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f> > & pc2_curr,                 
+                 const CvoParams * cvo_params,                 
                  std::shared_ptr<BinaryStateCPU::Kdtree> mat_index,
                  float ell,
-                 float c_ell,
-                 float sp_thresh,
-                 float sigma,
                  int iter,
                  // output
                  Eigen::SparseMatrix<double, Eigen::RowMajor> & ip_mat_gradient_prefix
@@ -130,64 +146,111 @@ namespace cvo {
                  ) {
 
     ip_mat_gradient_prefix.setZero();
+
+    auto & pc1 = pc1_cvo.positions();
+    auto & pc2 = pc2_cvo.positions();
+    auto & labels1 = pc1_cvo.labels();
+    auto & labels2 = pc2_cvo.labels();
+    auto & features1 = pc1_cvo.features();
+    auto & features2 = pc2_cvo.features();
+    auto & geometry1 = pc1_cvo.geometric_types();
+    auto & geometry2 = pc2_cvo.geometric_types();
+
+    const float sigma2 = cvo_params->sigma * cvo_params->sigma;
+    const float c_ell2 = cvo_params->c_ell * cvo_params->c_ell;
+    const float s_ell2 = cvo_params->s_ell * cvo_params->s_ell;
+    const float c_sigma2 = cvo_params->c_sigma*cvo_params->c_sigma;
+    const float s_sigma2 = cvo_params->s_sigma*cvo_params->s_sigma;
     
-    const float d2_thresh = -2 * ell * ell * log(sp_thresh);
-    const float d2_c_thresh = -2.0*c_ell*c_ell*log(sp_thresh);    
-    const float s2 = sigma * sigma;
+    
+    float d2_thresh=1, d2_c_thresh=1, d2_s_thresh=1;
+    //d2_thresh = -2 * ell * ell * log(sp_thresh);
+    if (cvo_params->is_using_geometry)
+      d2_thresh = -2.0*ell*ell*log(cvo_params->sp_thres/sigma2);
+    if (cvo_params->is_using_intensity)
+      d2_c_thresh = -2.0*c_ell2*log(cvo_params->sp_thres/c_sigma2);
+    if (cvo_params->is_using_semantics)
+      d2_s_thresh = -2.0*s_ell2*log(cvo_params->sp_thres/s_sigma2);
+    
     
     // typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> >, double>  kd_tree_t;
     //kd_tree_t mat_index(3 /*dim*/, pc2, 20 /* max leaf */ );
     //mat_index.index->buildIndex();
 
-    #pragma omp parallel for
-    for (int idx = 0; idx < pc2.size(); idx++) {
+    #pragma omp parallel for num_threads(24)
+    for (int idx = 0; idx < pc2_curr.size(); idx++) {
 
       const float search_radius = d2_thresh;
         
       std::vector<std::pair<size_t,float>>  ret_matches;
       nanoflann::SearchParams params_flann;
-      const size_t nMatches = mat_index->index->radiusSearch(pc2[idx].data(), search_radius, ret_matches, params_flann);
+      const size_t num_matches = mat_index->index->radiusSearch(pc2_curr[idx].data(), search_radius, ret_matches, params_flann);
 
-
-
-      for(size_t j=0; j<nMatches; ++j){
+      for(size_t j=0; j<num_matches; ++j){
         int i = ret_matches[j].first;
         float d2 = ret_matches[j].second;
 
-        float k = 1;
-        float ck = 1;
-        float a = 1;
-        if(d2<d2_thresh){
-          Eigen::VectorXf feature_b = color_pc2.row(idx);          
-          Eigen::VectorXf feature_a = color_pc1.row(i);
+        float a = 1, sk=1, ck=1, k=1, geo_sim=1;
+        if (cvo_params->is_using_geometric_type) {
+          //geo_sim = compute_geometric_type_ip(p_a->geometric_type,
+          //                                    p_b->geometric_type,
+          //                                    2);
+          const Eigen::Vector2f g_a = Eigen::Map<const Eigen::Vector2f>(geometry1.data()+i*2);
+          const Eigen::Vector2f g_b = Eigen::Map<const Eigen::Vector2f>(geometry2.data()+idx*2);
+          geo_sim = g_a.dot(g_b) / g_a.norm() / g_b.norm();
+          if(geo_sim < 0.01) {
+            //         std::cout<<"i="<<i<<", j="<<idx<<", geo_sim="<<geo_sim<<", skipped\n";
+            continue;
+          }
+        }
+      
+        if (cvo_params->is_using_geometry) {
+          //float d2 = (squared_dist( *p_b ,*p_a ));
+          if (d2 < d2_thresh)
+            k= sigma2*exp(-d2/(2.0*ell*ell));
+          else continue;
+        }
+        
+        Eigen::VectorXf feature_b = features2.row(idx);          
+        Eigen::VectorXf feature_a = features1.row(i);
+        if (cvo_params->is_using_intensity) {
           float d2_color = (feature_a-feature_b).squaredNorm();
-            
-          if(d2_color<d2_c_thresh){
-            k = s2*exp(-d2/(2.0*ell*ell));
-            
-            ck = exp(-d2_color/(2.0*0.05*0.05));
-            a = ck*k;
-
-            if (a > sp_thresh){
-              //double a_residual = ck * k * d2 ; // least square
-              double a_gradient = (double)ck * k ;
-              #pragma omp critical
-              {
-                //nonzero_list.push_back(Eigen::Triplet<double>(i, idx, a));
-                ip_mat_gradient_prefix.insert(i, idx) = a_gradient;
-                //*sum_residual += a_residual;
-              }
-            }
-          /*if ( i == 10) {
-            std::cout<<"Inside se_kernel: i=10, j="<<idx<<", d2="<<d2<<", k="<<k<<
+          if (d2_color < d2_c_thresh)
+            ck = c_sigma2 * exp(-d2_color/(2.0*c_ell2));
+          else
+            continue;
+        }
+        if (cvo_params->is_using_semantics) {
+          Eigen::VectorXf label_a = labels1.row(i);
+          Eigen::VectorXf label_b = labels2.row(idx);
+          float d2_semantic = (label_a - label_b).squaredNorm();  //squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
+          if (d2_semantic < d2_s_thresh )
+            sk = s_sigma2*exp(-d2_semantic/(2.0*s_ell2));
+          else
+            continue;
+        }
+        a = ck*k*sk*geo_sim;
+        if (a > cvo_params->sp_thres){
+          //double a_residual = ck * k * d2 ; // least square
+          double a_gradient = (double)ck * k ;
+#pragma omp critical
+          {
+            //nonzero_list.push_back(Eigen::Triplet<double>(i, idx, a));
+            ip_mat_gradient_prefix.insert(i, idx) = a_gradient;
+            //*sum_residual += a_residual;
+          }
+          /*
+          if ( idx == 0) {
+            std::cout<<"Inside se_kernel: i="<<i<<"j="<<idx<<", d2="<<d2<<", k="<<k<<
             ", ck="<<ck
             <<", the point_a is ("<<pc1[i].transpose()
-            <<", the point_b is ("<<pc2[idx].transpose()<<std::endl;
-            std::cout<<"feature_a "<<feature_a.transpose()<<", feature_b "<<feature_b.transpose()<<std::endl;
+            <<", the point_b is ("<<pc2[idx].transpose()<<std::endl
+                     << ", geo_sim is "<<geo_sim
+                     <<"feature_a "<<feature_a.transpose()<<", feature_b "<<feature_b.transpose()<<std::endl;
                 
-            }*/
+                     }*/
           
-          }
+          //}
         }
       }
     }
@@ -216,13 +279,11 @@ namespace cvo {
     std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f> > pc2_curr_;
     transform_pcd(f1_to_f2, frame2->points->positions(), pc2_curr_);
 
-    se_kernel(frame1->points->positions(), pc2_curr_,
-              frame1->points->features(), frame2->points->features(),
+    se_kernel(*frame1->points, *frame2->points,
+              pc2_curr_,
+              params_,
               pc1_kdtree_,
               (float)ell_,
-              params_->c_ell,
-              (float)params_->sp_thres,(float) params_->sigma,
-
               iter_,
               ip_mat_
               );

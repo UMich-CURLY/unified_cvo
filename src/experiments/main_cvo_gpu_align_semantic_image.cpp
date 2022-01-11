@@ -7,7 +7,7 @@
 #include <cmath>
 #include <boost/filesystem.hpp>
 #include "dataset_handler/KittiHandler.hpp"
-#include "utils/RawImage.hpp"
+#include "utils/ImageStereo.hpp"
 #include "utils/Calibration.hpp"
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/CvoGPU.hpp"
@@ -164,8 +164,8 @@ init_guess <<
   std::vector<float> semantics_source;
   kitti.read_next_stereo(source_left, source_right, NUM_CLASSES, semantics_source);
   //kitti.read_next_stereo(source_left, source_right);
-  std::shared_ptr<cvo::RawImage> source_raw(new cvo::RawImage(source_left, NUM_CLASSES, semantics_source));
-  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw, source_right, calib));
+  std::shared_ptr<cvo::ImageStereo> source_raw(new cvo::ImageStereo(source_left, source_right, NUM_CLASSES, semantics_source));
+  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw, calib));
   //source->write_to_color_pcd(std::string(argv[1]) +std::string( "/cvo_semantic_pcds/") + std::string(argv[4]) + std::string(".pcd")) ;
   //source->write_to_txt(std::string(argv[1]) +std::string( "/cvo_points_semantics/") + std::string(argv[4]) + std::string(".txt") );
   double total_time = 0;
@@ -184,8 +184,8 @@ init_guess <<
       std::cout<<"finish all files\n";
       break;
     }
-    std::shared_ptr<cvo::RawImage> target_raw(new cvo::RawImage(left, NUM_CLASSES, semantics_target));
-    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, right, calib));
+    std::shared_ptr<cvo::ImageStereo> target_raw(new cvo::ImageStereo(left,right,  NUM_CLASSES, semantics_target));
+    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, calib));
 
     //if (i == start_frame)
     //  target->write_to_color_pcd("target.pcd");

@@ -51,8 +51,8 @@ namespace cvo {
     using Mat34d_row = Eigen::Matrix<double, 3, 4, Eigen::RowMajor>;
     
     CvoBatchIRLS(const std::vector<CvoFrame::Ptr> & frames,
+                 const std::vector<bool> & pivot_flags,
                  const std::list<BinaryState::Ptr> & states,
-                 CvoFrame * const pivot_frame,
                  const CvoParams * params
                  );
 
@@ -67,7 +67,8 @@ namespace cvo {
     //std::unique_ptr<ceres::Problem> problem_;
     
     const std::vector<CvoFrame::Ptr> * frames_;
-    CvoFrame * const pivot_;
+    //CvoFrame * const pivot_;
+    const std::vector<bool> * pivot_flags_; 
     const CvoParams * params_;
 
 

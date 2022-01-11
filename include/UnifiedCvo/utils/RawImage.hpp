@@ -1,10 +1,7 @@
 #pragma once
 
 #include <vector>
-#include <iostream>
 #include <opencv2/opencv.hpp>
-#include "utils/RawImage.hpp"
-//#include "utils/data_type.hpp"
 
 namespace cvo {
 
@@ -14,7 +11,7 @@ namespace cvo {
     RawImage(const cv::Mat & left_image);
     RawImage(const cv::Mat & left_image, int num_classes, const std::vector<float> & semantic);
     RawImage();
-    ~RawImage() {}
+    virtual ~RawImage() {}
 
     const std::vector<float> intensity() const { return intensity_; }
     const cv::Mat & image() const { return image_;}
@@ -24,7 +21,7 @@ namespace cvo {
     int rows() const {return rows_;}
     int cols() const {return cols_;}
     int channels() const {return channels_;}
-    int num_class() const {return num_class_;}
+    int num_classes() const {return num_class_;}
     
   private: 
     // assume all data to be float32
@@ -33,7 +30,7 @@ namespace cvo {
     std::vector<float> gradient_; // size: image total pixels x 2
     std::vector<float> gradient_square_;
     int num_class_;
-    int rows_;
+    int rows_; 
     int cols_;
     int channels_;
     std::vector<float> semantic_image_;

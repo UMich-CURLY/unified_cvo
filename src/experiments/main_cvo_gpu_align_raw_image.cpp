@@ -7,7 +7,7 @@
 #include <cmath>
 #include <boost/filesystem.hpp>
 #include "dataset_handler/KittiHandler.hpp"
-#include "utils/RawImage.hpp"
+#include "utils/ImageStereo.hpp"
 #include "utils/Calibration.hpp"
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/CvoGPU.hpp"
@@ -56,12 +56,14 @@ int main(int argc, char *argv[]) {
   //kitti.read_next_stereo(source_left, source_right, 19, semantics_source);
   kitti.read_next_stereo(source_left, source_right);
   std::cout<<"read source raw...\n";
-  std::shared_ptr<cvo::RawImage> source_raw(new cvo::RawImage(source_left));
+  std::shared_ptr<cvo::ImageStereo> source_raw(new cvo::ImageStereo(source_left, source_right));
   std::cout<<"build source CvoPointCloud...\n";
-  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw, source_right, calib, cvo::CvoPointCloud::FULL));
+  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw, calib
+                                                                    //, cvo::CvoPointCloud::CANNY_EDGES
+                                                                    ));
   std::cout<<"write to opcd\n";
   source->write_to_color_pcd("source.pcd");
-  source->write_to_color_pcd(std::to_string(start_frame) + ".pcd");
+  //source->write_to_color_pcd(std::to_string(start_frame) + ".pcd");
 
   double total_time = 0;
   int i = start_frame;
@@ -80,20 +82,22 @@ int main(int argc, char *argv[]) {
       break;
     }
 
-    std::shared_ptr<cvo::RawImage> target_raw(new cvo::RawImage(left));
-    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, right, calib, cvo::CvoPointCloud::FULL));
+    std::shared_ptr<cvo::ImageStereo> target_raw(new cvo::ImageStereo(left, right));
+    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, calib
+                                                                      //,cvo::CvoPointCloud::CANNY_EDGES
+                                                                      ));
     
     target->write_to_color_pcd("target.pcd");
-    target->write_to_color_pcd(std::to_string(i+1) + ".pcd");
+    //target->write_to_color_pcd(std::to_string(i+1) + ".pcd");
     Eigen::Matrix4f result, init_guess_inv;
     Eigen::Matrix4f identity_init = Eigen::Matrix4f::Identity();
     init_guess_inv = init_guess.inverse();    
-    /*
-    double in_product_pre_t2s = cvo_align.function_angle(*source, *target, init_guess_inv, ell_init, false);
-    std::cout<<"The init guess function_angle from frame "<<i <<" to "<< i-1 <<" is "<<in_product_pre_t2s<<"\n";
+
+    //double in_product_pre_t2s = cvo_align.function_angle(*source, *target, init_guess_inv, ell_init, false);
+    //std::cout<<"The init guess function_angle from frame "<<i <<" to "<< i-1 <<" is "<<in_product_pre_t2s<<"\n";
     
-    double in_product_identity = cvo_align.function_angle(*source, *target, identity_init, ell_init);
-    std::cout<<"The identity guess  inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_identity<<"\n";
+    //double in_product_identity = cvo_align.function_angle(*source, *target, identity_init, ell_init);
+    //std::cout<<"The identity guess  inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_identity<<"\n";
     
     
 
@@ -101,20 +105,20 @@ int main(int argc, char *argv[]) {
     std::cout<<std::flush;
 
     double this_time = 0;
-    // cvo_align.align(*source, *target, init_guess_inv, result, nullptr,&this_time);
+    cvo_align.align(*source, *target, init_guess_inv, result, nullptr,&this_time);
     total_time += this_time;
     //cvo_align.align(*source, *target, init_guess, result);
     
     // get tf and inner product from cvo getter
     //double in_product = cvo_align.inner_product_cpu(*source, *target, result, ell_init);
-    double in_product = cvo_align.function_angle(*source, *target, result.inverse(), ell_init, false);
+    //double in_product = cvo_align.function_angle(*source, *target, result.inverse(), ell_init, false);
 
     //double in_product_normalized = cvo_align.inner_product_normalized();a
     //int non_zeros_in_A = cvo_align.number_of_non_zeros_in_A();
-    std::cout<<"The gpu inner product between "<<i-1 <<" and "<< i <<" is "<<in_product<<"\n";
+    //std::cout<<"The gpu inner product between "<<i-1 <<" and "<< i <<" is "<<in_product<<"\n";
     //std::cout<<"The normalized inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_normalized<<"\n";
     std::cout<<"Transform is "<<result <<"\n\n";
-    */
+
     // append accum_tf_list for future initialization
     init_guess = result;
     accum_mat = accum_mat * result;

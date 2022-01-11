@@ -99,6 +99,7 @@ namespace cvo{
      */
     int align(// inputs
               std::vector<CvoFrame::Ptr> & frames,  // point clouds, poses, the outputs are within
+              const std::vector<bool> & frames_to_hold_const,              
               const std::list<std::pair<CvoFrame::Ptr, CvoFrame::Ptr>> & edges,
               // outputs
               double *registration_seconds=nullptr

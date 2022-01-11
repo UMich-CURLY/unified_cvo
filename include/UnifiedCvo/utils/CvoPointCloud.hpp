@@ -5,8 +5,6 @@
 #include <Eigen/Dense>
 #include <opencv2/opencv.hpp>
 #include "utils/data_type.hpp"
-#include "utils/RawImage.hpp"
-#include "utils/Calibration.hpp"
 #include "utils/PointSegmentedDistribution.hpp"
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
@@ -23,6 +21,10 @@ namespace pcl {
 
 namespace cvo {
 
+  class ImageRGBD;
+  class ImageStereo;
+  class RawImage;
+  class Calibration;
 
   class
 #ifdef __CUDACC__
@@ -53,17 +55,27 @@ namespace cvo {
     const int pixel_pattern[8][2] = {{0,0}, {-1, 0},{-1,-1}, {-1,1}, {0,1},{0,-1},{1,1},{1,0} };
 
     // Constructor for stereo image
+    /*
     CvoPointCloud(const RawImage & left_raw_image,
                   const cv::Mat & right_image,
                   const Calibration &calib,
                   PointSelectionMethod pt_selection_method=CV_FAST);
+    */
+    CvoPointCloud(const ImageStereo & left_raw_image,
+                  const Calibration &calib,
+                  PointSelectionMethod pt_selection_method=CV_FAST);
+    
 
     // Constructor for rgbd image
+    CvoPointCloud(const ImageRGBD & rgb_raw_image,
+                  const Calibration &calib,
+                  PointSelectionMethod pt_selection_method=CV_FAST);
+    /*
     CvoPointCloud(const RawImage & rgb_raw_image,
                   const std::vector<uint16_t> & depth_image,
                   const Calibration &calib,
                   PointSelectionMethod pt_selection_method=CV_FAST);
-    
+    */
     CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
                   int target_num_points,
                   int beam_num,

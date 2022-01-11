@@ -244,6 +244,7 @@ namespace cvo {
 
   static
   void align_multi_cpu_impl(std::vector<CvoFrame::Ptr> & frames,
+                            const std::vector<bool> & frames_to_hold_const,                    
                             const std::list<std::pair<CvoFrame::Ptr, CvoFrame::Ptr>> & edges,
                             const CvoParams & params
                             ) {
@@ -255,7 +256,8 @@ namespace cvo {
       binary_states.push_back(std::dynamic_pointer_cast<BinaryState>(new_binary_state));
     }
 
-    CvoBatchIRLS batch_irls_problem(frames, binary_states, frames[0].get(), &params);
+    CvoBatchIRLS batch_irls_problem(frames, frames_to_hold_const,
+                                    binary_states, &params);
 
     batch_irls_problem.solve();
   }
@@ -265,6 +267,7 @@ namespace cvo {
                     //const std::vector<pcl::PointCloud<CvoPoint>> & pcs,
                     //const std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> & poses_in,
                     std::vector<CvoFrame::Ptr> & frames,
+                    const std::vector<bool> & frames_to_hold_const,                                     
                     const std::list<std::pair<CvoFrame::Ptr, CvoFrame::Ptr>> & edges,
                     // outputs
                     //std::vector<Eigen::Ref<Eigen::Matrix4f>> poses_out,
@@ -277,7 +280,8 @@ namespace cvo {
       
       auto start = std::chrono::system_clock::now();
       
-      align_multi_cpu_impl(frames, edges, params);
+      align_multi_cpu_impl(frames, frames_to_hold_const,
+                           edges, params);
       
 
       auto end = std::chrono::system_clock::now();

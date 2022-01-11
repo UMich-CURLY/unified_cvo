@@ -153,7 +153,10 @@ int main(int argc, char** argv) {
   }
 
   double time = 0;
-  cvo_align.align(frames, edges, &time);
+  std::vector<bool> const_flags(frames.size(), false);
+  const_flags[0] = true;  
+  cvo_align.align(frames, const_flags,
+                  edges, &time);
 
   std::cout<<"Align ends. Total time is "<<time<<std::endl;
   f_name="after_BA.pcd";

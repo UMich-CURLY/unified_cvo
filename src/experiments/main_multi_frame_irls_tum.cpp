@@ -12,6 +12,8 @@
 #include "utils/CvoPointCloud.hpp"
 #include "utils/CvoFrame.hpp"
 #include "dataset_handler/TumHandler.hpp"
+#include "utils/ImageRGBD.hpp"
+#include "utils/Calibration.hpp"
 
 using namespace std;
 
@@ -190,9 +192,9 @@ int main(int argc, char** argv) {
     cv::Mat rgb, depth;
     tum.read_next_rgbd(rgb, depth);
     vector<uint16_t> depth_data(depth.begin<uint16_t>(), depth.end<uint16_t>());
-    std::shared_ptr<cvo::RawImage> raw(new cvo::RawImage(rgb));
-    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(*raw, depth_data, calib, cvo::CvoPointCloud::CANNY_EDGES));
-    std::shared_ptr<cvo::CvoPointCloud> pc_full(new cvo::CvoPointCloud(*raw, depth_data, calib, cvo::CvoPointCloud::FULL));
+    std::shared_ptr<cvo::ImageRGBD> raw(new cvo::ImageRGBD(rgb, depth_data));
+    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(*raw, calib, cvo::CvoPointCloud::CANNY_EDGES));
+    std::shared_ptr<cvo::CvoPointCloud> pc_full(new cvo::CvoPointCloud(*raw,  calib, cvo::CvoPointCloud::FULL));
     std::cout<<"Load "<<curr_frame_id<<", "<<pc->positions().size()<<" number of points\n";
     pcs.push_back(pc);
     pcs_full.push_back(pc_full);
@@ -219,7 +221,10 @@ int main(int argc, char** argv) {
   }
 
   double time = 0;
-  cvo_align.align(frames, edges, &time);
+  std::vector<bool> const_flags(frames.size(), false);
+  const_flags[0] = true;
+  cvo_align.align(frames, const_flags,
+                  edges, &time);
 
   std::cout<<"Align ends. Total time is "<<time<<" seconds."<<std::endl;
   f_name="after_BA.pcd";
