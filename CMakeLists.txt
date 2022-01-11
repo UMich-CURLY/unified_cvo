@@ -108,7 +108,7 @@ set(CVO_UTILS_SOURCE
   ${PROJECT_SOURCE_DIR}/src/utils/LeGoLoamPointSelection.cpp
   ${PROJECT_SOURCE_DIR}/src/utils/RawImage.cpp
   ${PROJECT_SOURCE_DIR}/src/utils/CvoPointCloud.cpp
-  
+  ${PROJECT_SOURCE_DIR}/src/utils/ImageStereo.cpp
   )
 
 set(CVO_UTILS_COVARIANCE_SOURCE
@@ -120,6 +120,7 @@ set(CVO_UTILS_COVARIANCE_SOURCE
   ${PROJECT_SOURCE_DIR}/src/utils/RawImage.cpp
   ${PROJECT_SOURCE_DIR}/src/utils/CvoPointCloud.cpp
   ${PROJECT_SOURCE_DIR}/src/utils/CvoPointCovariance.cu
+  ${PROJECT_SOURCE_DIR}/src/utils/ImageStereo.cpp  
   )
 
 
@@ -655,8 +656,7 @@ install(
     )  
 
 
-  install(DIRECTORY ${CVO_PUBLIC_HEADERS} 
-	  
+  install(DIRECTORY ${CVO_PUBLIC_HEADERS} 	  
 	  DESTINATION ${${PROJECT_NAME}_INCLUDE_DEST})
 
 
