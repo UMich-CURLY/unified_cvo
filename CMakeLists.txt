@@ -140,6 +140,14 @@ set(KITTI_HANDLER_SOURCE
   ${PROJECT_SOURCE_DIR}/src/dataset_handler/KittiHandler.cpp  
   )
 
+set(CNPY_LIB_SOURCE
+  ${PROJECT_SOURCE_DIR}/thirdparty/cnpy/cnpy.cpp
+  )
+
+set(TARTAN_HANDLER_SOURCE
+  ${PROJECT_SOURCE_DIR}/src/dataset_handler/TartanAirHandler.cpp
+  )
+
 # Sources files
 #set(POSE_GRAPH_SOURCE
 #  ${PROJECT_SOURCE_DIR}/src/graph_optimizer/Frame.cpp
@@ -188,6 +196,7 @@ set (CVO_INCLUDE_DIRS
   # thirdparty
   ${PROJECT_SOURCE_DIR}/thirdparty/libelas/
   ${PROJECT_SOURCE_DIR}/thirdparty/cugicp/
+  ${PROJECT_SOURCE_DIR}/thirdparty/cnpy/
   )
 
 #include_directories(
@@ -227,6 +236,19 @@ target_include_directories(kitti PUBLIC
 target_link_libraries(kitti PUBLIC opencv_core opencv_photo opencv_highgui opencv_features2d opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search pcl_common boost_filesystem
   )
 
+add_library(cnpy SHARED ${CNPY_LIB_SOURCE})
+target_include_directories(cnpy PUBLIC
+  #$<BUILD_INTERFACE:${CMAE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}>
+  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+  #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cnpy PUBLIC )
+
+add_library(tartan SHARED ${TARTAN_HANDLER_SOURCE})
+target_include_directories(tartan PUBLIC
+  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(tartan PUBLIC opencv_core cnpy opencv_photo opencv_highgui opencv_features2d opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search pcl_common boost_system boost_filesystem)
 
 if (${PROJECT_NAME}_ENABLE_CUDA)
   add_library(cukdtree_lib SHARED ${CUKDTREE_LIB_SOURCE})
@@ -619,7 +641,7 @@ set(${PROJECT_NAME}_LIB_DEST "lib/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}")
 
 
 export(                                                                                                                                                                                                    
-  TARGETS    elas tum kitti lie_group_utils cvo_utils_lib cvo_gpu_img_lib cvo_irls_lib
+  TARGETS    elas tum kitti cnpy tartan lie_group_utils cvo_utils_lib cvo_gpu_img_lib cvo_irls_lib
   NAMESPACE  ${PROJECT_NAME}::        
   FILE ${PROJECT_NAME}Targets.cmake                                                                                                                                                                     
   )                                                                                                                                                                                                        
@@ -627,7 +649,7 @@ export(
 
 install(
     # targets to install
-    TARGETS elas tum kitti lie_group_utils cvo_utils_lib cvo_gpu_img_lib cvo_irls_lib
+    TARGETS elas tum kitti cnpy tartan lie_group_utils cvo_utils_lib cvo_gpu_img_lib cvo_irls_lib
     # name of the CMake "export group" containing the targets we want to install
     EXPORT ${PROJECT_NAME}Targets
     # Dynamic, static library and include destination locations after running
