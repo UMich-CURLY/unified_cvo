@@ -65,6 +65,7 @@ namespace cvo {
     float multiframe_ell_min;
     float multiframe_ell_decay_rate;
     int multiframe_iterations_per_ell;
+    int multiframe_expected_points;
     
     CvoParams() :
       ell_init_first_frame(0.5),
@@ -109,7 +110,8 @@ namespace cvo {
       multiframe_ell_init(0.15),
       multiframe_ell_min(0.05),
       multiframe_ell_decay_rate(0.7),
-      multiframe_iterations_per_ell(8)
+      multiframe_iterations_per_ell(8),
+      multiframe_expected_points(1000)
     {}
     
   };
@@ -267,6 +269,8 @@ namespace cvo {
       params->multiframe_ell_decay_rate = fs["multiframe_ell_decay_rate"].as<float>();
     if (fs["multiframe_iterations_per_ell"])
       params->multiframe_iterations_per_ell = fs["multiframe_iterations_per_ell"].as<int>();
+    if (fs["multiframe_expected_points"])
+      params->multiframe_expected_points = fs["multiframe_expected_points"].as<int>();
 
     
     

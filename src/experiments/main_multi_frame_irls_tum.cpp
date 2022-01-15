@@ -133,9 +133,11 @@ void write_traj_file(std::string & fname,
   outfile.close();
 }
 
-void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string & fname) {
+void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string & fname, int max_frames=-1) {
   pcl::PointCloud<pcl::PointXYZRGB> pc_all;
+  int counter = 0;
   for (auto ptr : frames) {
+    if (counter == max_frames) break;
     cvo::CvoPointCloud new_pc;
     Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
     pose.block<3,4>(0,0) = Eigen::Map<cvo::Mat34d_row>(ptr->pose_vec);
@@ -147,6 +149,7 @@ void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string 
     new_pc.export_to_pcd(pc_curr);
 
     pc_all += pc_curr;
+    counter++;
   }
   pcl::io::savePCDFileASCII(fname, pc_all);
 }
@@ -156,17 +159,25 @@ int main(int argc, char** argv) {
   omp_set_num_threads(24);
 
   cvo::TumHandler tum(argv[1]);
+  string cvo_param_file(argv[2]);    
+  std::string graph_file_name(argv[3]);
+  std::string tracking_fname(argv[4]);
+
+  int num_const_frames = 1;
+  if (argc > 5)
+    num_const_frames = std::stoi(std::string(argv[5]));
+  
   int total_iters = tum.get_total_number();
   vector<string> vstrRGBName = tum.get_rgb_name_list();
 
-  string cvo_param_file(argv[2]);  
+
   cvo::CvoGPU cvo_align(cvo_param_file);
   string calib_file;
   calib_file = string(argv[1] ) +"/cvo_calib.txt"; 
   cvo::Calibration calib(calib_file, cvo::Calibration::RGBD);
 
   
-  std::string graph_file_name(argv[3]);
+
   std::vector<int> frame_inds;
   std::vector<std::pair<int, int>> edge_inds;
   read_graph_file(graph_file_name, frame_inds, edge_inds);
@@ -174,7 +185,7 @@ int main(int argc, char** argv) {
   std::vector<cvo::Mat34d_row, Eigen::aligned_allocator<cvo::Mat34d_row>> gt_poses;
   std::vector<cvo::Mat34d_row, Eigen::aligned_allocator<cvo::Mat34d_row>> tracking_poses;
   std::vector<std::string> timestamps;
-  std::string tracking_fname(argv[4]);
+
   std::string tracking_subset_poses_fname("cvo_track_poses.txt");
   read_pose_file(tracking_fname, tracking_subset_poses_fname , frame_inds, timestamps, tracking_poses);
 
@@ -215,14 +226,19 @@ int main(int argc, char** argv) {
   for (int i = 0; i < edge_inds.size(); i++) {
     int first_ind = id_to_index[edge_inds[i].first];
     int second_ind = id_to_index[edge_inds[i].second];
-    std::cout<<"first ind "<<first_ind<<", second ind "<<second_ind<<std::endl;
+     std::cout<<"first ind "<<first_ind<<", second ind "<<second_ind<<std::endl;
     std::pair<cvo::CvoFrame::Ptr, cvo::CvoFrame::Ptr> p(frames[first_ind], frames[second_ind]);
     edges.push_back(p);
   }
 
   double time = 0;
   std::vector<bool> const_flags(frames.size(), false);
-  const_flags[0] = true;
+  std::cout<<"Const frames include ";
+  for (int i = 0; i < num_const_frames; i++) {
+    const_flags[i] = true;
+    std::cout<<frame_inds[i]<<", ";
+  }
+  std::cout<<std::endl;
   cvo_align.align(frames, const_flags,
                   edges, &time);
 
@@ -234,6 +250,12 @@ int main(int argc, char** argv) {
   }
   write_transformed_pc(frames_full, f_name_full);
   write_transformed_pc(frames, f_name);
+
+  f_name="const_BA.pcd";
+  f_name_full="const_BA_full.pcd";
+  write_transformed_pc(frames_full, f_name_full, num_const_frames);
+  write_transformed_pc(frames, f_name, num_const_frames);
+  
 
   std::string traj_out("traj_out.txt");
   write_traj_file(traj_out,

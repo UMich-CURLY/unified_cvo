@@ -117,11 +117,11 @@ namespace cvo {
       options.gradient_tolerance = 1e-8;
       options.parameter_tolerance = 1e-8;
       //options.line_search_direction_type = ceres::BFGS;
-    options.sparse_linear_algebra_library_type = ceres::SUITE_SPARSE;
-    options.linear_solver_type = ceres::SPARSE_SCHUR;
-    options.preconditioner_type = ceres::JACOBI;
-    options.visibility_clustering_type = ceres::CANONICAL_VIEWS;
-    
+      options.sparse_linear_algebra_library_type = ceres::SUITE_SPARSE;
+      options.linear_solver_type = ceres::SPARSE_SCHUR;
+      options.preconditioner_type = ceres::JACOBI;
+      options.visibility_clustering_type = ceres::CANONICAL_VIEWS;
+      
       
       options.num_threads = 24;
       options.max_num_iterations = params_->multiframe_iterations_per_ell;
@@ -134,8 +134,10 @@ namespace cvo {
       pose_snapshot(*frames_, poses_new);
       double param_change = change_of_all_poses(poses_old, poses_new);
       std::cout<<"Update is "<<param_change<<std::endl;
-      if (param_change < 1e-5 ) {
-        if (ell > params_->multiframe_ell_min) {
+      if (param_change < 1e-5 * poses_new.size()
+          || iter_ % 10 == 0
+          ) {
+        if (ell >= params_->multiframe_ell_min) {
           ell = ell *  params_->multiframe_ell_decay_rate;
           std::cout<<"Reduce ell to "<<ell<<std::endl;          
           for (auto && state : *states_) 

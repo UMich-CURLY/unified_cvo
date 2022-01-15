@@ -287,8 +287,8 @@ namespace cvo {
               iter_,
               ip_mat_
               );
-    if (ip_mat_.nonZeros() == 0) {
-      std::cout<<"zero ip mat\n";
+    if (ip_mat_.nonZeros() < 100) {
+      std::cout<<"too sparse inner product mat "<<ip_mat_.nonZeros()<<std::endl;
       return -1;
     } else
       return 0;

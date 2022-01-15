@@ -282,7 +282,7 @@ namespace cvo{
     /*****************************************/
     // using DSO semi dense point selector
     else if (pt_selection_method == CvoPointCloud::DSO_EDGES) {
-      int expected_points = 800;
+      int expected_points = 1500;
       dso_select_pixels(left_image,
                         expected_points,
                         output_uv);

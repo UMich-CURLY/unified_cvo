@@ -291,7 +291,7 @@ namespace cvo{
     float norm2_b = square_norm(geo_type_b, size);
     float dot_ab = dot(geo_type_a, geo_type_b, size);
     //printf("norm2_a=%f, norm2_b=%f, dot_ab=%f\n", norm2_a, norm2_b, dot_ab);
-    float geo_sim = dot_ab / sqrt(norm2_a * norm2_b);
+    float geo_sim = dot_ab * dot_ab / (norm2_a * norm2_b);
     
     return geo_sim;
   }
@@ -466,7 +466,7 @@ namespace cvo{
                                             );
 
 
-        if(geo_sim < 0.01)
+        if(geo_sim < 0.001)
           continue;
       }
       
