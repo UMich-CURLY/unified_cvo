@@ -72,18 +72,22 @@ namespace cvo {
         int idx1 = it.row();   // row index
         int idx2 = it.col();   // col index (here it is equal to k)
         double color_ip = it.value();
-        /*
-          ceres::CostFunction * cost_per_point =
-          new PairwiseCostFunction(&pc1[idx1], &pc2[idx2], color_ip,  ell, 0.1);
-        */
+
         
+        ceres::CostFunction * cost_per_point =
+          new PairwiseAnalyticalDiffFunctor(pc1[idx1], pc2[idx2], color_ip,  ell_, params_->sigma);
+        
+
+        /*
         ceres::CostFunction* cost_per_point
           = new ceres::AutoDiffCostFunction<PairwiseAutoDiffFunctor, 1, 12, 12>(new PairwiseAutoDiffFunctor(pc1[idx1],
                                                                                                             pc2[idx2],
                                                                                                             color_ip,
                                                                                                             ell_,
-                                                                                                            params_->sigma));    
-        problem.AddResidualBlock(cost_per_point, nullptr, frame1->pose_vec, frame2->pose_vec);
+                                                                                                            params_->sigma));  
+        */
+        //ceres::LossFunctionWrapper* loss_function(new ceres::HuberLoss(1.0), ceres::TAKE_OWNERSHIP);
+        problem.AddResidualBlock(cost_per_point, nullptr , frame1->pose_vec, frame2->pose_vec);
       }
     }
 

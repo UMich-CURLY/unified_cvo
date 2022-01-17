@@ -10,7 +10,7 @@ sigma: 0.1
 sp_thres: 0.003 #0.0006
 c: 7.0
 d: 7.0
-c_ell: 0.1 #0.025 #0.02
+c_ell: 0.3 #0.1 #0.025 #0.02
 c_sigma: 1 
 s_ell: 0.1 #0.15 #0.04
 s_sigma: 1 #0.7
@@ -38,7 +38,7 @@ is_using_geometric_type: 0
 # for irls solver
 multiframe_using_cpu: 1
 multiframe_max_iters: 400
-multiframe_ell_init: 0.5
+multiframe_ell_init: 0.25 #0.5
 multiframe_ell_min: 0.02
 multiframe_ell_decay_rate: 0.7
 multiframe_iterations_per_ell: 20 #15

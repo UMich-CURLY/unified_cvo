@@ -20,7 +20,10 @@ using namespace std;
 
 void read_graph_file(std::string &graph_file_path,
                      std::vector<int> & frame_inds,
-                     std::vector<std::pair<int, int>> & edges) {
+                     std::vector<std::pair<int, int>> & edges,
+                     // optional
+                     std::vector<cvo::Mat34d_row,
+                      Eigen::aligned_allocator<cvo::Mat34d_row>> & poses_all) {
   std::ifstream graph_file(graph_file_path);
   
   int num_frames, num_edges;
@@ -40,6 +43,21 @@ void read_graph_file(std::string &graph_file_path,
     std::cout<<"("<<p.first<<", "<<p.second <<"), ";
   }
   std::cout<<"\n";
+  if (graph_file.eof() == false){
+    std::cout<<"poses included in the graph file\n";
+    poses_all.resize(num_frames);
+    for (int i = 0; i < num_frames; i++) {
+      double pose_vec[12];
+      for (int j = 0; j < 12; j++) {
+        graph_file>>pose_vec[j];
+      }
+      poses_all[i]  << pose_vec[0] , pose_vec[1], pose_vec[2], pose_vec[3],
+        pose_vec[4], pose_vec[5], pose_vec[6], pose_vec[7],
+        pose_vec[8], pose_vec[9], pose_vec[10], pose_vec[11];
+      std::cout<<"read pose["<<i<<"] as \n"<<poses_all[i]<<"\n";
+    }
+  }
+  
   graph_file.close();  
 }
 
@@ -180,7 +198,8 @@ int main(int argc, char** argv) {
 
   std::vector<int> frame_inds;
   std::vector<std::pair<int, int>> edge_inds;
-  read_graph_file(graph_file_name, frame_inds, edge_inds);
+  std::vector<cvo::Mat34d_row, Eigen::aligned_allocator<cvo::Mat34d_row>> BA_poses;
+  read_graph_file(graph_file_name, frame_inds, edge_inds, BA_poses);
 
   std::vector<cvo::Mat34d_row, Eigen::aligned_allocator<cvo::Mat34d_row>> gt_poses;
   std::vector<cvo::Mat34d_row, Eigen::aligned_allocator<cvo::Mat34d_row>> tracking_poses;
@@ -210,8 +229,14 @@ int main(int argc, char** argv) {
     pcs.push_back(pc);
     pcs_full.push_back(pc_full);
 
-    cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrame(pc.get(), tracking_poses[i].data()));
-    cvo::CvoFrame::Ptr new_full_frame(new cvo::CvoFrame(pc_full.get(), tracking_poses[i].data()));
+    double * poses_data = nullptr;
+    if (BA_poses.size())
+      poses_data = BA_poses[i].data();
+    else
+      poses_data = tracking_poses[i].data();
+
+    cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrame(pc.get(), poses_data));
+    cvo::CvoFrame::Ptr new_full_frame(new cvo::CvoFrame(pc_full.get(), poses_data));
     frames.push_back(new_frame);
     frames_full.push_back(new_full_frame);
     id_to_index[curr_frame_id] = i;
@@ -239,6 +264,9 @@ int main(int argc, char** argv) {
     std::cout<<frame_inds[i]<<", ";
   }
   std::cout<<std::endl;
+
+  
+  
   cvo_align.align(frames, const_flags,
                   edges, &time);
 

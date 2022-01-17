@@ -116,6 +116,7 @@ namespace cvo {
       options.function_tolerance = 1e-8;
       options.gradient_tolerance = 1e-8;
       options.parameter_tolerance = 1e-8;
+      //options.check_gradients = true;
       //options.line_search_direction_type = ceres::BFGS;
       options.sparse_linear_algebra_library_type = ceres::SUITE_SPARSE;
       options.linear_solver_type = ceres::SPARSE_SCHUR;

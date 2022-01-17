@@ -61,7 +61,7 @@ namespace cvo {
       }
     }
     // scale by 5000 and convert to uint16_t
-    raw_dep = raw_dep * 5000.0f;
+    raw_dep = raw_dep * 500.0f;
     raw_dep.convertTo(dep_img, CV_16UC1);
     return 0;
   }
