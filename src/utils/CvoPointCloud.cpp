@@ -403,13 +403,14 @@ namespace cvo{
  
   }
   */
-  
-  CvoPointCloud::CvoPointCloud(const ImageRGBD & raw_image,
+
+  template <typename DepthType>
+  CvoPointCloud::CvoPointCloud(const ImageRGBD<DepthType> & raw_image,
                                const Calibration &calib,
                                PointSelectionMethod pt_selection_method){
 
     const cv::Mat & rgb_raw_image = raw_image.image();
-    const std::vector<uint16_t> & depth_image = raw_image.depth_image();
+    const std::vector<DepthType> & depth_image = raw_image.depth_image();
  
     std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> output_uv;
     std::vector<float> geometry;
@@ -428,9 +429,9 @@ namespace cvo{
       int u = uv(0);
       int v = uv(1);
       Vec3f xyz;
-
+ 
       //uint16_t dep = depth_image.at<uint16_t>(cv::Point(u, v));
-      uint16_t dep = depth_image[v * w + u];
+      DepthType dep = depth_image[v * w + u];
         
       if(dep!=0 && !isnan(dep)){
 
@@ -479,7 +480,19 @@ namespace cvo{
     }
  
   }
+
+
+  template float
+  CvoPointCloud::CvoPointCloud(const ImageRGBD<float> & raw_image,
+                               const Calibration &calib,
+                               PointSelectionMethod pt_selection_method);
   
+  template uint16_t
+  CvoPointCloud::CvoPointCloud(const ImageRGBD<uint16_t> & raw_image,
+                               const Calibration &calib,
+                               PointSelectionMethod pt_selection_method);
+  
+
   
 
   template <>

@@ -222,9 +222,9 @@ int main(int argc, char** argv) {
     cv::Mat rgb, depth;
     tum.read_next_rgbd(rgb, depth);
     vector<uint16_t> depth_data(depth.begin<uint16_t>(), depth.end<uint16_t>());
-    std::shared_ptr<cvo::ImageRGBD> raw(new cvo::ImageRGBD(rgb, depth_data));
-    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(*raw, calib, cvo::CvoPointCloud::CANNY_EDGES));
-    std::shared_ptr<cvo::CvoPointCloud> pc_full(new cvo::CvoPointCloud(*raw,  calib, cvo::CvoPointCloud::FULL));
+    std::shared_ptr<cvo::ImageRGBD<uint16_t>> raw(new cvo::ImageRGBD<uint16_t>(rgb, depth_data));
+    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud<uint16_t>(*raw, calib, cvo::CvoPointCloud::CANNY_EDGES));
+    std::shared_ptr<cvo::CvoPointCloud> pc_full(new cvo::CvoPointCloud<uint16_t>(*raw,  calib, cvo::CvoPointCloud::FULL));
     std::cout<<"Load "<<curr_frame_id<<", "<<pc->positions().size()<<" number of points\n";
     pcs.push_back(pc);
     pcs_full.push_back(pc_full);

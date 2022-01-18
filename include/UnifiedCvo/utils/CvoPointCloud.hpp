@@ -67,7 +67,8 @@ namespace cvo {
     
 
     // Constructor for rgbd image
-    CvoPointCloud(const ImageRGBD & rgb_raw_image,
+    template <typename DepthType>
+    CvoPointCloud(const ImageRGBD<DepthType> & rgb_raw_image,
                   const Calibration &calib,
                   PointSelectionMethod pt_selection_method=CV_FAST);
     /*

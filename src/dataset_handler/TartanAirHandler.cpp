@@ -53,7 +53,9 @@ namespace cvo {
     int dim1 = dep_arr.shape[0];
     int dim2 = dep_arr.shape[1];
     cv::Mat raw_dep(cv::Size(dim2, dim1), CV_32FC1, dep_data);
+
     // set high depth pixels (sky) to nan
+    #pragma omp parallel for
     for (int r = 0; r < raw_dep.rows; r++) {
       for (int c = 0; c < raw_dep.cols; c++) {
         if (raw_dep.at<float>(r, c) < 10000) continue;
@@ -61,7 +63,7 @@ namespace cvo {
       }
     }
     // scale by 5000 and convert to uint16_t
-    raw_dep = raw_dep * 500.0f;
+    raw_dep = raw_dep * 5000.0f;
     raw_dep.convertTo(dep_img, CV_16UC1);
     return 0;
   }

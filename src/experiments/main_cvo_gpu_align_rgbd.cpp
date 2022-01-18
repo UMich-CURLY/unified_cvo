@@ -62,13 +62,13 @@ int main(int argc, char *argv[]) {
   //std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_rgb, source_dep,
                                                     //19, semantics_source, 
   //                                                  calib, 1));
-  std::shared_ptr<cvo::ImageRGBD> source_raw(new cvo::ImageRGBD(source_rgb, source_dep_data));
-  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw,
-                                                                    calib
-                                                                    //,cvo::CvoPointCloud::CANNY_EDGES
-                                                                    ));
-                                                                    //19, semantics_source, 
-                                                                    //                                                                    cvo::CvoPointCloud::CV_FAST));
+  std::shared_ptr<cvo::ImageRGBD<uint16_t>> source_raw(new cvo::ImageRGBD(source_rgb, source_dep_data));
+  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud<uint16_t>(*source_raw,
+                                                                              calib
+                                                                              //,cvo::CvoPointCloud::CANNY_EDGES
+                                                                              ));
+  //19, semantics_source, 
+  //                                                                    cvo::CvoPointCloud::CV_FAST));
   
   //0.2));
   //source->write_to_color_pcd("source.pcd");
@@ -90,10 +90,10 @@ int main(int argc, char *argv[]) {
 
 
     //std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, rgb, dep, calib,1));
-    std::shared_ptr<cvo::ImageRGBD> target_raw(new cvo::ImageRGBD(rgb, target_dep_data));
-    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, calib
-                                                                      //,cvo::CvoPointCloud::CANNY_EDGES
-                                                                      ));
+    std::shared_ptr<cvo::ImageRGBD<uint16_t>> target_raw(new cvo::ImageRGBD(rgb, target_dep_data));
+    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud<uint16_t>(*target_raw, calib
+                                                                                //,cvo::CvoPointCloud::CANNY_EDGES
+                                                                                ));
     //if (i == 0)
     //  target->write_to_color_pcd("target.pcd");  
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
