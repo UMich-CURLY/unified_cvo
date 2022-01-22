@@ -563,6 +563,15 @@ target_include_directories(cvo_irls_tum PUBLIC
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(cvo_irls_tum cvo_gpu_img_lib cvo_irls_lib cvo_utils_lib tum boost_filesystem boost_system)
 
+add_executable(cvo_irls_tartan ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_tartan.cpp)
+target_include_directories(cvo_irls_tartan PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_irls_tartan cvo_gpu_img_lib cvo_irls_lib cvo_utils_lib tartan boost_filesystem boost_system)
+      
+
 #add_executable(cvo_irls_kitti ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_kitti.cpp)
 #target_include_directories(cvo_irls_kitti PUBLIC
 	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
@@ -588,6 +597,15 @@ target_include_directories(cvo_align_gpu_rgbd PUBLIC
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(cvo_align_gpu_rgbd cvo_gpu_img_lib cvo_cpu_lib tum cvo_utils_lib boost_filesystem boost_system)
+
+add_executable(cvo_align_gpu_rgbd_tartan ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_tartan.cpp)
+target_include_directories(cvo_align_gpu_rgbd_tartan PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_align_gpu_rgbd_tartan cvo_gpu_img_lib cvo_cpu_lib tum cvo_utils_lib boost_filesystem boost_system tartan)
+
 
 if (${PROJECT_NAME}_ENABLE_LIDAR)
   add_executable(cvo_align_gpu_lidar_raw ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_geometric.cpp)

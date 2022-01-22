@@ -20,8 +20,8 @@ namespace pcl {
 
 
 namespace cvo {
-
-  class ImageRGBD;
+  
+  template <typename DepthType> class ImageRGBD;
   class ImageStereo;
   class RawImage;
   class Calibration;

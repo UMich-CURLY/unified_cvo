@@ -459,7 +459,7 @@ namespace cvo{
       int u = output_uv[good_point_ind[i]](0);
       int v = output_uv[good_point_ind[i]](1);
       if (raw_image.channels() == 3) {
-        cv::Vec3b avg_pixel = raw_image.image().at<cv::Vec3b>(v,u);
+        cv::Vec3b avg_pixel = raw_image.image(). template at<cv::Vec3b>(v,u);
         float gradient_0 = raw_image.gradient()[v * w + u];
         float gradient_1 = raw_image.gradient()[v * w + u + 1];
         features_(i,0) = ((float)(avg_pixel [0]) )/255.0;
@@ -468,7 +468,7 @@ namespace cvo{
         features_(i,3) = gradient_0/ 500.0 + 0.5;
         features_(i,4) = gradient_1/ 500.0 + 0.5;
       } else if (raw_image.channels() == 1) {
-        uint8_t avg_pixel = raw_image.image().at<uint8_t>(v,u);
+        uint8_t avg_pixel = raw_image.image(). template at<uint8_t>(v,u);
         float gradient_0 = raw_image.gradient()[v * w + u];
         float gradient_1 = raw_image.gradient()[v * w + u + 1];
         features_(i,0) = ((float)(avg_pixel) )/255.0;
@@ -482,15 +482,15 @@ namespace cvo{
   }
 
 
-  template float
-  CvoPointCloud::CvoPointCloud(const ImageRGBD<float> & raw_image,
-                               const Calibration &calib,
-                               PointSelectionMethod pt_selection_method);
+  template 
+  CvoPointCloud::CvoPointCloud<float>(const ImageRGBD<float> & raw_image,
+                                      const Calibration &calib,
+                                      PointSelectionMethod pt_selection_method);
   
-  template uint16_t
-  CvoPointCloud::CvoPointCloud(const ImageRGBD<uint16_t> & raw_image,
-                               const Calibration &calib,
-                               PointSelectionMethod pt_selection_method);
+  template 
+  CvoPointCloud::CvoPointCloud<uint16_t>(const ImageRGBD<uint16_t> & raw_image,
+                                         const Calibration &calib,
+                                         PointSelectionMethod pt_selection_method);
   
 
   

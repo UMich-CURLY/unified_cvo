@@ -58,7 +58,7 @@ namespace cvo {
     #pragma omp parallel for
     for (int r = 0; r < raw_dep.rows; r++) {
       for (int c = 0; c < raw_dep.cols; c++) {
-        if (raw_dep.at<float>(r, c) < 10000) continue;
+        if (raw_dep.at<float>(r, c) < 100) continue;
         raw_dep.at<float>(r, c) = std::nanf("1");
       }
     }
@@ -86,16 +86,20 @@ namespace cvo {
     int dim2 = dep_arr.shape[1];
     cv::Mat raw_dep(cv::Size(dim2, dim1), CV_32FC1, dep_data);
     // set high depth pixels (sky) to nan
+    dep_vec.resize(dim1 * dim2);
     for (int r = 0; r < raw_dep.rows; r++) {
       for (int c = 0; c < raw_dep.cols; c++) {
-        if (raw_dep.at<float>(r, c) < 10000) continue;
-        raw_dep.at<float>(r, c) = std::nanf("1");
+        float pix = raw_dep.at<float>(r, c);
+        if (pix > 100)
+          pix = std::nanf("1");
+          //  raw_dep.at<float>(r, c) = std::nanf("1");
+        dep_vec[ r * raw_dep.cols + c] =  5000 * pix;
       }
     }
     // scale by 5000 and flatten to vector
-    raw_dep = raw_dep * 5000.0f;
-    dep_vec.clear();
-    dep_vec = vector<float>(raw_dep.begin<float>(), raw_dep.end<float>());
+    //raw_dep = raw_dep * 5000.0f;
+    //dep_vec.clear();
+    //dep_vec = vector<float>(raw_dep.begin<float>(), raw_dep.end<float>());
     return 0;
   }
 

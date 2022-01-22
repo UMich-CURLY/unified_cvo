@@ -7,7 +7,7 @@
 #include <cmath>
 #include <boost/filesystem.hpp>
 //#include <opencv2/opencv.hpp>
-#include "dataset_handler/TumHandler.hpp"
+#include "dataset_handler/TartanAirHandler.hpp"
 //#include "graph_optimizer/Frame.hpp"
 #include "utils/Calibration.hpp"
 #include "utils/CvoPointCloud.hpp"
@@ -22,16 +22,16 @@ using namespace boost::filesystem;
 int main(int argc, char *argv[]) {
   // list all files in current directory.
   //You could put any file path in here, e.g. "/home/me/mwah" to list that directory
-  cvo::TumHandler tum(argv[1]);
-  int total_iters = tum.get_total_number();
-  vector<string> vstrRGBName = tum.get_rgb_name_list();
+  cvo::TartanAirHandler tartan(argv[1]);
+  int total_iters = tartan.get_total_number();
+  //vector<string> vstrRGBName = tum.get_rgb_name_list();
   string cvo_param_file(argv[2]);
   string calib_file;
   calib_file = string(argv[1] ) +"/cvo_calib.txt"; 
   cvo::Calibration calib(calib_file, cvo::Calibration::RGBD);
   std::ofstream accum_output(argv[3]);
   int start_frame = std::stoi(argv[4]);
-  tum.set_start_index(start_frame);
+  tartan.set_start_index(start_frame);
   int max_num = std::stoi(argv[5]);
   
   
@@ -55,23 +55,15 @@ int main(int argc, char *argv[]) {
   Eigen::Matrix4f accum_mat = Eigen::Matrix4f::Identity();
   // start the iteration
 
-  cv::Mat source_rgb, source_dep;
-  tum.read_next_rgbd(source_rgb, source_dep);
-  std::vector<uint16_t> source_dep_data(source_dep.begin<uint16_t>(), source_dep.end<uint16_t>());
-
-  //std::shared_ptr<cvo::Frame> source(new cvo::Frame(start_frame, source_rgb, source_dep,
-                                                    //19, semantics_source, 
-  //                                                  calib, 1));
-  std::shared_ptr<cvo::ImageRGBD<uint16_t>> source_raw(new cvo::ImageRGBD(source_rgb, source_dep_data));
+  cv::Mat source_rgb;
+  vector<float> source_depth;
+  tartan.read_next_rgbd(source_rgb, source_depth);
+  std::shared_ptr<cvo::ImageRGBD<float>> source_raw(new cvo::ImageRGBD<float>(source_rgb, source_depth));
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw,
-                                                                              calib
-                                                                              //,cvo::CvoPointCloud::CANNY_EDGES
-                                                                              ));
+                                                                    calib
+                                                                    ));
   //19, semantics_source, 
   //                                                                    cvo::CvoPointCloud::CV_FAST));
-  
-  //0.2));
-  //source->write_to_color_pcd("source.pcd");
   
   for (int i = start_frame; i<min(total_iters, start_frame+max_num)-1 ; i++) {
     
@@ -79,21 +71,20 @@ int main(int argc, char *argv[]) {
     std::cout<<"\n\n\n\n============================================="<<std::endl;
     std::cout<<"Aligning "<<i<<" and "<<i+1<<" with GPU "<<std::endl;
 
-    tum.next_frame_index();
-    cv::Mat rgb, dep;
+    tartan.next_frame_index();
+    cv::Mat rgb;
+    std::vector<float> dep;    
     //sdt::vector<float> semantics_target;
-    if (tum.read_next_rgbd(rgb, dep) != 0) {
+    if (tartan.read_next_rgbd(rgb, dep) != 0) {
       std::cout<<"finish all files\n";
       break;
     }
-    std::vector<uint16_t> target_dep_data(dep.begin<uint16_t>(), dep.end<uint16_t>());    
-
 
     //std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, rgb, dep, calib,1));
-    std::shared_ptr<cvo::ImageRGBD<uint16_t>> target_raw(new cvo::ImageRGBD(rgb, target_dep_data));
+    std::shared_ptr<cvo::ImageRGBD<float>> target_raw(new cvo::ImageRGBD(rgb, dep));
     std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, calib
-                                                                                //,cvo::CvoPointCloud::CANNY_EDGES
-                                                                                ));
+                                                                      //,cvo::CvoPointCloud::CANNY_EDGES
+                                                                      ));
     //if (i == 0)
     //  target->write_to_color_pcd("target.pcd");  
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
@@ -127,7 +118,7 @@ int main(int argc, char *argv[]) {
     // accum_output<<std::flush;
     
     Eigen::Quaternionf q(accum_mat.block<3,3>(0,0));
-    accum_output<<vstrRGBName[i]<<" ";
+    //accum_output<<vstrRGBName[i]<<" ";
     accum_output<<accum_mat(0,3)<<" "<<accum_mat(1,3)<<" "<<accum_mat(2,3)<<" "; 
     accum_output<<q.x()<<" "<<q.y()<<" "<<q.z()<<" "<<q.w()<<"\n";
     accum_output.flush();

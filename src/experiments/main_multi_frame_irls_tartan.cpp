@@ -11,7 +11,7 @@
 #include "cvo/CvoGPU.hpp"
 #include "utils/CvoPointCloud.hpp"
 #include "utils/CvoFrame.hpp"
-#include "dataset_handler/TumHandler.hpp"
+#include "dataset_handler/TartanAirHandler.hpp"
 #include "utils/ImageRGBD.hpp"
 #include "utils/Calibration.hpp"
 
@@ -176,17 +176,17 @@ int main(int argc, char** argv) {
 
   omp_set_num_threads(24);
 
-  cvo::TumHandler tum(argv[1]);
+  cvo::TartanAirHandler tartan(argv[1]);
   string cvo_param_file(argv[2]);    
   std::string graph_file_name(argv[3]);
-  std::string tracking_fname(argv[4]);
+  //std::string tracking_fname(argv[4]);
 
   int num_const_frames = 1;
-  if (argc > 5)
-    num_const_frames = std::stoi(std::string(argv[5]));
+  if (argc > 4)
+    num_const_frames = std::stoi(std::string(argv[4]));
   
-  int total_iters = tum.get_total_number();
-  vector<string> vstrRGBName = tum.get_rgb_name_list();
+  int total_iters = tartan.get_total_number();
+  //vector<string> vstrRGBName = tum.get_rgb_name_list();
 
 
   cvo::CvoGPU cvo_align(cvo_param_file);
@@ -206,7 +206,7 @@ int main(int argc, char** argv) {
   std::vector<std::string> timestamps;
 
   std::string tracking_subset_poses_fname("cvo_track_poses.txt");
-  read_pose_file(tracking_fname, tracking_subset_poses_fname , frame_inds, timestamps, tracking_poses);
+  //read_pose_file(tracking_fname, tracking_subset_poses_fname , frame_inds, timestamps, tracking_poses);
 
   // read point cloud
   std::vector<cvo::CvoFrame::Ptr> frames;
@@ -218,11 +218,12 @@ int main(int argc, char** argv) {
 
     int curr_frame_id = frame_inds[i];
     
-    tum.set_start_index(curr_frame_id);
-    cv::Mat rgb, depth;
-    tum.read_next_rgbd(rgb, depth);
-    vector<uint16_t> depth_data(depth.begin<uint16_t>(), depth.end<uint16_t>());
-    std::shared_ptr<cvo::ImageRGBD<uint16_t>> raw(new cvo::ImageRGBD<uint16_t>(rgb, depth_data));
+    tartan.set_start_index(curr_frame_id);
+    cv::Mat rgb;
+    vector<float> depth    ;
+    tartan.read_next_rgbd(rgb, depth);
+
+    std::shared_ptr<cvo::ImageRGBD<float>> raw(new cvo::ImageRGBD<float>(rgb, depth));
     std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(*raw, calib, cvo::CvoPointCloud::CANNY_EDGES));
     std::shared_ptr<cvo::CvoPointCloud> pc_full(new cvo::CvoPointCloud(*raw,  calib, cvo::CvoPointCloud::FULL));
     std::cout<<"Load "<<curr_frame_id<<", "<<pc->positions().size()<<" number of points\n";
@@ -230,10 +231,10 @@ int main(int argc, char** argv) {
     pcs_full.push_back(pc_full);
 
     double * poses_data = nullptr;
-    if (BA_poses.size())
-      poses_data = BA_poses[i].data();
-    else
-      poses_data = tracking_poses[i].data();
+    //if (BA_poses.size())
+    poses_data = BA_poses[i].data();
+    //else
+    //  poses_data = tracking_poses[i].data();
 
     cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrame(pc.get(), poses_data));
     cvo::CvoFrame::Ptr new_full_frame(new cvo::CvoFrame(pc_full.get(), poses_data));
@@ -285,10 +286,10 @@ int main(int argc, char** argv) {
   write_transformed_pc(frames, f_name, num_const_frames);
   
 
-  std::string traj_out("traj_out.txt");
-  write_traj_file(traj_out,
-                  timestamps,
-                  frames );
+  //std::string traj_out("traj_out.txt");
+  //write_traj_file(traj_out,
+  //               timestamps,
+  //                frames );
  
 
   return 0;
