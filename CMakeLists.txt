@@ -12,6 +12,7 @@ cmake_minimum_required(VERSION 3.0)
 option(${PROJECT_NAME}_ENABLE_CUDA "ENABLE_CUDA" ON)
 option(${PROJECT_NAME}_ENABLE_ACVO "ENABLE_ACVO" OFF)
 option(${PROJECT_NAME}_ENABLE_LIDAR "ENABLE_LIDAR" ON)
+option(${PROJECT_NAME}_ENABLE_QT_VIEWER "ENABLE_QT_VIEWER" ON)
 
 include(CheckLanguage)
 if (${PROJECT_NAME}_ENABLE_CUDA)
@@ -96,8 +97,14 @@ set(ELAS_LIB_SOURCE
   ${PROJECT_SOURCE_DIR}/thirdparty/libelas/libelas/triangle.cpp
   )
 
+
 set(CUKDTREE_LIB_SOURCE
   ${PROJECT_SOURCE_DIR}/thirdparty/cugicp/cukdtree/cukdtree.cuh
+  )
+
+set(QT_VIEWER_SOURCE
+  ${PROJECT_SOURCE_DIR}/thirdparty/cugicp/viewer/color_handler.cc
+  ${PROJECT_SOURCE_DIR}/thirdparty/cugicp/viewer/viewer.cc
   )
 
 set(CVO_UTILS_SOURCE
@@ -199,15 +206,10 @@ set (CVO_INCLUDE_DIRS
   ${PROJECT_SOURCE_DIR}/thirdparty/cnpy/
   )
 
-#include_directories(
-#  ${CVO_INCLUDE_DIRS}
-#  )
-
 set (CVO_PUBLIC_HEADERS
   ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/
   ${PROJECT_SOURCE_DIR}/thirdparty/libelas/
   ${PROJECT_SOURCE_DIR}/thirdparty/cugicp/  
-
   )
 
 message("CXX_FLAGS are ${CMAKE_CXX_FLAGS}")
@@ -259,8 +261,18 @@ if (${PROJECT_NAME}_ENABLE_CUDA)
     "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
     $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
   set_target_properties(cukdtree_lib PROPERTIES LINKER_LANGUAGE CUDA  CUDA_SOURCE_PROPERTY_FORMAT OBJ )
-
 endif()  
+
+if (${PROJECT_NAME}_ENABLE_QT_VIEWER)
+  add_library(pcd_qt_viewer_lib SHARED ${QT_VIEWER_SOURCE})
+  target_include_directories(pcd_qt_viewer_lib PUBLIC
+    #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+    #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+    "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+    $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+  target_link_libraries(pcd_qt_viewer_lib PUBLIC pcl_common pcl_visualization)
+
+endif()
 
 add_library(lie_group_utils SHARED ${LIE_GROUP_SOURCE})
 target_include_directories(lie_group_utils PUBLIC
@@ -605,6 +617,17 @@ target_include_directories(cvo_align_gpu_rgbd_tartan PUBLIC
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(cvo_align_gpu_rgbd_tartan cvo_gpu_img_lib cvo_cpu_lib tum cvo_utils_lib boost_filesystem boost_system tartan)
+
+if (${PROJECT_NAME}_ENABLE_QT_VIEWER)
+  add_executable(stack_pcd_viewer ${PROJECT_SOURCE_DIR}/src/experiments/main_stack_pcd_viewer.cpp)
+  target_include_directories(stack_pcd_viewer PUBLIC
+    #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+    #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+    "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+    $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+  target_link_libraries(stack_pcd_viewer cvo_utils_lib boost_filesystem boost_system  pcl_common pcl_io pcl_visualization  pcd_qt_viewer_lib )
+  
+endif()
 
 
 if (${PROJECT_NAME}_ENABLE_LIDAR)

@@ -39,7 +39,7 @@ is_using_geometric_type: 0
 multiframe_using_cpu: 1
 multiframe_max_iters: 400
 multiframe_ell_init: 0.25 #0.5
-multiframe_ell_min: 0.02
+multiframe_ell_min: 0.1
 multiframe_ell_decay_rate: 0.7
 multiframe_iterations_per_ell: 20 #15
 multiframe_expected_points: 2000
