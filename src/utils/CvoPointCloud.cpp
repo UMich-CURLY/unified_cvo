@@ -441,7 +441,14 @@ namespace cvo{
         // construct x and y
         xyz(0) = (u-intrinsic(0,2)) * xyz(2) / intrinsic(0,0);
         xyz(1) = (v-intrinsic(1,2)) * xyz(2) / intrinsic(1,1);
-            
+        
+        // check for labels
+        auto labels = Eigen::Map<const VecXf_row>((raw_image.semantic_image().data()+ (v * w + u)*raw_image.num_classes()), raw_image.num_classes() );
+        int max_class = 0;
+        labels.maxCoeff(&max_class);
+        if(max_class == 10)// exclude unlabeled points
+          continue;
+
         // add point to pcd
         good_point_ind.push_back(i);
         //positions_[i] = xyz;
@@ -453,6 +460,8 @@ namespace cvo{
 
     num_points_ = good_point_ind.size();
     num_classes_ = raw_image.num_classes();
+    if (num_classes_ )
+      labels_.resize(num_points_, num_classes_);
     feature_dimensions_ = raw_image.channels() + 2;
     features_.resize(num_points_, feature_dimensions_);
     for (int i = 0; i < num_points_ ; i++) {
@@ -476,6 +485,11 @@ namespace cvo{
         features_(i,2) = gradient_1/ 500.0 + 0.5;          
       } else {
         std::cerr<<"CvoPointCloud: channel unknown\n";
+      }
+      if (num_classes_) {
+        labels_.row(i) = Eigen::Map<const VecXf_row>((raw_image.semantic_image().data()+ (v * w + u)*num_classes_), num_classes_);
+        int max_class = 0;
+        labels_.row(i).maxCoeff(&max_class);
       }
     }
  
