@@ -221,6 +221,10 @@ int main(int argc, char** argv) {
   //cvo::CvoGPU cvo_align(cvo_param_file);
   std::string pcd_folder(argv[1]);
   std::string total_graphs_arg(argv[2]);
+  int start_ind = std::stoi(std::string(argv[3]));
+  int is_auto_preceed = std::stoi(std::string(argv[4]));
+
+  
   int total_graphs = std::stoi(total_graphs_arg);
 
   std::unique_ptr<perl_registration::Viewer> viewer;
@@ -241,7 +245,7 @@ int main(int argc, char** argv) {
   
   
   
-  for (int f = 0; f < total_graphs; f++) {
+  for (int f = start_ind; f < total_graphs; f++) {
     std::string graph_file_name(pcd_folder + "/" + std::to_string(f) + "_graph.txt");
 
     viewer->addOrUpdateText ( graph_file_name,
@@ -292,7 +296,7 @@ int main(int argc, char** argv) {
 
         
         
-        viewer->updateColorPointCloud(*cloud, viewer_id);
+        //viewer->updateColorPointCloud(*cloud, viewer_id);
       } else {
         viewer->addColorPointCloud(*cloud, viewer_id);
         std::pair<int, std::string> p;
@@ -303,11 +307,17 @@ int main(int argc, char** argv) {
 
       //cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrame(pc.get(), BA_poses[i].data()));
 
-      std::this_thread::sleep_for(std::chrono::microseconds(100000));
-      
+      //std::this_thread::sleep_for(std::chrono::microseconds(100000));
       //frames.push_back(new_frame);
       //id_to_index[curr_frame_id] = i;
     }
+    if (is_auto_preceed)
+      std::this_thread::sleep_for(std::chrono::microseconds(50000));
+    else {
+      std::cout <<"Just rendered "<<f<<"_graph.txt, Press Enter to Continue";
+      std::cin.ignore();
+    }
+
     //std::string f_name("before_BA.pcd");
     //write_transformed_pc(frames, f_name);
   }

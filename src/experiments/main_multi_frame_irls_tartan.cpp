@@ -224,7 +224,7 @@ int main(int argc, char** argv) {
     tartan.read_next_rgbd(rgb, depth);
 
     std::shared_ptr<cvo::ImageRGBD<float>> raw(new cvo::ImageRGBD<float>(rgb, depth));
-    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(*raw, calib, cvo::CvoPointCloud::CANNY_EDGES));
+    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(*raw, calib, cvo::CvoPointCloud::DSO_EDGES));
     std::shared_ptr<cvo::CvoPointCloud> pc_full(new cvo::CvoPointCloud(*raw,  calib, cvo::CvoPointCloud::FULL));
     std::cout<<"Load "<<curr_frame_id<<", "<<pc->positions().size()<<" number of points\n";
     pcs.push_back(pc);
@@ -266,7 +266,10 @@ int main(int argc, char** argv) {
   }
   std::cout<<std::endl;
 
-  
+  f_name="const_BA.pcd";
+  f_name_full="const_BA_full.pcd";
+  write_transformed_pc(frames_full, f_name_full, num_const_frames);
+  write_transformed_pc(frames, f_name, num_const_frames);
   
   cvo_align.align(frames, const_flags,
                   edges, &time);
@@ -280,10 +283,6 @@ int main(int argc, char** argv) {
   write_transformed_pc(frames_full, f_name_full);
   write_transformed_pc(frames, f_name);
 
-  f_name="const_BA.pcd";
-  f_name_full="const_BA_full.pcd";
-  write_transformed_pc(frames_full, f_name_full, num_const_frames);
-  write_transformed_pc(frames, f_name, num_const_frames);
   
 
   //std::string traj_out("traj_out.txt");

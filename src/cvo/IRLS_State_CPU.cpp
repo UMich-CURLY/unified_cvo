@@ -291,7 +291,7 @@ namespace cvo {
               iter_,
               ip_mat_
               );
-    if (ip_mat_.nonZeros() < 50) {
+    if (ip_mat_.nonZeros() < 100) {
       std::cout<<"too sparse inner product mat "<<ip_mat_.nonZeros()<<std::endl;
       return -1;
     } else

@@ -94,7 +94,8 @@ namespace cvo {
 
     
     CvoPointCloud(const CvoPointCloud & to_copy);
-    
+    CvoPointCloud operator+(const CvoPointCloud & b);
+    CvoPointCloud & operator=(const CvoPointCloud& input);
     // Not recommended: Image Gradient is empty
     template <typename PointT>
     CvoPointCloud(const pcl::PointCloud<PointT> & pc);    
@@ -165,8 +166,10 @@ namespace cvo {
     std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> positions_;  // points position. x,y,z
     //Eigen::Matrix<float, Eigen::Dynamic, 3> positions_;
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> features_;   // rgb, gradient in [0,1]
+    //std::vector<Eigen::Matrix<float, 1, Eigen::Dynamic>> features_;   // rgb, gradient in [0,1]
     //Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> normals_;  // surface normals
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> labels_; // number of points by number of classes
+    //std::vector<Eigen::Matrix<float, 1, Eigen::Dynamic>> labels_;   // rgb, gradient in [0,1]    
 
     pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals_;
     //Eigen::Matrix<float, Eigen::Dynamic, 2> types_; // type of the point using loam point selector, edge=(1,0), surface=(0,1)

@@ -437,7 +437,10 @@ namespace cvo{
 
         // construct depth
         xyz(2) = dep/calib.scaling_factor();
-            
+
+        //if (xyz(2) > 15.0)
+        //  continue;
+        
         // construct x and y
         xyz(0) = (u-intrinsic(0,2)) * xyz(2) / intrinsic(0,0);
         xyz(1) = (v-intrinsic(1,2)) * xyz(2) / intrinsic(1,1);
@@ -769,6 +772,57 @@ namespace cvo{
     features_ = input.features_;
     labels_ = input.labels_;
     geometric_types_ = input.geometric_types_;
+  }
+
+  CvoPointCloud & CvoPointCloud::operator=(const CvoPointCloud& input) {
+    if (&input == this) return *this;
+    num_points_ = input.num_points_;
+    num_classes_ = input.num_classes_;
+    feature_dimensions_ = input.feature_dimensions_;
+
+    positions_ = input.positions_;
+    features_ = input.features_;
+    labels_ = input.labels_;
+    geometric_types_ = input.geometric_types_;
+    return *this;
+  }
+
+  CvoPointCloud CvoPointCloud::operator+(const CvoPointCloud & to_add) {
+    if (this->feature_dimensions_ != to_add.feature_dimensions_
+        || this->num_classes_ != to_add.num_classes_ ) {
+      std::cout<<"Warning: adding cvo pointcloud of different classes or features\n";
+      return *this;
+    }
+
+    CvoPointCloud new_points;
+    new_points.positions_.resize(0);
+    new_points.positions_.insert(new_points.positions_.end(),  this->positions_.begin(), this->positions_.end());
+    new_points.positions_.insert(new_points.positions_.end(),  to_add.positions_.begin(), to_add.positions_.end());
+
+    if (this->feature_dimensions_) {
+      new_points.features_.resize(this->num_points_ + to_add.num_points_,
+                                  this->feature_dimensions_);
+      new_points.features_.block(0, 0, this->num_points_, this->feature_dimensions_) = this->features_;
+      new_points.features_.block(this->num_points_, 0, to_add.num_points_, this->feature_dimensions_) = to_add.features_;
+    }
+
+    if (this->num_classes_) {
+      new_points.labels_.resize(this->num_points_ + to_add.num_points_,
+                                this->num_classes_);
+      new_points.labels_.block(0, 0, this->num_points_, this->num_classes_) = this->labels_;
+      new_points.labels_.block(this->num_points_, 0, to_add.num_points_, this->num_classes_) = to_add.labels_;
+    }
+    
+    new_points.geometric_types_.resize(0);
+    new_points.geometric_types_.insert(new_points.geometric_types_.end(),
+                                       this->geometric_types_.begin(),this->geometric_types_.end() );
+    new_points.geometric_types_.insert(new_points.geometric_types_.end(),
+                                       to_add.geometric_types_.begin(),to_add.geometric_types_.end() );
+
+    new_points.num_points_ = this->num_points_ + to_add.num_points_;
+    new_points.feature_dimensions_ = this->feature_dimensions_;
+    new_points.num_classes_ = this->num_classes_;
+    return new_points;
   }
   
 

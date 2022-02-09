@@ -53,6 +53,10 @@ int main(int argc, char *argv[]) {
   Eigen::Affine3f init_guess_cpu = Eigen::Affine3f::Identity();
   init_guess_cpu.matrix()(2,3)=0;
   Eigen::Matrix4f accum_mat = Eigen::Matrix4f::Identity();
+  Eigen::Quaternionf q(accum_mat.block<3,3>(0,0));
+  accum_output<<accum_mat(0,3)<<" "<<accum_mat(1,3)<<" "<<accum_mat(2,3)<<" "; 
+  accum_output<<q.x()<<" "<<q.y()<<" "<<q.z()<<" "<<q.w()<<"\n";
+  accum_output.flush();
   // start the iteration
 
   cv::Mat source_rgb;
@@ -65,7 +69,7 @@ int main(int argc, char *argv[]) {
   //19, semantics_source, 
   //                                                                    cvo::CvoPointCloud::CV_FAST));
   
-  for (int i = start_frame; i<min(total_iters, start_frame+max_num)-1 ; i++) {
+  for (int i = start_frame; i<min(total_iters, max_num)-1 ; i++) {
     
     // calculate initial guess
     std::cout<<"\n\n\n\n============================================="<<std::endl;
@@ -127,6 +131,10 @@ int main(int argc, char *argv[]) {
    
     source = target;
     if (i == start_frame) {
+      init_param.ell_init = ell_init;
+      init_param.ell_decay_rate = ell_decay_rate;
+      init_param.ell_decay_start = ell_decay_start;
+      
       cvo_align.write_params(&init_param);
       
     }

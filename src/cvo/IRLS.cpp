@@ -136,7 +136,7 @@ namespace cvo {
       double param_change = change_of_all_poses(poses_old, poses_new);
       std::cout<<"Update is "<<param_change<<std::endl;
       if (param_change < 1e-5 * poses_new.size()
-          || iter_ % 5 == 0
+          || iter_ && iter_ % 10 == 0
           ) {
         if (ell >= params_->multiframe_ell_min) {
           ell = ell *  params_->multiframe_ell_decay_rate;
