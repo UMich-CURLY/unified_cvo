@@ -443,11 +443,13 @@ namespace cvo{
         xyz(1) = (v-intrinsic(1,2)) * xyz(2) / intrinsic(1,1);
         
         // check for labels
-        auto labels = Eigen::Map<const VecXf_row>((raw_image.semantic_image().data()+ (v * w + u)*raw_image.num_classes()), raw_image.num_classes() );
-        int max_class = 0;
-        labels.maxCoeff(&max_class);
-        if(max_class == 10)// exclude unlabeled points
-          continue;
+        if (raw_image.num_classes()) {
+          auto labels = Eigen::Map<const VecXf_row>((raw_image.semantic_image().data()+ (v * w + u)*raw_image.num_classes()), raw_image.num_classes() );
+          int max_class = 0;
+          labels.maxCoeff(&max_class);
+          if(max_class == 10)// exclude unlabeled points
+            continue;
+        }
 
         // add point to pcd
         good_point_ind.push_back(i);
