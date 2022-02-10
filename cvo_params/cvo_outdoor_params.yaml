@@ -1,7 +1,7 @@
 %YAML:1.0
 ---
 ell_init_first_frame: 0.4
-ell_init: 0.25 #0.125
+ell_init: 0.2 #0.125
 ell_min: 0.05
 ell_max: 0.9
 dl: 0.0
@@ -10,7 +10,7 @@ sigma: 0.1
 sp_thres: 0.006
 c: 7.0
 d: 7.0
-c_ell: 0.01 #0.02
+c_ell: 0.025 #0.02
 c_sigma: 1 
 s_ell: 0.1 #0.15 #0.04
 s_sigma: 1 #0.7
@@ -20,9 +20,9 @@ max_step: 0.01
 eps: 0.00005
 eps_2: 0.000012
 nearest_neighbors_max: 256
-ell_decay_rate: 0.9 #0.95 #0.98
+ell_decay_rate: 0.8 #0.95 #0.98
 ell_decay_rate_first_frame: 0.99
-ell_decay_start: 20 #60 #300 #60
+ell_decay_start: 10 #60 #300 #60
 ell_decay_start_first_frame: 100 #600 #2000
 indicator_window_size: 10 #30
 indicator_stable_threshold: 0.001
