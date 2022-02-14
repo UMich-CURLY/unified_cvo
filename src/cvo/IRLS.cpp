@@ -73,6 +73,8 @@ namespace cvo {
     int iter_ = 0;
     bool converged = false;
     double ell = params_->multiframe_ell_init;
+
+    std::ofstream nonzeros("nonzeros.txt");
     
     while (!converged) {
 
@@ -95,14 +97,17 @@ namespace cvo {
 
       std::vector<int> invalid_factors(states_->size());
       int counter = 0;
+      int total_nonzeros = 0;
       for (auto && state : *states_) {
-        int invalid_ip_mat = state->update_inner_product();
+        int nonzeros_ip_mat = state->update_inner_product();
+        total_nonzeros += nonzeros_ip_mat;
         //invalid_factors[counter] = invalid_ip_mat;
-        if (!invalid_ip_mat) {
+        if (nonzeros_ip_mat > 100) {
           state->add_residual_to_problem(problem);
           counter++;
         }
       }
+      nonzeros <<ell<<", "<< total_nonzeros<<"\n";
       if (counter == 0) break;
       //   for (auto && frame : *frames_) {
       for (int k = 0; k < frames_->size(); k++) {
@@ -135,9 +140,11 @@ namespace cvo {
       pose_snapshot(*frames_, poses_new);
       double param_change = change_of_all_poses(poses_old, poses_new);
       std::cout<<"Update is "<<param_change<<std::endl;
-      if (param_change < 1e-5 * poses_new.size()
-          || iter_ && iter_ % 10 == 0
+      if (//param_change < 1e-5 * poses_new.size()
+          //||
+          iter_ && iter_ % 50 == 0
           ) {
+        //break;
         if (ell >= params_->multiframe_ell_min) {
           ell = ell *  params_->multiframe_ell_decay_rate;
           std::cout<<"Reduce ell to "<<ell<<std::endl;          
@@ -155,6 +162,8 @@ namespace cvo {
       iter_++;
         
     }
+
+    nonzeros.close();
     
   }
 

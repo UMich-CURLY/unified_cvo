@@ -581,7 +581,7 @@ target_include_directories(cvo_irls_tartan PUBLIC
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_link_libraries(cvo_irls_tartan cvo_gpu_img_lib cvo_irls_lib cvo_utils_lib tartan boost_filesystem boost_system)
+target_link_libraries(cvo_irls_tartan cvo_gpu_img_lib cvo_irls_lib cvo_utils_lib tartan boost_filesystem boost_system pcl_filters)
       
 
 #add_executable(cvo_irls_kitti ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_kitti.cpp)

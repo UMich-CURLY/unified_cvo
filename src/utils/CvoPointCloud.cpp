@@ -282,7 +282,7 @@ namespace cvo{
     /*****************************************/
     // using DSO semi dense point selector
     else if (pt_selection_method == CvoPointCloud::DSO_EDGES) {
-      int expected_points = 1500;
+      int expected_points = 3000;
       dso_select_pixels(left_image,
                         expected_points,
                         output_uv);
@@ -298,7 +298,7 @@ namespace cvo{
     else if (pt_selection_method == CvoPointCloud::CANNY_EDGES) {
       //std::vector<bool> selected_inds_map;
       std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> final_selected_uv;
-      int expected_points = 1500;
+      int expected_points = 5000;
       stereo_surface_sampling(left_gray, output_uv, true, true, expected_points,
                               edge_or_surface, output_uv);
 

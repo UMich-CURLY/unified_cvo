@@ -7,7 +7,9 @@
 #include <sstream>
 #include <set>
 #include <Eigen/Dense>
-#include <Eigen/Geometry> 
+#include <Eigen/Geometry>
+#include <pcl/filters/voxel_grid.h>
+
 #include "cvo/CvoGPU.hpp"
 #include "utils/CvoPointCloud.hpp"
 #include "utils/CvoFrame.hpp"
@@ -214,6 +216,7 @@ int main(int argc, char** argv) {
   std::vector<std::shared_ptr<cvo::CvoPointCloud>> pcs_full;
   std::vector<std::shared_ptr<cvo::CvoFrame>> frames_full;
   std::unordered_map<int, int> id_to_index;
+  pcl::VoxelGrid<pcl::PointXYZRGB> sor;
   for (int i = 0; i<frame_inds.size(); i++) {
 
     int curr_frame_id = frame_inds[i];
@@ -222,11 +225,24 @@ int main(int argc, char** argv) {
     cv::Mat rgb;
     vector<float> depth    ;
     tartan.read_next_rgbd(rgb, depth);
-
-    std::shared_ptr<cvo::ImageRGBD<float>> raw(new cvo::ImageRGBD<float>(rgb, depth));
-    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(*raw, calib, cvo::CvoPointCloud::DSO_EDGES));
+    
+    std::shared_ptr<cvo::ImageRGBD<float>> raw(new cvo::ImageRGBD<float>(rgb, depth));    
     std::shared_ptr<cvo::CvoPointCloud> pc_full(new cvo::CvoPointCloud(*raw,  calib, cvo::CvoPointCloud::FULL));
-    std::cout<<"Load "<<curr_frame_id<<", "<<pc->positions().size()<<" number of points\n";
+    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(*raw, calib, cvo::CvoPointCloud::CV_FAST));
+
+    /*
+    std::cout<<"cvt to raw pcl point cloud..\n"<<std::flush;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr raw_pcd(new pcl::PointCloud<pcl::PointXYZRGB>);
+    pc_full->export_to_pcd<pcl::PointXYZRGB>(*raw_pcd);
+
+    std::cout<<"start voxel filtering...\n"<<std::flush;
+    sor.setInputCloud (raw_pcd);
+    sor.setLeafSize (0.1f, 0.1f, 0.1f);
+    sor.filter (*raw_pcd);
+    std::cout<<"construct filtered cvo points\n"<<std::flush;
+    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(*raw_pcd));
+    */
+    std::cout<<"Load "<<curr_frame_id<<", "<<pc->positions().size()<<" number of points\n"<<std::flush;
     pcs.push_back(pc);
     pcs_full.push_back(pc_full);
 

@@ -63,6 +63,7 @@ namespace cvo {
     int multiframe_max_iters;
     float multiframe_ell_init;
     float multiframe_ell_min;
+    int  multiframe_iter_per_ell;
     float multiframe_ell_decay_rate;
     int multiframe_iterations_per_ell;
     int multiframe_expected_points;
@@ -109,6 +110,7 @@ namespace cvo {
       nearest_neighbors_max(512),
       multiframe_ell_init(0.15),
       multiframe_ell_min(0.05),
+      multiframe_iter_per_ell(10),
       multiframe_ell_decay_rate(0.7),
       multiframe_iterations_per_ell(8),
       multiframe_expected_points(1000)

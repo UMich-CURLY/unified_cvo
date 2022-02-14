@@ -1,4 +1,4 @@
 
 
 
-./build/bin/stack_pcd_viewer /home/rayzhang/dsm/tartan_easy_abandonedfactory_night/ 360 0 1
+./build/bin/stack_pcd_viewer /home/rayzhang/dsm/tartan_Easy_abandonedfactory_night/ 800 0 0
