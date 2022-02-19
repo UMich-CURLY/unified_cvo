@@ -142,7 +142,7 @@ namespace cvo {
       std::cout<<"Update is "<<param_change<<std::endl;
       if (//param_change < 1e-5 * poses_new.size()
           //||
-          iter_ && iter_ % 50 == 0
+          iter_ && iter_ % 20 == 0
           ) {
         //break;
         if (ell >= params_->multiframe_ell_min) {

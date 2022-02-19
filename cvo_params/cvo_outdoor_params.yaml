@@ -7,7 +7,7 @@ ell_max: 0.9
 dl: 0.0
 dl_step: 0.3
 sigma: 0.1
-sp_thres: 0.007 #0.006
+sp_thres: 0.008 #0.006
 c: 7.0
 d: 7.0
 c_ell: 0.04 #0.02
