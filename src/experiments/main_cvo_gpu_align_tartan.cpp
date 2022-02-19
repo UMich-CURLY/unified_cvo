@@ -65,6 +65,7 @@ int main(int argc, char *argv[]) {
   std::shared_ptr<cvo::ImageRGBD<float>> source_raw(new cvo::ImageRGBD<float>(source_rgb, source_depth));
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw,
                                                                     calib
+								    //,cvo::CvoPointCloud::CANNY_EDGES
                                                                     ));
   //19, semantics_source, 
   //                                                                    cvo::CvoPointCloud::CV_FAST));
