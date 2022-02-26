@@ -8,6 +8,9 @@
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <Eigen/Dense>
+
+using Mat34d_row = Eigen::Matrix<double, 3, 4, Eigen::RowMajor>;
 
 namespace perl_registration {
 
@@ -15,7 +18,9 @@ class Viewer {
  public:
   typedef pcl::PointXYZ PointT;
   
-  Viewer() : stopped(false), visualizationTread(&Viewer::runVisualizer, this){};
+  Viewer(bool screenshotIn, std::string saveDir) : stopped(false), visualizationTread(&Viewer::runVisualizer, this), screenshot(screenshotIn), screenshotSaveDir(saveDir) {};
+
+  Viewer() : Viewer(false, "") {}; 
 
   ~Viewer() { visualizationTread.join(); };
 
@@ -33,6 +38,8 @@ class Viewer {
   void addOrUpdateText(const std::string & text, int x, int y, const std::string &id );
 
   bool wasStopped();
+     
+  void drawTrajectory(const Mat34d_row& current_pose);
 
  private:
   void runVisualizer();
@@ -60,6 +67,12 @@ class Viewer {
   std::map<std::string,
            std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, float, float>>
       intensityCloudsToAdd;
+  bool screenshot;
+  std::string screenshotSaveDir;
+
+  Eigen::Matrix3f viewerCamInstrinsics;
+  std::vector<Mat34d_row, Eigen::aligned_allocator<Mat34d_row>> trajectoryPtsToDraw;
+  int trajId;
 };
 
 }  // namespace perl_registration

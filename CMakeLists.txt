@@ -629,6 +629,17 @@ if (${PROJECT_NAME}_ENABLE_QT_VIEWER)
   
 endif()
 
+if (${PROJECT_NAME}_ENABLE_QT_VIEWER)
+  add_executable(traj_playback ${PROJECT_SOURCE_DIR}/src/experiments/main_traj_playback.cpp)
+  target_include_directories(traj_playback PUBLIC
+    #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+    #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+    "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+    $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+  target_link_libraries(traj_playback cvo_utils_lib boost_filesystem boost_system boost_filesystem pcl_common pcl_io pcl_visualization  pcd_qt_viewer_lib )
+  
+endif()
+
 
 if (${PROJECT_NAME}_ENABLE_LIDAR)
   add_executable(cvo_align_gpu_lidar_raw ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_geometric.cpp)

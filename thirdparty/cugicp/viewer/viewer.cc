@@ -6,6 +6,8 @@
 #include <viewer/color_handler.h>
 #include <viewer/viewer.h>
 
+#include <iostream>
+
 namespace perl_registration {
 
   void Viewer::addPointCloudSingleColor(
@@ -61,11 +63,15 @@ namespace perl_registration {
   void Viewer::runVisualizer() {
     pcl::visualization::PCLVisualizer viewer("Viewer");
 
+    trajId = 0;
+
+    viewerCamInstrinsics << 640, 0, 320, 0, 480, 240, 0, 0, 1;
+
     viewer.setBackgroundColor(255, 255, 255);
     viewer.setCameraPosition(0, 15, 0, 0, -1, 0, 1, 0, 0);
-    viewer.updateCamera();
     viewer.addCoordinateSystem(0.25);
     viewer.initCameraParameters();
+
 
     while (!viewer.wasStopped()) {
       viewer.spinOnce(100);
@@ -125,6 +131,33 @@ namespace perl_registration {
       //colorCloudsToUpdate.clear();
       colorIdsToAdd.clear();
       
+
+      if (trajectoryPtsToDraw.empty() || trajectoryPtsToDraw.size() == 1) continue;
+      for (int i = 1; i < trajectoryPtsToDraw.size(); i++) {
+        pcl::PointXYZ prevPt(trajectoryPtsToDraw[i - 1](0, 3), trajectoryPtsToDraw[i - 1](1, 3), trajectoryPtsToDraw[i - 1](2, 3));
+        pcl::PointXYZ currPt(trajectoryPtsToDraw[i](0, 3), trajectoryPtsToDraw[i](1, 3), trajectoryPtsToDraw[i](2, 3));
+        viewer.addLine(prevPt, currPt, 1, 0, 0, std::to_string(trajId++));
+      }
+      Mat34d_row prevPose = trajectoryPtsToDraw.back();
+      trajectoryPtsToDraw.clear();
+      trajectoryPtsToDraw.push_back(prevPose);
+      
+      // update camera to follow the trajectory
+      Eigen::Matrix4f Twc = Eigen::Matrix4f::Identity();
+      Twc.block<3, 4>(0, 0) = prevPose.cast<float>();
+      Eigen::Matrix4f Tcv;
+      Tcv << -1,  0, 0, -1,
+              0, -1, 0, -1,
+              0,  0, 1, -15,
+              0,  0, 0, 1;
+      Eigen::Matrix4f Twv = Twc * Tcv;
+      viewer.setCameraParameters(viewerCamInstrinsics, Twv);
+      if (screenshot) {
+        std::string filename = screenshotSaveDir + "/" + std::to_string(trajId) + ".png";
+        viewer.saveScreenshot(filename);
+
+      }
+      
     }
 
     std::lock_guard<std::mutex> lockStopped(stoppedGuard);
@@ -136,5 +169,9 @@ namespace perl_registration {
     bool temp = stopped;
     return temp;
   };
+
+  void Viewer::drawTrajectory(const Mat34d_row& current_pose) {
+      trajectoryPtsToDraw.push_back(current_pose);
+  }
 
 }  // namespace perl_registration
