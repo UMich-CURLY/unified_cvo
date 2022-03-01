@@ -124,3 +124,72 @@ do
       #python scripts/xyzq2kitti.py /home/rayzhang/media/Samsung_T5/tartanair/$i/Easy/P001/pose_left.txt results/tartan/gt_outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt ${start_ind} ${end_ind}
       #python ~/.local/lib/python3.6/site-packages/evo/main_traj.py kitti --ref results/tartan/gt_outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt  results/tartan/outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt   --plot_mode xyz --align --save_plot results/tartan/${i}_plot 
 done
+
+
+start_ind=750
+end_ind=800
+for i in seasonsforest_winter	
+do
+	echo "new seq $i"
+      ./build/bin/cvo_align_gpu_rgbd_tartan /home/rayzhang/media/Samsung_T5/tartanair/$i/Easy/P001/ cvo_params/cvo_outdoor_params.yaml \
+                                       cvo_tartan_outdoor_${i}_${start_ind}_${end_ind}.txt ${start_ind} ${end_ind}
+      #python scripts/xyzq2kitti.py cvo_tartan_outdoor_${i}_${start_ind}_${end_ind}.txt results/tartan/outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt
+      #python scripts/xyzq2kitti.py /home/rayzhang/media/Samsung_T5/tartanair/$i/Easy/P001/pose_left.txt results/tartan/gt_outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt ${start_ind} ${end_ind}
+      #python ~/.local/lib/python3.6/site-packages/evo/main_traj.py kitti --ref results/tartan/gt_outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt  results/tartan/outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt   --plot_mode xyz --align --save_plot results/tartan/${i}_plot 
+done
+
+
+
+start_ind=210
+end_ind=220
+for i in seasonsforest
+do
+	echo "new seq $i"
+      ./build/bin/cvo_align_gpu_rgbd_tartan /home/rayzhang/media/Samsung_T5/tartanair/$i/Easy/P001/ cvo_params/cvo_outdoor_params.yaml \
+                                       cvo_tartan_outdoor_${i}_${start_ind}_${end_ind}.txt ${start_ind} ${end_ind}
+      #python scripts/xyzq2kitti.py cvo_tartan_outdoor_${i}_${start_ind}_${end_ind}.txt results/tartan/outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt
+      #python scripts/xyzq2kitti.py /home/rayzhang/media/Samsung_T5/tartanair/$i/Easy/P001/pose_left.txt results/tartan/gt_outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt ${start_ind} ${end_ind}
+      #python ~/.local/lib/python3.6/site-packages/evo/main_traj.py kitti --ref results/tartan/gt_outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt  results/tartan/outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt   --plot_mode xyz --align --save_plot results/tartan/${i}_plot 
+done
+
+
+
+
+start_ind=0
+end_ind=80
+for i in endofworld
+do
+	echo "new seq $i"
+      ./build/bin/cvo_align_gpu_rgbd_tartan /home/rayzhang/media/Samsung_T5/tartanair/$i/Easy/P001/ cvo_params/cvo_outdoor_params.yaml \
+                                       cvo_tartan_outdoor_${i}_${start_ind}_${end_ind}.txt ${start_ind} ${end_ind}
+      #python scripts/xyzq2kitti.py cvo_tartan_outdoor_${i}_${start_ind}_${end_ind}.txt results/tartan/outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt
+      #python scripts/xyzq2kitti.py /home/rayzhang/media/Samsung_T5/tartanair/$i/Easy/P001/pose_left.txt results/tartan/gt_outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt ${start_ind} ${end_ind}
+      #python ~/.local/lib/python3.6/site-packages/evo/main_traj.py kitti --ref results/tartan/gt_outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt  results/tartan/outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt   --plot_mode xyz --align --save_plot results/tartan/${i}_plot 
+done
+
+
+
+start_ind=150
+end_ind=250
+for i in seasidetown
+do
+	echo "new seq $i"
+      ./build/bin/cvo_align_gpu_rgbd_tartan /home/rayzhang/media/Samsung_T5/tartanair/$i/Easy/P001/ cvo_params/cvo_outdoor_params.yaml \
+                                       cvo_tartan_outdoor_${i}_${start_ind}_${end_ind}.txt ${start_ind} ${end_ind}
+      #python scripts/xyzq2kitti.py cvo_tartan_outdoor_${i}_${start_ind}_${end_ind}.txt results/tartan/outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt
+      #python scripts/xyzq2kitti.py /home/rayzhang/media/Samsung_T5/tartanair/$i/Easy/P001/pose_left.txt results/tartan/gt_outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt ${start_ind} ${end_ind}
+      #python ~/.local/lib/python3.6/site-packages/evo/main_traj.py kitti --ref results/tartan/gt_outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt  results/tartan/outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt   --plot_mode xyz --align --save_plot results/tartan/${i}_plot 
+done
+
+
+start_ind=40
+end_ind=130
+for i in ocean
+do
+	echo "new seq $i"
+      ./build/bin/cvo_align_gpu_rgbd_tartan /home/rayzhang/media/Samsung_T5/tartanair/$i/Easy/P001/ cvo_params/cvo_outdoor_params.yaml \
+                                       cvo_tartan_outdoor_${i}_${start_ind}_${end_ind}.txt ${start_ind} ${end_ind}
+      #python scripts/xyzq2kitti.py cvo_tartan_outdoor_${i}_${start_ind}_${end_ind}.txt results/tartan/outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt
+      #python scripts/xyzq2kitti.py /home/rayzhang/media/Samsung_T5/tartanair/$i/Easy/P001/pose_left.txt results/tartan/gt_outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt ${start_ind} ${end_ind}
+      #python ~/.local/lib/python3.6/site-packages/evo/main_traj.py kitti --ref results/tartan/gt_outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt  results/tartan/outdoor_easy_kitti_${i}_${start_ind}_${end_ind}.txt   --plot_mode xyz --align --save_plot results/tartan/${i}_plot 
+done
