@@ -181,11 +181,16 @@ int main(int argc, char** argv) {
   cvo::TartanAirHandler tartan(argv[1]);
   string cvo_param_file(argv[2]);    
   std::string graph_file_name(argv[3]);
+
+
   //std::string tracking_fname(argv[4]);
 
   int num_const_frames = 1;
   if (argc > 4)
     num_const_frames = std::stoi(std::string(argv[4]));
+  std::string graph_file_folder;
+  if (argc > 5)
+    graph_file_folder = std::string(argv[5]);
   
   int total_iters = tartan.get_total_number();
   //vector<string> vstrRGBName = tum.get_rgb_name_list();
@@ -225,33 +230,58 @@ int main(int argc, char** argv) {
     cv::Mat rgb;
     vector<float> depth    ;
     tartan.read_next_rgbd(rgb, depth);
+
+    
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr raw_pcd(new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::io::loadPCDFile(graph_file_folder + "/" + std::to_string(curr_frame_id)+".pcd",
+                         *raw_pcd);
+    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(*raw_pcd));
+    std::cout<<"read number points is "<<pc->num_points()<<std::endl;
+    
+
     
     std::shared_ptr<cvo::ImageRGBD<float>> raw(new cvo::ImageRGBD<float>(rgb, depth));    
     std::shared_ptr<cvo::CvoPointCloud> pc_full(new cvo::CvoPointCloud(*raw,  calib, cvo::CvoPointCloud::FULL));
-    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(*raw, calib, cvo::CvoPointCloud::CV_FAST));
-
     /*
+     std::shared_ptr<cvo::CvoPointCloud> pc_edge(new cvo::CvoPointCloud(*raw, calib, cvo::CvoPointCloud::CANNY_EDGES));
+     std::cout<<"DSO points num is "<<pc_edge->num_points()<<std::endl;
+    
     std::cout<<"cvt to raw pcl point cloud..\n"<<std::flush;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr raw_pcd(new pcl::PointCloud<pcl::PointXYZRGB>);
     pc_full->export_to_pcd<pcl::PointXYZRGB>(*raw_pcd);
 
     std::cout<<"start voxel filtering...\n"<<std::flush;
     sor.setInputCloud (raw_pcd);
-    sor.setLeafSize (0.1f, 0.1f, 0.1f);
+    float leaf_size = cvo_align.get_params().multiframe_downsample_voxel_size;
+    sor.setLeafSize (leaf_size, leaf_size, leaf_size);
     sor.filter (*raw_pcd);
-    std::cout<<"construct filtered cvo points\n"<<std::flush;
-    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(*raw_pcd));
+    std::cout<<"construct filtered cvo points with voxel size "<<leaf_size<<"\n"<<std::flush;
+    std::shared_ptr<cvo::CvoPointCloud> pc_voxel(new cvo::CvoPointCloud(*raw_pcd));
+    std::cout<<"Voxel number points is "<<pc_voxel->num_points()<<std::endl;
+
+
+    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud);
+    *pc = *pc_voxel + *pc_edge;
+
     */
     std::cout<<"Load "<<curr_frame_id<<", "<<pc->positions().size()<<" number of points\n"<<std::flush;
+
+    
+
+
+    
     pcs.push_back(pc);
     pcs_full.push_back(pc_full);
 
     double * poses_data = nullptr;
     //if (BA_poses.size())
+
+    //Eigen::Matrix4d id_mat = Eigen::Matrix4d::Identity();
+    //poses_data = id_mat.data();
     poses_data = BA_poses[i].data();
-    //else
     //  poses_data = tracking_poses[i].data();
 
+    
     cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrame(pc.get(), poses_data));
     cvo::CvoFrame::Ptr new_full_frame(new cvo::CvoFrame(pc_full.get(), poses_data));
     frames.push_back(new_frame);
@@ -299,6 +329,16 @@ int main(int argc, char** argv) {
   write_transformed_pc(frames_full, f_name_full);
   write_transformed_pc(frames, f_name);
 
+
+  f_name_full = ("before_BA_full.pcd");
+  f_name = ("before_BA.pcd");
+  for (int i = 0; i < frames.size(); i++) {
+    double * raw =  BA_poses[i].data(); //Eigen::Map<Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>(BA_poses[i]);
+    memcpy(frames_full[i]->pose_vec, raw, sizeof(double)*12);
+    memcpy(frames[i]->pose_vec, raw, sizeof(double)*12);
+  }
+  write_transformed_pc(frames_full, f_name_full);
+  write_transformed_pc(frames, f_name);
   
 
   //std::string traj_out("traj_out.txt");

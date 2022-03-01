@@ -184,18 +184,44 @@ namespace cvo{
       }
       
     }
+
+    cv::Ptr< cv::ORB > orb_detector = cv::ORB::create (expected_points / 3,
+                                                     /* float scaleFactor=*/1.2f,
+                                                     /* int nlevels=*/8,
+                                                     /* int edgeThreshold=*/31,
+                                                     /*int firstLevel=*/0,
+                                                     /*int WTA_K=*/2,
+                                                     /*int scoreType=*/cv::ORB::HARRIS_SCORE,
+                                                     /*int patchSize=*/31,
+                                                     /*int fastThreshold=*/20);
+    std::vector<cv::KeyPoint> keypoints; 
+    orb_detector->detect ( left_gray, keypoints );
+    int found_orb = keypoints.size();
+    for (int i = 0; i < keypoints.size(); i++) {
+      int c = (int)keypoints[i].pt.x;        
+      int r = (int)keypoints[i].pt.y;
+      //selected_inds_map[r * left_gray.cols + c] = 0;
+      final_selected_uv.push_back(Eigen::Vector2i(c, r));
+      edge_or_surface.push_back(1.0);
+      edge_or_surface.push_back(0.0);
+      
+      found_orb++;
+    }
+
+    
     std::cout<<"Canny size "<<tmp_uvs_canny.size()<<", surface size "<<tmp_uvs_surface.size()<<"\n";
     int total_selected_canny = tmp_uvs_canny.size();
     int total_selected_surface = tmp_uvs_surface.size();
+    //expected_points -= found_orb;
     for (int i = 0; i < tmp_uvs_canny.size(); i++) {
-      if (rand() % total_selected_canny < expected_points  * 3 / 4  ) {
+      if (rand() % total_selected_canny < expected_points  * 1 / 2  ) {
         final_selected_uv.push_back(tmp_uvs_canny[i]);
         edge_or_surface.push_back(1.0);
         edge_or_surface.push_back(0.0);
       }
     }
     for (int i = 0; i < tmp_uvs_surface.size(); i++) {
-      if (rand() % total_selected_surface < expected_points * 1 / 4 ) {
+      if (rand() % total_selected_surface < expected_points * 1 / 2 ) {
         final_selected_uv.push_back(tmp_uvs_surface[i]);
         edge_or_surface.push_back(0.0);
         edge_or_surface.push_back(1.0);
@@ -282,7 +308,7 @@ namespace cvo{
     /*****************************************/
     // using DSO semi dense point selector
     else if (pt_selection_method == CvoPointCloud::DSO_EDGES) {
-      int expected_points = 3000;
+      int expected_points = 1000;
       dso_select_pixels(left_image,
                         expected_points,
                         output_uv);
@@ -298,7 +324,7 @@ namespace cvo{
     else if (pt_selection_method == CvoPointCloud::CANNY_EDGES) {
       //std::vector<bool> selected_inds_map;
       std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> final_selected_uv;
-      int expected_points = 5000;
+      int expected_points = 1000;
       stereo_surface_sampling(left_gray, output_uv, true, true, expected_points,
                               edge_or_surface, output_uv);
 
@@ -518,10 +544,11 @@ namespace cvo{
   CvoPointCloud::CvoPointCloud<pcl::PointXYZRGB>(const pcl::PointCloud<pcl::PointXYZRGB> & pc) {
     num_points_ = pc.size();
     num_classes_ = 0;
-    feature_dimensions_ = 3;
+    feature_dimensions_ = 5;
 
     positions_.resize(pc.size());
     features_.resize(num_points_, feature_dimensions_);
+    geometric_types_.resize(num_points_ * 2);
     for (int i = 0; i < num_points_; i++) {
       Eigen::Vector3f xyz;
       auto & p = (pc)[i];
@@ -531,7 +558,11 @@ namespace cvo{
       features_(i,0) = ((float)(int)p.r) / 255.0;
       features_(i,1) = ((float)(int)p.g) / 255.0;
       features_(i,2) = ((float)(int)p.b) / 255.0;
-      
+      features_(i, 3) = 0;
+      features_(i, 4) = 0;
+
+      geometric_types_[i*2] = 0;
+      geometric_types_[i*2+1] = 1;
     }
     
   }

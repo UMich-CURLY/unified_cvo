@@ -75,7 +75,10 @@ namespace cvo {
     double ell = params_->multiframe_ell_init;
 
     std::ofstream nonzeros("nonzeros.txt");
-    
+    std::ofstream loss_change("loss_change.txt");
+
+    int num_ells = 0;
+    int last_nonzeros = 0;
     while (!converged) {
 
       std::cout<<"\n\n==============================================================\n";
@@ -90,6 +93,7 @@ namespace cvo {
       ceres::Problem problem;
       LocalParameterizationSE3 * se3_parameterization = new LocalParameterizationSE3();
       for (auto & frame : *frames_) {
+
         std::cout<<"Frame number of points "<<frame->points->num_points()<<std::endl;
         problem.AddParameterBlock(frame->pose_vec, 12, se3_parameterization);
       }
@@ -109,62 +113,74 @@ namespace cvo {
       }
       nonzeros <<ell<<", "<< total_nonzeros<<"\n";
       if (counter == 0) break;
-      //   for (auto && frame : *frames_) {
-      for (int k = 0; k < frames_->size(); k++) {
-        problem.SetParameterization(frames_->at(k)->pose_vec, se3_parameterization);
-        if (pivot_flags_->at(k))
-          problem.SetParameterBlockConstant(frames_->at(k)->pose_vec);          
-      }
-
-
-      ceres::Solver::Options options;
-      options.function_tolerance = 1e-8;
-      options.gradient_tolerance = 1e-8;
-      options.parameter_tolerance = 1e-8;
-      //options.check_gradients = true;
-      //options.line_search_direction_type = ceres::BFGS;
-      options.sparse_linear_algebra_library_type = ceres::SUITE_SPARSE;
-      options.linear_solver_type = ceres::SPARSE_SCHUR;
-      options.preconditioner_type = ceres::JACOBI;
-      options.visibility_clustering_type = ceres::CANONICAL_VIEWS;
-      
-      
-      options.num_threads = 24;
-      options.max_num_iterations = params_->multiframe_iterations_per_ell;
-      ceres::Solver::Summary summary;
-      ceres::Solve(options, &problem, &summary);
-
-      std::cout << summary.FullReport() << std::endl;
-
-      std::vector<Sophus::SE3d> poses_new(frames_->size());
-      pose_snapshot(*frames_, poses_new);
-      double param_change = change_of_all_poses(poses_old, poses_new);
-      std::cout<<"Update is "<<param_change<<std::endl;
-      if (//param_change < 1e-5 * poses_new.size()
-          //||
-          iter_ && iter_ % 20 == 0
-          ) {
-        //break;
-        if (ell >= params_->multiframe_ell_min) {
-          ell = ell *  params_->multiframe_ell_decay_rate;
-          std::cout<<"Reduce ell to "<<ell<<std::endl;          
-          for (auto && state : *states_) 
-            std::dynamic_pointer_cast<BinaryStateCPU>(state)->update_ell();
-        } else {
-          converged = true;
-          std::cout<<"End: pose change is "<<param_change<<std::endl;          
+      if (total_nonzeros > last_nonzeros ) {
+        last_nonzeros = total_nonzeros;
+        //   for (auto && frame : *frames_) {
+        for (int k = 0; k < frames_->size(); k++) {
+          problem.SetParameterization(frames_->at(k)->pose_vec, se3_parameterization);
+          if (pivot_flags_->at(k))
+            problem.SetParameterBlockConstant(frames_->at(k)->pose_vec);          
         }
-      }
-      if ( iter_ > params_->multiframe_max_iters) {
-        converged = true;
-      }
+
+
+        ceres::Solver::Options options;
+        options.function_tolerance = 1e-5;
+        options.gradient_tolerance = 1e-5;
+        options.parameter_tolerance = 1e-5;
+        //options.check_gradients = true;
+        //options.line_search_direction_type = ceres::BFGS;
+        options.sparse_linear_algebra_library_type = ceres::SUITE_SPARSE;
+        options.linear_solver_type = ceres::SPARSE_SCHUR;
+        options.preconditioner_type = ceres::JACOBI;
+        options.visibility_clustering_type = ceres::CANONICAL_VIEWS;
       
+      
+        options.num_threads = 24;
+        options.max_num_iterations = params_->multiframe_iterations_per_solve;
+        ceres::Solver::Summary summary;
+        ceres::Solve(options, &problem, &summary);
+
+        std::cout << summary.FullReport() << std::endl;
+        loss_change << ell <<", "<< summary.final_cost - summary.initial_cost <<std::endl;
+
+        std::vector<Sophus::SE3d> poses_new(frames_->size());
+        pose_snapshot(*frames_, poses_new);
+        double param_change = change_of_all_poses(poses_old, poses_new);
+        std::cout<<"Update is "<<param_change<<std::endl;
+      } else  {
+        //  if (//param_change < 1e-5 * poses_new.size()
+        //    //||
+        //    iter_ && iter_ % params_->multiframe_iterations_per_ell == 0
+
+        //    ) {
+          //break;
+          num_ells ++;
+          //if (num_ells == 2)
+          //  break;
+        
+          if (ell >= params_->multiframe_ell_min) {
+            last_nonzeros = 0;
+            ell = ell *  params_->multiframe_ell_decay_rate;
+            std::cout<<"Reduce ell to "<<ell<<std::endl;          
+
+            for (auto && state : *states_) 
+              std::dynamic_pointer_cast<BinaryStateCPU>(state)->update_ell();
+          } else {
+            converged = true;
+            //std::cout<<"End: pose change is "<<param_change<<std::endl;          
+          }
+        
+          if ( iter_ > params_->multiframe_max_iters) {
+            converged = true;
+          }
+          //}
+      }
       iter_++;
         
     }
 
     nonzeros.close();
-    
+    loss_change.close();
   }
 
   void CvoBatchIRLS::remove_frame(CvoFrame::Ptr to_remove) {
