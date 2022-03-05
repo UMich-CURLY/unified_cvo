@@ -43,6 +43,7 @@ namespace cvo {
       DSO_EDGES_WITH_RANDOM,
       LIDAR_EDGES,
       CANNY_EDGES,
+      EDGES_ONLY,
       LOAM,
       FULL
     };
@@ -98,7 +99,9 @@ namespace cvo {
     CvoPointCloud & operator=(const CvoPointCloud& input);
     // Not recommended: Image Gradient is empty
     template <typename PointT>
-    CvoPointCloud(const pcl::PointCloud<PointT> & pc);    
+      CvoPointCloud(const pcl::PointCloud<PointT> & pc);    
+    template <typename PointT>
+      CvoPointCloud(const pcl::PointCloud<PointT> & pc, GeometryType g_type);    
 
     /*
     CvoPointCloud(pcl::PointCloud<pcl::PointXYZIR>::Ptr pc,
@@ -156,7 +159,7 @@ namespace cvo {
     void write_to_intensity_pcd(const std::string & name) const;
 
     void reserve(int num_points, int feature_dims, int num_classes);
-    int add_point(int index, const Eigen::Vector3f & xyz, const Eigen::VectorXf & feature, const Eigen::VectorXf & label, const float * geometric_type = nullptr);
+    int add_point(int index, const Eigen::Vector3f & xyz, const Eigen::VectorXf & feature, const Eigen::VectorXf & label, const Eigen::VectorXf & geometric_type);
    
   private:
     int num_points_;

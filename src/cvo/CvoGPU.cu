@@ -1960,8 +1960,16 @@ namespace cvo{
 
     assert (non_isotropic_kernel != nullptr);
     Eigen::Matrix3f kernel_inv = non_isotropic_kernel->inverse();
+
+    CvoParams new_params = params;
+    new_params.is_using_geometric_type = false;
+    CvoParams * new_params_gpu;
+    cudaMalloc((void**)&new_params_gpu, sizeof(CvoParams) );
+    cudaMemcpy( (void*)new_params_gpu, &new_params, sizeof(CvoParams), cudaMemcpyHostToDevice  );
+
+    
     se_kernel_dense(// input
-                    params_gpu,  cvo_state.cloud_x_gpu, cvo_state.cloud_y_gpu,
+                    new_params_gpu,  cvo_state.cloud_x_gpu, cvo_state.cloud_y_gpu,
                     params.nearest_neighbors_max,
                     kernel_inv,
                     // output
@@ -1972,6 +1980,8 @@ namespace cvo{
     gpu_association_to_cpu(cvo_state.A_host, *association_output,
                            cvo_state.num_fixed,
                            cvo_state.num_moving);
+
+    cudaFree(new_params_gpu);
     
     return;
   }

@@ -42,7 +42,7 @@ namespace cvo{
     if ( u < 2 || u > w -2 || v < 100 || v > h-30 )
       return false;
 
-    if (xyz.norm() >=55)
+    if (xyz.norm() >= 55) // 55
       return false;
 
     return true;
@@ -50,7 +50,7 @@ namespace cvo{
 
   // filter away pixels that are too far away
   static bool is_good_point(const Vec3f & xyz ) {
-    if (xyz.norm() > 55)
+    if (xyz.norm() > 55) // 55
       return false;
 
     return true;
@@ -140,6 +140,7 @@ namespace cvo{
                                       const std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & dso_selected_uv,
                                       bool is_using_canny,
                                       bool is_using_uniform_rand,
+                                      bool is_using_orb,
                                       int expected_points,
                                       // output
                                       std::vector<float> & edge_or_surface,
@@ -158,70 +159,73 @@ namespace cvo{
       cv::Canny( left_gray, detected_edges, 50, 50*3, 3 );
     int counter = 0;
     std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> tmp_uvs_canny, tmp_uvs_surface;
-    for (int r = 0 ; r < left_gray.rows; r++) {
-      for (int c = 0; c < left_gray.cols; c++) {
-        // using Canny
-        if (is_using_canny &&  detected_edges.at<uint8_t>(r, c) > 0)  {
-          // selected_inds_map[r * left_gray.cols + c] = EDGE;
-          tmp_uvs_canny.push_back(Vec2i(c, r));
+    if (is_using_canny) {
+      for (int r = 0 ; r < left_gray.rows; r++) {
+        for (int c = 0; c < left_gray.cols; c++) {
+          // using Canny
+          if (is_using_canny &&  detected_edges.at<uint8_t>(r, c) > 0)  {
+            // selected_inds_map[r * left_gray.cols + c] = EDGE;
+            tmp_uvs_canny.push_back(Vec2i(c, r));
+          }
         }
-
       }
-      
     }
-    for (int r = 0 ; r < left_gray.rows; r++) {
-      for (int c = 0; c < left_gray.cols; c++) {
+    if (is_using_uniform_rand) {
+      for (int r = 0 ; r < left_gray.rows; r++) {
+        for (int c = 0; c < left_gray.cols; c++) {
+          
+          // using uniform sampling
+          if ( (!is_using_canny || detected_edges.at<uint8_t>(r, c) == 0 ) &&
+               is_using_uniform_rand &&
+               //r > left_gray.rows   &&
+               rand() % 10 == 0)  {
+            //selected_inds_map[r * left_gray.cols + c] = SURFACE;
+            tmp_uvs_surface.push_back(Vec2i(c, r));
+        }
+          
+        }
         
-        // using uniform sampling
-        if ( (!is_using_canny || detected_edges.at<uint8_t>(r, c) == 0 ) &&
-            is_using_uniform_rand &&
-            //r > left_gray.rows   &&
-            rand() % 10 == 0)  {
-          //selected_inds_map[r * left_gray.cols + c] = SURFACE;
-          tmp_uvs_surface.push_back(Vec2i(c, r));
-        }
-
       }
-      
     }
 
-    cv::Ptr< cv::ORB > orb_detector = cv::ORB::create (expected_points / 3,
-                                                     /* float scaleFactor=*/1.2f,
-                                                     /* int nlevels=*/8,
-                                                     /* int edgeThreshold=*/31,
-                                                     /*int firstLevel=*/0,
-                                                     /*int WTA_K=*/2,
-                                                     /*int scoreType=*/cv::ORB::HARRIS_SCORE,
-                                                     /*int patchSize=*/31,
-                                                     /*int fastThreshold=*/20);
-    std::vector<cv::KeyPoint> keypoints; 
-    orb_detector->detect ( left_gray, keypoints );
-    int found_orb = keypoints.size();
-    for (int i = 0; i < keypoints.size(); i++) {
-      int c = (int)keypoints[i].pt.x;        
-      int r = (int)keypoints[i].pt.y;
-      //selected_inds_map[r * left_gray.cols + c] = 0;
-      final_selected_uv.push_back(Eigen::Vector2i(c, r));
-      edge_or_surface.push_back(1.0);
-      edge_or_surface.push_back(0.0);
+    if (is_using_orb) {
+      cv::Ptr< cv::ORB > orb_detector = cv::ORB::create (expected_points / 3,
+                                                         /* float scaleFactor=*/1.2f,
+                                                         /* int nlevels=*/8,
+                                                         /* int edgeThreshold=*/31,
+                                                         /*int firstLevel=*/0,
+                                                         /*int WTA_K=*/2,
+                                                         /*int scoreType=*/cv::ORB::HARRIS_SCORE,
+                                                         /*int patchSize=*/31,
+                                                         /*int fastThreshold=*/20);
+      std::vector<cv::KeyPoint> keypoints; 
+      orb_detector->detect ( left_gray, keypoints );
+      int found_orb = keypoints.size();
+      for (int i = 0; i < keypoints.size(); i++) {
+        int c = (int)keypoints[i].pt.x;        
+        int r = (int)keypoints[i].pt.y;
+        //selected_inds_map[r * left_gray.cols + c] = 0;
+        final_selected_uv.push_back(Eigen::Vector2i(c, r));
+        edge_or_surface.push_back(1.0);
+        edge_or_surface.push_back(0.0);
       
-      found_orb++;
+        found_orb++;
+      }
     }
-
     
     std::cout<<"Canny size "<<tmp_uvs_canny.size()<<", surface size "<<tmp_uvs_surface.size()<<"\n";
     int total_selected_canny = tmp_uvs_canny.size();
     int total_selected_surface = tmp_uvs_surface.size();
     //expected_points -= found_orb;
     for (int i = 0; i < tmp_uvs_canny.size(); i++) {
-      if (rand() % total_selected_canny < expected_points  * 1 / 2  ) {
+      if (rand() % total_selected_canny < expected_points  * 1 / 4  ) {
         final_selected_uv.push_back(tmp_uvs_canny[i]);
         edge_or_surface.push_back(1.0);
         edge_or_surface.push_back(0.0);
       }
     }
     for (int i = 0; i < tmp_uvs_surface.size(); i++) {
-      if (rand() % total_selected_surface < expected_points * 1 / 2 ) {
+      if (rand() % total_selected_surface < expected_points * 3 / 4 ) {
         final_selected_uv.push_back(tmp_uvs_surface[i]);
         edge_or_surface.push_back(0.0);
         edge_or_surface.push_back(1.0);
@@ -308,14 +312,14 @@ namespace cvo{
     /*****************************************/
     // using DSO semi dense point selector
     else if (pt_selection_method == CvoPointCloud::DSO_EDGES) {
-      int expected_points = 1000;
+      int expected_points = 10000;
       dso_select_pixels(left_image,
                         expected_points,
                         output_uv);
       edge_or_surface.resize(output_uv.size() * 2);
       for (int i = 0; i < output_uv.size(); i++) {
-        edge_or_surface[i*2] = 0.8;
-        edge_or_surface[i*2 +1]=0.2;
+        edge_or_surface[i*2] = 0.9;
+        edge_or_surface[i*2 +1]=0.1;
       }
       
     }
@@ -324,14 +328,24 @@ namespace cvo{
     else if (pt_selection_method == CvoPointCloud::CANNY_EDGES) {
       //std::vector<bool> selected_inds_map;
       std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> final_selected_uv;
-      int expected_points = 1000;
-      stereo_surface_sampling(left_gray, output_uv, true, true, expected_points,
+      int expected_points = 10000;
+      stereo_surface_sampling(left_gray, output_uv, true, true, true, expected_points,
                               edge_or_surface, output_uv);
 
 
       
       
     }
+    /* edge only */
+    else if (pt_selection_method == CvoPointCloud::EDGES_ONLY) {
+      //std::vector<bool> selected_inds_map;
+      std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> final_selected_uv;
+      int expected_points = 10000;
+      stereo_surface_sampling(left_gray, output_uv, true, false, false, expected_points,
+                              edge_or_surface, output_uv);
+      
+    }
+    
     /********************************************/
     // using full point cloud
     else if (pt_selection_method == CvoPointCloud::FULL) {
@@ -563,6 +577,40 @@ namespace cvo{
 
       geometric_types_[i*2] = 0;
       geometric_types_[i*2+1] = 1;
+    }
+    
+  }
+
+  template <>
+  CvoPointCloud::CvoPointCloud<pcl::PointXYZRGB>(const pcl::PointCloud<pcl::PointXYZRGB> & pc,
+                                                 GeometryType g_type) {
+    num_points_ = pc.size();
+    num_classes_ = 0;
+    feature_dimensions_ = 5;
+
+    positions_.resize(pc.size());
+    features_.resize(num_points_, feature_dimensions_);
+    geometric_types_.resize(num_points_ * 2);
+    for (int i = 0; i < num_points_; i++) {
+      Eigen::Vector3f xyz;
+      auto & p = (pc)[i];
+      xyz << p.x, p.y, p.z;
+      positions_[i] = xyz;
+
+      features_(i,0) = ((float)(int)p.r) / 255.0;
+      features_(i,1) = ((float)(int)p.g) / 255.0;
+      features_(i,2) = ((float)(int)p.b) / 255.0;
+      features_(i, 3) = 0;
+      features_(i, 4) = 0;
+
+      if (g_type == GeometryType::SURFACE) {
+        geometric_types_[i*2] = 0;
+        geometric_types_[i*2+1] = 1;
+      } else {
+        geometric_types_[i*2] = 1;
+        geometric_types_[i*2+1] = 0;
+        
+      }
     }
     
   }
@@ -1250,14 +1298,14 @@ namespace cvo{
     geometric_types_ .resize(num_points*2);
   }
   
-  int CvoPointCloud::add_point(int index, const Eigen::Vector3f & xyz, const Eigen::VectorXf & feature, const Eigen::VectorXf & label, const float * geometry_type) {
+  int CvoPointCloud::add_point(int index, const Eigen::Vector3f & xyz, const Eigen::VectorXf & feature, const Eigen::VectorXf & label, const Eigen::VectorXf & geometry_type) {
     
     if (index >= num_points_) return -1;
     if (positions_.size() < num_points_ ||
         features_.rows() < num_points_ ||
         //labels_.rows() < num_points_ ||
-        features_.cols() != feature_dimensions_
-        //||
+        features_.cols() != feature_dimensions_ ||
+        geometry_type.size() != 2
         //labels_.cols() != num_classes_
         ) {
       std::cerr<<"CvoPointCloud must be reserved before add_point\n";
@@ -1269,9 +1317,9 @@ namespace cvo{
       features_.row(index) = feature.transpose();
     if (num_classes_)
       labels_.row(index) = label;
-    if (geometry_type) {
-      geometric_types_[index*2] = (geometry_type[0]);
-      geometric_types_[index*2+1] = (geometry_type[1]);
+    if (geometry_type.size()) {
+      geometric_types_[index*2] = (geometry_type(0));
+      geometric_types_[index*2+1] = (geometry_type(1));
     }
     return 0;
   }

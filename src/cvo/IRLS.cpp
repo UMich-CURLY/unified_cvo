@@ -79,6 +79,7 @@ namespace cvo {
 
     int num_ells = 0;
     int last_nonzeros = 0;
+    bool ell_should_decay = false;
     while (!converged) {
 
       std::cout<<"\n\n==============================================================\n";
@@ -111,9 +112,16 @@ namespace cvo {
           counter++;
         }
       }
-      nonzeros <<ell<<", "<< total_nonzeros<<"\n";
+      nonzeros <<ell<<", "<< total_nonzeros<<"\n"<<std::flush;
+
+      std::cout<<"Total nonzeros "<<total_nonzeros<<", last_nonzeros "<<last_nonzeros<<std::endl;
+      std::cout<<"iter_ "<<iter_<<", multiframe_iterations_per_ell "<<params_->multiframe_iterations_per_ell<<std::endl;
       if (counter == 0) break;
-      if (total_nonzeros > last_nonzeros ) {
+      if (total_nonzeros > last_nonzeros)
+        ell_should_decay = true;
+      if (total_nonzeros > last_nonzeros
+          || iter_ < params_->multiframe_iterations_per_ell 
+          ) {
         last_nonzeros = total_nonzeros;
         //   for (auto && frame : *frames_) {
         for (int k = 0; k < frames_->size(); k++) {
@@ -155,6 +163,7 @@ namespace cvo {
         //    ) {
           //break;
           num_ells ++;
+          ell_should_decay = false;
           //if (num_ells == 2)
           //  break;
         
