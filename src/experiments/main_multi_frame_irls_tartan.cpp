@@ -190,11 +190,15 @@ int main(int argc, char** argv) {
   //std::string tracking_fname(argv[4]);
 
   int num_const_frames = 1;
-  if (argc > 4)
-    num_const_frames = std::stoi(std::string(argv[4]));
+  //if (argc > 4)
+  num_const_frames = std::stoi(std::string(argv[4]));
   std::string graph_file_folder;
-  if (argc > 5)
-    graph_file_folder = std::string(argv[5]);
+  //if (argc > 5)
+  graph_file_folder = std::string(argv[5]);
+
+  std::string covisMapFile;
+  if (argc > 6)
+    covisMapFile = std::string(argv[6]);
   
   int total_iters = tartan.get_total_number();
   //vector<string> vstrRGBName = tum.get_rgb_name_list();
@@ -307,9 +311,9 @@ int main(int argc, char** argv) {
     double * poses_data = nullptr;
     //if (BA_poses.size())
 
-    Eigen::Matrix4d id_mat = Eigen::Matrix4d::Identity();
-    poses_data = id_mat.data();
-    //poses_data = BA_poses[i].data();
+    //Eigen::Matrix4d id_mat = Eigen::Matrix4d::Identity();
+    //poses_data = id_mat.data();
+    poses_data = BA_poses[i].data();
     //  poses_data = tracking_poses[i].data();
 
     
@@ -319,6 +323,25 @@ int main(int argc, char** argv) {
     frames_full.push_back(new_full_frame);
     id_to_index[curr_frame_id] = i;
   }
+
+
+  if (covisMapFile.size() > 0) {
+    std::cout<<"Read covis Map "<<covisMapFile<<std::endl;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr covis_pcd(new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::io::loadPCDFile(graph_file_folder + "/" + covisMapFile,
+                         *covis_pcd);
+    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(*covis_pcd));
+    pcs.push_back(pc);
+    cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrame(pc.get(), frames[0]->pose_vec));
+    cvo::CvoFrame::Ptr new_full_frame(new cvo::CvoFrame(pc.get(), frames[0]->pose_vec));
+    
+    frames.push_back(new_frame);
+    frames_full.push_back(new_frame);      
+    std::cout<<"read number points is "<<pc->num_points()<<std::endl;
+
+  }
+
+  
   std::string f_name_full("before_BA_full.pcd");
   std::string f_name("before_BA.pcd");
   write_transformed_pc(frames_full, f_name_full);
@@ -334,15 +357,26 @@ int main(int argc, char** argv) {
     edges.push_back(p);
   }
 
+  if (covisMapFile.size()) {
+    for (int i = 0; i < frames.size() - 1; i++) {
+      std::pair<cvo::CvoFrame::Ptr, cvo::CvoFrame::Ptr> p(frames[i], frames[frames.size()-1]);
+      edges.push_back(p);
+    }
+  }
+  
+
   double time = 0;
   std::vector<bool> const_flags(frames.size(), false);
   std::cout<<"Const frames include ";
-  for (int i = 0; i < num_const_frames; i++) {
-    const_flags[i] = true;
-    std::cout<<frame_inds[i]<<", ";
+  if (covisMapFile.size())
+    const_flags[const_flags.size()-1] = true;
+  else {
+    for (int i = 0; i < num_const_frames; i++) {
+      const_flags[i] = true;
+      std::cout<<frame_inds[i]<<", ";
+    }
+    std::cout<<std::endl;
   }
-  std::cout<<std::endl;
-
   f_name="const_BA.pcd";
   f_name_full="const_BA_full.pcd";
   write_transformed_pc(frames_full, f_name_full, num_const_frames);
