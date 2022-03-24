@@ -69,7 +69,7 @@ namespace cvo {
     int multiframe_iterations_per_solve;
     int multiframe_expected_points;
     float multiframe_downsample_voxel_size;
-    
+    int multiframe_kdtree_num_neighbors;
     CvoParams() :
       ell_init_first_frame(0.5),
       ell_init(0.5),
@@ -117,7 +117,8 @@ namespace cvo {
       multiframe_iterations_per_ell(50),
       multiframe_iterations_per_solve(8),
       multiframe_downsample_voxel_size(0.5),      
-      multiframe_expected_points(1000)
+      multiframe_expected_points(1000),
+      multiframe_kdtree_num_neighbors(20)
     {}
     
   };
@@ -282,6 +283,8 @@ namespace cvo {
     
     if (fs["multiframe_expected_points"])
       params->multiframe_expected_points = fs["multiframe_expected_points"].as<int>();
+    if (fs["multiframe_kdtree_num_neighbors"])
+      params->multiframe_kdtree_num_neighbors = fs["multiframe_kdtree_num_neighbors"].as<int>();
 
     
     

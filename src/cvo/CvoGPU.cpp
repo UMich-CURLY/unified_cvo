@@ -241,7 +241,20 @@ namespace cvo {
   }
   */
 
+  static
+  void align_multi_cpu_impl(std::vector<CvoFrame::Ptr> & frames,
+                            const std::vector<bool> & frames_to_hold_const,                    
+                            const std::list<BinaryState::Ptr> & binary_states,
+                            const CvoParams & params
+                            ) {
+    
+    CvoBatchIRLS batch_irls_problem(frames, frames_to_hold_const,
+                                    binary_states, &params);
 
+    batch_irls_problem.solve();
+  }
+
+  /*  
   static
   void align_multi_cpu_impl(std::vector<CvoFrame::Ptr> & frames,
                             const std::vector<bool> & frames_to_hold_const,                    
@@ -261,6 +274,36 @@ namespace cvo {
 
     batch_irls_problem.solve();
   }
+  */
+  int CvoGPU::align(// inputs
+                    std::vector<CvoFrame::Ptr> & frames,  // point clouds, poses, the outputs are within
+                    const std::vector<bool> & frames_to_hold_const,              
+                    const std::list<BinaryState::Ptr> & edge_states,
+                    // outputs
+                    double *registration_seconds
+                    ) const {
+    if (params.multiframe_using_cpu) {
+      
+      auto start = std::chrono::system_clock::now();
+
+      align_multi_cpu_impl(frames, frames_to_hold_const,
+                           edge_states, params);
+
+      auto end = std::chrono::system_clock::now();
+      std::chrono::duration<double, std::milli> t_all = end - start;
+      if (registration_seconds)
+        *registration_seconds = (double)t_all.count() / 1000;
+      return 0;
+    }
+    else {
+      std::cerr<<"Not implemented ERR\n";
+      return -1;
+    }
+    
+    
+  }
+  
+  
 
   
   int CvoGPU::align(// inputs
@@ -279,9 +322,18 @@ namespace cvo {
     if (params.multiframe_using_cpu) {
       
       auto start = std::chrono::system_clock::now();
+
+      std::list<BinaryState::Ptr> binary_states;
+      for (auto && p : edges) {
+        auto & f1 = p.first;
+        auto & f2 = p.second;
+        BinaryStateCPU::Ptr new_binary_state(new BinaryStateCPU(f1, f2, &params));
+        binary_states.push_back(std::dynamic_pointer_cast<BinaryState>(new_binary_state));
+      }
+      
       
       align_multi_cpu_impl(frames, frames_to_hold_const,
-                           edges, params);
+                           binary_states, params);
       
 
       auto end = std::chrono::system_clock::now();

@@ -180,6 +180,41 @@ void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string 
   pcl::io::savePCDFileASCII(fname, pc_all);
 }
 
+void merge_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames,  cvo::CvoPointCloud & pc_all) {
+  std::cout<<"start merge_transformed_pc\n";
+  if (frames.size() == 0)
+    return;
+  
+  int num_points = 0;
+  for (auto ptr : frames) {
+    num_points += ptr->points->num_points();
+  }
+  pc_all.reserve(num_points, frames[0]->points->feature_dimensions(),
+                 frames[0]->points->num_classes());
+  for (auto ptr : frames) {
+    
+    //if (counter == max_frames) break;
+    cvo::CvoPointCloud new_pc;
+    Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
+    cvo::Mat34d_row pose_eigen = Eigen::Map<cvo::Mat34d_row>(ptr->pose_vec);
+    pose.block<3,4>(0,0) = pose_eigen;
+    
+    Eigen::Matrix4f pose_f = pose.cast<float>();
+    std::cout<<"Before transform first point is  "<<ptr->points->positions()[0]<<std::endl;
+    std::cout<<"Before transform 2nd point is  "<<ptr->points->positions()[1]<<std::endl;
+    
+    cvo::CvoPointCloud::transform(pose_f, *ptr->points, new_pc);
+    std::cout<<"after transform first point is  "<<new_pc.positions()[0]<<std::endl;
+    std::cout<<"after transform 2nd point is  "<<new_pc.positions()[1]<<std::endl;
+    pc_all = pc_all + new_pc;
+    std::cout<<"2nd point of pc_all is "<<pc_all.positions()[1]<<std::endl;
+    std::cout<<"Last point of pc_all is "<<pc_all.positions()[pc_all.num_points()-1]<<std::endl;
+    std::cout<<"pc all size is "<<pc_all.num_points()<<std::endl;
+  }
+
+}
+
+
 int main(int argc, char** argv) {
 
   omp_set_num_threads(24);
@@ -325,22 +360,6 @@ int main(int argc, char** argv) {
   }
 
 
-  if (covisMapFile.size() > 0) {
-    std::cout<<"Read covis Map "<<covisMapFile<<std::endl;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr covis_pcd(new pcl::PointCloud<pcl::PointXYZRGB>);
-    pcl::io::loadPCDFile(graph_file_folder + "/" + covisMapFile,
-                         *covis_pcd);
-    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(*covis_pcd));
-    pcs.push_back(pc);
-    cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrame(pc.get(), frames[0]->pose_vec));
-    cvo::CvoFrame::Ptr new_full_frame(new cvo::CvoFrame(pc.get(), frames[0]->pose_vec));
-    
-    frames.push_back(new_frame);
-    frames_full.push_back(new_frame);      
-    std::cout<<"read number points is "<<pc->num_points()<<std::endl;
-
-  }
-
   
   std::string f_name_full("before_BA_full.pcd");
   std::string f_name("before_BA.pcd");
@@ -356,60 +375,35 @@ int main(int argc, char** argv) {
      std::cout<<"first ind "<<first_ind<<", second ind "<<second_ind<<std::endl;
     std::pair<cvo::CvoFrame::Ptr, cvo::CvoFrame::Ptr> p(frames[first_ind], frames[second_ind]);
     edges.push_back(p);
-
-    Eigen::Vector3f p_mean_covis = Eigen::Vector3f::Zero();
-    Eigen::Vector3f p_mean_tmp = Eigen::Vector3f::Zero();
-    for (int k = 0; k < frames[first_ind]->points->num_points(); k++)
-      p_mean_tmp = (p_mean_tmp + frames[first_ind]->points->positions()[k]).eval();
-    p_mean_tmp = (p_mean_tmp) / frames[first_ind]->points->num_points();    
-    for (int k = 0; k <  frames[second_ind]->points->num_points(); k++)
-      p_mean_covis = (p_mean_covis + frames[second_ind]->points->positions()[k]).eval();
-    p_mean_covis = (p_mean_covis) / frames[second_ind]->points->num_points();
-    float dist = (p_mean_covis - p_mean_tmp).norm();
-    std::cout<<"dist between tmp and covis is "<<dist<<"\n";
-    
     
     const cvo::CvoParams & params = cvo_align.get_params();
     cvo::BinaryState::Ptr edge_state(new cvo::BinaryStateCPU(frames[first_ind],
                                                              frames[second_ind],
                                                              &params,
                                                              params.multiframe_kdtree_num_neighbors,
-                                                             //params.multiframe_ell_init
-                                                             dist / 3
+                                                             params.multiframe_ell_init
                                                              ));
     edge_states.push_back(edge_state);
     
   }
 
+  /*
   if (covisMapFile.size()) {
     for (int i = 0; i < frames.size() - 1; i++) {
       std::pair<cvo::CvoFrame::Ptr, cvo::CvoFrame::Ptr> p(frames[i], frames[frames.size()-1]);
       edges.push_back(p);
-
-      Eigen::Vector3f p_mean_covis = Eigen::Vector3f::Zero();
-      Eigen::Vector3f p_mean_tmp = Eigen::Vector3f::Zero();
-      for (int k = 0; k < frames[i]->points->num_points(); k++)
-        p_mean_tmp = (p_mean_tmp + frames[i]->points->positions()[k]).eval();
-      p_mean_tmp = (p_mean_tmp) / frames[i]->points->num_points();    
-      for (int k = 0; k <  frames[frames.size()-1]->points->num_points(); k++)
-        p_mean_covis = (p_mean_covis + frames[frames.size()-1]->points->positions()[k]).eval();
-      p_mean_covis = (p_mean_covis) / frames[frames.size()-1]->points->num_points();
-      float dist = (p_mean_covis - p_mean_tmp).norm();
-      std::cout<<"dist between tmp and covis is "<<dist<<"\n";
-      
       const cvo::CvoParams & params = cvo_align.get_params();
       cvo::BinaryState::Ptr edge_state(new cvo::BinaryStateCPU(frames[i],
                                                                frames[frames.size()-1],
                                                                &params,
                                                                params.multiframe_kdtree_num_neighbors,
-                                                               //params.multiframe_ell_init * 4
-                                                               dist / 4
+                                                               params.multiframe_ell_init * 4
                                                              ));
       edge_states.push_back(edge_state);
       
     }
   }
-  
+  */
 
   double time = 0;
   std::vector<bool> const_flags(frames.size(), false);
@@ -451,6 +445,77 @@ int main(int argc, char** argv) {
   }
   write_transformed_pc(frames_full, f_name_full);
   write_transformed_pc(frames, f_name);
+
+
+
+  if (covisMapFile.size() > 0) {
+
+    std::shared_ptr<cvo::CvoPointCloud> tmpMap(new cvo::CvoPointCloud);
+    merge_transformed_pc(frames, *tmpMap);
+    
+    std::cout<<"tmp Map with points "<<tmpMap->num_points()<<std::endl;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr covis_pcd(new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::io::loadPCDFile(graph_file_folder + "/" + covisMapFile,
+                        *covis_pcd);
+    std::shared_ptr<cvo::CvoPointCloud> covis_pc(new cvo::CvoPointCloud(*covis_pcd));
+    std::cout<<"covis Map with points "<<covis_pc->num_points()<<std::endl;
+    
+    //pcs.push_back(pc);
+    cvo::CvoFrame::Ptr tmpMap_frame(new cvo::CvoFrame(tmpMap.get(), frames[0]->pose_vec));
+    cvo::CvoFrame::Ptr covis_pc_frame(new cvo::CvoFrame(covis_pc.get(), frames[0]->pose_vec));
+
+    std::cout<<"just constructed frames\n";
+    std::vector<cvo::CvoFrame::Ptr> covisFrames;
+    covisFrames.push_back(tmpMap_frame);
+    covisFrames.push_back(covis_pc_frame);
+    f_name = "before_covis_BA.pcd";
+    write_transformed_pc(covisFrames, f_name);
+
+    Eigen::Vector3f p_mean_covis = Eigen::Vector3f::Zero();
+    Eigen::Vector3f p_mean_tmp = Eigen::Vector3f::Zero();
+    for (int k = 0; k < tmpMap->num_points(); k++)
+      p_mean_tmp = (p_mean_tmp + tmpMap->positions()[k]).eval();
+    p_mean_tmp = (p_mean_tmp) / tmpMap->num_points();    
+    for (int k = 0; k < covis_pc->num_points(); k++)
+      p_mean_covis = (p_mean_covis + covis_pc->positions()[k]).eval();
+    p_mean_covis = (p_mean_covis) / covis_pc->num_points();
+    float dist = (p_mean_covis - p_mean_tmp).norm();
+    std::cout<<"dist between tmp and covis is "<<dist<<"\n";
+    
+    cvo::CvoParams & init_param = cvo_align.get_params();
+    float ell_init = init_param.ell_init;
+    float ell_decay_rate = init_param.ell_decay_rate;
+    int ell_decay_start = init_param.ell_decay_start;
+    init_param.ell_init = dist;  //init_param.ell_init_first_frame;
+    init_param.ell_decay_rate = init_param.ell_decay_rate_first_frame;
+    init_param.ell_decay_start  = init_param.ell_decay_start_first_frame;
+    cvo_align.write_params(&init_param);
+
+    Eigen::Matrix4f T_t2s = Eigen::Matrix4f::Identity();
+    Eigen::Matrix4f output;
+    std::cout<<"start align....\n"<<std::flush;
+    cvo_align.align(*tmpMap, *covis_pc, T_t2s, output );
+    std::cout<<"end align....\n";
+    Eigen::Matrix<double, 4, 4, Eigen::RowMajor> init_pose = Eigen::Matrix<double, 4, 4, Eigen::RowMajor> ::Identity();
+    init_pose.block<3,4>(0,0) = Eigen::Map<Eigen::Matrix<double, 3, 4, Eigen::RowMajor>> (frames[0]->pose_vec);
+    Eigen::Matrix<float, 4, 4, Eigen::RowMajor> T_row_f =  output;
+    Eigen::Matrix<double, 4, 4, Eigen::RowMajor> T_row = init_pose *  T_row_f.cast<double>();
+    // Eigen::Map<Eigen::Matrix<double, 3,4, Eigen::RowMajor>>(covisFrames[1]->pose_vec ) = T_row.data();
+    for (int k = 0; k < 12; k++)
+      covisFrames[1]->pose_vec[k]  = T_row.data()[k];
+    f_name = "after_covis_BA.pcd";
+    write_transformed_pc(covisFrames, f_name);
+
+    
+    //frames.push_back(new_frame);
+    //frames_full.push_back(new_frame);
+    
+    
+    // std::cout<<"read number points is "<<pc->num_points()<<std::endl;
+
+  }
+
+  
   
 
   //std::string traj_out("traj_out.txt");

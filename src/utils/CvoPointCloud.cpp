@@ -866,44 +866,53 @@ namespace cvo{
     return *this;
   }
 
-  CvoPointCloud CvoPointCloud::operator+(const CvoPointCloud & to_add) {
-    if (this->feature_dimensions_ != to_add.feature_dimensions_
-        || this->num_classes_ != to_add.num_classes_ ) {
-      std::cout<<"Warning: adding cvo pointcloud of different classes or features\n";
-      return *this;
-    }
+  CvoPointCloud & CvoPointCloud::operator+=(const CvoPointCloud & to_add) {
+    //if (this->feature_dimensions_ != to_add.feature_dimensions_
+    //    || this->num_classes_ != to_add.num_classes_ ) {
+    //  std::cout<<"Warning: adding cvo pointcloud of different classes or features\n";
+    //  return *this;
+    // }
 
-    CvoPointCloud new_points;
-    new_points.positions_.resize(0);
-    new_points.positions_.insert(new_points.positions_.end(),  this->positions_.begin(), this->positions_.end());
-    new_points.positions_.insert(new_points.positions_.end(),  to_add.positions_.begin(), to_add.positions_.end());
+    //CvoPointCloud new_points;
+    //new_points.positions_.resize(0);
+    //new_points.positions_.insert(new_points.positions_.end(),  this->positions_.begin(), this->positions_.end());
+    //new_points.positions_.insert(new_points.positions_.end(),  to_add.positions_.begin(), to_add.positions_.end());
+    this->positions_.insert(this->positions_.end(),  to_add.positions_.begin(), to_add.positions_.end());
 
     if (this->feature_dimensions_) {
-      new_points.features_.resize(this->num_points_ + to_add.num_points_,
-                                  this->feature_dimensions_);
-      new_points.features_.block(0, 0, this->num_points_, this->feature_dimensions_) = this->features_;
-      new_points.features_.block(this->num_points_, 0, to_add.num_points_, this->feature_dimensions_) = to_add.features_;
+      this->features_.conservativeResize(this->num_points_ + to_add.num_points_, Eigen::NoChange_t::NoChange);
+      //new_points.features_.resize(this->num_points_ + to_add.num_points_,
+      //                            this->feature_dimensions_);
+      //new_points.features_.block(0, 0, this->num_points_, this->feature_dimensions_) = this->features_;
+      this->features_.block(this->num_points_, 0, to_add.num_points_, this->feature_dimensions_) = to_add.features_;
     }
 
     if (this->num_classes_) {
-      new_points.labels_.resize(this->num_points_ + to_add.num_points_,
-                                this->num_classes_);
-      new_points.labels_.block(0, 0, this->num_points_, this->num_classes_) = this->labels_;
-      new_points.labels_.block(this->num_points_, 0, to_add.num_points_, this->num_classes_) = to_add.labels_;
+      //new_points.labels_.resize(this->num_points_ + to_add.num_points_,
+      //                          this->num_classes_);
+      this->labels_.conservativeResize( this->num_points_ + to_add.num_points_, Eigen::NoChange_t::NoChange);
+      //new_points.labels_.block(0, 0, this->num_points_, this->num_classes_) = this->labels_;
+      this->labels_.block(this->num_points_, 0, to_add.num_points_, this->num_classes_) = to_add.labels_;
     }
     
-    new_points.geometric_types_.resize(0);
-    new_points.geometric_types_.insert(new_points.geometric_types_.end(),
-                                       this->geometric_types_.begin(),this->geometric_types_.end() );
-    new_points.geometric_types_.insert(new_points.geometric_types_.end(),
-                                       to_add.geometric_types_.begin(),to_add.geometric_types_.end() );
+    //new_points.geometric_types_.resize(0);
+    //new_points.geometric_types_.insert(new_points.geometric_types_.end(),
+    //                                   this->geometric_types_.begin(),this->geometric_types_.end() );
+    this->geometric_types_.insert(this->geometric_types_.end(),
+                                  to_add.geometric_types_.begin(),to_add.geometric_types_.end() );
 
-    new_points.num_points_ = this->num_points_ + to_add.num_points_;
-    new_points.feature_dimensions_ = this->feature_dimensions_;
-    new_points.num_classes_ = this->num_classes_;
-    return new_points;
+    this->num_points_ = this->num_points_ + to_add.num_points_;
+    //this>feature_dimensions_ = this->feature_dimensions_;
+    // new_points.num_classes_ = this->num_classes_;
+    return *this;
   }
-  
+
+  CvoPointCloud operator+(CvoPointCloud lhs,        // passing lhs by value helps optimize chained a+b+c
+                                 const CvoPointCloud& rhs) // otherwise, both parameters may be const references
+  {
+    lhs += rhs; // reuse compound assignment
+    return lhs; // return the result by value (uses move constructor)
+  }
 
   CvoPointCloud::CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, int target_num_points, int beam_num, PointSelectionMethod pt_selection_method) {
     int expected_points = target_num_points;
@@ -1088,7 +1097,7 @@ namespace cvo{
     
   }
   CvoPointCloud::~CvoPointCloud() {
-    std::cout<<"Destruct CvoPointCloud..\n"<<std::flush;
+    // std::cout<<"Destruct CvoPointCloud..\n"<<std::flush;
     
   }
 
@@ -1171,9 +1180,9 @@ namespace cvo{
       p.y = positions_[i]( 1);
       p.z = positions_[i]( 2);
       
-      uint8_t b = static_cast<uint8_t>(std::min(255, (int)(features_(i,0) * 255) ) );
+      uint8_t r = static_cast<uint8_t>(std::min(255, (int)(features_(i,0) * 255) ) );
       uint8_t g = static_cast<uint8_t>(std::min(255, (int)(features_(i,1) * 255) ) );
-      uint8_t r = static_cast<uint8_t>(std::min(255, (int)(features_(i,2) * 255)));
+      uint8_t b = static_cast<uint8_t>(std::min(255, (int)(features_(i,2) * 255)));
       //if (num_classes_ ) {
       //  int max_class;
       //  labels_.row(i).maxCoeff(&max_class);

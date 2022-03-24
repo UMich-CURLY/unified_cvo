@@ -20,6 +20,12 @@ namespace cvo {
                    CvoFrame::Ptr pc2,
                    const CvoParams * params
                    );
+    BinaryStateCPU(CvoFrame::Ptr pc1,
+                   CvoFrame::Ptr pc2,
+                   const CvoParams * params,
+                   int num_kdtree_neighbor,
+                   double init_ell
+                   );
 
     // update 
     virtual int update_inner_product();

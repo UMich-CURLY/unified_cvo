@@ -5,6 +5,7 @@
 #include "utils/CvoPointCloud.hpp"
 #include "utils/CvoPoint.hpp"
 #include "utils/CvoFrame.hpp"
+#include "cvo/IRLS_State.hpp"
 
 #include <vector>
 #include <string.h>
@@ -105,6 +106,23 @@ namespace cvo{
               double *registration_seconds=nullptr
               ) const;
 
+    /**
+     * @brief Aligning multiple point clouds
+     * @param frames The vector of CvoFrame, each containing a CvoPointCloud and an initial pose. 
+     *               The registration results will be recorded in the pose_vec attribute of CvoFrame. 
+     * @param edge_states The list of connection between different frames. Each edge connects two.
+     * @param registration_seconds The running time in seconds
+     * @return 0 if sucessful, otherwise failure
+     */
+    int align(// inputs
+              std::vector<CvoFrame::Ptr> & frames,  // point clouds, poses, the outputs are within
+              const std::vector<bool> & frames_to_hold_const,              
+              const std::list<BinaryState::Ptr> & edge_states,
+              // outputs
+              double *registration_seconds=nullptr
+              ) const;
+
+    
     
     /**
      * @brief the function_angle measures the overlap of the two point clouds, via 

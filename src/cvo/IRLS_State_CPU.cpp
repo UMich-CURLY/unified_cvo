@@ -96,6 +96,30 @@ namespace cvo {
 
   }
 
+  BinaryStateCPU::BinaryStateCPU(CvoFrame::Ptr pc1,
+                                 CvoFrame::Ptr pc2,
+                                 const CvoParams * params,
+                                 int num_kdtree_neighbor,
+                                 double init_ell
+                                 ) : frame1(pc1), frame2(pc2),
+                                     params_(params),
+                                     ip_mat_(pc1->points->size(),
+                                             pc2->points->size()),
+                                     ell_(init_ell){
+    //pc2_curr_.resize(pc2->points->size());
+    //pc1_curr_.resize(pc1->points->size());
+    //Eigen::Matrix4d identity = Eigen::Matrix4d::Identity();
+    //Mat34d_row identity_34 = identity.block<3,4>(0,0);
+    //transform_pcd(identity_34, pc1->points->positions(), pc1_curr_);
+    std::cout<<"Construct BinaryStateCPU: ell is "<<ell_<<"\n";
+
+    iter_ = 0;
+
+    pc1_kdtree_.reset(new Kdtree(3 /*dim*/,
+                                 frame1->points->positions(),
+                                 num_kdtree_neighbor /* max leaf */ ));
+    pc1_kdtree_->index->buildIndex();
+  }
 
   
   BinaryStateCPU::BinaryStateCPU(CvoFrame::Ptr pc1,
@@ -112,6 +136,7 @@ namespace cvo {
     //transform_pcd(identity_34, pc1->points->positions(), pc1_curr_);
 
     ell_ = params->multiframe_ell_init;
+    std::cout<<"Construct BinaryStateCPU: ell is "<<ell_<<"\n";    
     iter_ = 0;
 
     pc1_kdtree_.reset(new Kdtree(3 /*dim*/, frame1->points->positions(), 20 /* max leaf */ ));

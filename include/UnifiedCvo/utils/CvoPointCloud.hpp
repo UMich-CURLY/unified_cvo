@@ -93,10 +93,14 @@ namespace cvo {
                   int beam_num,
                   PointSelectionMethod pt_selection_method=LOAM);
 
-    
+
+    // overloaded operators and copy constructors
     CvoPointCloud(const CvoPointCloud & to_copy);
-    CvoPointCloud operator+(const CvoPointCloud & b);
+    CvoPointCloud & operator+=(const CvoPointCloud & b);
+    friend CvoPointCloud operator+(CvoPointCloud a, const CvoPointCloud & b);
     CvoPointCloud & operator=(const CvoPointCloud& input);
+
+    
     // Not recommended: Image Gradient is empty
     template <typename PointT>
       CvoPointCloud(const pcl::PointCloud<PointT> & pc);    

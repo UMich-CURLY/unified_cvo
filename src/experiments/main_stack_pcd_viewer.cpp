@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <fstream>
 #include <iostream>
+#include <boost/filesystem.hpp>
 #include "viewer/viewer.h"
 #include <Eigen/Dense>
 using Mat34d_row = Eigen::Matrix<double, 3, 4, Eigen::RowMajor>;
@@ -247,6 +248,11 @@ int main(int argc, char** argv) {
   
   for (int f = start_ind; f < total_graphs; f++) {
     std::string graph_file_name(pcd_folder + "/" + std::to_string(f) + "_graph.txt");
+
+    if ( !boost::filesystem::exists( graph_file_name ) ) {
+      continue;
+    } else
+      std::cout<<"Read "<<graph_file_name<<std::endl;
 
     viewer->addOrUpdateText ( graph_file_name,
                               0,
