@@ -1453,6 +1453,7 @@ namespace cvo{
     
     int k = 0;
     int num_neighbors = params.is_using_kdtree? perl_registration::KDTREE_K_SIZE : params.nearest_neighbors_max;
+    Eigen::Matrix4d dRT = Eigen::Matrix4d::Identity();    
     for(; k<params.MAX_ITER; k++){
       if (debug_print) printf("new iteration %d, ell is %f\n", k, cvo_state.ell);
       cvo_state.reset_state_at_new_iter(num_neighbors);
@@ -1538,7 +1539,7 @@ namespace cvo{
       R = (R.cast<double>() * dR).cast<float>();
 
       // reduce ell, if the se3 distance is smaller than eps2, break
-      Eigen::Matrix4d dRT = Eigen::Matrix4d::Identity();
+      // Eigen::Matrix4d dRT = Eigen::Matrix4d::Identity();
       dRT.block<3,3>(0,0) = dR;
       dRT.block<3,1>(0,3) = dT;
       Sophus::SE3d dRT_sophus(dRT);

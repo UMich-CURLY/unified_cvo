@@ -164,7 +164,7 @@ void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string 
   int counter = 0;
   for (auto ptr : frames) {
     if (counter == max_frames) break;
-    cvo::CvoPointCloud new_pc;
+    cvo::CvoPointCloud new_pc(5, 0);
     Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
     pose.block<3,4>(0,0) = Eigen::Map<cvo::Mat34d_row>(ptr->pose_vec);
     
@@ -189,12 +189,12 @@ void merge_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames,  cvo::CvoPoi
   for (auto ptr : frames) {
     num_points += ptr->points->num_points();
   }
-  pc_all.reserve(num_points, frames[0]->points->feature_dimensions(),
-                 frames[0]->points->num_classes());
+  //pc_all.reserve(num_points, frames[0]->points->feature_dimensions(),
+  //               frames[0]->points->num_classes());
   for (auto ptr : frames) {
     
     //if (counter == max_frames) break;
-    cvo::CvoPointCloud new_pc;
+    cvo::CvoPointCloud new_pc(5,0);
     Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
     cvo::Mat34d_row pose_eigen = Eigen::Map<cvo::Mat34d_row>(ptr->pose_vec);
     pose.block<3,4>(0,0) = pose_eigen;
@@ -328,7 +328,7 @@ int main(int argc, char** argv) {
     //std::cout<<"construct filtered cvo points with voxel size "<<leaf_size<<"\n"<<std::flush;
     std::shared_ptr<cvo::CvoPointCloud> pc_edge(new cvo::CvoPointCloud(edge_pcl, cvo::CvoPointCloud::GeometryType::EDGE));
     std::shared_ptr<cvo::CvoPointCloud> pc_surface(new cvo::CvoPointCloud(surface_pcl, cvo::CvoPointCloud::GeometryType::SURFACE));
-    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud);
+    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(5,0));
     *pc = *pc_edge + *pc_surface;
     
     std::cout<<"Voxel number points is "<<pc->num_points()<<std::endl;
@@ -365,6 +365,16 @@ int main(int argc, char** argv) {
   std::string f_name("before_BA.pcd");
   write_transformed_pc(frames_full, f_name_full);
   write_transformed_pc(frames, f_name);
+
+  cvo::CvoPointCloud before_ba_cvo(5,0);
+  merge_transformed_pc(frames, before_ba_cvo);
+  pcl::PointCloud<pcl::PointXYZRGB> pc_to_write;
+  before_ba_cvo.export_to_pcd(pc_to_write);
+  std::string nfname("before_ba_cvo.pcd");
+  std::cout<<"write to before_ba_cvo.pcd";
+  pcl::io::savePCDFileASCII(nfname, pc_to_write);
+  std::cout<<"fin\n";
+  //before_ba_cvo.write_to_color_pcd("before_ba_cvo.pcd");
 
   // read edges to construct graph
   std::list<std::pair<cvo::CvoFrame::Ptr, cvo::CvoFrame::Ptr>> edges;
@@ -405,6 +415,20 @@ int main(int argc, char** argv) {
   }
   */
 
+
+  /*
+  f_name_full = ("before_BA_full.pcd");
+  f_name = ("before_BA.pcd");
+  for (int i = 0; i < frames.size(); i++) {
+    double * raw =  BA_poses[i].data(); //Eigen::Map<Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>(BA_poses[i]);
+    memcpy(frames_full[i]->pose_vec, raw, sizeof(double)*12);
+    memcpy(frames[i]->pose_vec, raw, sizeof(double)*12);
+  }
+  write_transformed_pc(frames_full, f_name_full);
+  write_transformed_pc(frames, f_name);
+
+  */
+
   double time = 0;
   std::vector<bool> const_flags(frames.size(), false);
   std::cout<<"Const frames include ";
@@ -436,24 +460,36 @@ int main(int argc, char** argv) {
   write_transformed_pc(frames, f_name);
 
 
-  f_name_full = ("before_BA_full.pcd");
-  f_name = ("before_BA.pcd");
-  for (int i = 0; i < frames.size(); i++) {
-    double * raw =  BA_poses[i].data(); //Eigen::Map<Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>(BA_poses[i]);
-    memcpy(frames_full[i]->pose_vec, raw, sizeof(double)*12);
-    memcpy(frames[i]->pose_vec, raw, sizeof(double)*12);
-  }
-  write_transformed_pc(frames_full, f_name_full);
-  write_transformed_pc(frames, f_name);
-
-
 
   if (covisMapFile.size() > 0) {
 
-    std::shared_ptr<cvo::CvoPointCloud> tmpMap(new cvo::CvoPointCloud);
+    std::shared_ptr<cvo::CvoPointCloud> tmpMap(new cvo::CvoPointCloud(5, 0));
     merge_transformed_pc(frames, *tmpMap);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr tmp_voxel_pcd(new pcl::PointCloud<pcl::PointXYZRGB>);
+    tmpMap->export_to_pcd(*tmp_voxel_pcd);
+    pcl::io::savePCDFileASCII("merged_pc.pcd", *tmp_voxel_pcd);
+    cvo::VoxelMap<pcl::PointXYZRGB> tmp_voxel(leaf_size / 2); // /10
+    for (int k = 0; k < tmp_voxel_pcd->size(); k++) {
+      auto p_ptr = &tmp_voxel_pcd->points[k];
+      Eigen::Vector3f p_eigen = p_ptr->getVector3fMap();
+      if(! (p_eigen(0) != p_eigen(0)
+            || p_eigen(1) != p_eigen(1)
+            || p_eigen(2) != p_eigen(2)
+            ))
+        tmp_voxel.insert_point(p_ptr);
+    }
+    std::vector<pcl::PointXYZRGB*> tmp_results = tmp_voxel.sample_points();
+    pcl::PointCloud<pcl::PointXYZRGB> tmp_pcl;
+    for (int k = 0; k < tmp_results.size(); k++) {
+
     
-    std::cout<<"tmp Map with points "<<tmpMap->num_points()<<std::endl;
+      tmp_pcl.push_back(*tmp_results[k]);
+    }
+    std::cout<<"tmp voxel selected points "<<tmp_pcl.size()<<std::endl;
+    std::shared_ptr<cvo::CvoPointCloud> tmp_pc(new cvo::CvoPointCloud(tmp_pcl));
+    tmp_pc->write_to_color_pcd("tmp_pc.pcd");
+
+    std::cout<<"tmp Map with points "<<tmp_pc->num_points()<<std::endl;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr covis_pcd(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::io::loadPCDFile(graph_file_folder + "/" + covisMapFile,
                         *covis_pcd);
@@ -461,26 +497,27 @@ int main(int argc, char** argv) {
     std::cout<<"covis Map with points "<<covis_pc->num_points()<<std::endl;
     
     //pcs.push_back(pc);
-    cvo::CvoFrame::Ptr tmpMap_frame(new cvo::CvoFrame(tmpMap.get(), frames[0]->pose_vec));
+    cvo::CvoFrame::Ptr tmp_pc_frame(new cvo::CvoFrame(tmp_pc.get(), frames[0]->pose_vec));
     cvo::CvoFrame::Ptr covis_pc_frame(new cvo::CvoFrame(covis_pc.get(), frames[0]->pose_vec));
 
     std::cout<<"just constructed frames\n";
     std::vector<cvo::CvoFrame::Ptr> covisFrames;
-    covisFrames.push_back(tmpMap_frame);
+    covisFrames.push_back(tmp_pc_frame);
     covisFrames.push_back(covis_pc_frame);
     f_name = "before_covis_BA.pcd";
     write_transformed_pc(covisFrames, f_name);
 
     Eigen::Vector3f p_mean_covis = Eigen::Vector3f::Zero();
     Eigen::Vector3f p_mean_tmp = Eigen::Vector3f::Zero();
-    for (int k = 0; k < tmpMap->num_points(); k++)
-      p_mean_tmp = (p_mean_tmp + tmpMap->positions()[k]).eval();
-    p_mean_tmp = (p_mean_tmp) / tmpMap->num_points();    
+    for (int k = 0; k < tmp_pc->num_points(); k++)
+      p_mean_tmp = (p_mean_tmp + tmp_pc->positions()[k]).eval();
+    p_mean_tmp = (p_mean_tmp) / tmp_pc->num_points();    
     for (int k = 0; k < covis_pc->num_points(); k++)
       p_mean_covis = (p_mean_covis + covis_pc->positions()[k]).eval();
     p_mean_covis = (p_mean_covis) / covis_pc->num_points();
     float dist = (p_mean_covis - p_mean_tmp).norm();
-    std::cout<<"dist between tmp and covis is "<<dist<<"\n";
+    std::cout<<"dist between tmp and covis is "<<dist<<", p_mean_tmp is "<<p_mean_tmp
+             <<", p_mean_covis is "<<p_mean_covis<<"\n";
     
     cvo::CvoParams & init_param = cvo_align.get_params();
     float ell_init = init_param.ell_init;
@@ -494,7 +531,7 @@ int main(int argc, char** argv) {
     Eigen::Matrix4f T_t2s = Eigen::Matrix4f::Identity();
     Eigen::Matrix4f output;
     std::cout<<"start align....\n"<<std::flush;
-    cvo_align.align(*tmpMap, *covis_pc, T_t2s, output );
+    cvo_align.align(*tmp_pc, *covis_pc, T_t2s, output );
     std::cout<<"end align....\n";
     Eigen::Matrix<double, 4, 4, Eigen::RowMajor> init_pose = Eigen::Matrix<double, 4, 4, Eigen::RowMajor> ::Identity();
     init_pose.block<3,4>(0,0) = Eigen::Map<Eigen::Matrix<double, 3, 4, Eigen::RowMajor>> (frames[0]->pose_vec);

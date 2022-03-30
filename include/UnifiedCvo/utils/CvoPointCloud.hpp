@@ -124,11 +124,12 @@ namespace cvo {
     CvoPointCloud(const semantic_bki::SemanticBKIOctoMap * map,
                   int num_semantic_class);
 
-    CvoPointCloud();
+    CvoPointCloud(int feature_dimensions, int num_classes);
 
     CvoPointCloud(const std::string & filename);
     
     ~CvoPointCloud();
+    CvoPointCloud();
 
     int read_cvo_pointcloud_from_file(const std::string & filename);
 

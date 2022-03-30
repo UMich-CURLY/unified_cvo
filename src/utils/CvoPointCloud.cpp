@@ -867,11 +867,11 @@ namespace cvo{
   }
 
   CvoPointCloud & CvoPointCloud::operator+=(const CvoPointCloud & to_add) {
-    //if (this->feature_dimensions_ != to_add.feature_dimensions_
-    //    || this->num_classes_ != to_add.num_classes_ ) {
-    //  std::cout<<"Warning: adding cvo pointcloud of different classes or features\n";
-    //  return *this;
-    // }
+    assert (this->feature_dimensions_ == to_add.feature_dimensions_
+            && this->num_classes_ == to_add.num_classes_ ) ;
+      //std::cout<<"Warning: adding cvo pointcloud of different classes or features\n";
+      //return *this;
+    
 
     //CvoPointCloud new_points;
     //new_points.positions_.resize(0);
@@ -880,7 +880,7 @@ namespace cvo{
     this->positions_.insert(this->positions_.end(),  to_add.positions_.begin(), to_add.positions_.end());
 
     if (this->feature_dimensions_) {
-      this->features_.conservativeResize(this->num_points_ + to_add.num_points_, Eigen::NoChange_t::NoChange);
+      this->features_.conservativeResize(this->num_points_ + to_add.num_points_, this->feature_dimensions_);
       //new_points.features_.resize(this->num_points_ + to_add.num_points_,
       //                            this->feature_dimensions_);
       //new_points.features_.block(0, 0, this->num_points_, this->feature_dimensions_) = this->features_;
@@ -890,7 +890,7 @@ namespace cvo{
     if (this->num_classes_) {
       //new_points.labels_.resize(this->num_points_ + to_add.num_points_,
       //                          this->num_classes_);
-      this->labels_.conservativeResize( this->num_points_ + to_add.num_points_, Eigen::NoChange_t::NoChange);
+      this->labels_.conservativeResize( this->num_points_ + to_add.num_points_, this->num_classes_);
       //new_points.labels_.block(0, 0, this->num_points_, this->num_classes_) = this->labels_;
       this->labels_.block(this->num_points_, 0, to_add.num_points_, this->num_classes_) = to_add.labels_;
     }
@@ -1096,6 +1096,13 @@ namespace cvo{
 
     
   }
+
+  CvoPointCloud::CvoPointCloud(int feature_dimensions, int num_classes) {
+    num_points_=0;
+    num_classes_ = num_classes;
+    feature_dimensions_ = feature_dimensions;
+  }  
+  
   CvoPointCloud::~CvoPointCloud() {
     // std::cout<<"Destruct CvoPointCloud..\n"<<std::flush;
     
