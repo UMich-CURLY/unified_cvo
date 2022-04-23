@@ -312,9 +312,9 @@ int main(int argc, char** argv) {
     //if (BA_poses.size())
 
     Eigen::Matrix4d id_mat = Eigen::Matrix4d::Identity();
-    if (BA_poses.size() == frame_inds.size())
-      poses_data = BA_poses[i].data();
-    else 
+    //if (BA_poses.size() == frame_inds.size())
+    //  poses_data = BA_poses[i].data();
+    //else 
       poses_data = id_mat.data();
     
     cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrame(pc.get(), poses_data));
@@ -374,8 +374,8 @@ int main(int argc, char** argv) {
                                                              frames[second_ind],
                                                              &params,
                                                              params.multiframe_kdtree_num_neighbors,
-                                                             //params.multiframe_ell_init
-                                                             dist / 3
+                                                             params.multiframe_ell_init
+                                                             //dist / 3
                                                              ));
     edge_states.push_back(edge_state);
     
@@ -402,8 +402,8 @@ int main(int argc, char** argv) {
                                                                frames[frames.size()-1],
                                                                &params,
                                                                params.multiframe_kdtree_num_neighbors,
-                                                               //params.multiframe_ell_init * 4
-                                                               dist / 4
+                                                               params.multiframe_ell_init * 4
+                                                               //dist / 4
                                                              ));
       edge_states.push_back(edge_state);
       

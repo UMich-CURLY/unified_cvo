@@ -77,6 +77,8 @@ namespace cvo {
                                   double label_ip,
                                   double ell,
                                   double sigma
+                                  //,int num_pts_1,
+                                  //int num_pts_2
                                   ) {
       pt1_.head<3>() = pt1.cast<double>();
       pt1_[3] = 1.0;
@@ -169,7 +171,8 @@ namespace cvo {
     double ell2_;
     double sigma2_;
     double label_ip_;
-  
+    //    int pc1_size_;
+    //int pc2_size_;
   };
   
 

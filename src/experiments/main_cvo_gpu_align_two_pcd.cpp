@@ -39,6 +39,9 @@ int main(int argc, char *argv[]) {
   //cvo::KittiHandler kitti(argv[1], 0);
   std::string source_file(argv[1]);
   std::string target_file(argv[2]);
+  float ell = -1;
+  if (argc > 4)
+	  ell = std::stof(argv[4]);
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr source_pcd(new pcl::PointCloud<pcl::PointXYZRGB>);
   pcl::io::loadPCDFile(source_file, *source_pcd);
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_pcd));
@@ -55,6 +58,9 @@ int main(int argc, char *argv[]) {
   cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();
   init_param.ell_init = dist; //init_param.ell_init_first_frame;
+
+  if (argc > 4)
+	  init_param.ell_init = ell;
   init_param.ell_decay_rate = init_param.ell_decay_rate_first_frame;
   init_param.ell_decay_start  = init_param.ell_decay_start_first_frame;
   cvo_align.write_params(&init_param);
@@ -80,7 +86,7 @@ int main(int argc, char *argv[]) {
     
   std::cout<<"Transform is "<<result <<"\n\n";
   pcl::PointCloud<pcl::PointXYZRGB> pcd_old, pcd_new;
-  cvo::CvoPointCloud new_pc, old_pc;
+  cvo::CvoPointCloud new_pc(3, 19), old_pc(3, 19);
   cvo::CvoPointCloud::transform(init_guess, * target, old_pc);
   cvo::CvoPointCloud::transform(result, *target, new_pc);
   std::cout<<"Just finished transform\n";

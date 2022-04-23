@@ -1210,6 +1210,12 @@ namespace cvo{
     
   }
 
+  Eigen::Vector3f & CvoPointCloud::at(unsigned int index)  {
+    assert (index < num_points_ && index >= 0);
+    return positions_[index];
+  }
+  
+
   void CvoPointCloud::write_to_color_pcd(const std::string & name) const {
     pcl::PointCloud<pcl::PointXYZRGB> pc;
     export_to_pcd<pcl::PointXYZRGB>(pc);

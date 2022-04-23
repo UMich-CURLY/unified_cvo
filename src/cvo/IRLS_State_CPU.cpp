@@ -76,17 +76,18 @@ namespace cvo {
 
         
         //ceres::CostFunction * cost_per_point =
-        //  new PairwiseAnalyticalDiffFunctor(pc1[idx1], pc2[idx2], color_ip,  ell_, params_->sigma);
+        //  new PairwiseAnalyticalDiffFunctor(pc1[idx1], pc2[idx2], color_ip ,  ell_, params_->sigma);
         
-
+        ceres::CostFunction * cost_per_point =
+          new PairwiseAnalyticalDiffFunctor(pc1[idx1], pc2[idx2], color_ip / ell_ / (double) ip_mat_.nonZeros() ,  ell_, params_->sigma);
         
-        ceres::CostFunction* cost_per_point
+        /* ceres::CostFunction* cost_per_point
           = new ceres::AutoDiffCostFunction<PairwiseAutoDiffFunctor, 1, 12, 12>(new PairwiseAutoDiffFunctor(pc1[idx1],
                                                                                                             pc2[idx2],
                                                                                                             color_ip,
                                                                                                             ell_,
                                                                                                             params_->sigma));  
-        
+        */
         
         //ceres::LossFunctionWrapper* loss_function(new ceres::HuberLoss(1.0), ceres::TAKE_OWNERSHIP);
         problem.AddResidualBlock(cost_per_point, nullptr , frame1->pose_vec, frame2->pose_vec);
@@ -264,6 +265,7 @@ namespace cvo {
         if (a > cvo_params->sp_thres){
           //double a_residual = ck * k * d2 ; // least square
           double a_gradient = (double)ck * k ;
+          //double a_gradient = (double)ck * k  /  ell ; /// pc1_cvo.size() / pc2_cvo.size();
 #pragma omp critical
           {
             //nonzero_list.push_back(Eigen::Triplet<double>(i, idx, a));
