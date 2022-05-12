@@ -45,6 +45,8 @@ Please see [this doc](https://github.com/autowarefoundation/autoware/issues/2094
 
 ### Compile
 ```
+export CC=gcc-9
+export CXX=g++-9
 mkdir build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${YOUR_INSTALL_DIR} 
@@ -55,6 +57,7 @@ make -j4
 
 ### Demo
 #### Frame-to-Frame Registration Demo on Kitti
+Inside docker container: 
 * GeometricCVO: `bash scripts/kitti_geometric_stereo.bash`
 * ColorCvo:     `bash scripts/kitti_intensity_stereo.bash`
 * SemanticCvo:  `bash scripts/cvo_semantic_img_oct26_gpu0.bash`
