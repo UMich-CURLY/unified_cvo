@@ -1,11 +1,15 @@
 #include "utils/CvoPointCloud.hpp"
 #include "utils/PointSegmentedDistribution.hpp"
+//#include "utils/CvoFrameGPU.hpp"
 #include "utils/CvoPoint.hpp"
 #include "cvo/nanoflann.hpp"
 #include "cvo/CvoParams.hpp"
 #include "cvo/CvoGPU.hpp"
+#include "cvo/CvoFrame.hpp"
+#include "cvo/CvoFrameGPU.hpp"
 #include "cvo/IRLS_State.hpp"
 #include "cvo/IRLS_State_CPU.hpp"
+#include "cvo/IRLS_State_GPU.hpp"
 #include "cvo/KDTreeVectorOfVectorsAdaptor.h"
 #include "cvo/IRLS.hpp"
 #include <tbb/tbb.h>
@@ -254,27 +258,6 @@ namespace cvo {
     batch_irls_problem.solve();
   }
 
-  /*  
-  static
-  void align_multi_cpu_impl(std::vector<CvoFrame::Ptr> & frames,
-                            const std::vector<bool> & frames_to_hold_const,                    
-                            const std::list<std::pair<CvoFrame::Ptr, CvoFrame::Ptr>> & edges,
-                            const CvoParams & params
-                            ) {
-    std::list<BinaryState::Ptr> binary_states;
-    for (auto && p : edges) {
-      auto & f1 = p.first;
-      auto & f2 = p.second;
-      BinaryStateCPU::Ptr new_binary_state(new BinaryStateCPU(f1, f2, &params));
-      binary_states.push_back(std::dynamic_pointer_cast<BinaryState>(new_binary_state));
-    }
-
-    CvoBatchIRLS batch_irls_problem(frames, frames_to_hold_const,
-                                    binary_states, &params);
-
-    batch_irls_problem.solve();
-  }
-  */
   int CvoGPU::align(// inputs
                     std::vector<CvoFrame::Ptr> & frames,  // point clouds, poses, the outputs are within
                     const std::vector<bool> & frames_to_hold_const,              
@@ -282,72 +265,25 @@ namespace cvo {
                     // outputs
                     double *registration_seconds
                     ) const {
-    if (params.multiframe_using_cpu) {
+
+    std::cout<<"CvoGPU.cpp:align() get called\n";
       
-      auto start = std::chrono::system_clock::now();
-
-      align_multi_cpu_impl(frames, frames_to_hold_const,
-                           edge_states, params);
-
-      auto end = std::chrono::system_clock::now();
-      std::chrono::duration<double, std::milli> t_all = end - start;
-      if (registration_seconds)
-        *registration_seconds = (double)t_all.count() / 1000;
-      return 0;
-    }
-    else {
-      std::cerr<<"Not implemented ERR\n";
-      return -1;
-    }
+    auto start = std::chrono::system_clock::now();
+    CvoBatchIRLS batch_irls_problem(frames, frames_to_hold_const,
+                                    edge_states, &params);
     
+    batch_irls_problem.solve();
+    
+    
+    auto end = std::chrono::system_clock::now();
+    std::chrono::duration<double, std::milli> t_all = end - start;
+    if (registration_seconds)
+      *registration_seconds = (double)t_all.count() / 1000;
+    return 0;
     
   }
   
   
-
-  
-  int CvoGPU::align(// inputs
-                    //const std::vector<pcl::PointCloud<CvoPoint>> & pcs,
-                    //const std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> & poses_in,
-                    std::vector<CvoFrame::Ptr> & frames,
-                    const std::vector<bool> & frames_to_hold_const,                                     
-                    const std::list<std::pair<CvoFrame::Ptr, CvoFrame::Ptr>> & edges,
-                    // outputs
-                    //std::vector<Eigen::Ref<Eigen::Matrix4f>> poses_out,
-                    double *registration_seconds
-            
-                    ) const {
-
-
-    if (params.multiframe_using_cpu) {
-      
-      auto start = std::chrono::system_clock::now();
-
-      std::list<BinaryState::Ptr> binary_states;
-      for (auto && p : edges) {
-        auto & f1 = p.first;
-        auto & f2 = p.second;
-        BinaryStateCPU::Ptr new_binary_state(new BinaryStateCPU(f1, f2, &params));
-        binary_states.push_back(std::dynamic_pointer_cast<BinaryState>(new_binary_state));
-      }
-      
-      
-      align_multi_cpu_impl(frames, frames_to_hold_const,
-                           binary_states, params);
-      
-
-      auto end = std::chrono::system_clock::now();
-      std::chrono::duration<double, std::milli> t_all = end - start;
-      if (registration_seconds)
-        *registration_seconds = (double)t_all.count() / 1000;
-      return 0;
-    }
-    else {
-      std::cerr<<"Not implemented ERR\n";
-      return -1;
-    }
-    
-  }
 
 
   template <>

@@ -6,13 +6,13 @@
 
 /**
  *  @file   cvo.cpp
- *  @author Tzu-yuan Lin, Maani Ghaffari 
+ *  @author Tzu-yuan Lin, Maani Ghaffari, Ray Zhang 
  *  @brief  Source file for contineuous visual odometry registration
  *  @date   November 03, 2019
  **/
 
 #include "cvo/AdaptiveCvoGPU.hpp"
-#include "cvo/SparseKernelMat.cuh"
+#include "cvo/SparseKernelMat.hpp"
 #include "cvo/AdaptiveCvoGPU_impl.cuh"
 #include "cvo/CvoState.cuh"
 #include "cvo/KDTreeVectorOfVectorsAdaptor.h"

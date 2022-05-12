@@ -1,6 +1,6 @@
 #pragma once
 #include "cvo/Association.hpp"
-#include "cvo/SparseKernelMat.cuh"
+#include "cvo/SparseKernelMat.hpp"
 #include "cvo/CvoState.cuh"
 
 #include "cvo/LieGroup.h"
@@ -38,7 +38,25 @@ inline void gpu_assert(cudaError_t code, const char *file, int line, bool abort=
 namespace cvo {
   //const int CUDA_BLOCK_SIZE = 1024 ;//128;
   CvoPointCloudGPU::SharedPtr CvoPointCloud_to_gpu(const CvoPointCloud& cvo_cloud );
-  CvoPointCloudGPU::SharedPtr pcl_PointCloud_to_gpu(const pcl::PointCloud<CvoPoint> & cvo_cloud );  
+  CvoPointCloudGPU::SharedPtr pcl_PointCloud_to_gpu(const pcl::PointCloud<CvoPoint> & cvo_cloud );
+  void CvoPointCloud_to_gpu(const CvoPointCloud& cvo_cloud, thrust::device_vector<CvoPoint> & output );
+  void pcl_PointCloud_to_gpu(const pcl::PointCloud<CvoPoint> & cvo_cloud, thrust::device_vector<CvoPoint> & output );
+
+
+
+  __global__
+  void fill_in_A_mat_gpu(const CvoParams * cvo_params,
+                         const CvoPoint * points_a,
+                         int a_size,
+                         const CvoPoint * points_b,
+                         int b_size,
+                         int num_neighbors,
+                         float ell,
+                         // output
+                         SparseKernelMat * A_mat // the kernel matrix!
+                         );
+
+  
 
   float compute_ranged_lengthscale(float curr_dist_square, float curr_ell, float min_ell, float max_ell );
 
@@ -86,8 +104,19 @@ namespace cvo {
    */
   void transform_pointcloud_thrust(std::shared_ptr<CvoPointCloudGPU> init_cloud,
                                    std::shared_ptr<CvoPointCloudGPU> transformed_cloud,
-                                   Mat33f * R_gpu, Vec3f * T_gpu
-                                   ) ;
+                                   Mat33f * R_gpu, Vec3f * T_gpu,
+                                   bool update_normal_and_cov
+                                   );
+
+  void transform_pointcloud_thrust(thrust::device_vector<CvoPoint> & init_cloud,
+                                   thrust::device_vector<CvoPoint> & transformed_cloud,
+                                   float * T_12_row_gpu,
+                                   bool update_normal_and_cov
+                                   );
+  
+
+
+  
 
   void gpu_association_to_cpu(const SparseKernelMat & association_gpu,
                               Association & association_cpu,

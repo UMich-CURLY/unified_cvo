@@ -1,11 +1,17 @@
 #include "cvo/IRLS.hpp"
-#include "cvo/IRLS_State_CPU.hpp"
+//#include "cvo/IRLS_State_CPU.hpp"
 #include "cvo/local_parameterization_se3.hpp"
 #include <sophus/se3.hpp>
 #include <ceres/local_parameterization.h>
 #include <memory>
+#include <chrono>
+#include "cvo/IRLS_State.hpp"
+#include "cvo/CvoFrame.hpp"
+#include "cvo/CvoParams.hpp"
+#include <ceres/ceres.h>
+#include "utils/CvoPointCloud.hpp"
 namespace cvo {
-  
+
   CvoBatchIRLS::CvoBatchIRLS(//const std::vector<Mat34d_row, Eigen::aligned_allocator<Mat34d_row>> & init_poses,
                              const std::vector<CvoFrame::Ptr> &  frames,
                              const std::vector<bool> & pivot_flags,                             
@@ -77,9 +83,11 @@ namespace cvo {
     std::ofstream nonzeros("nonzeros.txt");
     std::ofstream loss_change("loss_change.txt");
 
+    double ceres_time = 0;
     int num_ells = 0;
     int last_nonzeros = 0;
     bool ell_should_decay = false;
+    std::cout<<"Solve: total number of states is "<<states_->size()<<std::endl;
     while (!converged) {
 
       std::cout<<"\n\n==============================================================\n";
@@ -96,9 +104,9 @@ namespace cvo {
       for (auto & frame : *frames_) {
 
         std::cout<<"Frame number of points "<<frame->points->num_points()<<std::endl;
+        frame->transform_pointcloud();
         problem.AddParameterBlock(frame->pose_vec, 12, se3_parameterization);
       }
-      
 
       std::vector<int> invalid_factors(states_->size());
       int counter = 0;
@@ -107,7 +115,7 @@ namespace cvo {
         int nonzeros_ip_mat = state->update_inner_product();
         total_nonzeros += nonzeros_ip_mat;
         //invalid_factors[counter] = invalid_ip_mat;
-        if (nonzeros_ip_mat > 100) {
+        if (nonzeros_ip_mat > 50) {
           state->add_residual_to_problem(problem);
           counter++;
         }
@@ -116,7 +124,9 @@ namespace cvo {
 
       std::cout<<"Total nonzeros "<<total_nonzeros<<", last_nonzeros "<<last_nonzeros<<std::endl;
       std::cout<<"iter_ "<<iter_<<", multiframe_iterations_per_ell "<<params_->multiframe_iterations_per_ell<<std::endl;
-      if (counter == 0) break;
+      if (counter == 0
+          || iter_ == params_->multiframe_max_iters
+          ) break;
       if (total_nonzeros > last_nonzeros)
         ell_should_decay = true;
       if (total_nonzeros > last_nonzeros
@@ -143,10 +153,17 @@ namespace cvo {
         options.visibility_clustering_type = ceres::CANONICAL_VIEWS;
       
       
-        options.num_threads = 24;
+        options.num_threads = params_->multiframe_least_squares_num_threads;
         options.max_num_iterations = params_->multiframe_iterations_per_solve;
+
+
+        auto start = std::chrono::system_clock::now();
         ceres::Solver::Summary summary;
         ceres::Solve(options, &problem, &summary);
+        auto end = std::chrono::system_clock::now();
+        std::chrono::duration<double, std::milli> t_all = end - start;
+        ceres_time += ( (static_cast<double>(t_all.count())) / 1000);
+        
 
         std::cout << summary.FullReport() << std::endl;
         loss_change << ell <<", "<< summary.final_cost - summary.initial_cost <<std::endl;
@@ -173,7 +190,8 @@ namespace cvo {
             std::cout<<"Reduce ell to "<<ell<<std::endl;          
 
             for (auto && state : *states_) 
-              std::dynamic_pointer_cast<BinaryStateCPU>(state)->update_ell();
+              //std::dynamic_pointer_cast<BinaryStateCPU>(state)->update_ell();
+              state->update_ell();
           } else {
             converged = true;
             //std::cout<<"End: pose change is "<<param_change<<std::endl;          
@@ -190,14 +208,8 @@ namespace cvo {
 
     nonzeros.close();
     loss_change.close();
+
+    std::cout<<"ceres running time is "<<ceres_time<<"\n";
   }
 
-  void CvoBatchIRLS::remove_frame(CvoFrame::Ptr to_remove) {
-    
-  }
-  void CvoBatchIRLS::add_frame(CvoFrame::Ptr to_remove) {
-    
-  }
-
-  
 }

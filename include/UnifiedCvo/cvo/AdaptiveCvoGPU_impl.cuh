@@ -3,7 +3,7 @@
 
 
 
-#include "cvo/SparseKernelMat.cuh"
+#include "cvo/SparseKernelMat.hpp"
 #include "cvo/CvoState.cuh"
 #include "cvo/KDTreeVectorOfVectorsAdaptor.h"
 #include "cvo/LieGroup.h"

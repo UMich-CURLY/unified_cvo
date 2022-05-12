@@ -10,7 +10,7 @@
 #include <Eigen/Geometry> 
 #include "cvo/CvoGPU.hpp"
 #include "utils/CvoPointCloud.hpp"
-#include "utils/CvoFrame.hpp"
+#include "cvo/CvoFrame.hpp"
 #include "dataset_handler/TumHandler.hpp"
 #include "utils/ImageRGBD.hpp"
 #include "utils/Calibration.hpp"

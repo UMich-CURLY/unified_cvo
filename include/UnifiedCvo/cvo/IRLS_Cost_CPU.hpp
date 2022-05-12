@@ -68,15 +68,21 @@ namespace cvo {
   
   };
 
-  class PairwiseAnalyticalDiffFunctor : public ceres::SizedCostFunction <1, 12, 12>  {
+  class
+#ifdef __CUDACC__
+  __align__(16)
+#else
+    alignas(16)
+#endif  
+  PairwiseAnalyticalDiffFunctor : public ceres::SizedCostFunction <1, 12, 12>  {
   public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    //EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     
     PairwiseAnalyticalDiffFunctor(const Eigen::Vector3f & pt1,
                                   const Eigen::Vector3f & pt2,
                                   double label_ip,
                                   double ell,
-                                  double sigma
+                                  double sigma=0.1
                                   //,int num_pts_1,
                                   //int num_pts_2
                                   ) {

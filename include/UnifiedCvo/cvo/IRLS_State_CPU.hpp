@@ -1,13 +1,17 @@
 #include "cvo/IRLS_State.hpp"
 #include "cvo/KDTreeVectorOfVectorsAdaptor.h"
-#include "cvo/CvoParams.hpp"
-#include "utils/PointSegmentedDistribution.hpp"
-#include "utils/CvoFrame.hpp"
-#include "utils/CvoPointCloud.hpp"
+//#include "cvo/CvoParams.hpp"
+//#include "utils/PointSegmentedDistribution.hpp"
+#include "cvo/CvoFrame.hpp"
+//#include "utils/CvoPointCloud.hpp"
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
+#include <memory>
 
 namespace cvo {
+
+  class  CvoFrame;
+  class CvoParams;
 
   class BinaryStateCPU : public BinaryState {
     
@@ -16,12 +20,12 @@ namespace cvo {
     typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f> >, float>  Kdtree;
     typedef std::shared_ptr<BinaryStateCPU> Ptr;
     
-    BinaryStateCPU(CvoFrame::Ptr pc1,
-                   CvoFrame::Ptr pc2,
+    BinaryStateCPU(std::shared_ptr<CvoFrame> pc1,
+                   std::shared_ptr<CvoFrame> pc2,
                    const CvoParams * params
                    );
-    BinaryStateCPU(CvoFrame::Ptr pc1,
-                   CvoFrame::Ptr pc2,
+    BinaryStateCPU(std::shared_ptr<CvoFrame> pc1,
+                   std::shared_ptr<CvoFrame> pc2,
                    const CvoParams * params,
                    int num_kdtree_neighbor,
                    double init_ell
@@ -47,8 +51,8 @@ namespace cvo {
     virtual void update_jacobians(double ** jacobians);
     */
 
-    CvoFrame::Ptr frame1;
-    CvoFrame::Ptr frame2;     
+    std::shared_ptr<CvoFrame> frame1;
+    std::shared_ptr<CvoFrame> frame2;     
 
   private:
     //pcl::PointCloud<pcl::PointSegmentedDistribution<>>::Ptr pc1_;

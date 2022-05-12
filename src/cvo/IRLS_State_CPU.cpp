@@ -5,7 +5,9 @@
 #include "cvo/KDTreeVectorOfVectorsAdaptor.h"
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
-
+#include <ceres/ceres.h>
+#include "utils/CvoPointCloud.hpp"
+#include "cvo/CvoParams.hpp"
 namespace cvo {
 
 
@@ -73,13 +75,15 @@ namespace cvo {
         int idx2 = it.col();   // col index (here it is equal to k)
         double color_ip = it.value();
 
+        //if (idx1 == 0)
+        //  std::cout<<"add_residual_to_problem: pc1[0] with pc2["<<idx2<<"] and label_ip is "<<color_ip<<std::endl;
 
         
-        //ceres::CostFunction * cost_per_point =
-        //  new PairwiseAnalyticalDiffFunctor(pc1[idx1], pc2[idx2], color_ip ,  ell_, params_->sigma);
-        
         ceres::CostFunction * cost_per_point =
-          new PairwiseAnalyticalDiffFunctor(pc1[idx1], pc2[idx2], color_ip / ell_ / (double) ip_mat_.nonZeros() ,  ell_, params_->sigma);
+          new PairwiseAnalyticalDiffFunctor(pc1[idx1], pc2[idx2], color_ip ,  ell_, params_->sigma);
+        
+        //ceres::CostFunction * cost_per_point =
+        //  new PairwiseAnalyticalDiffFunctor(pc1[idx1], pc2[idx2], color_ip / ell_  / ip_mat_.nonZeros() ,  ell_, params_->sigma);
         
         /* ceres::CostFunction* cost_per_point
           = new ceres::AutoDiffCostFunction<PairwiseAutoDiffFunctor, 1, 12, 12>(new PairwiseAutoDiffFunctor(pc1[idx1],
@@ -322,6 +326,7 @@ namespace cvo {
               );
 
     int nonzeros = ip_mat_.nonZeros();
+    std::cout<<"CPU: inner product num nonzeros is "<<nonzeros<<std::endl;
     return nonzeros;
     //if (ip_mat_.nonZeros() < 100) {
     //  std::cout<<"too sparse inner product mat "<<ip_mat_.nonZeros()<<std::endl;

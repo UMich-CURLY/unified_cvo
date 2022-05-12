@@ -1,5 +1,5 @@
 #include "cvo/CvoGPU.hpp"
-#include "cvo/SparseKernelMat.cuh"
+#include "cvo/SparseKernelMat.hpp"
 #include "cvo/Association.hpp"
 #include "cvo/CvoGPU_impl.cuh"
 #include "cvo/CvoState.cuh"
@@ -11,6 +11,12 @@
 #include "utils/PointSegmentedDistribution.hpp"
 #include "cupointcloud/point_types.h"
 #include "cupointcloud/cupointcloud.h"
+#include "cvo/IRLS_State.hpp"
+#include "cvo/IRLS_State_CPU.hpp"
+#include "cvo/IRLS_State_GPU.hpp"
+#include "cvo/IRLS.hpp"
+#include "cvo/CvoFrameGPU.hpp"
+
 //#include "cukdtree/cukdtree.h"
 
 #include <pcl/point_types.h>
@@ -76,94 +82,6 @@ namespace cvo{
     
   }
 
-
-  struct transform_point : public thrust::unary_function<CvoPoint,CvoPoint>
-  {
-    const Mat33f * R;
-    const Vec3f * T;
-    const bool update_normal_and_cov;
-
-    transform_point(const Mat33f * R_gpu, const Vec3f * T_gpu,
-                    bool update_normal_and_covariance): R(R_gpu), T(T_gpu),
-                                                        update_normal_and_cov(update_normal_and_covariance){}
-    
-    __host__ __device__
-    CvoPoint operator()(const CvoPoint & p_init)
-    {
-      CvoPoint result(p_init);
-
-
-      Eigen::Vector3f input;
-      input << p_init.x, p_init.y, p_init.z;
-
-      Eigen::Vector3f trans = (*R) * input + (*T);
-      result.x = trans(0);
-      result.y = trans(1);
-      result.z = trans(2);
-      
-      if (update_normal_and_cov) {
-        Eigen::Vector3f input_normal;
-        input_normal << p_init.normal[0], p_init.normal[1], p_init.normal[2];
-        Eigen::Vector3f trans_normal = (*R) * input_normal + (*T);
-        result.normal[0] = trans_normal(0);
-        result.normal[1] = trans_normal(1);
-        result.normal[2] = trans_normal(2);
-
-
-
-        Eigen::Matrix3f point_cov;
-        point_cov << p_init.covariance[0], p_init.covariance[1], p_init.covariance[2],
-          p_init.covariance[3], p_init.covariance[4], p_init.covariance[5],
-          p_init.covariance[6], p_init.covariance[7], p_init.covariance[8];
-      
-        point_cov = ((*R) * point_cov * (R->transpose())).eval();
-        for (int i = 0; i < 3; i++) {
-          for (int j = 0; j < 3; j++) {
-            result.covariance[i*3 + j] = point_cov(i,j);
-          }
-        }
-        memcpy(result.cov_eigenvalues, p_init.cov_eigenvalues, sizeof(float)*3);
-      }
-
-      return result;
-
-    }
-  };
-
-
-  void  transform_pointcloud_thrust(std::shared_ptr<CvoPointCloudGPU> init_cloud,
-                                    std::shared_ptr<CvoPointCloudGPU> transformed_cloud,
-                                    Mat33f * R_gpu, Vec3f * T_gpu,
-                                    bool update_normal_and_cov
-                                    ) {
-
-    thrust::transform( init_cloud->begin(), init_cloud->end(),  transformed_cloud->begin(), 
-                       transform_point(R_gpu, T_gpu, update_normal_and_cov));
-    /*
-    if (debug_print) {
-      std::cout<<"transformed size is "<<transformed_cloud->size()<<std::endl;
-      Mat33f R_cpu;
-      cudaMemcpy(&R_cpu, R_gpu, sizeof(Mat33f), cudaMemcpyDeviceToHost);
-      printf("Transform point : R_gpu is \n");
-      std::cout<<R_cpu<<std::endl;
-    
-      CvoPoint from_point;
-      CvoPoint transformed_point;
-      for (int i = 1000; i < 1001; i++){
-        cudaMemcpy((void*)&transformed_point, (void*)thrust::raw_pointer_cast( transformed_cloud->points.data() +i), sizeof(CvoPoint), cudaMemcpyDeviceToHost  );
-        cudaMemcpy((void*)&from_point, (void*)thrust::raw_pointer_cast( init_cloud->points.data() +i), sizeof(CvoPoint), cudaMemcpyDeviceToHost  );
-
-          printf("print %d point after transformation:\n", i);
-          printf("from\n ");
-          pcl::print_point(from_point);
-          printf("to\n");
-          pcl::print_point(transformed_point  );
-
-      }     
-      }*/
-  
-  }
-  
 
   __device__
   float compute_range_ell(float curr_ell, float curr_dist_to_sensor, float min_dist, float max_dist ) {
@@ -558,9 +476,9 @@ namespace cvo{
 
   __global__
   void fill_in_A_mat_gpu(const CvoParams * cvo_params,
-                         CvoPoint * points_a,
+                         const CvoPoint * points_a,
                          int a_size,
-                         CvoPoint * points_b,
+                         const CvoPoint * points_b,
                          int b_size,
                          int num_neighbors,
                          float ell,
@@ -569,7 +487,7 @@ namespace cvo{
                          ) {
 
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    //printf("\ni is %d\n\n", i);
+    //printf("\ni is %d, a_size is %d, ", i, a_size);
     if (i > a_size - 1)
       return;
     
@@ -581,8 +499,9 @@ namespace cvo{
     float c_sigma2 = cvo_params->c_sigma * cvo_params->c_sigma;
     float s_ell = cvo_params->s_ell;
     float s_sigma2 = cvo_params->s_sigma * cvo_params->s_sigma;
+    //printf("params_gpu_ are %f, %f, %f, %f\n",ell, sigma2, c2, s_ell);
 
-    CvoPoint * p_a =  &points_a[i];
+    const CvoPoint * p_a =  &points_a[i];
 
     float a_to_sensor = sqrtf(p_a->x * p_a->x + p_a->y * p_a->y + p_a->z * p_a->z);
     float l = compute_range_ell(ell, a_to_sensor , 1, 80 );
@@ -596,28 +515,33 @@ namespace cvo{
       d2_s_thres = -2.0*s_ell*s_ell*log(cvo_params->sp_thres/s_sigma2 );
     
 
-    float * label_a = nullptr;
-    if (cvo_params->is_using_semantics)
-      label_a = p_a ->label_distribution;
+    const float * label_a = p_a ->label_distribution; //nullptr;
+    //if (cvo_params->is_using_semantics)
+    //  label_a = p_a ->label_distribution;
 
     unsigned int num_inds = 0;
+    //printf("a_size is %d, i=%d, b_size=%d, num_neighbors=%d\n", a_size, i, b_size, num_neighbors);
     for (int j = 0; j < b_size ; j++) {
       int ind_b = j;
       if (num_inds == num_neighbors) break;
-      CvoPoint * p_b = &points_b[ind_b];
-      //if (j == 0)
-      //  printf("p_a is (%f, %f, %f), p_b is (%f, %f, %f\n)", p_a->x,p_a->y, p_a->z, p_b->x, p_b->y, p_b->z);
-
+      const CvoPoint * p_b = &points_b[ind_b];
+      /*
+      if (i == 0) {
+        printf(" pointcloud_b.size is %d, num_neighbors is %d,  p_a[%d] is (%f, %f, %f), p_b[%d] is (%f, %f, %f\n)",    b_size, num_neighbors,
+               i, p_a->x,p_a->y, p_a->z,
+               ind_b, p_b->x, p_b->y, p_b->z);
+               }*/
       float a = 1, sk=1, ck=1, k=1, geo_sim=1;
       if (cvo_params->is_using_geometric_type) {
         geo_sim = compute_geometric_type_ip(p_a->geometric_type,
                                             p_b->geometric_type,
                                             2
                                             );
-
-        //if (i == 0 )
-        //  printf("p_a is (%f, %f, %f), p_b is (%f, %f, %f), geo_sim is %f\n", p_a->x,p_a->y, p_a->z, p_b->x, p_b->y, p_b->z, geo_sim);
         
+        /*
+        if (i == 0 )
+          printf("p_a is (%f, %f, %f), p_b is (%f, %f, %f), geo_sim is %f\n", p_a->x,p_a->y, p_a->z, p_b->x, p_b->y, p_b->z, geo_sim);
+        */
         if(geo_sim < 0.01)
           continue;        
       }
@@ -644,11 +568,17 @@ namespace cvo{
           continue;
       }
       a = ck*k*sk*geo_sim;
+      /*
+      if (i==0)  {
+        printf("point_a is (%f,%f,%f), point_b with index %d is (%f,%f,%f), k=%f,ck=%f, sk=%f \n", p_a->x, p_a->y, p_a->z, ind_b,  p_b->x, p_b->y, p_b->z,  k, ck, sk );
+        }*/
+      
       if (a > cvo_params->sp_thres){
         A_mat->mat[i * num_neighbors + num_inds] = a;
         A_mat->ind_row2col[i * num_neighbors + num_inds] = ind_b;
-        //if (i==10) 
-        //  printf("point_a is (%f,%f,%f), point_b with index %d is (%f,%f,%f), k=%f,ck=%f, sk=%f \n", p_a->x, p_a->y, p_a->z, ind_b,  p_b->x, p_b->y, p_b->z,  k, ck, sk );
+        //if (i==10)  {
+            //printf("point_a is (%f,%f,%f), point_b with index %d is (%f,%f,%f), k=%f,ck=%f, sk=%f \n", p_a->x, p_a->y, p_a->z, ind_b,  p_b->x, p_b->y, p_b->z,  k, ck, sk );
+        //}
         
         //if (a > curr_max_ip) {
         //  curr_max_ip = a;
@@ -1700,6 +1630,59 @@ namespace cvo{
     //std::cout<<"Result Transform is "<<transform<<std::endl;
     return ret;
   }
+
+
+
+  
+  int CvoGPU::align(// inputs
+                    //const std::vector<pcl::PointCloud<CvoPoint>> & pcs,
+                    //const std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> & poses_in,
+                    std::vector<CvoFrame::Ptr> & frames,
+                    const std::vector<bool> & frames_to_hold_const,                                     
+                    const std::list<std::pair<CvoFrame::Ptr, CvoFrame::Ptr>> & edges,
+                    // outputs
+                    //std::vector<Eigen::Ref<Eigen::Matrix4f>> poses_out,
+                    double *registration_seconds
+            
+                    ) const {
+
+
+
+      
+    auto start = std::chrono::system_clock::now();
+
+    std::list<BinaryState::Ptr> binary_states;
+    for (auto && p : edges) {
+      auto & f1 = p.first;
+      auto & f2 = p.second;
+      if (params.multiframe_using_cpu){
+        BinaryStateCPU::Ptr new_binary_state(new BinaryStateCPU(f1, f2, &params));
+        binary_states.push_back(std::dynamic_pointer_cast<BinaryState>(new_binary_state));
+      } else {
+        
+        BinaryStateGPU::Ptr new_binary_state(new BinaryStateGPU(std::dynamic_pointer_cast<CvoFrameGPU>(f1),
+                                                                std::dynamic_pointer_cast<CvoFrameGPU>(f2),
+                                                                &params, params_gpu, params.multiframe_num_neighbors,
+                                                                params.multiframe_ell_init));
+        binary_states.push_back(std::dynamic_pointer_cast<BinaryState>(new_binary_state));        
+      }
+    }
+    
+    CvoBatchIRLS batch_irls_problem(frames, frames_to_hold_const,
+                                    binary_states, &params);
+
+    batch_irls_problem.solve();
+      
+
+    auto end = std::chrono::system_clock::now();
+    std::chrono::duration<double, std::milli> t_all = end - start;
+    if (registration_seconds)
+      *registration_seconds = (double)t_all.count() / 1000;
+    return 0;
+    
+  }
+
+  
   /*
   float CvoGPU::inner_product(const CvoPointCloud& source_points,
                               const CvoPointCloud& target_points,

@@ -14,7 +14,7 @@
 #include "cvo/IRLS_State_CPU.hpp"
 #include "cvo/IRLS_State.hpp"
 #include "utils/CvoPointCloud.hpp"
-#include "utils/CvoFrame.hpp"
+#include "cvo/CvoFrame.hpp"
 #include "utils/VoxelMap.hpp"
 #include "dataset_handler/TartanAirHandler.hpp"
 #include "utils/ImageRGBD.hpp"
@@ -390,7 +390,7 @@ int main(int argc, char** argv) {
     cvo::BinaryState::Ptr edge_state(new cvo::BinaryStateCPU(frames[first_ind],
                                                              frames[second_ind],
                                                              &params,
-                                                             params.multiframe_kdtree_num_neighbors,
+                                                             params.multiframe_num_neighbors,
                                                              params.multiframe_ell_init
                                                              ));
     edge_states.push_back(edge_state);

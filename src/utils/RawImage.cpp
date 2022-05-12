@@ -7,6 +7,10 @@ namespace cvo {
   RawImage::RawImage(const cv::Mat & image)
     : gradient_(image.total() * 2, 0),
       gradient_square_(image.total(), 0) {
+
+    if (image.total() == 0)
+      return;
+    
     num_class_ = 0;
     image_ = image.clone();
     rows_ = image.rows;

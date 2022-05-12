@@ -56,6 +56,18 @@ namespace cvo{
     return true;
   }
 
+  static void copy_eigen_dynamic_matrix(const Eigen::MatrixXf * source,
+                                        Eigen::MatrixXf * target
+                                        ) {
+    if (source->cols() == 0 || source->rows() == 0)
+      return;
+    target->resize(source->rows(), source->cols());
+    #pragma omp parallel for
+    for (int i = 0; i < source->cols(); i++)
+      target->col(i) = source->col(i);
+    
+  }
+
   void write_all_to_label_pcd(const std::string name,
                               const pcl::PointCloud<pcl::PointXYZI> & pc,
                               int num_class,
@@ -847,8 +859,13 @@ namespace cvo{
     num_classes_ = input.num_classes_;
     feature_dimensions_ = input.feature_dimensions_;
 
+    features_.resize(num_points_, feature_dimensions_);
+    #pragma omp parallel for
+    for (int i = 0; i < feature_dimensions_; i++)
+      features_.col(i) = input.features_.col(i);
+    
     positions_ = input.positions_;
-    features_ = input.features_;
+    //features_ = input.features_;
     labels_ = input.labels_;
     geometric_types_ = input.geometric_types_;
   }
@@ -860,7 +877,12 @@ namespace cvo{
     feature_dimensions_ = input.feature_dimensions_;
 
     positions_ = input.positions_;
-    features_ = input.features_;
+    features_.resize(num_points_, feature_dimensions_);
+    #pragma omp parallel for
+    for (int i = 0; i < feature_dimensions_; i++)
+      features_.col(i) = input.features_.col(i);
+    
+    //features_ = input.features_;
     labels_ = input.labels_;
     geometric_types_ = input.geometric_types_;
     return *this;
@@ -1210,7 +1232,7 @@ namespace cvo{
     
   }
 
-  Eigen::Vector3f & CvoPointCloud::at(unsigned int index)  {
+  Eigen::Vector3f CvoPointCloud::at(unsigned int index)  {
     assert (index < num_points_ && index >= 0);
     return positions_[index];
   }
@@ -1298,7 +1320,10 @@ namespace cvo{
                                 CvoPointCloud & output) {
     output.num_points_ = input.num_points();
     output.num_classes_ = input.num_classes();
-    output.features_ = input.features();
+    //output.features_ = input.features();
+    copy_eigen_dynamic_matrix(&input.features_,
+                              &output.features_);
+    
     output.labels_ = input.labels();
     output.positions_.resize(output.num_points_);
     tbb::parallel_for(int(0), input.num_points(), [&](int j) {

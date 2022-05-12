@@ -13,7 +13,7 @@
 
 #include "cvo/CvoGPU.hpp"
 #include "utils/CvoPointCloud.hpp"
-#include "utils/CvoFrame.hpp"
+#include "cvo/CvoFrame.hpp"
 #include "utils/VoxelMap.hpp"
 #include "dataset_handler/TartanAirHandler.hpp"
 #include "utils/ImageRGBD.hpp"

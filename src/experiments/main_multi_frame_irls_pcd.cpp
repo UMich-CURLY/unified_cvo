@@ -9,7 +9,7 @@
 #include <Eigen/Dense>
 #include "cvo/CvoGPU.hpp"
 #include "utils/CvoPointCloud.hpp"
-#include "utils/CvoFrame.hpp"
+#include "cvo/CvoFrame.hpp"
 #include "dataset_handler/KittiHandler.hpp"
 using namespace std;
 
@@ -120,6 +120,10 @@ int main(int argc, char** argv) {
   //std::string gt_fname(argv[4]);
   read_pose_file(tracking_fname, frame_inds, tracking_poses);
   //read_pose_file(gt_fname, frame_inds, gt_poses);
+
+  std::string covisMapFile;
+  if (argc > 4)
+    covisMapFile = argv[4];
 
   // read point cloud
   std::vector<cvo::CvoFrame::Ptr> frames;

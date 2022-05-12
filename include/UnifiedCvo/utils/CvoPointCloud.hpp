@@ -144,10 +144,14 @@ namespace cvo {
     int num_features() const {return feature_dimensions_;}
     int feature_dimensions() const {return feature_dimensions_;}
     const std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> & positions() const {return positions_;}
-    Eigen::Vector3f & at(unsigned int index);
+    Eigen::Vector3f at(unsigned int index);
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & labels() const { return labels_;}
+    Eigen::VectorXf label_at(int index) { return labels_.row(index); }
+    Eigen::VectorXf feature_at(int index) { return features_.row(index); }
+    Eigen::Vector2f geometry_type_at(int index);
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & semantics() const { return labels_;}
-    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & features() const {return features_;}
+    //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & features() const {return features_;}
+    const Eigen::MatrixXf & features() const {return features_;}
     const std::vector<float> & geometric_types() const {return geometric_types_;}
     
     //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals() const {return normals_;}
@@ -176,7 +180,8 @@ namespace cvo {
     
     std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> positions_;  // points position. x,y,z
     //Eigen::Matrix<float, Eigen::Dynamic, 3> positions_;
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> features_;   // rgb, gradient in [0,1]
+    Eigen::MatrixXf features_;
+    //Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> features_;   // rgb, gradient in [0,1]
     //std::vector<Eigen::Matrix<float, 1, Eigen::Dynamic>> features_;   // rgb, gradient in [0,1]
     //Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> normals_;  // surface normals
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> labels_; // number of points by number of classes
@@ -212,4 +217,5 @@ namespace cvo {
                           const pcl::PointCloud<pcl::PointXYZI> & pc,
                           int num_class,
                           const std::vector<int> & semantic);
+
 }

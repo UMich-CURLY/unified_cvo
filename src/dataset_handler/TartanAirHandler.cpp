@@ -85,8 +85,10 @@ namespace cvo {
   }
 
   int TartanAirHandler::read_next_rgbd(cv::Mat & rgb_img, std::vector<float> & dep_vec) {
-    if (curr_index >= total_size)
+    if (curr_index >= total_size) {
+      std::cout<<"Error: index is larger than maximum";
       return -1;
+    }
     // format curr_index
     stringstream ss;
     ss << setw(6) << setfill('0') << curr_index;

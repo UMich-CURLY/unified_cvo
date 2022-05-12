@@ -1,5 +1,5 @@
 #pragma once
-#include "SparseKernelMat.cuh"
+#include "SparseKernelMat.hpp"
 #include "CvoParams.hpp"
 #include "utils/PointSegmentedDistribution.hpp"
 #include "utils/CvoPointCloud.hpp"

@@ -9,7 +9,7 @@
 #include <Eigen/Dense>
 #include "cvo/CvoGPU.hpp"
 #include "utils/CvoPointCloud.hpp"
-#include "utils/CvoFrame.hpp"
+#include "cvo/CvoFrame.hpp"
 #include "dataset_handler/KittiHandler.hpp"
 using namespace std;
 

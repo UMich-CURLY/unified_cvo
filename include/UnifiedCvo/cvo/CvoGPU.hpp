@@ -4,8 +4,8 @@
 #include "cvo/Association.hpp"
 #include "utils/CvoPointCloud.hpp"
 #include "utils/CvoPoint.hpp"
-#include "utils/CvoFrame.hpp"
-#include "cvo/IRLS_State.hpp"
+//#include "utils/CvoFrame.hpp"
+//#include "cvo/IRLS_State.hpp"
 
 #include <vector>
 #include <string.h>
@@ -26,6 +26,9 @@
 
 
 namespace cvo{
+
+  class CvoFrame;
+  class BinaryState;
   
   class CvoGPU{
 
@@ -46,6 +49,7 @@ namespace cvo{
     CvoGPU(const std::string & f);
     ~CvoGPU();
     CvoParams & get_params() {return params;}
+    const CvoParams  * get_params_gpu() {return params_gpu;}
     void write_params(const CvoParams * p_cpu);
 
     
@@ -99,9 +103,9 @@ namespace cvo{
      * @return 0 if sucessful, otherwise failure
      */
     int align(// inputs
-              std::vector<CvoFrame::Ptr> & frames,  // point clouds, poses, the outputs are within
+              std::vector<std::shared_ptr<CvoFrame>> & frames,  // point clouds, poses, the outputs are within
               const std::vector<bool> & frames_to_hold_const,              
-              const std::list<std::pair<CvoFrame::Ptr, CvoFrame::Ptr>> & edges,
+              const std::list<std::pair<std::shared_ptr<CvoFrame>, std::shared_ptr<CvoFrame>>> & edges,
               // outputs
               double *registration_seconds=nullptr
               ) const;
@@ -115,9 +119,9 @@ namespace cvo{
      * @return 0 if sucessful, otherwise failure
      */
     int align(// inputs
-              std::vector<CvoFrame::Ptr> & frames,  // point clouds, poses, the outputs are within
+              std::vector<std::shared_ptr<CvoFrame>> & frames,  // point clouds, poses, the outputs are within
               const std::vector<bool> & frames_to_hold_const,              
-              const std::list<BinaryState::Ptr> & edge_states,
+              const std::list<std::shared_ptr<BinaryState>> & edge_states,
               // outputs
               double *registration_seconds=nullptr
               ) const;

@@ -1,5 +1,5 @@
 #include "cvo/CvoGPU_impl.cuh"
-#include "cvo/SparseKernelMat.cuh"
+#include "cvo/SparseKernelMat.hpp"
 #include "utils/PointSegmentedDistribution.hpp"
 #include "cvo/Association.hpp"
 #include "utils/PointSegmentedDistribution.hpp"
@@ -28,6 +28,163 @@ extern template struct pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS, NUM_C
 namespace cvo {
 
 
+  struct transform_point_R_T : public thrust::unary_function<CvoPoint,CvoPoint>
+  {
+    const Mat33f * R;
+    const Vec3f * T;
+    const bool update_normal_and_cov;
+
+    transform_point_R_T(const Mat33f * R_gpu, const Vec3f * T_gpu,
+                        bool update_normal_and_covariance): R(R_gpu), T(T_gpu),
+                                                        update_normal_and_cov(update_normal_and_covariance){}
+    
+    __host__ __device__
+    CvoPoint operator()(const CvoPoint & p_init)
+    {
+      CvoPoint result(p_init);
+
+
+      Eigen::Vector3f input;
+      input << p_init.x, p_init.y, p_init.z;
+
+      Eigen::Vector3f trans = (*R) * input + (*T);
+      result.x = trans(0);
+      result.y = trans(1);
+      result.z = trans(2);
+      
+      if (update_normal_and_cov) {
+        Eigen::Vector3f input_normal;
+        input_normal << p_init.normal[0], p_init.normal[1], p_init.normal[2];
+        Eigen::Vector3f trans_normal = (*R) * input_normal + (*T);
+        result.normal[0] = trans_normal(0);
+        result.normal[1] = trans_normal(1);
+        result.normal[2] = trans_normal(2);
+
+
+
+        Eigen::Matrix3f point_cov;
+        point_cov << p_init.covariance[0], p_init.covariance[1], p_init.covariance[2],
+          p_init.covariance[3], p_init.covariance[4], p_init.covariance[5],
+          p_init.covariance[6], p_init.covariance[7], p_init.covariance[8];
+      
+        point_cov = ((*R) * point_cov * (R->transpose())).eval();
+        for (int i = 0; i < 3; i++) {
+          for (int j = 0; j < 3; j++) {
+            result.covariance[i*3 + j] = point_cov(i,j);
+          }
+        }
+        memcpy(result.cov_eigenvalues, p_init.cov_eigenvalues, sizeof(float)*3);
+      }
+
+      return result;
+
+    }
+  };
+
+
+  struct transform_point_pose_vec : public thrust::unary_function<CvoPoint,CvoPoint>
+  {
+    float * T_12_row_gpu;
+    //Eigen::Matrix<float, 3, 4, Eigen::RowMajor> T;
+    //Eigen::MatrixXf T;
+    const bool update_normal_and_cov;
+
+    transform_point_pose_vec(float * pose_vec_row_gpu,
+                             bool update_normal_and_covariance):
+      //T(Eigen::Map<Eigen::Matrix<float, 3, 4, Eigen::RowMajor>>(pose_vec_row_gpu)),
+      T_12_row_gpu(pose_vec_row_gpu),
+      //T(3,4),
+      update_normal_and_cov(update_normal_and_covariance){
+      
+      //auto p = pose_vec_row_gpu;
+      /*
+      T << pose_vec_row_gpu[0], pose_vec_row_gpu[1], pose_vec_row_gpu[2], pose_vec_row_gpu[3],
+        pose_vec_row_gpu [4], pose_vec_row_gpu[5], pose_vec_row_gpu[6], pose_vec_row_gpu[7],
+        pose_vec_row_gpu[8], pose_vec_row_gpu[9], pose_vec_row_gpu[10], pose_vec_row_gpu[11];
+      */
+      
+      
+    }
+    
+    __host__ __device__
+    CvoPoint operator()(const CvoPoint & p_init)
+    {
+      CvoPoint result(p_init);
+
+      Eigen::Vector4f input;
+      input << p_init.x, p_init.y, p_init.z, 1.0;
+
+      Eigen::Matrix<float, 3, 4, Eigen::RowMajor> T =
+      //auto T =
+        Eigen::Map<Eigen::Matrix<float, 3, 4, Eigen::RowMajor>>(T_12_row_gpu);
+      //Eigen::Map<Eigen::Matrix<const float, 3, 4, Eigen::RowMajor>> T(T_12_row_gpu);
+
+
+
+      Eigen::Vector3f trans = T * input;
+      result.x = trans(0);
+      result.y = trans(1);
+      result.z = trans(2);
+      //printf("transform point: T is \n %f %f %f %f\n %f %f %f %f\n%f %f %f %f\nbefore T: p=(%f,%f,%f), after T: p=(%f,%f,%f)\n",
+      //       T(0,0), T(0,1), T(0,2), T(0,3), T(1,0), T(1,1), T(1,2), T(1,3), T(2,0), T(2,1), T(2,2), T(2,3),
+      //       input(0), input(1), input(2), result.x, result.y, result.z);      
+      
+      if (update_normal_and_cov) {
+        Eigen::Vector4f input_normal;
+        input_normal << p_init.normal[0], p_init.normal[1], p_init.normal[2], 1.0;
+        Eigen::Vector3f trans_normal = T * input_normal;
+        result.normal[0] = trans_normal(0);
+        result.normal[1] = trans_normal(1);
+        result.normal[2] = trans_normal(2);
+
+
+
+        Eigen::Matrix3f point_cov;
+        point_cov << p_init.covariance[0], p_init.covariance[1], p_init.covariance[2],
+          p_init.covariance[3], p_init.covariance[4], p_init.covariance[5],
+          p_init.covariance[6], p_init.covariance[7], p_init.covariance[8];
+
+        Eigen::Matrix<float,3,3,Eigen::RowMajor> R = T.block<3,3>(0,0);
+      
+        point_cov = ((R) * point_cov * (R.transpose())).eval();
+        for (int i = 0; i < 3; i++) {
+          for (int j = 0; j < 3; j++) {
+            result.covariance[i*3 + j] = point_cov(i,j);
+          }
+        }
+        memcpy(result.cov_eigenvalues, p_init.cov_eigenvalues, sizeof(float)*3);
+      }
+
+      return result;
+
+    }
+  };
+  
+
+  void  transform_pointcloud_thrust(std::shared_ptr<CvoPointCloudGPU> init_cloud,
+                                    std::shared_ptr<CvoPointCloudGPU> transformed_cloud,
+                                    Mat33f * R_gpu, Vec3f * T_gpu,
+                                    bool update_normal_and_cov
+                                    ) {
+
+    thrust::transform( init_cloud->begin(), init_cloud->end(),  transformed_cloud->begin(), 
+                       transform_point_R_T(R_gpu, T_gpu, update_normal_and_cov));
+  
+  }
+
+  void  transform_pointcloud_thrust(thrust::device_vector<CvoPoint> & init_cloud,
+                                    thrust::device_vector<CvoPoint> & transformed_cloud,
+                                    float * T_12_row_gpu,
+                                    bool update_normal_and_cov
+                                    ) {
+
+    thrust::transform( init_cloud.begin(),
+                       init_cloud.end(),
+                       transformed_cloud.begin(), 
+                       transform_point_pose_vec(T_12_row_gpu, update_normal_and_cov));
+  }
+  
+
   
   __global__
   void copy_covariances(// inputs
@@ -45,9 +202,8 @@ namespace cvo {
     memcpy(points_gpu[i].cov_eigenvalues, eigenvalues+i*3, 3*sizeof(float));
     
   }
-  
-   
-  CvoPointCloudGPU::SharedPtr CvoPointCloud_to_gpu(const CvoPointCloud & cvo_cloud ) {
+
+  void CvoPointCloud_to_gpu(const CvoPointCloud& cvo_cloud, thrust::device_vector<CvoPoint> & output ) {
     int num_points = cvo_cloud.num_points();
     const ArrayVec3f & positions = cvo_cloud.positions();
     const Eigen::Matrix<float, Eigen::Dynamic, FEATURE_DIMENSIONS> & features = cvo_cloud.features();
@@ -99,9 +255,15 @@ namespace cvo {
         }*/
       actual_num ++;
     }
-    //gpu_cloud->points = host_cloud;
+    output = host_cloud;
+  }
+
+  
+   
+  CvoPointCloudGPU::SharedPtr CvoPointCloud_to_gpu(const CvoPointCloud & cvo_cloud ) {
+
     CvoPointCloudGPU::SharedPtr gpu_cloud(new CvoPointCloudGPU);
-    gpu_cloud->points = host_cloud;
+    CvoPointCloud_to_gpu(cvo_cloud, gpu_cloud->points);
 
     /*
       #ifdef IS_USING_COVARIANCE    
@@ -118,14 +280,8 @@ namespace cvo {
     return gpu_cloud;
   }
 
-  CvoPointCloudGPU::SharedPtr pcl_PointCloud_to_gpu(const pcl::PointCloud<CvoPoint> & cvo_cloud ) {
+  void pcl_PointCloud_to_gpu(const pcl::PointCloud<CvoPoint> & cvo_cloud, thrust::device_vector<CvoPoint> & output ) {
     int num_points = cvo_cloud.size();
-    //const ArrayVec3f & positions = cvo_cloud.positions();
-    //const Eigen::Matrix<float, Eigen::Dynamic, FEATURE_DIMENSIONS> & features = cvo_cloud.features();
-    //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals = cvo_cloud.normals();
-    // const Eigen::Matrix<float, Eigen::Dynamic, 2> & types = cvo_cloud.types();
-    //auto & labels = cvo_cloud.labels();
-    // set basic informations for pcl_cloud
     thrust::host_vector<CvoPoint> host_cloud;
     host_cloud.resize(num_points);
 
@@ -173,9 +329,18 @@ namespace cvo {
       
       */
     }
+    output = host_cloud;
     //gpu_cloud->points = host_cloud;
+    
+  }
+  
+
+  CvoPointCloudGPU::SharedPtr pcl_PointCloud_to_gpu(const pcl::PointCloud<CvoPoint> & cvo_cloud ) {
+
+    
     CvoPointCloudGPU::SharedPtr gpu_cloud(new CvoPointCloudGPU);
-    gpu_cloud->points = host_cloud;
+    
+    pcl_PointCloud_to_gpu(cvo_cloud, gpu_cloud->points );
 
     /*
       #ifdef IS_USING_COVARIANCE    

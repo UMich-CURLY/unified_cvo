@@ -19,7 +19,7 @@ void run_test() {
   std::mt19937 gen(rd());
   pcl::PointCloud<pcl::PointXYZ> pc;
 
-  for (size_t i = 0; i < 100; i++) {
+  for (size_t i = 0; i < 10000; i++) {
     pcl::PointXYZ p(i , 0, 0);
     pc.push_back(p);
   }
