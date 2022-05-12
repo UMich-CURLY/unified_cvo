@@ -7,7 +7,8 @@ Specifically, this repository provides:
 * CPU and GPU implementation of `cos` function angle computation that measures the overlap of two point clouds
 * Soft data association between any two pairs of points in the two point clouds
 
-
+And the following modules are under-development:
+* Multiframe point cloud registration
 
 Stacked point clouds based on the resulting frame-to-frame trajectory:
 ![The stacked pointcloud based on CVO's trajectory](https://github.com/UMich-CURLY/unified_cvo/raw/multiframe/results/stacked_pointcloud.png "Stacked Point Cloud after registration")
@@ -21,10 +22,10 @@ Stacked point clouds based on the resulting frame-to-frame trajectory:
 We recommend using this [Dockerfile](https://github.com/UMich-CURLY/docker_images/tree/master/cvo_gpu) to get a prebuilt environment with all the following dependencies. 
 
 *  `cuda 10 or 11`  (already in docker)
-*  `gcc7` (already in docker)
+*  `gcc9` (already in docker)
 *  `SuiteParse` (already in docker)
 * `Sophus 1.0.0 release` (already in docker)
-* `Eigen 3.3.7` (already in docker)
+* `Eigen 3.3.9` (already in docker)
 * `TBB` (already in docker)
 * `Boost 1.65` (already in docker)
 * `pcl 1.9.1` (already in docker)
@@ -58,8 +59,6 @@ make -j4
 * ColorCvo:     `bash scripts/kitti_intensity_stereo.bash`
 * SemanticCvo:  `bash scripts/cvo_semantic_img_oct26_gpu0.bash`
 
-#### Multi-Frame Registration Demo on TUM
-* ColorCvo: `bash scripts/cvo_irls_tum.bash`
 
 ---
 
