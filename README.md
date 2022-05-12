@@ -75,7 +75,6 @@ Inside docker container:
  UnifiedCvo::cvo_utils_lib
  UnifiedCvo::lie_group_utils
  UnifiedCvo::cvo_gpu_img_lib 
- UnifiedCvo::cvo_irls_lib
  UnifiedCvo::elas
  UnifiedCvo::tum
  UnifiedCvo::kitti
