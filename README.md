@@ -5,7 +5,7 @@ This repository is an implementation for CVO (Continuous Visual Odometry).  It c
 Specifically, this repository provides:
 * GPU implentation of goemetric, color, and semantic based registration
 * CPU and GPU implementation of `cos` function angle computation that measures the overlap of two point clouds
-* Soft data association between any two pairs of points in the two point clouds
+* Soft data association between any two pairs of points in the two point clouds given a guess of their relative pose
 
 And the following modules are under-development:
 * Multiframe point cloud registration
