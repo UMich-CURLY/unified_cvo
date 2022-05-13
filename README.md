@@ -66,9 +66,9 @@ demo_data/source.pcd |  demo_data/target.pcd
 ###### Launch registration: 
 `./build/bin/cvo_align_gpu_two_pcd  demo_data/source.pcd  demo_data/target.pcd  cvo_params/cvo_outdoor_params.yaml `
 
-###### Before and after alignment 
+###### Results: Stacking two point clouds before and after alignment 
 
-Before registration |  After registration
+Before registration (`before_align.pcd`) |  After registration (`after_align.pcd`) 
 --- | ---
 ![stacking source.pcd and target.pcd before registration](https://github.com/UMich-CURLY/unified_cvo/raw/multiframe/demo_data/before_align.png "Stacked Point Cloud before registration")  | ![stacking source.pcd and target.pcd after registration](https://github.com/UMich-CURLY/unified_cvo/raw/multiframe/demo_data/after_align.png "Stacked Point Cloud before registration")
 
