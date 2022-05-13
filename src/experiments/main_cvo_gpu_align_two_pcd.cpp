@@ -97,9 +97,9 @@ int main(int argc, char *argv[]) {
   sum_old.export_to_pcd(pcd_old);
   sum_new.export_to_pcd(pcd_new);
   std::cout<<"Just export to pcd\n";
-  std::string fname("old_aligned.pcd");
+  std::string fname("before_align.pcd");
   pcl::io::savePCDFileASCII(fname, pcd_old);
-  fname= "new_aligned.pcd";
+  fname= "after_align.pcd";
   pcl::io::savePCDFileASCII(fname, pcd_new);
   // append accum_tf_list for future initialization
   std::cout<<"Average registration time is "<<this_time<<std::endl;
