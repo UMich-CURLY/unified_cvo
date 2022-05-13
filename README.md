@@ -56,6 +56,23 @@ make -j4
 ---
 
 ### Demo
+#### Example of aligning two point clouds:
+###### Input Colored Point Clouds: 
+
+demo_data/source.pcd |  demo_data/target.pcd
+--- | ---
+![](https://github.com/UMich-CURLY/unified_cvo/raw/multiframe/demo_data/source.png "source.png")  | ![demo_data/target.pcd](https://github.com/UMich-CURLY/unified_cvo/raw/multiframe/demo_data/target.png "target.png")
+
+###### Launch registration: 
+`./build/bin/cvo_align_gpu_two_pcd  demo_data/source.pcd  demo_data/target.pcd  cvo_params/cvo_outdoor_params.yaml `
+
+###### Before and after alignment 
+
+Before registration |  After registration
+--- | ---
+![stacking source.pcd and target.pcd before registration](https://github.com/UMich-CURLY/unified_cvo/raw/multiframe/demo_data/before_align.png "Stacked Point Cloud before registration")  | ![stacking source.pcd and target.pcd after registration](https://github.com/UMich-CURLY/unified_cvo/raw/multiframe/demo_data/after_align.png "Stacked Point Cloud before registration")
+
+
 #### Frame-to-Frame Registration Demo on Kitti
 Inside docker container: 
 * GeometricCVO: `bash scripts/kitti_geometric_stereo.bash`
