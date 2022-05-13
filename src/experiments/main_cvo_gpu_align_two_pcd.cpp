@@ -39,6 +39,7 @@ int main(int argc, char *argv[]) {
   //cvo::KittiHandler kitti(argv[1], 0);
   std::string source_file(argv[1]);
   std::string target_file(argv[2]);
+  string cvo_param_file(argv[3]);
   float ell = -1;
   if (argc > 4)
 	  ell = std::stof(argv[4]);
@@ -54,7 +55,6 @@ int main(int argc, char *argv[]) {
 
   float dist = (source_mean - target_mean).norm();
   std::cout<<"source mean is "<<source_mean<<", target mean is "<<target_mean<<", dist is "<<dist<<std::endl;
-  string cvo_param_file(argv[3]);
   cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();
   init_param.ell_init = dist; //init_param.ell_init_first_frame;

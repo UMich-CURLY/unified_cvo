@@ -41,11 +41,10 @@ namespace cvo {
 
   int BinaryStateGPU::update_inner_product() {
 
-    int new_num_neighbors_ = std::min(init_num_neighbors_, (int)(max_neighbors(&A_host_)*1.1));
-    if (new_num_neighbors_ > 0)
-      num_neighbors_ = new_num_neighbors_;
-    std::cout<<
-      "Current num_neighbors_ is "<<num_neighbors_<<"\n";
+    int last_num_neibors = max_neighbors(&A_host_);
+    if (last_num_neibors > 0)
+      num_neighbors_ = std::min(init_num_neighbors_, (int)(last_num_neibors*1.1));
+    std::cout<< "Current num_neighbors_ is "<<num_neighbors_<<"\n";
     
 
     clear_SparseKernelMat(&A_host_, num_neighbors_);
