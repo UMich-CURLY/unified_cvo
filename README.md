@@ -74,7 +74,7 @@ Before registration (`before_align.pcd`) |  After registration (`after_align.pcd
 
 
 #### Frame-to-Frame Registration Demo on Kitti
-Inside docker container: 
+Make sure the dataset folder contains the `cvo_calib.txt` and the parameter yaml file is specified. Now inside docker container:
 * GeometricCVO: `bash scripts/kitti_geometric_stereo.bash`
 * ColorCvo:     `bash scripts/kitti_intensity_stereo.bash`
 * SemanticCvo:  `bash scripts/cvo_semantic_img_oct26_gpu0.bash`
