@@ -5,7 +5,7 @@ for i in  04
 #for i in 01 10 07 02 05  04 06	
 do
 	echo "new seq $i"
-    ./build/bin/cvo_align_gpu_intensity_img  /home/rayzhang/data/kitti/$i cvo_params/cvo_intensity_params_img_gpu0.yaml \
+    ./build/bin/cvo_align_gpu_img  /home/rayzhang/data/kitti/$i cvo_params/cvo_intensity_params_img_gpu0.yaml \
                                        cvo_intensity_img_jan11_$i.txt 0 20000
  	
 done
