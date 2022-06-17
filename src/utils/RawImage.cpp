@@ -12,10 +12,12 @@ namespace cvo {
       return;
     
     num_class_ = 0;
+    // std::cout<<"Start clone: image "<<image.rows<<"x"<<image.cols<<", channel is "<<image.channels()<<"\n";
     image_ = image.clone();
     rows_ = image.rows;
     cols_ = image.cols;
     channels_ = image.channels();
+    //std::cout<<"Raw Image: channels is "<< image.channels()<<"\n";
     if (channels_==3)
       cv::fastNlMeansDenoisingColored(image_,image_,10,10,7,21);
     else if (channels_ == 1)
@@ -24,6 +26,7 @@ namespace cvo {
       std::cerr<<"Image channels should be 1 or 3!\n";
       return;
     }
+    //std::cout<<"denoising complete\n";
     //cv::fastNlMeansDenoising (color_, color_);
     intensity_.resize(image_.total());
     cv::Mat gray;    
@@ -35,6 +38,7 @@ namespace cvo {
     }
     memcpy(intensity_.data(), gray.data, sizeof(float) * image_.total());      
     compute_image_gradient();
+    //std::cout<<"Raw Image created\n";
   }
 
   RawImage::RawImage(const cv::Mat & image, int num_classes, const std::vector<float> & semantic)

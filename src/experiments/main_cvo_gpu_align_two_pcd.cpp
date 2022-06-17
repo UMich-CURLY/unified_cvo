@@ -43,12 +43,12 @@ int main(int argc, char *argv[]) {
   float ell = -1;
   if (argc > 4)
 	  ell = std::stof(argv[4]);
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr source_pcd(new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr source_pcd(new pcl::PointCloud<pcl::PointXYZ>);
   pcl::io::loadPCDFile(source_file, *source_pcd);
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_pcd));
   Eigen::Vector3f source_mean = get_pc_mean(*source);
   
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr target_pcd(new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr target_pcd(new pcl::PointCloud<pcl::PointXYZ>);
   pcl::io::loadPCDFile(target_file, *target_pcd);
   std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_pcd));
   Eigen::Vector3f target_mean = get_pc_mean(*target);
@@ -63,6 +63,7 @@ int main(int argc, char *argv[]) {
 	  init_param.ell_init = ell;
   init_param.ell_decay_rate = init_param.ell_decay_rate_first_frame;
   init_param.ell_decay_start  = init_param.ell_decay_start_first_frame;
+  init_param.is_using_intensity = 0;
   cvo_align.write_params(&init_param);
 
   std::cout<<"write ell! ell init is "<<cvo_align.get_params().ell_init<<std::endl;
@@ -85,8 +86,8 @@ int main(int argc, char *argv[]) {
   //cvo_align.align(*source, *target, init_guess, result);
     
   std::cout<<"Transform is "<<result <<"\n\n";
-  pcl::PointCloud<pcl::PointXYZRGB> pcd_old, pcd_new;
-  cvo::CvoPointCloud new_pc(3, 19), old_pc(3, 19);
+  pcl::PointCloud<pcl::PointXYZ> pcd_old, pcd_new;
+  cvo::CvoPointCloud new_pc(0, 0), old_pc(0, 0);
   cvo::CvoPointCloud::transform(init_guess, * target, old_pc);
   cvo::CvoPointCloud::transform(result, *target, new_pc);
   std::cout<<"Just finished transform\n";

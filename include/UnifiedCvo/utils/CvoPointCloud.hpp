@@ -101,7 +101,6 @@ namespace cvo {
     CvoPointCloud & operator=(const CvoPointCloud& input);
 
     
-    // Not recommended: Image Gradient is empty
     template <typename PointT>
       CvoPointCloud(const pcl::PointCloud<PointT> & pc);    
     template <typename PointT>
@@ -144,11 +143,11 @@ namespace cvo {
     int num_features() const {return feature_dimensions_;}
     int feature_dimensions() const {return feature_dimensions_;}
     const std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> & positions() const {return positions_;}
-    Eigen::Vector3f at(unsigned int index);
+    Eigen::Vector3f at(unsigned int index) const;
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & labels() const { return labels_;}
-    Eigen::VectorXf label_at(int index) { return labels_.row(index); }
-    Eigen::VectorXf feature_at(int index) { return features_.row(index); }
-    Eigen::Vector2f geometry_type_at(int index);
+    Eigen::VectorXf label_at(unsigned int index) const { return labels_.row(index); }
+    Eigen::VectorXf feature_at(unsigned int index) const { return features_.row(index); }
+    Eigen::Vector2f geometry_type_at(unsigned int index) const;
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & semantics() const { return labels_;}
     //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & features() const {return features_;}
     const Eigen::MatrixXf & features() const {return features_;}

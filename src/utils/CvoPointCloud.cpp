@@ -593,6 +593,8 @@ namespace cvo{
     
   }
 
+  
+
   template <>
   CvoPointCloud::CvoPointCloud<pcl::PointXYZRGB>(const pcl::PointCloud<pcl::PointXYZRGB> & pc,
                                                  GeometryType g_type) {
@@ -609,9 +611,9 @@ namespace cvo{
       xyz << p.x, p.y, p.z;
       positions_[i] = xyz;
 
-      features_(i,0) = ((float)(int)p.r) / 255.0;
+      features_(i,2) = ((float)(int)p.r) / 255.0;
       features_(i,1) = ((float)(int)p.g) / 255.0;
-      features_(i,2) = ((float)(int)p.b) / 255.0;
+      features_(i,0) = ((float)(int)p.b) / 255.0;
       features_(i, 3) = 0;
       features_(i, 4) = 0;
 
@@ -627,6 +629,29 @@ namespace cvo{
     
   }
 
+
+  template <>
+  CvoPointCloud::CvoPointCloud<pcl::PointXYZ>(const pcl::PointCloud<pcl::PointXYZ> & pc) {
+    num_points_ = pc.size();
+    num_classes_ = 0;
+    feature_dimensions_ = 0;
+
+    positions_.resize(pc.size());
+    //features_.resize(num_points_, feature_dimensions_);
+    geometric_types_.resize(num_points_ * 2);
+    for (int i = 0; i < num_points_; i++) {
+      Eigen::Vector3f xyz;
+      auto & p = (pc)[i];
+      xyz << p.x, p.y, p.z;
+      positions_[i] = xyz;
+
+      geometric_types_[i*2] = 1;
+      geometric_types_[i*2+1] = 0;
+    }
+    
+  }
+
+  
   /*
   template <>
   CvoPointCloud::CvoPointCloud<CvoPoint>(const pcl::PointCloud<CvoPoint> & pc) {
@@ -1209,9 +1234,9 @@ namespace cvo{
       p.y = positions_[i]( 1);
       p.z = positions_[i]( 2);
       
-      uint8_t r = static_cast<uint8_t>(std::min(255, (int)(features_(i,0) * 255) ) );
+      uint8_t r = static_cast<uint8_t>(std::min(255, (int)(features_(i,2) * 255) ) );
       uint8_t g = static_cast<uint8_t>(std::min(255, (int)(features_(i,1) * 255) ) );
-      uint8_t b = static_cast<uint8_t>(std::min(255, (int)(features_(i,2) * 255)));
+      uint8_t b = static_cast<uint8_t>(std::min(255, (int)(features_(i,0) * 255)));
       //if (num_classes_ ) {
       //  int max_class;
       //  labels_.row(i).maxCoeff(&max_class);
@@ -1232,9 +1257,32 @@ namespace cvo{
     
   }
 
-  Eigen::Vector3f CvoPointCloud::at(unsigned int index)  {
+
+  template <>
+  void CvoPointCloud::export_to_pcd<pcl::PointXYZ>(pcl::PointCloud<pcl::PointXYZ> & pc)  const {
+
+    for (int i = 0; i < num_points_; i++) {
+      pcl::PointXYZ p;
+      p.x = positions_[i](0);
+      p.y = positions_[i](1);
+      p.z = positions_[i](2);
+      
+      pc.push_back(p);
+    }
+    
+  }
+  
+
+  Eigen::Vector3f CvoPointCloud::at(unsigned int index) const {
     assert (index < num_points_ && index >= 0);
-    return positions_[index];
+    Eigen::Vector3f p  = positions_[index];
+    return p;
+  }
+
+  Eigen::Vector2f CvoPointCloud::geometry_type_at(unsigned int index) const {
+    Eigen::Map<const Eigen::Vector2f> gtype(geometric_types_.data()+ index*2);
+    Eigen::Vector2f ret = gtype;
+    return gtype;
   }
   
 

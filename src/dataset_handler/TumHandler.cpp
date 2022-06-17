@@ -42,7 +42,8 @@ namespace cvo {
 		string dep_pth = folder_name + "/" + vstrDepPth[curr_index];
 
 		rgb_img = cv::imread(rgb_pth);
-    dep_img = cv::imread(dep_pth,CV_LOAD_IMAGE_ANYDEPTH);
+                //dep_img = cv::imread(dep_pth,CV_LOAD_IMAGE_ANYDEPTH);
+                dep_img = cv::imread(dep_pth, cv::IMREAD_UNCHANGED);
 		if (rgb_img.data == nullptr || dep_img.data == nullptr) {
       cerr<<"Image doesn't read successfully: "<<rgb_pth<<", "<<dep_pth<<"\n";
       return -1;

@@ -64,7 +64,7 @@ demo_data/source.pcd |  demo_data/target.pcd
 ![](https://github.com/UMich-CURLY/unified_cvo/raw/multiframe/demo_data/source.png "source.png")  | ![demo_data/target.pcd](https://github.com/UMich-CURLY/unified_cvo/raw/multiframe/demo_data/target.png "target.png")
 
 ###### Launch registration: 
-`./build/bin/cvo_align_gpu_two_pcd  demo_data/source.pcd  demo_data/target.pcd  cvo_params/cvo_outdoor_params.yaml `
+`./build/bin/cvo_align_gpu_two_color_pcd  demo_data/source.pcd  demo_data/target.pcd  cvo_params/cvo_outdoor_params.yaml `
 
 ###### Results: Stacking two point clouds before and after alignment 
 

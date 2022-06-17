@@ -418,6 +418,24 @@ int main(int argc, char** argv) {
                                                              //dist / 3
                                                              ));
     edge_states_cpu.push_back(edge_state_cpu);
+
+    
+    Eigen::Matrix<double, 4,4, Eigen::RowMajor > T_source_frame =  Eigen::Matrix<double, 4,4, Eigen::RowMajor >::Identity();
+    T_source_frame.block<3,4>(0,0) = Eigen::Map<Eigen::Matrix<double, 3,4, Eigen::RowMajor>>(frames[first_ind]->pose_vec);
+    Eigen::Matrix<double, 4,4, Eigen::RowMajor > T_target_frame =  Eigen::Matrix<double, 4,4, Eigen::RowMajor >::Identity();
+    T_target_frame.block<3,4>(0,0) = Eigen::Map<Eigen::Matrix<double, 3,4, Eigen::RowMajor>>(frames[second_ind]->pose_vec);
+    Eigen::Matrix4f TT = (T_target_frame.inverse() * T_source_frame).cast<float>();
+    std::cout<<"cos between "<<first_ind<<" and "<<second_ind<<" is "<<cvo_align.function_angle(
+										      *frames[first_ind]->points,
+										      *frames[second_ind]->points,
+										      
+
+										      TT,
+                                                                                      1.0,
+										      false
+										      
+										      
+												)<<std::endl;
     
   }
 
@@ -447,6 +465,24 @@ int main(int argc, char** argv) {
                                                                   //dist / 4
                                                                   ));
       edge_states.push_back((edge_state));
+      
+      Eigen::Matrix<double, 4,4, Eigen::RowMajor > T_source_frame =  Eigen::Matrix<double, 4,4, Eigen::RowMajor >::Identity();
+      T_source_frame.block<3,4>(0,0) = Eigen::Map<Eigen::Matrix<double, 3,4, Eigen::RowMajor>>(frames[i]->pose_vec);
+      Eigen::Matrix<double, 4,4, Eigen::RowMajor > T_target_frame =  Eigen::Matrix<double, 4,4, Eigen::RowMajor >::Identity();
+      T_target_frame.block<3,4>(0,0) = Eigen::Map<Eigen::Matrix<double, 3,4, Eigen::RowMajor>>(frames[frames.size()-1]->pose_vec);
+      Eigen::Matrix4f TT = (T_target_frame.inverse() * T_source_frame).cast<float>();
+      std::cout<<"cos between "<<i<<" and covidMap is "<<cvo_align.function_angle(
+												  *frames[i]->points,
+												  *frames[frames.size()-1]->points,
+												  
+
+												  TT,
+                                                                                                  1.0,
+												  false
+										      
+										      
+										  )<<std::endl;
+      
       
     }
   }

@@ -29,7 +29,7 @@ namespace cvo {
     init_internal_SparseKernelMat_cpu(pc1->points->size(),  num_neighbor, &A_result_cpu_);
     A_device_ = init_SparseKernelMat_gpu(pc1->points->size(), num_neighbor, A_host_);
     clear_SparseKernelMat(&A_host_, num_neighbors_);
-    std::cout<<"Construct BinaryStateGPU: ell is "<<ell_<<", init_num_neighbors_ is "<<init_num_neighbors_<<"\n";
+    //std::cout<<"Construct BinaryStateGPU: ell is "<<ell_<<", init_num_neighbors_ is "<<init_num_neighbors_<<"\n";
 
     iter_ = 0;
 
@@ -45,7 +45,7 @@ namespace cvo {
     unsigned int last_num_neibors = max_neighbors(&A_host_);
     if (last_num_neibors > 0)
       num_neighbors_ = std::min(init_num_neighbors_, (unsigned int)(last_num_neibors*1.1));
-    std::cout<< "Current num_neighbors_ is "<<num_neighbors_<<"\n";
+    //std::cout<< "Current num_neighbors_ is "<<num_neighbors_<<"\n";
     
 
     clear_SparseKernelMat(&A_host_, num_neighbors_);

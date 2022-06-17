@@ -219,7 +219,9 @@ namespace cvo {
       (host_cloud)[i].x = positions[i](0);
       (host_cloud)[i].y = positions[i](1);
       (host_cloud)[i].z = positions[i](2);
-      if (FEATURE_DIMENSIONS == 5) {
+      if (FEATURE_DIMENSIONS == 5 &&
+          features.rows() == num_points &&
+          features.cols() == FEATURE_DIMENSIONS) {
         (host_cloud)[i].r = (uint8_t)std::min(255.0, (features(i,0) * 255.0));
         (host_cloud)[i].g = (uint8_t)std::min(255.0, (features(i,1) * 255.0));
         (host_cloud)[i].b = (uint8_t)std::min(255.0, (features(i,2) * 255.0));
@@ -228,10 +230,12 @@ namespace cvo {
       ///memcpy(host_cloud[i].features, features.row(i).data(), FEATURE_DIMENSIONS * sizeof(float));
       for (int j = 0; j < 2; j++)
         host_cloud[i].geometric_type[j] = cvo_cloud.geometric_types()[i*2+j];
-      
-      for (int j = 0; j < FEATURE_DIMENSIONS; j++)
-        host_cloud[i].features[j] = features(i,j);
 
+      if (features.rows() == num_points &&  features.cols() > 0 ) {
+        for (int j = 0; j < FEATURE_DIMENSIONS; j++)
+          host_cloud[i].features[j] = features(i,j);
+      }
+      
       if (cvo_cloud.num_classes() > 0) {
         labels.row(i).maxCoeff(&host_cloud[i].label);
         for (int j = 0; j < cvo_cloud.num_classes(); j++)
@@ -410,7 +414,7 @@ namespace cvo {
             //association_cpu.target_inliers[ind_target] = true;
             association_cpu.target_inliers.push_back(ind_target);
             association_cpu.pairs.insert(i, ind_target) = inner_product[i*cols+j];
-            //if (i == 4058)
+            //if (i == 2349)
             //  std::cout<<"Association: i=="<<i<<", j=="<<ind_target<<", a=="<<inner_product[i*cols+j]<<std::endl;
           }
           

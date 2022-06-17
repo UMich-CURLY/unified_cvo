@@ -114,8 +114,7 @@ set(CVO_UTILS_SOURCE
   ${PROJECT_SOURCE_DIR}/src/utils/LoamScanRegistration.cpp
   ${PROJECT_SOURCE_DIR}/src/utils/LeGoLoamPointSelection.cpp
   ${PROJECT_SOURCE_DIR}/src/utils/RawImage.cpp
-  ${PROJECT_SOURCE_DIR}/src/utils/VoxelMap.cpp
-  ${PROJECT_SOURCE_DIR}/src/utils/CvoPointCloud.cpp
+  ${PROJECT_SOURCE_DIR}/src/utils/VoxelMap_pcl.cpp
   ${PROJECT_SOURCE_DIR}/src/utils/ImageStereo.cpp
   )
 
@@ -188,6 +187,9 @@ set (CVO_GPU_SOURCE
   ${PROJECT_SOURCE_DIR}/src/cvo/CvoFrame.cpp
   ${PROJECT_SOURCE_DIR}/src/cvo/IRLS.cpp
   ${PROJECT_SOURCE_DIR}/src/cvo/IRLS_State_GPU.cpp
+  ${PROJECT_SOURCE_DIR}/src/utils/CvoPoint.cpp
+  ${PROJECT_SOURCE_DIR}/src/utils/VoxelMap_CvoPoint.cpp
+  ${PROJECT_SOURCE_DIR}/src/utils/CvoPointCloud.cpp  
   )
 
 set (CVO_CPU_SOURCE
@@ -584,7 +586,24 @@ target_include_directories(cvo_align_gpu_two_pcd PUBLIC
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_link_libraries(cvo_align_gpu_two_pcd cvo_gpu_img_lib cvo_gpu_img_lib cvo_utils_lib boost_filesystem boost_system pcl_io pcl_common)
+      target_link_libraries(cvo_align_gpu_two_pcd cvo_gpu_img_lib cvo_gpu_img_lib cvo_utils_lib boost_filesystem boost_system pcl_io pcl_common)
+
+add_executable(kitti_depth_filtering ${PROJECT_SOURCE_DIR}/src/experiments/main_depth_filtering.cpp)
+target_include_directories(kitti_depth_filtering PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+      target_link_libraries(kitti_depth_filtering kitti cvo_gpu_img_lib cvo_utils_lib boost_filesystem boost_system pcl_io pcl_common)
+      
+
+add_executable(cvo_align_gpu_two_color_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_two_color_pcd.cpp)
+target_include_directories(cvo_align_gpu_two_color_pcd PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_align_gpu_two_color_pcd cvo_gpu_img_lib cvo_gpu_img_lib cvo_utils_lib boost_filesystem boost_system pcl_io pcl_common)
 
 
 add_executable(cvo_irls_tum ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_tum.cpp)
@@ -621,13 +640,13 @@ target_include_directories(cvo_irls_tartan_translation PUBLIC
 target_link_libraries(cvo_irls_tartan_translation cvo_gpu_img_lib cvo_gpu_img_lib cvo_utils_lib tartan boost_filesystem boost_system pcl_filters)
 
 
-#add_executable(cvo_irls_kitti ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_kitti.cpp)
-#target_include_directories(cvo_irls_kitti PUBLIC
+add_executable(cvo_irls_kitti ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_kitti.cpp)
+target_include_directories(cvo_irls_kitti PUBLIC
 	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
- #       "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
- #       $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-#target_link_libraries(cvo_irls_kitti cvo_gpu_img_lib cvo_irls_lib cvo_utils_lib kitti boost_filesystem boost_system)
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_irls_kitti cvo_gpu_img_lib cvo_utils_lib kitti boost_filesystem boost_system)
 
 
 

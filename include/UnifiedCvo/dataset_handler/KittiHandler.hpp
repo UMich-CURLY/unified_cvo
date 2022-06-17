@@ -8,6 +8,7 @@ namespace cvo{
 
   class KittiHandler : public DatasetHandler {
   public:
+    // data_type: 0: Stereo,  1: Lidar
     KittiHandler(std::string kitti_folder, int data_type);
     ~KittiHandler();
     int read_next_stereo(cv::Mat & left,

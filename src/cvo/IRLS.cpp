@@ -17,7 +17,7 @@ namespace cvo {
                              const std::vector<bool> & pivot_flags,                             
                              const std::list<BinaryState::Ptr> & states,
                              const CvoParams * params
-                             ) : pivot_flags_(&pivot_flags),
+                             ) : pivot_flags_(pivot_flags),
                                  states_(&states),
                                  frames_(&frames),
                                  params_(params) {
@@ -115,9 +115,11 @@ namespace cvo {
         int nonzeros_ip_mat = state->update_inner_product();
         total_nonzeros += nonzeros_ip_mat;
         //invalid_factors[counter] = invalid_ip_mat;
-        if (nonzeros_ip_mat > 50) {
+        if (nonzeros_ip_mat > params_->multiframe_min_nonzeros) {
           state->add_residual_to_problem(problem);
           counter++;
+        } else {
+          
         }
       }
       nonzeros <<ell<<", "<< total_nonzeros<<"\n"<<std::flush;
@@ -136,7 +138,7 @@ namespace cvo {
         //   for (auto && frame : *frames_) {
         for (int k = 0; k < frames_->size(); k++) {
           problem.SetParameterization(frames_->at(k)->pose_vec, se3_parameterization);
-          if (pivot_flags_->at(k))
+          if (pivot_flags_.at(k))
             problem.SetParameterBlockConstant(frames_->at(k)->pose_vec);          
         }
 

@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
   std::shared_ptr<cvo::ImageRGBD<float>> source_raw(new cvo::ImageRGBD<float>(source_rgb, source_depth));
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw,
                                                                     calib
-								    //,cvo::CvoPointCloud::CANNY_EDGES
+								    ,cvo::CvoPointCloud::DSO_EDGES
                                                                     ));
   //19, semantics_source, 
   //                                                                    cvo::CvoPointCloud::CV_FAST));
@@ -88,12 +88,12 @@ int main(int argc, char *argv[]) {
     //std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, rgb, dep, calib,1));
     std::shared_ptr<cvo::ImageRGBD<float>> target_raw(new cvo::ImageRGBD(rgb, dep));
     std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, calib
-                                                                      //,cvo::CvoPointCloud::CANNY_EDGES
+                                                                      ,cvo::CvoPointCloud::DSO_EDGES
                                                                       ));
     //if (i == 0)
-    //  target->write_to_color_pcd("target.pcd");  
+    target->write_to_color_pcd(std::to_string(i+1)+".pcd");  
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
-
+/*
     Eigen::Matrix4f result, init_guess_inv;
     init_guess_inv = init_guess.inverse();
     printf("Start align... num_fixed is %d, num_moving is %d\n", source->num_points(), target->num_points());
@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
     accum_output<<accum_mat(0,3)<<" "<<accum_mat(1,3)<<" "<<accum_mat(2,3)<<" "; 
     accum_output<<q.x()<<" "<<q.y()<<" "<<q.z()<<" "<<q.w()<<"\n";
     accum_output.flush();
-
+*/
     std::cout<<"\n\n===========next frame=============\n\n";
    
     source = target;

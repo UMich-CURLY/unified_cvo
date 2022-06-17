@@ -40,7 +40,7 @@ namespace cvo {
     const std::vector<std::shared_ptr<CvoFrame>> * frames_;
     //const FullStates
     //CvoFrame * const pivot_;
-    const std::vector<bool> * pivot_flags_; 
+    std::vector<bool> pivot_flags_; 
     const CvoParams * params_;
 
   };

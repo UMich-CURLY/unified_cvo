@@ -1,13 +1,9 @@
+#pragma once
+
 #include "utils/VoxelMap.hpp"
 #include <random>
-// updateCovis Debug use
-#include <pcl/point_types.h>
-// #include <pcl/point_cloud.h>
-#include <pcl/io/pcd_io.h>
 
 namespace cvo {
-
-
   template <typename PointType>
   VoxelMap<PointType>::VoxelMap(float voxelSize) : voxelSize_(voxelSize) {
     // std::cout << "Assigned voxelSize_" << voxelSize << std::endl;
@@ -222,12 +218,4 @@ namespace cvo {
       std::cout << "Wrote voxel centers to " << filename << std::endl;
   }
 
-  //template <>
-  //VoxelCoord VoxelMap<SimplePoint>::point_to_voxel_center(const SimplePoint* pt) const;
-  template class Voxel<SimplePoint>;
-  template class VoxelMap<SimplePoint>;
-  template class Voxel<pcl::PointXYZRGB>;
-  template class VoxelMap<pcl::PointXYZRGB>;
-  
-  
 }
