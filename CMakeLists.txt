@@ -512,7 +512,7 @@ target_include_directories(cvo_gpu_lidar_lib PUBLIC
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 add_dependencies(cvo_gpu_lidar_lib cvo_utils_lib lie_group_utils)
 target_compile_definitions(cvo_gpu_lidar_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=256)
-target_link_libraries(cvo_gpu_lidar_lib PRIVATE lie_group_utils cvo_utils_lib cvo_gpu_img_lib yaml-cpp)
+target_link_libraries(cvo_gpu_lidar_lib PRIVATE lie_group_utils cvo_utils_lib cvo_gpu_img_lib yaml-cpp Ceres::ceres)
 set_target_properties(cvo_gpu_lidar_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
     CUDA_SEPERABLE_COMPILATION ON
@@ -692,6 +692,16 @@ if (${PROJECT_NAME}_ENABLE_QT_VIEWER)
     "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
     $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
   target_link_libraries(stack_pcd_viewer cvo_utils_lib boost_filesystem boost_system  pcl_common pcl_io pcl_visualization  pcd_qt_viewer_lib )
+
+  add_executable(ellipse_viewer ${PROJECT_SOURCE_DIR}/src/experiments/main_ellipse_viewer)
+  target_compile_definitions(ellipse_viewer PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
+  target_include_directories(ellipse_viewer PUBLIC
+    #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+    #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+    "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+    $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+  target_link_libraries(ellipse_viewer cvo_gpu_img_lib cvo_utils_lib boost_filesystem boost_system  pcl_common pcl_io pcl_visualization  pcd_qt_viewer_lib  kitti)
+  
   
 endif()
 
