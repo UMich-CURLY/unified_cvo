@@ -30,7 +30,7 @@ void read_kitti_pose_file(const std::string & tracking_fname,
 
   //std::string gt_file_subset(selected_pose_fname);
   //ofstream outfile(gt_file_subset);
-  
+
   while (std::getline(gt_file, line)) {
     
     if (line_ind < frame_inds[curr_frame_ind]) {
@@ -137,8 +137,6 @@ int main(int argc, char ** argv) {
       cvo::VoxelMap<cvo::CvoPoint> edge_voxel(leaf_size / 4); // /10
       cvo::VoxelMap<cvo::CvoPoint> surface_voxel(leaf_size);
 
-      
-    
       for (int k = 0; k < raw_pcd_edge->size(); k++) {
         edge_voxel.insert_point(&raw_pcd_edge->points[k]);
       }
@@ -170,11 +168,9 @@ int main(int argc, char ** argv) {
     std::shared_ptr<cvo::CvoPointCloud> pc_surface(new cvo::CvoPointCloud(surface_pcl, cvo::CvoPointCloud::GeometryType::SURFACE));
     std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud);
     *pc = *pc_edge + *pc_surface;
-    
+
     std::cout<<"Voxel number points is "<<pc->num_points()<<std::endl;
 
-      
-  
     pcl::PointCloud<cvo::CvoPoint> pcd_to_save;
     pc->write_to_color_pcd(std::to_string(curr_frame_id)+".pcd");
     

@@ -1,11 +1,13 @@
 #include <algorithm>
 #include <iostream>
 #include <vector>
+#include <memory>
 #include <string>
 #include <algorithm>
 #include <fstream>
 #include <cmath>
 #include <boost/filesystem.hpp>
+#include <Eigen/Dense>
 #include "dataset_handler/KittiHandler.hpp"
 #include "utils/ImageStereo.hpp"
 #include "utils/Calibration.hpp"
@@ -30,7 +32,7 @@ int main(int argc, char *argv[]) {
   int start_frame = std::stoi(argv[4]);
   kitti.set_start_index(start_frame);
   int max_num = std::stoi(argv[5]);
-  
+
   accum_output <<"1 0 0 0 0 1 0 0 0 0 1 0\n";
   
   cvo::CvoGPU cvo_align(cvo_param_file );
@@ -60,7 +62,8 @@ int main(int argc, char *argv[]) {
   std::cout<<"build source CvoPointCloud...\n";
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw, calib
                                                                     //, cvo::CvoPointCloud::CANNY_EDGES
-                                                                    ));
+                                                                   ));
+
   std::cout<<"write to opcd\n";
   source->write_to_color_pcd("source.pcd");
   //source->write_to_color_pcd(std::to_string(start_frame) + ".pcd");
@@ -86,7 +89,7 @@ int main(int argc, char *argv[]) {
     std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, calib
                                                                       //,cvo::CvoPointCloud::CANNY_EDGES
                                                                       ));
-    
+
     target->write_to_color_pcd("target.pcd");
     //target->write_to_color_pcd(std::to_string(i+1) + ".pcd");
     Eigen::Matrix4f result, init_guess_inv;
@@ -98,7 +101,6 @@ int main(int argc, char *argv[]) {
     
     //double in_product_identity = cvo_align.function_angle(*source, *target, identity_init, ell_init);
     //std::cout<<"The identity guess  inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_identity<<"\n";
-    
     
 
     printf("Start align... num_fixed is %d, num_moving is %d\n", source->num_points(), target->num_points());
