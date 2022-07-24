@@ -37,7 +37,7 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <cstdlib>
-
+#include <vector>
 namespace cvo{
 
     LeGoLoamPointSelection::LeGoLoamPointSelection()
@@ -403,7 +403,7 @@ namespace cvo{
         // use std::queue std::vector std::deque will slow the program down greatly
         float d1, d2, alpha, angle;
         int fromIndX, fromIndY, thisIndX, thisIndY; 
-        bool lineCountFlag[N_SCAN] = {false};
+	std::vector<bool> lineCountFlag(N_SCAN, false);
 
         queueIndX[0] = row;
         queueIndY[0] = col;

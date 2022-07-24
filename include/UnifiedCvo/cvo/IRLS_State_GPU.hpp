@@ -9,7 +9,10 @@
 #include <Eigen/Sparse>
 #include "cvo/SparseKernelMat.hpp"
 //#include <ceres/ceres.h>
-class ceres::Problem;
+
+namespace ceres {
+  class Problem;
+}
 
 namespace cvo {
   class CvoFrame;

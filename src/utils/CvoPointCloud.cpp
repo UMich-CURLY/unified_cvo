@@ -554,12 +554,12 @@ namespace cvo{
 
 
   template 
-  CvoPointCloud::CvoPointCloud<float>(const ImageRGBD<float> & raw_image,
+  CvoPointCloud::CvoPointCloud(const ImageRGBD<float> & raw_image,
                                       const Calibration &calib,
                                       PointSelectionMethod pt_selection_method);
   
   template 
-  CvoPointCloud::CvoPointCloud<uint16_t>(const ImageRGBD<uint16_t> & raw_image,
+  CvoPointCloud::CvoPointCloud(const ImageRGBD<uint16_t> & raw_image,
                                          const Calibration &calib,
                                          PointSelectionMethod pt_selection_method);
   
@@ -567,7 +567,7 @@ namespace cvo{
   
 
   template <>
-  CvoPointCloud::CvoPointCloud<pcl::PointXYZRGB>(const pcl::PointCloud<pcl::PointXYZRGB> & pc) {
+  CvoPointCloud::CvoPointCloud(const pcl::PointCloud<pcl::PointXYZRGB> & pc) {
     num_points_ = pc.size();
     num_classes_ = 0;
     feature_dimensions_ = 5;
@@ -596,7 +596,7 @@ namespace cvo{
   
 
   template <>
-  CvoPointCloud::CvoPointCloud<pcl::PointXYZRGB>(const pcl::PointCloud<pcl::PointXYZRGB> & pc,
+  CvoPointCloud::CvoPointCloud(const pcl::PointCloud<pcl::PointXYZRGB> & pc,
                                                  GeometryType g_type) {
     num_points_ = pc.size();
     num_classes_ = 0;
@@ -631,7 +631,7 @@ namespace cvo{
 
 
   template <>
-  CvoPointCloud::CvoPointCloud<pcl::PointXYZ>(const pcl::PointCloud<pcl::PointXYZ> & pc) {
+  CvoPointCloud::CvoPointCloud(const pcl::PointCloud<pcl::PointXYZ> & pc) {
     num_points_ = pc.size();
     num_classes_ = 0;
     feature_dimensions_ = 0;

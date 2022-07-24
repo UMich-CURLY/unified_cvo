@@ -6,7 +6,7 @@
 namespace cvo {
 
   template <>
-  CvoPointCloud::CvoPointCloud<CvoPoint>(const pcl::PointCloud<CvoPoint> & pc,
+  CvoPointCloud::CvoPointCloud(const pcl::PointCloud<CvoPoint> & pc,
                                          GeometryType  gtype) {
     num_points_ = pc.size();
     num_classes_ = NUM_CLASSES;
@@ -49,7 +49,7 @@ namespace cvo {
 
   
   template <>
-  CvoPointCloud::CvoPointCloud<CvoPoint>(const pcl::PointCloud<CvoPoint> & pc) {
+  CvoPointCloud::CvoPointCloud(const pcl::PointCloud<CvoPoint> & pc) {
     num_points_ = pc.size();
     num_classes_ = NUM_CLASSES;
     feature_dimensions_ = FEATURE_DIMENSIONS;

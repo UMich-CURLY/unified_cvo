@@ -12,7 +12,10 @@ namespace cvo{
 			TumHandler(std::string tum_folder);
     ~TumHandler();
 			int read_next_rgbd(cv::Mat & rgb_img, 
-                        cv::Mat & dep_img);
+                                           cv::Mat & dep_img);
+			int read_next_rgbd(cv::Mat & rgb_img, 
+                                           std::vector<uint16_t> & dep);
+    
 
 			void next_frame_index();
 			void set_start_index(int start);
