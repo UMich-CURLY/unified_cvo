@@ -24,6 +24,40 @@
 
 #define EIGEN_DEFAULT_DENSE_INDEX_TYPE int
 
+/*
+#ifndef CHECK_CUDA_ERROR
+#define CHECK_CUDA_ERROR(val) check((val), #val, __FILE__, __LINE__)
+template <typename T>
+void gpu_error_check(T err, const char* const func, const char* const file,
+           const int line)
+{
+    if (err != cudaSuccess)
+    {
+        std::cerr << "CUDA Runtime Error at: " << file << ":" << line
+                  << std::endl;
+        std::cerr << cudaGetErrorString(err) << " " << func << std::endl;
+        // We don't exit when we encounter CUDA errors in this example.
+        std::exit(EXIT_FAILURE);
+    }
+}
+#endif
+
+#ifndef CHECK_LAST_CUDA_ERROR
+#define CHECK_LAST_CUDA_ERROR() checkLast(__FILE__, __LINE__)
+void gpu_last_error_check(const char* const file, const int line)
+{
+    cudaError_t err{cudaGetLastError()};
+    if (err != cudaSuccess)
+    {
+        std::cerr << "CUDA Runtime Error at: " << file << ":" << line
+                  << std::endl;
+        std::cerr << cudaGetErrorString(err) << std::endl;
+        // We don't exit when we encounter CUDA errors in this example.
+        std::exit(EXIT_FAILURE);
+    }
+}
+#endif
+*/
 #define GpuErrorCheck(ans) { gpu_assert((ans), __FILE__, __LINE__); }
 inline void gpu_assert(cudaError_t code, const char *file, int line, bool abort=true)
 {

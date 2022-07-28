@@ -197,7 +197,7 @@ namespace cvo{
      * @param target_points The second point cloud
      * @param T_target_frame_to_source_frame The transformation from the second frame to the 
      *                                       first frame.
-     * @param non_isotropic_kernel The geometric kernel for geometric association
+     * @param non_isotropic_kernel The matrix geometric kernel for geometric data association
      * @param association This is the resulting association, containing the inliers of the 
      *                    registration as well as all pairs of associated points 
      */

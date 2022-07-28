@@ -13,7 +13,7 @@ option(${PROJECT_NAME}_ENABLE_CUDA "ENABLE_CUDA" ON)
 option(${PROJECT_NAME}_ENABLE_ACVO "ENABLE_ACVO" OFF)
 option(${PROJECT_NAME}_ENABLE_LIDAR "ENABLE_LIDAR" ON)
 option(${PROJECT_NAME}_ENABLE_QT_VIEWER "ENABLE_QT_VIEWER" ON)
-
+option(${PROJECT_NAME}_ENABLE_CUKDTREE "ENABLE_CUKDTREE" OFF)
 include(CheckLanguage)
 if (${PROJECT_NAME}_ENABLE_CUDA)
   enable_language(CUDA)
@@ -26,10 +26,10 @@ endif()
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # Release Mode
-set(CMAKE_BUILD_TYPE Release)
+#set(CMAKE_BUILD_TYPE Release)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -O3 -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -lmkl_intel_lp64 -lmkl_core -lmkl -liomp -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
-#set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Debug)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -g  -msse -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}   -march=native" )
 #set(BUILD_TYPE RelWithDebInfo)
@@ -76,8 +76,8 @@ set(CMAKE_CXX_FLAGS
 )
 
 find_package(CUDA)
-set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_61,code=sm_61  -gencode arch=compute_52,code=sm_52 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_86,code=sm_86 "  )
-#set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda -gencode arch=compute_75,code=sm_75 -gencode arch=compute_86,code=sm_86 "  )
+#set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_61,code=sm_61  -gencode arch=compute_52,code=sm_52 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_86,code=sm_86 "  )
+set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_86,code=sm_86 "  )
 foreach(flag IN LISTS " -use_fast_math -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -fPIC"  )
   add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${flag}>")
 endforeach()
@@ -502,6 +502,23 @@ set_target_properties(cvo_gpu_img_lib PROPERTIES
   COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 
 
+add_library(cvo_gpu_img_deep_feature_lib SHARED ${CVO_GPU_SOURCE})
+add_dependencies(cvo_gpu_img_deep_feature_lib cvo_utils_lib lie_group_utils)
+target_link_libraries(cvo_gpu_img_deep_feature_lib PRIVATE lie_group_utils cvo_utils_lib yaml-cpp  Ceres::ceres )
+#target_compile_definitions(cvo_gpu_img_lib ${PCL_DEFINITIONS})   
+#set_target_properties(cvo_gpu_img_lib PROPERTIES PUBLIC_HEADER "${CVO_PUBLIC_HEADERS}")
+target_include_directories(cvo_gpu_img_deep_feature_lib PUBLIC
+  #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/UnifiedCvo>
+  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
+  #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_compile_definitions(cvo_gpu_img_deep_feature_lib PUBLIC -DNUM_CLASSES=256 -DFEATURE_DIMENSIONS=5 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=256 ${PCL_DEFINITIONS})
+set_target_properties(cvo_gpu_img_deep_feature_lib PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+  CUDA_SEPERABLE_COMPILATION ON
+  COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
+
+
 if(${PROJECT_NAME}_ENABLE_LIDAR)
   add_library(cvo_gpu_lidar_lib SHARED ${CVO_GPU_SOURCE})
 target_include_directories(cvo_gpu_lidar_lib PUBLIC
@@ -754,8 +771,16 @@ target_link_libraries(cvo_indicator_in_sequence cvo_gpu_img_lib cvo_utils_lib bo
 add_executable(cu_kd_tree_test ${PROJECT_SOURCE_DIR}/src/experiments/cu_kd_tree_test.cu)
 target_include_directories(cu_kd_tree_test PUBLIC
       "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                  
-  )
+    )
 target_link_libraries(cu_kd_tree_test cvo_utils_lib cukdtree_lib ${PCL_LIBRARIES})
+
+add_executable(cvo_align_two_nn_feature ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_two_nn_feature_pcd.cpp)
+target_include_directories(cvo_align_two_nn_feature PUBLIC
+      "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                  
+    )
+target_link_libraries(cvo_align_two_nn_feature cvo_gpu_img_deep_feature_lib cvo_utils_lib kitti  boost_filesystem boost_system)
+
+  
 endif()
 
 #add_executable(cvo_local_mapping ${PROJECT_SOURCE_DIR}/src/main_local_mapping.cpp )

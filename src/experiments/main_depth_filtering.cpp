@@ -209,8 +209,8 @@ int main(int argc, char ** argv) {
   const cvo::CvoPointCloud & kf = *pcs[0];
   Eigen::Matrix3f non_isotropic_kernel= Eigen::Matrix3f::Identity();
   non_isotropic_kernel(0,0) = depth_normal_ell;
-  non_isotropic_kernel(2,2) = depth_dir_ell;  
   non_isotropic_kernel(1,1) = depth_normal_ell;
+  non_isotropic_kernel(2,2) = depth_dir_ell;    
   std::cout<<"kernel is "<<non_isotropic_kernel<<std::endl;
   depths.resize(kf.size());
   weights.resize(kf.size());

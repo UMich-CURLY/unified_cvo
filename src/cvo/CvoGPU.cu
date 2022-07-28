@@ -148,6 +148,34 @@ namespace cvo{
 
   typedef KDTreeVectorOfVectorsAdaptor<cloud_t, float>  kd_tree_t;
 
+  __device__
+  Eigen::Matrix3f rotate_kernel_and_inverse(const CvoPoint & p_center,
+                                            const Eigen::Matrix3f & eig) {
+    Eigen::Vector3f z; // = p_center.getVector3fMap().normalized();
+    z << p_center.x, p_center.y, p_center.z;
+    z = z.normalized();
+    Eigen::Vector3f x(1,1,1);
+    x(2) = (-1)/z(2)*(z(0) + z(1));
+    Eigen::Vector3f y = z.cross(x);
+
+    Eigen::Matrix3f U;
+    U.col(0) = x;
+    U.col(1) = y;
+    U.col(2) = z;
+
+    Eigen::Matrix3f eig_inv;
+    eig_inv <<
+      1/eig(0,0), 0, 0,
+      0, 1/eig(1,1), 0,
+      0, 0, 1/eig(2,2);
+
+
+    Eigen::Matrix3f rotated_kernel_inv = U.transpose() * eig_inv * U;
+
+    return rotated_kernel_inv;
+    
+  }
+
 
   __device__
   float mahananobis_distance( const CvoPoint & p_a,const  CvoPoint &p_b,
@@ -222,7 +250,7 @@ namespace cvo{
                                           CvoPoint * points_b,
                                           int b_size,
                                           int num_neighbors,
-                                          Eigen::Matrix3f * kernel_inv,
+                                          Eigen::Matrix3f * kernel,
                                           // output
                                           SparseKernelMat * A_mat // the inner product matrix!
                                           ) {
@@ -290,7 +318,8 @@ namespace cvo{
       if (cvo_params->is_using_geometry) {
         //if (i == 0)
         //  printf("computing mahanobis_dist");
-        float d2 = mahananobis_distance(*p_a, *p_b, *kernel_inv);        
+        Eigen::Matrix3f rotated_kernel_inv = rotate_kernel_and_inverse( *p_a  ,*kernel);
+        float d2 = mahananobis_distance(*p_a, *p_b, rotated_kernel_inv);        
         //k= cvo_params->sigma * cvo_params->sigma*exp(-d2/(2.0*l*l));
         k = sigma_square * exp(-d2 / 2.0);
       }
@@ -688,7 +717,7 @@ namespace cvo{
                        std::shared_ptr<CvoPointCloudGPU> points_fixed,
                        std::shared_ptr<CvoPointCloudGPU> points_moving,
                        int num_neighbors,
-                       const Eigen::Matrix3f & kernel_inv_cpu,
+                       const Eigen::Matrix3f & kernel_cpu,
                        // output
                        SparseKernelMat * A_mat,
                        SparseKernelMat * A_mat_gpu
@@ -699,9 +728,9 @@ namespace cvo{
     CvoPoint * points_fixed_raw = thrust::raw_pointer_cast (  points_fixed->points.data() );
     CvoPoint * points_moving_raw = thrust::raw_pointer_cast( points_moving->points.data() );
 
-    Eigen::Matrix3f * kernel_inv_gpu;
-    cudaMalloc((void**)&kernel_inv_gpu, sizeof(Eigen::Matrix3f));
-    cudaMemcpy(kernel_inv_gpu, &kernel_inv_cpu, sizeof(decltype(kernel_inv_cpu)), cudaMemcpyHostToDevice);
+    Eigen::Matrix3f * kernel_gpu;
+    cudaMalloc((void**)&kernel_gpu, sizeof(Eigen::Matrix3f));
+    cudaMemcpy(kernel_gpu, &kernel_cpu, sizeof(decltype(kernel_cpu)), cudaMemcpyHostToDevice);
     //std::cout<<"Start fill_in_A_mat_gpu_dense_mat_kernel\n"<<std::endl;
     fill_in_A_mat_gpu_dense_mat_kernel<<<(points_fixed->points.size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(params_gpu,
                                                                                                                  points_fixed_raw,
@@ -709,7 +738,7 @@ namespace cvo{
                                                                                                                  points_moving_raw,
                                                                                                                  points_moving->points.size(),
                                                                                                                  num_neighbors,
-                                                                                                                 kernel_inv_gpu,
+                                                                                                                 kernel_gpu,
                                                                                                                  // output
                                                                                                                  A_mat_gpu // the kernel mat
                                                                                                                  );
@@ -721,7 +750,7 @@ namespace cvo{
     }
     
     compute_nonzeros(A_mat);
-    cudaFree(kernel_inv_gpu);
+    cudaFree(kernel_gpu);
 
   }
   
@@ -1754,11 +1783,11 @@ namespace cvo{
                 &cvo_state.A_host, cvo_state.A);
     else {
       assert (non_isotropic_kernel != nullptr);
-      Eigen::Matrix3f kernel_inv = non_isotropic_kernel->inverse();
+      //Eigen::Matrix3f kernel_inv = non_isotropic_kernel;
       se_kernel_dense(// input
                       params_gpu,  cvo_state.cloud_x_gpu, cvo_state.cloud_y_gpu,
                       params.nearest_neighbors_max,
-                      kernel_inv,
+                      *non_isotropic_kernel,
                       // output
                       &cvo_state.A_host, cvo_state.A);                      
     }

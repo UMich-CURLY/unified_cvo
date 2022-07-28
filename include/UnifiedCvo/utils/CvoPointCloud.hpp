@@ -32,9 +32,9 @@ namespace cvo {
 #else
     alignas(16)
 #endif    
-  CvoPointCloud{
+    CvoPointCloud{
   public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    //EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
     enum PointSelectionMethod {
       CV_FAST,
@@ -149,8 +149,8 @@ namespace cvo {
     Eigen::VectorXf feature_at(unsigned int index) const { return features_.row(index); }
     Eigen::Vector2f geometry_type_at(unsigned int index) const;
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & semantics() const { return labels_;}
-    //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & features() const {return features_;}
-    const Eigen::MatrixXf & features() const {return features_;}
+    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & features() const {return features_;}
+    //const Eigen::MatrixXf & features() const {return features_;}
     const std::vector<float> & geometric_types() const {return geometric_types_;}
     
     //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals() const {return normals_;}
