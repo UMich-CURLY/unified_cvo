@@ -17,7 +17,8 @@ namespace cvo {
     
   public:
 
-    typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f> >, float>  Kdtree;
+    //typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f> >, float>  Kdtree;
+    typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector3f>, float>  Kdtree;
     typedef std::shared_ptr<BinaryStateCPU> Ptr;
     
     BinaryStateCPU(std::shared_ptr<CvoFrame> pc1,

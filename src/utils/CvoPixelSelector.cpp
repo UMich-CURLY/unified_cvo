@@ -27,6 +27,7 @@
 #include <cstring>
 #include <cmath>
 #include <cstdlib>
+#include <utility>
 #include <vector>
 #include <string>
 
@@ -150,7 +151,8 @@ namespace cvo
                                   float density, 
                                   // output
                                   float * map_out,
-                                  std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv,
+                                  //std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv,
+                                  std::vector<std::pair<int, int>> & output_uv,
                                   // default inputs
                                   int customized_potential,
                                   int recursionsLeft, bool plot, float thFactor)
@@ -271,7 +273,7 @@ namespace cvo
                                         int pot, float thFactor,
                                         // outputs
                                         float * map_out,
-                                        std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv 
+                                        std::vector<std::pair<int, int>> & output_uv 
                                         )
   {
 
@@ -398,8 +400,7 @@ namespace cvo
                 if(bestIdx2>0)
                 {
                   map_out[bestIdx2] = 1;
-                  Vec2i uv;
-                  uv << bestIdx2 % w , bestIdx2 / w;
+                  std::pair<int,int> uv{ bestIdx2 % w , bestIdx2 / w};
                   output_uv.push_back(uv);
                   bestVal3 = 1e10;
                   n2++;
@@ -430,7 +431,7 @@ namespace cvo
   void dso_select_pixels(const RawImage & raw_image,
                          int num_want,
                          // output
-                         std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv ) {
+                         std::vector<std::pair<int,int>> & output_uv ) {
     PixelSelector selector(raw_image.cols(), raw_image.rows());
     std::vector<float> heat_map(raw_image.image().total(), 0);
     selector.makeHeatMaps(raw_image,static_cast<float> (num_want), heat_map.data(), output_uv, 3, 0);
@@ -461,7 +462,7 @@ namespace cvo
       int h = heatmap.rows;
       for (int i = 0; i < output_uv.size(); i++) {
 
-        cv::circle(heatmap, cv::Point( output_uv[i](0), output_uv[i](1) ), 1, cv::Scalar(255, 0 ,0), 1);
+        cv::circle(heatmap, cv::Point( output_uv[i].first, output_uv[i].second ), 1, cv::Scalar(255, 0 ,0), 1);
 
         
       }

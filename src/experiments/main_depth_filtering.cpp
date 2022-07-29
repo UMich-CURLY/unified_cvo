@@ -171,7 +171,6 @@ int main(int argc, char ** argv) {
 
     std::cout<<"Voxel number points is "<<pc->num_points()<<std::endl;
 
-    pcl::PointCloud<cvo::CvoPoint> pcd_to_save;
     pc->write_to_color_pcd(std::to_string(curr_frame_id)+".pcd");
     
     

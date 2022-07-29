@@ -39,6 +39,7 @@ This is an implementation of the algorithm described in the following paper:
 #include "CircularBuffer.h"
 #include "time_utils.h"
 #include "math_utils.h"
+#include <cmath>
 
 
 namespace cvo
@@ -326,6 +327,11 @@ class LoamScanRegistration{
     void compute_normal_and_remove_ground(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out, std::vector <float> & edge_or_surface);
 };
 
+    template <typename T>
+    bool pcl_isfinite(T x) {
+      return std::isfinite(x);
+    }
+    
 
 }
 

@@ -6,6 +6,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <ceres/ceres.h>
+#include <vector>
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/CvoParams.hpp"
 namespace cvo {
@@ -13,11 +14,13 @@ namespace cvo {
 
   static
   void transform_pcd(const Eigen::Matrix<double, 3, 4, Eigen::RowMajor> & transform,
-                     const std::vector<Eigen::Vector3d,
-                       Eigen::aligned_allocator<Eigen::Vector3d>> & cloud_y_init,
+                     //const std::vector<Eigen::Vector3d,
+                     //  Eigen::aligned_allocator<Eigen::Vector3d>> & cloud_y_init,
+                     const std::vector<Eigen::Vector3d> & cloud_y_init,
                      // output
-                     std::vector<Eigen::Vector3d,
-                       Eigen::aligned_allocator<Eigen::Vector3d> > & cloud_y
+                     std::vector<Eigen::Vector3d> & cloud_y
+                     //std::vector<Eigen::Vector3d,
+                     //  Eigen::aligned_allocator<Eigen::Vector3d> > & cloud_y
                      )  {
     int num_pts = cloud_y_init.size();
     #pragma omp parallel for
@@ -27,28 +30,9 @@ namespace cvo {
   }
   static
   void transform_pcd(const Eigen::Matrix<double, 3, 4, Eigen::RowMajor> & transform,
-                     const std::vector<Eigen::Vector3f,
-                       Eigen::aligned_allocator<Eigen::Vector3f>> & cloud_y_init,
+                     const std::vector<Eigen::Vector3f> & cloud_y_init,
                      // output
-                     std::vector<Eigen::Vector3d,
-                       Eigen::aligned_allocator<Eigen::Vector3d> > & cloud_y
-                     )  {
-    int num_pts = cloud_y_init.size();
-    if (cloud_y.size() < num_pts)
-      cloud_y.resize(num_pts);
-    #pragma omp parallel for
-    for (int i = 0; i < num_pts; i++ ){
-      (cloud_y)[i] = transform.block<3,3>(0,0)*cloud_y_init[i].cast<double>()+transform.block<3,1>(0,3);
-    }
-  }
-
-  static
-  void transform_pcd(const Eigen::Matrix<double, 3, 4, Eigen::RowMajor> & transform,
-                     const std::vector<Eigen::Vector3f,
-                       Eigen::aligned_allocator<Eigen::Vector3f>> & cloud_y_init,
-                     // output
-                     std::vector<Eigen::Vector3f,
-                       Eigen::aligned_allocator<Eigen::Vector3f> > & cloud_y
+                     std::vector<Eigen::Vector3f> & cloud_y
                      )  {
     int num_pts = cloud_y_init.size();
     if (cloud_y.size() < num_pts)
@@ -171,7 +155,8 @@ namespace cvo {
                  //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>& color_pc2,
                  const CvoPointCloud & pc1_cvo,
                  const CvoPointCloud & pc2_cvo,
-                 const std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f> > & pc2_curr,                 
+                 // const std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f> > & pc2_curr,
+                  const std::vector<Eigen::Vector3f > & pc2_curr,                 
                  const CvoParams * cvo_params,                 
                  std::shared_ptr<BinaryStateCPU::Kdtree> mat_index,
                  float ell,
@@ -313,7 +298,8 @@ namespace cvo {
     pose2_full.block<3,4>(0,0) = Eigen::Map<Mat34d_row>(frame2->pose_vec);;
     Mat34d_row f1_to_f2 = (pose1_full.inverse() * pose2_full ).block<3,4>(0,0);
 
-    std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f> > pc2_curr_;
+    //std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f> > pc2_curr_;
+    std::vector<Eigen::Vector3f> pc2_curr_;
     transform_pcd(f1_to_f2, frame2->points->positions(), pc2_curr_);
 
     se_kernel(*frame1->points, *frame2->points,

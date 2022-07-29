@@ -33,6 +33,10 @@ class PointCloudColorHandlerIntensityMap
 
   virtual bool getColor(vtkSmartPointer<vtkDataArray> &scalars) const;
 
+  virtual vtkSmartPointer<vtkDataArray> getColor() const;
+
+
+
  protected:
   // Members derived from the base class
   using pcl::visualization::PointCloudColorHandler<pcl::PointXYZI>::cloud_;

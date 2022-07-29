@@ -1,3 +1,4 @@
+#include <bits/stdint-intn.h>
 #include <cassert>
 #include <cmath>
 #include <utility>
@@ -67,12 +68,12 @@ namespace cvo{
                                         //const cv::Mat & right_gray,
                                         const std::vector<float> & disparity,
                                         const Calibration & calib,
-                                        const Vec2i & input,
+                                        const std::pair<int, int> & input,
                                         Eigen::Ref<Vec3f> result
                                         )  {
 
-      int u = input(0);
-      int v = input(1);
+      int u = input.first;
+      int v = input.second;
       int h = left.rows();
       int w = left.cols();
 

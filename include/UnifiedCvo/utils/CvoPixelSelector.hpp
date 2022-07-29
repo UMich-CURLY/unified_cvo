@@ -23,6 +23,7 @@
 
 
 #pragma once
+#include <utility>
 #include <vector>
 #include <Eigen/Dense>
 #include <opencv2/opencv.hpp>
@@ -37,7 +38,7 @@ namespace cvo
   void dso_select_pixels(const RawImage & raw_image,
                          int num_want,
                          // output
-                         std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv );
+                         std::vector<std::pair<int, int>> & output_uv );
 
   pcl::PointCloud<pcl::Normal>::Ptr
   compute_pcd_normals(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in, float radius);
@@ -138,7 +139,7 @@ namespace cvo
                      float density, 
                      // output
                      float* map_out,
-                     std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv,
+                     std::vector<std::pair<int, int>> & output_uv,
                      // default inputs
                      int customized_potential=-1,
                      int recursionsLeft=1, bool plot=false, float thFactor=1
@@ -157,7 +158,7 @@ namespace cvo
                            int pot, float thFactor,
                            // outputs
                            float* map_out,
-                           std::vector<Vec2i, Eigen::aligned_allocator<Vec2i>> & output_uv
+                           std::vector<std::pair<int,int>> & output_uv
                            );
 
     std::vector<unsigned char> randomPattern;

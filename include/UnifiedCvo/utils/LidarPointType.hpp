@@ -197,7 +197,7 @@ struct PointXYZIR
     PCL_ADD_INTENSITY;
     uint16_t ring;
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-} EIGEN_ALIGN16;
+}; //EIGEN_ALIGN16;
 }
 POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZIR,  
                                    (float, x, x) (float, y, y)
@@ -215,7 +215,7 @@ struct PointXYZLR
     uint32_t label;
     uint16_t ring;
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-} EIGEN_ALIGN16;
+};// EIGEN_ALIGN16;
 }
 POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZLR,  
                                    (float, x, x) (float, y, y)
@@ -236,7 +236,7 @@ struct PointXYZIRPYT
     float yaw;
     double time;
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-} EIGEN_ALIGN16;
+};// EIGEN_ALIGN16;
 }
 POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZIRPYT,
                                    (float, x, x) (float, y, y)

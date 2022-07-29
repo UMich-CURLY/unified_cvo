@@ -27,12 +27,12 @@ namespace cvo {
   class Calibration;
 
   class
-#ifdef __CUDACC__
-  __align__(16)
-#else
-    alignas(16)
-#endif    
-    CvoPointCloud{
+  //#ifdef __CUDACC__
+  // __align__(16)
+  //#else
+  //  alignas(16)
+  // #endif    
+ CvoPointCloud{
   public:
     //EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
@@ -142,7 +142,8 @@ namespace cvo {
     int num_classes() const {return num_classes_;}
     int num_features() const {return feature_dimensions_;}
     int feature_dimensions() const {return feature_dimensions_;}
-    const std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> & positions() const {return positions_;}
+    //const std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> & positions() const {return positions_;}
+    const std::vector<Eigen::Vector3f> & positions() const {return positions_;}
     Eigen::Vector3f at(unsigned int index) const;
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & labels() const { return labels_;}
     Eigen::VectorXf label_at(unsigned int index) const { return labels_.row(index); }
@@ -177,7 +178,8 @@ namespace cvo {
     int num_classes_;
     int feature_dimensions_;
     
-    std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> positions_;  // points position. x,y,z
+    //std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> positions_;  // points position. x,y,z
+    std::vector<Eigen::Vector3f> positions_; 
     //Eigen::Matrix<float, Eigen::Dynamic, 3> positions_;
     Eigen::MatrixXf features_;
     //Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> features_;   // rgb, gradient in [0,1]

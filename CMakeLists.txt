@@ -68,12 +68,12 @@ else()
 	message("OpenMP not Found")
 endif()
 add_definitions(-DOPENMP)
-add_definitions(-DENABLE_SSE)
-set(CMAKE_CXX_FLAGS
+#add_definitions(-DENABLE_SSE)
+#set(CMAKE_CXX_FLAGS
 #  #"${CMAKE_CXX_FLAGS} ${SSE_FLAGS} -fPIC -march=native"
 #  "${CMAKE_CXX_FLAGS} ${SSE_FLAGS} -march=native"
-"${CMAKE_CXX_FLAGS} ${SSE_FLAGS} "
-)
+#"${CMAKE_CXX_FLAGS} ${SSE_FLAGS} "
+#)
 
 find_package(CUDA)
 #set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_61,code=sm_61  -gencode arch=compute_52,code=sm_52 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_86,code=sm_86 "  )
@@ -297,7 +297,7 @@ target_include_directories(lie_group_utils PUBLIC
 add_library(cvo_utils_lib SHARED ${CVO_UTILS_SOURCE})
 set_target_properties(cvo_utils_lib PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
 #add_dependencies(cvo_utils_lib elas)
-target_compile_definitions(cvo_utils_lib PUBLIC ${PCL_DEFINITIONS})   
+#target_compile_definitions(cvo_utils_lib PUBLIC ${PCL_DEFINITIONS})   
 target_include_directories(cvo_utils_lib PUBLIC
   #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/UnifiedCvo>
   "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"  
@@ -495,7 +495,9 @@ target_include_directories(cvo_gpu_img_lib PUBLIC
   "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
   #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_compile_definitions(cvo_gpu_img_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=256 ${PCL_DEFINITIONS})
+target_compile_definitions(cvo_gpu_img_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=256
+#  ${PCL_DEFINITIONS}
+)
 set_target_properties(cvo_gpu_img_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   CUDA_SEPERABLE_COMPILATION ON
@@ -512,7 +514,9 @@ target_include_directories(cvo_gpu_img_deep_feature_lib PUBLIC
   "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
   #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_compile_definitions(cvo_gpu_img_deep_feature_lib PUBLIC -DNUM_CLASSES=256 -DFEATURE_DIMENSIONS=5 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=256 ${PCL_DEFINITIONS})
+target_compile_definitions(cvo_gpu_img_deep_feature_lib PUBLIC -DNUM_CLASSES=256 -DFEATURE_DIMENSIONS=5 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=256
+  # ${PCL_DEFINITIONS}
+)
 set_target_properties(cvo_gpu_img_deep_feature_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   CUDA_SEPERABLE_COMPILATION ON
@@ -779,6 +783,12 @@ target_include_directories(cvo_align_two_nn_feature PUBLIC
       "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                  
     )
 target_link_libraries(cvo_align_two_nn_feature cvo_gpu_img_deep_feature_lib cvo_utils_lib kitti  boost_filesystem boost_system)
+
+add_executable(cvo_test ${PROJECT_SOURCE_DIR}/src/experiments/test.cpp)
+target_include_directories(cvo_test PUBLIC
+      "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                  
+    )
+target_link_libraries(cvo_test ${PCL_LIBRARIES})
 
   
 endif()

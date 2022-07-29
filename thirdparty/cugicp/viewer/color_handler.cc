@@ -5,6 +5,13 @@
 
 namespace perl_registration {
 
+  vtkSmartPointer<vtkDataArray> PointCloudColorHandlerIntensityMap::getColor() const{
+    vtkSmartPointer<vtkDataArray> scalars;
+    getColor(scalars);
+    return scalars;
+  }
+  
+
 bool PointCloudColorHandlerIntensityMap::getColor(
     vtkSmartPointer<vtkDataArray>& scalars) const {
   if (!capable_ || !cloud_) {

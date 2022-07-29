@@ -30,7 +30,7 @@ namespace cvo {
                                         const std::vector<float> & left_disparity,
                                         const Calibration & calib,
                                         // output
-                                        const Vec2i & uv,
+                                        const std::pair<int, int> & uv,
                                         Eigen::Ref<Vec3f> result
                                         );
 
