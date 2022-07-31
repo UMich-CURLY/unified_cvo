@@ -503,6 +503,24 @@ set_target_properties(cvo_gpu_img_lib PROPERTIES
   CUDA_SEPERABLE_COMPILATION ON
   COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 
+add_library(cvo_gpu_rgb_lib SHARED ${CVO_GPU_SOURCE})
+add_dependencies(cvo_gpu_rgb_lib cvo_utils_lib lie_group_utils)
+target_link_libraries(cvo_gpu_rgb_lib PRIVATE lie_group_utils cvo_utils_lib yaml-cpp  Ceres::ceres )
+#target_compile_definitions(cvo_gpu_img_lib ${PCL_DEFINITIONS})   
+#set_target_properties(cvo_gpu_img_lib PROPERTIES PUBLIC_HEADER "${CVO_PUBLIC_HEADERS}")
+target_include_directories(cvo_gpu_rgb_lib PUBLIC
+  #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/UnifiedCvo>
+  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
+  #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_compile_definitions(cvo_gpu_rgb_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=3 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=256
+#  ${PCL_DEFINITIONS}
+)
+set_target_properties(cvo_gpu_rgb_lib PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+  CUDA_SEPERABLE_COMPILATION ON
+  COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
+
 
 add_library(cvo_gpu_img_deep_feature_lib SHARED ${CVO_GPU_SOURCE})
 add_dependencies(cvo_gpu_img_deep_feature_lib cvo_utils_lib lie_group_utils)
@@ -616,7 +634,7 @@ target_include_directories(cvo_align_gpu_two_pcd PUBLIC
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-      target_link_libraries(cvo_align_gpu_two_pcd cvo_gpu_img_lib cvo_gpu_img_lib cvo_utils_lib boost_filesystem boost_system pcl_io pcl_common)
+      target_link_libraries(cvo_align_gpu_two_pcd cvo_gpu_rgb_lib cvo_utils_lib boost_filesystem boost_system pcl_io pcl_common)
 
 add_executable(kitti_depth_filtering ${PROJECT_SOURCE_DIR}/src/experiments/main_depth_filtering.cpp)
 target_include_directories(kitti_depth_filtering PUBLIC
@@ -633,7 +651,7 @@ target_include_directories(cvo_align_gpu_two_color_pcd PUBLIC
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_link_libraries(cvo_align_gpu_two_color_pcd cvo_gpu_img_lib cvo_gpu_img_lib cvo_utils_lib boost_filesystem boost_system pcl_io pcl_common)
+target_link_libraries(cvo_align_gpu_two_color_pcd cvo_gpu_rgb_lib cvo_utils_lib boost_filesystem boost_system pcl_io pcl_common)
 
 
 add_executable(cvo_irls_tum ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_tum.cpp)
@@ -784,13 +802,6 @@ target_include_directories(cvo_align_two_nn_feature PUBLIC
     )
 target_link_libraries(cvo_align_two_nn_feature cvo_gpu_img_deep_feature_lib cvo_utils_lib kitti  boost_filesystem boost_system)
 
-add_executable(cvo_test ${PROJECT_SOURCE_DIR}/src/experiments/test.cpp)
-target_include_directories(cvo_test PUBLIC
-      "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                  
-    )
-target_link_libraries(cvo_test ${PCL_LIBRARIES})
-
-  
 endif()
 
 #add_executable(cvo_local_mapping ${PROJECT_SOURCE_DIR}/src/main_local_mapping.cpp )

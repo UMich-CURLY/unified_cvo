@@ -163,14 +163,15 @@ namespace cvo{
     U.col(1) = y;
     U.col(2) = z;
 
-    Eigen::Matrix3f eig_inv;
-    eig_inv <<
-      1/eig(0,0), 0, 0,
-      0, 1/eig(1,1), 0,
-      0, 0, 1/eig(2,2);
+    //Eigen::Matrix3f eig_inv;
+    //eig_inv <<
+    //  1/eig(0,0), 0, 0,
+    //  0, 1/eig(1,1), 0,
+    //  0, 0, 1/eig(2,2);
 
 
-    Eigen::Matrix3f rotated_kernel_inv = U.transpose() * eig_inv * U;
+    //Eigen::Matrix3f rotated_kernel_inv = U.transpose() * eig_inv * U;
+    Eigen::Matrix3f rotated_kernel_inv = U * eig * U.transpose();
 
     return rotated_kernel_inv;
     

@@ -568,7 +568,7 @@ namespace cvo{
   CvoPointCloud::CvoPointCloud(const pcl::PointCloud<pcl::PointXYZRGB> & pc) {
     num_points_ = pc.size();
     num_classes_ = 0;
-    feature_dimensions_ = 5;
+    feature_dimensions_ = 3;
 
     positions_.resize(pc.size());
     features_.resize(num_points_, feature_dimensions_);
@@ -582,8 +582,8 @@ namespace cvo{
       features_(i,0) = ((float)(int)p.r) / 255.0;
       features_(i,1) = ((float)(int)p.g) / 255.0;
       features_(i,2) = ((float)(int)p.b) / 255.0;
-      features_(i, 3) = 0;
-      features_(i, 4) = 0;
+      //features_(i, 3) = 0;
+      //features_(i, 4) = 0;
 
       geometric_types_[i*2] = 0;
       geometric_types_[i*2+1] = 1;
