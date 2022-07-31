@@ -160,6 +160,10 @@ set(TARTAN_HANDLER_SOURCE
 #  ${PROJECT_SOURCE_DIR}/src/graph_optimizer/PoseGraph.cpp
 #  )
 
+set(POINT_SELECION_SOURCE
+  ${PROJECT_SOURCE_DIR}/src/utils/PointSelection.cpp
+  )
+
 set(LIE_GROUP_SOURCE
   ${PROJECT_SOURCE_DIR}/src/cvo/LieGroup.cpp
   )
@@ -285,6 +289,15 @@ if (${PROJECT_NAME}_ENABLE_QT_VIEWER)
   target_link_libraries(pcd_qt_viewer_lib PUBLIC pcl_common pcl_visualization)
 
 endif()
+
+
+add_library(point_selection_utils SHARED ${POINT_SELECION_SOURCE})
+target_compile_definitions(point_selection_utils PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=256) # TODO: change this
+target_include_directories(point_selection_utils PUBLIC
+  #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}>
+  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+  #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${UnifiedCvo_VERSION}> )
 
 add_library(lie_group_utils SHARED ${LIE_GROUP_SOURCE})
 target_include_directories(lie_group_utils PUBLIC
@@ -569,7 +582,15 @@ target_include_directories(cvo_align_gpu_img PUBLIC
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_link_libraries(cvo_align_gpu_img cvo_gpu_img_lib cvo_utils_lib kitti  boost_filesystem boost_system)
+target_link_libraries(cvo_align_gpu_img cvo_gpu_img_lib cvo_utils_lib kitti boost_filesystem boost_system)
+
+add_executable(cvo_align_gpu_img_ncpc ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_raw_image_no_cpc.cpp)
+target_include_directories(cvo_align_gpu_img_ncpc PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_align_gpu_img_ncpc cvo_gpu_img_lib cvo_utils_lib kitti tartan boost_filesystem boost_system point_selection_utils)
 
 add_executable(cvo_irls_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_pcd.cpp)
 target_include_directories(cvo_irls_pcd PUBLIC
@@ -749,7 +770,7 @@ target_include_directories(cvo_indicator_in_sequence PUBLIC
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_link_libraries(cvo_indicator_in_sequence cvo_gpu_img_lib cvo_utils_lib boost_filesystem boost_system kitti)
+target_link_libraries(cvo_indicator_in_sequence cvo_gpu_img_lib cvo_utils_lib boost_filesystem boost_system ${OpenCV_LIBS} kitti tartan)
 
 add_executable(cu_kd_tree_test ${PROJECT_SOURCE_DIR}/src/experiments/cu_kd_tree_test.cu)
 target_include_directories(cu_kd_tree_test PUBLIC
@@ -757,6 +778,7 @@ target_include_directories(cu_kd_tree_test PUBLIC
   )
 target_link_libraries(cu_kd_tree_test cvo_utils_lib cukdtree_lib ${PCL_LIBRARIES})
 endif()
+
 
 #add_executable(cvo_local_mapping ${PROJECT_SOURCE_DIR}/src/main_local_mapping.cpp )
 #target_link_libraries(cvo_local_mapping cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES}  )
