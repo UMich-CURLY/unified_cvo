@@ -6,6 +6,7 @@
 //#include <pcl-1.9/pcl/impl/point_types.hpp>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/common/transforms.h>
+#include <pcl/impl/point_types.hpp>
 #include <vector>
 #include <utility>
 #include <random>
@@ -41,6 +42,12 @@ void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string 
     pc_all += pc_curr;
   }
   pcl::io::savePCDFileASCII(fname, pc_all);
+}
+
+void add_normal_noise(pcl::PointCloud<pcl::PointNormal> & input,
+                      pcl::PointCloud<pcl::PointXYZ> & output,
+                      float sigma) {
+  
 }
 
 void gen_random_poses(std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> & poses, int num_poses,

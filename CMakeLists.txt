@@ -235,6 +235,7 @@ target_include_directories(elas PUBLIC
 set_target_properties(elas PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 add_library(tum SHARED ${TUM_HANDLER_SOURCE})
+target_compile_definitions(tum PUBLIC -DCVO_NDEBUG)  
 target_include_directories(tum PUBLIC
   #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}>
   "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"

@@ -29,7 +29,6 @@ namespace cvo{
 
 
 #define MAX_RES_PER_POINT 8
-#define NUM_THREADS 6
 
 
  
