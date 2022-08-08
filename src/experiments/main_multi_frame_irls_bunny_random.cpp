@@ -70,9 +70,10 @@ void gen_random_poses(std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eige
       axis << (float)dist_trans(e2), (float)dist_trans(e2), (float)dist_trans(e2);
       axis = axis.normalized().eval();
       
-      rot = Eigen::AngleAxisf(dist(e2)*M_PI, Eigen::Vector3f::UnitX())
-        * Eigen::AngleAxisf(dist(e2)*M_PI,  Eigen::Vector3f::UnitY())
-        * Eigen::AngleAxisf(dist(e2)*M_PI, Eigen::Vector3f::UnitZ());
+      //rot = Eigen::AngleAxisf(dist(e2)*M_PI, Eigen::Vector3f::UnitX())
+      //  * Eigen::AngleAxisf(dist(e2)*M_PI,  Eigen::Vector3f::UnitY())
+      //  * Eigen::AngleAxisf(dist(e2)*M_PI, Eigen::Vector3f::UnitZ());
+      rot = Eigen::AngleAxisf(max_angle_axis * M_PI, axis);
       poses[i] = Eigen::Matrix4f::Identity();
       poses[i].block<3,3>(0,0) = rot;
       poses[i](0,3) = dist_trans(e2);
