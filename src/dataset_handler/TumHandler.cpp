@@ -3,6 +3,7 @@
 #include <string>
 #include <algorithm>
 #include <filesystem>
+#include <iterator>
 #include "utils/def_assert.hpp"
 #include <boost/filesystem.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -70,7 +71,7 @@ namespace cvo {
     }
 
 
-    std::copy(dep_img.begin<uint16_t>(), dep_img.end<uint16_t>(), dep.begin());
+    std::copy(dep_img.begin<uint16_t>(), dep_img.end<uint16_t>(), std::back_inserter(dep));
     assert(dep.size() == dep_img.total());
 
     return 0;
