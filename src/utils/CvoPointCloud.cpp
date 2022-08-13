@@ -1,6 +1,6 @@
 #include <string>
 #include <fstream>
-#include <cassert>
+#include "utils/def_assert.hpp"
 #include <cmath>
 #include <cstdio>
 #include <iostream>
@@ -1232,25 +1232,27 @@ namespace cvo{
       p.x = positions_[i]( 0);
       p.y = positions_[i]( 1);
       p.z = positions_[i]( 2);
-      
-      uint8_t r = static_cast<uint8_t>(std::min(255, (int)(features_(i,2) * 255) ) );
-      uint8_t g = static_cast<uint8_t>(std::min(255, (int)(features_(i,1) * 255) ) );
-      uint8_t b = static_cast<uint8_t>(std::min(255, (int)(features_(i,0) * 255)));
-      //if (num_classes_ ) {
-      //  int max_class;
-      //  labels_.row(i).maxCoeff(&max_class);
-      //  auto c = label2color[max_class];
-      //  auto r = std::get<0>(c);
-      //  auto g = std::get<1>(c);
-      //  auto b = std::get<2>(c);
-      //if (i == 0)
-      //  std::cout<<"export to pcd: color r is "<< (int )r <<std::endl;
-      // }
-      //uint32_t rgb = ((uint32_t) r << 16 |(uint32_t) g << 8  | (uint32_t) b ) ;
-      //p.rgb = *reinterpret_cast<float*>(&rgb);
-      p.r = r;
-      p.g = g;
-      p.b = b;
+
+      if (feature_dimensions_) {
+        uint8_t r = static_cast<uint8_t>(std::min(255, (int)(features_(i,2) * 255) ) );
+        uint8_t g = static_cast<uint8_t>(std::min(255, (int)(features_(i,1) * 255) ) );
+        uint8_t b = static_cast<uint8_t>(std::min(255, (int)(features_(i,0) * 255)));
+        //if (num_classes_ ) {
+        //  int max_class;
+        //  labels_.row(i).maxCoeff(&max_class);
+        //  auto c = label2color[max_class];
+        //  auto r = std::get<0>(c);
+        //  auto g = std::get<1>(c);
+        //  auto b = std::get<2>(c);
+        //if (i == 0)
+        //  std::cout<<"export to pcd: color r is "<< (int )r <<std::endl;
+        // }
+        //uint32_t rgb = ((uint32_t) r << 16 |(uint32_t) g << 8  | (uint32_t) b ) ;
+        //p.rgb = *reinterpret_cast<float*>(&rgb);
+        p.r = r;
+        p.g = g;
+        p.b = b;
+      }
       pc[i] = p;
     }
     
