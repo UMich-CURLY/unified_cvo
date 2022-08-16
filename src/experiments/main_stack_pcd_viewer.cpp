@@ -279,6 +279,8 @@ int main(int argc, char** argv) {
     //std::vector<cvo::CvoFrame::Ptr> frames;
     //std::vector<std::shared_ptr<cvo::CvoPointCloud>> pcs;
     //std::unordered_map<int, int> id_to_index;
+    frame_inds.pop_back();
+    BA_poses.pop_back(); 
     for (int i = 0; i<frame_inds.size(); i++) {
 
       int curr_frame_id = frame_inds[i];

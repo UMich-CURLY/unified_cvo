@@ -1369,6 +1369,7 @@ namespace cvo{
                                 CvoPointCloud & output) {
     output.num_points_ = input.num_points();
     output.num_classes_ = input.num_classes();
+    output.feature_dimensions_ = input.feature_dimensions();
     //output.features_ = input.features();
     copy_eigen_dynamic_matrix(&input.features_,
                               &output.features_);
