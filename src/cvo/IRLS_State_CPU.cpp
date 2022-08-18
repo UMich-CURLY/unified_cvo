@@ -9,6 +9,7 @@
 #include <vector>
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/CvoParams.hpp"
+#include "utils/def_assert.hpp"
 namespace cvo {
 
 
@@ -321,6 +322,11 @@ namespace cvo {
     //  return 0;
     
   }
+
+  void BinaryStateCPU::export_association(Association & output_association) {
+    assert(0);
+  }
+
 
   /*
   void BinaryStateCPU::update_jacobians(double ** jacobians) {

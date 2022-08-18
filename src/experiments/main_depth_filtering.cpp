@@ -6,6 +6,7 @@
 #include <pcl/point_types.h>
 #include "cvo/CvoFrameGPU.hpp"
 #include "cvo/CvoFrame.hpp"
+#include "cvo/Association.hpp"
 #include "utils/Calibration.hpp"
 #include "utils/VoxelMap.hpp"
 #include "utils/ImageStereo.hpp"

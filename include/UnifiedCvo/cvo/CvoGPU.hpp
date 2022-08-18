@@ -1,7 +1,7 @@
 #pragma once
 #include "utils/data_type.hpp"
 #include "cvo/CvoParams.hpp"
-#include "cvo/Association.hpp"
+//#include "cvo/Association.hpp"
 #include "utils/CvoPointCloud.hpp"
 #include "utils/CvoPoint.hpp"
 //#include "utils/CvoFrame.hpp"
@@ -29,6 +29,7 @@ namespace cvo{
 
   class CvoFrame;
   class BinaryState;
+  class Association;
   
   class CvoGPU{
 
@@ -112,10 +113,14 @@ namespace cvo{
 
     /**
      * @brief Aligning multiple point clouds
-     * @param frames The vector of CvoFrame, each containing a CvoPointCloud and an initial pose. 
-     *               The registration results will be recorded in the pose_vec attribute of CvoFrame. 
-     * @param edge_states The list of connection between different frames. Each edge connects two.
+     * @param frames The vector of CvoFrame, each containing a CvoPointCloud and
+an initial pose.
+     *               The registration results will be recorded in the pose_vec
+attribute of CvoFrame.
+     * @param edge_states The list of connection between different frames. Each
+edge connects two.
      * @param registration_seconds The running time in seconds
+     * @param inliers Inliers include the association results
      * @return 0 if sucessful, otherwise failure
      */
     int align(// inputs
@@ -123,7 +128,8 @@ namespace cvo{
               const std::vector<bool> & frames_to_hold_const,              
               const std::list<std::shared_ptr<BinaryState>> & edge_states,
               // outputs
-              double *registration_seconds=nullptr
+              double *registration_seconds=nullptr,
+              std::list<std::shared_ptr<Association>> * inliers=nullptr
               ) const;
 
     

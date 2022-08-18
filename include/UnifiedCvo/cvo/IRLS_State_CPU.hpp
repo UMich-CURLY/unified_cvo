@@ -42,6 +42,8 @@ namespace cvo {
     void add_residual_to_problem(ceres::Problem & problem);
                                  //ceres::LocalParameterization * parameterization);
 
+    void export_association(Association & output_association);
+
     /*
     virtual void update_residuals(double * residuals) {
       if (residuals) {
