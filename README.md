@@ -82,7 +82,8 @@ Make sure the dataset folder contains the `cvo_calib.txt` and the parameter yaml
 
 ---
 
-### Install this library and import from cmake when using it in another repository
+### Installation 
+If you want to import Unified CVO in your CMAKE project
 * Install this library: `make install`
 * In your own repository's `CMakeLists.txt`:
  ```
@@ -100,23 +101,34 @@ Make sure the dataset folder contains the `cvo_calib.txt` and the parameter yaml
 
 ---
 
-### How to use the library?
+### Tutorial: How to use the library?
 
-Compile the CvoGPU library for a customized stereo point cloud with 5 dimension color channels (r,g,b, gradient_x, gradient_y) and 19 semantic classes:
+#### Edit CMakeLists.txt
 
-#### CMakeLists.txt
+First, let's decide the dimension of intensity features and semantic features. For example, if you compile this library for a customized stereo point cloud with 5 dimension color channels (r,g,b, gradient_x, gradient_y) and 19 semantic classes (a distribution vector of dimension 19):
 
 ```
 add_library(cvo_gpu_img_lib ${CVO_GPU_SOURCE})                                                               
 target_link_libraries(cvo_gpu_img_lib PRIVATE lie_group_utils cvo_utils_lib  )                               
-target_compile_definitions(cvo_gpu_img_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)                  
+target_compile_definitions(cvo_gpu_img_lib PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)   # the dimension of the feature/semantics are declared here              
 set_target_properties(cvo_gpu_img_lib PROPERTIES                                                               
 POSITION_INDEPENDENT_CODE ON                                                                                 
 CUDA_SEPERABLE_COMPILATION ON                                                                                 
 COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>") 
 ```
 
-#### Example [experiment code for KITTI stereo](https://github.com/UMich-CURLY/unified_cvo/blob/release/src/experiments/main_cvo_gpu_align_raw_image.cpp) 
+#### Examples on calling the functions:
+1. [experiment code for aligning two point clouds](https://github.com/UMich-CURLY/unified_cvo/blob/multiframe/src/experiments/main_cvo_gpu_align_two_color_pcd.cpp)
+```
+add_executable(cvo_align_gpu_two_color_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_two_color_pcd.cpp)
+target_include_directories(cvo_align_gpu_two_color_pcd PUBLIC
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_align_gpu_two_color_pcd cvo_gpu_img_lib cvo_gpu_img_lib cvo_utils_lib boost_filesystem boost_system pcl_io pcl_common)
+
+```
+
+2. [experiment code for KITTI stereo](https://github.com/UMich-CURLY/unified_cvo/blob/release/src/experiments/main_cvo_gpu_align_raw_image.cpp) 
 
 ```
 add_executable(cvo_align_gpu_img ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_raw_image.cpp)     
@@ -171,8 +183,9 @@ is_using_semantics: 0           # if semantic kernel is computed. Enable it if u
 is_using_range_ell: 0
 is_using_kdtree: 0
 is_exporting_association: 0
-multiframe_using_cpu: 1
 nearest_neighbors_max: 512
+multiframe_using_cpu: 0
+is_using_geometric_type: 0
 
 ```
 
