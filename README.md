@@ -118,7 +118,17 @@ COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 ```
 
 #### Examples on calling the functions:
-1. [experiment code for aligning two point clouds](https://github.com/UMich-CURLY/unified_cvo/blob/multiframe/src/experiments/main_cvo_gpu_align_two_color_pcd.cpp)
+1. [experiment code for aligning two geometric point clouds, without color/semantics](https://github.com/UMich-CURLY/unified_cvo/blob/multiframe/src/experiments/main_cvo_gpu_align_two_pcd.cpp)
+```
+add_executable(cvo_align_gpu_two_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_two_pcd.cpp)
+target_include_directories(cvo_align_gpu_two_pcd PUBLIC
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+      target_link_libraries(cvo_align_gpu_two_pcd cvo_gpu_img_lib cvo_gpu_img_lib cvo_utils_lib boost_filesystem boost_system pcl_io pcl_common)
+
+```
+
+2. [experiment code for aligning two color point clouds, without semantics](https://github.com/UMich-CURLY/unified_cvo/blob/multiframe/src/experiments/main_cvo_gpu_align_two_color_pcd.cpp)
 ```
 add_executable(cvo_align_gpu_two_color_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_two_color_pcd.cpp)
 target_include_directories(cvo_align_gpu_two_color_pcd PUBLIC
@@ -128,12 +138,15 @@ target_link_libraries(cvo_align_gpu_two_color_pcd cvo_gpu_img_lib cvo_gpu_img_li
 
 ```
 
-2. [experiment code for KITTI stereo](https://github.com/UMich-CURLY/unified_cvo/blob/release/src/experiments/main_cvo_gpu_align_raw_image.cpp) 
+3. [experiment code for aligning KITTI stereo semantic point clouds](https://github.com/UMich-CURLY/unified_cvo/blob/release/src/experiments/https://github.com/UMich-CURLY/unified_cvo/blob/multiframe/src/experiments/main_cvo_gpu_align_semantic_image.cpp) 
 
 ```
-add_executable(cvo_align_gpu_img ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_raw_image.cpp)     
-target_compile_definitions(cvo_align_gpu_img PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)                 
-target_link_libraries(cvo_align_gpu_img cvo_gpu_img_lib cvo_utils_lib kitti  boost_filesystem boost_system) 
+add_executable(cvo_align_gpu_semantic_img ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_semantic_image.cpp)
+target_include_directories(cvo_align_gpu_semantic_img PUBLIC
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_align_gpu_semantic_img cvo_gpu_img_lib cvo_utils_lib kitti  boost_filesystem boost_system)
+
 ```
 
 #### Example calibration file (cvo_calib.txt)     
