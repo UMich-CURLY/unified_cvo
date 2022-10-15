@@ -74,10 +74,10 @@ Before registration (`before_align.pcd`) |  After registration (`after_align.pcd
 
 
 #### Frame-to-Frame Registration Demo on Kitti
-Make sure the dataset folder contains the `cvo_calib.txt` and the parameter yaml file is specified. Now inside docker container:
-* GeometricCVO: `bash scripts/kitti_geometric_stereo.bash`
-* ColorCvo:     `bash scripts/kitti_intensity_stereo.bash`
-* SemanticCvo:  `bash scripts/cvo_semantic_img_oct26_gpu0.bash`
+Make sure the folder of Kitti Stereo sequences contains the `cvo_calib.txt` and the parameter yaml file is specified. Now inside docker container:
+* Geometric Registration: `bash scripts/kitti_geometric_stereo.bash`
+* Color Registration:     `bash scripts/kitti_intensity_stereo.bash`
+* Semantic Registration:  `bash scripts/cvo_semantic_img_oct26_gpu0.bash`
 
 
 ---
@@ -103,9 +103,108 @@ If you want to import Unified CVO in your CMAKE project
 
 ### Tutorial: How to use the library?
 
-#### Edit CMakeLists.txt
+The function that aligns the two input point clouds are declared in `include/UnifiedCvo/cvo/CvoGPU.hpp`:
+```
+int align(/// inputs
+          source_pointcloud,
+          target_pointcloud,
+          init_pose_from_target_frame_to_source_frame,
+          /// outputs
+          result_pose_from_source_frame_to_target_frame,
+          result_data_correspondence,
+          total_running_time
+        )
+```
 
-First, let's decide the dimension of intensity features and semantic features. For example, if you compile this library for a customized stereo point cloud with 5 dimension color channels (r,g,b, gradient_x, gradient_y) and 19 semantic classes (a distribution vector of dimension 19):
+#### Definitions of the point clouds
+We currently support two data structures to represent point clouds. The two data structures could support many types of information. Only information necessary to the user has to be assigned, while the remaining can be initialized as zero. 
+
+1. PCL format: defined in `include/UnifiedCvo/utils/PointSegmentedDistribution.hpp` 
+```
+  template <unsigned int FEATURE_DIM, unsigned int NUM_CLASS>  
+  PointSegmentedDistribution
+  {
+    PCL_ADD_POINT4D;                      /// x, y, z
+    PCL_ADD_RGB;                          /// r, g, b
+    float features[FEATURE_DIM];          /// features invariant to transformations, scaled between [0,1]. 
+                                          /// It can include rescaled colors, lidar intensities, 
+                                          /// image gradients, etc
+    int   label;                          /// its semantic label
+    float label_distribution[NUM_CLASS];  /// semantic distribution vector, whose sum is 1.0
+    float geometric_type[2];              /// (optional) edge: 0; surface: 1
+    float normal[3];                      /// (optional) normal vector at this point
+    float covariance[9];                  /// (optional) sample covariance at this point
+    float cov_eigenvalues[3];             /// (optional) eigenvalues of the covariance matrix
+  };
+```
+`FEATURE_DIM` and `NUM_CLASS` are template arguments and have to be determined at compile time in `CMakeLists.txt`. Values of each field can be assigned like a regular Point object in PCL library. If you don't use some fields, they can be assigned as zero.
+
+2. Our customized point cloud data structure, `include/UnifiedCvo/utils/CvoPointCloud`. It wraps around the same pointwise information like 3D coordinates, invariant features, semantic distributions, etc. Moreover, it provides constructors from stereo images, RGB-D images, lidar point clouds, and PCL format point clouds.
+
+Examples:
+```
+/// Construct CvoPointCloud by inserting points 
+CvoPointCloud pc(FEATURE_DIMENSIONS, NUM_CLASSES);
+pc.reserve(num_points, FEATURE_DIMENSIONS, NUM_CLASSES);
+for (int i = 0; i < num_points; i++) {
+  /// xyz: the 3D coordinates of the points
+  /// feature: the invariant features, such as color, image gradients, etc. Its dimension is 
+  ///            FEATURE_DIMENSIONS. If you don't use it,
+  ///            they can be assigend as zero, i.e. Eigen::VectorXf::Zero(FEATURE_DIMENSION)
+  /// semantics: the semantic distribution vector, whose sum is 1. Its dimension is
+  ///            NUM_CLASSES. If you don't use it, they can be assigned as zero
+  /// geometric_type: A 2-dim vector, deciding whether the point is an edge or a surface. 
+  ///            They can be assigned as zero if you don't need this information
+  pc.add_point(i, xyz, feature, semantics, geometric_type);
+}
+ 
+```
+
+
+```
+/// CvoPointCloud from pcl::PointXYZ, with only geometric information
+pcl::PointCloud<pcl::PointXYZ>::Ptr source_pcd(new pcl::PointCloud<pcl::PointXYZ>);
+pcl::io::loadPCDFile(source_file, *source_pcd);
+std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_pcd));
+```
+
+```
+/// CvoPointCloud from pcl::PointXYZRGB, with both geometric and semantic information
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr source_pcd(new pcl::PointCloud<pcl::PointXYZRGB>);
+pcl::io::loadPCDFile(source_file, *source_pcd);
+std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_pcd));
+```
+
+```
+/// CvoPointCloud from RGB-D camera with color information
+  cv::Mat source_rgb, source_dep;
+  tum.read_next_rgbd(source_rgb, source_dep);
+  std::vector<uint16_t> source_dep_data(source_dep.begin<uint16_t>(), source_dep.end<uint16_t>());
+  std::shared_ptr<cvo::ImageRGBD<uint16_t>> source_raw(new cvo::ImageRGBD(source_rgb, source_dep_data));
+  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw,
+                                                                    calib
+                                                                    ));
+```
+
+
+```
+/// CvoPointCloud from Stereo camera with color and semantic information
+  cv::Mat source_left, source_right;
+  std::vector<float> semantics_source;
+  kitti.read_next_stereo(source_left, source_right, NUM_SEMANTIC_CLASSES, semantics_source);
+  std::shared_ptr<cvo::ImageStereo> source_raw(new cvo::ImageStereo(source_left, source_right, NUM_CLASSES, semantics_source));
+  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw, calib));
+
+```
+
+
+#### Edit CMakeLists.txt to build the library
+
+Based on the dimension of intensity features and the semantic features, we will need to add compile definitions in `CMakeLists.txt`:
+```
+target_compile_definitions(cvo_gpu_img_lib PRIVATE -DNUM_CLASSES=${YOUR_FEATURE_DIMENSION} -DFEATURE_DIMENSIONS=${YOUR_SEMANTIC_VECTOR_DIMESNION}) 
+```
+For example, if you compile this library for a customized stereo point cloud with 5 dimension color channels `(r,g,b, gradient_x, gradient_y)` and 19 semantic classes (a distribution vector of dimension 19):
 
 ```
 add_library(cvo_gpu_img_lib ${CVO_GPU_SOURCE})                                                               
@@ -118,7 +217,7 @@ COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 ```
 
 #### Examples on calling the functions:
-1. [experiment code for aligning two geometric point clouds, without color/semantics](https://github.com/UMich-CURLY/unified_cvo/blob/multiframe/src/experiments/main_cvo_gpu_align_two_pcd.cpp)
+1. [Example code for aligning two geometric point clouds, without color/semantics](https://github.com/UMich-CURLY/unified_cvo/blob/multiframe/src/experiments/main_cvo_gpu_align_two_pcd.cpp)
 ```
 add_executable(cvo_align_gpu_two_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_two_pcd.cpp)
 target_include_directories(cvo_align_gpu_two_pcd PUBLIC
@@ -128,7 +227,7 @@ target_include_directories(cvo_align_gpu_two_pcd PUBLIC
 
 ```
 
-2. [experiment code for aligning two color point clouds, without semantics](https://github.com/UMich-CURLY/unified_cvo/blob/multiframe/src/experiments/main_cvo_gpu_align_two_color_pcd.cpp)
+2. [Example code for aligning two color point clouds, without semantics](https://github.com/UMich-CURLY/unified_cvo/blob/multiframe/src/experiments/main_cvo_gpu_align_two_color_pcd.cpp)
 ```
 add_executable(cvo_align_gpu_two_color_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_two_color_pcd.cpp)
 target_include_directories(cvo_align_gpu_two_color_pcd PUBLIC
@@ -138,7 +237,7 @@ target_link_libraries(cvo_align_gpu_two_color_pcd cvo_gpu_img_lib cvo_gpu_img_li
 
 ```
 
-3. [experiment code for aligning KITTI stereo semantic point clouds](https://github.com/UMich-CURLY/unified_cvo/blob/release/src/experiments/https://github.com/UMich-CURLY/unified_cvo/blob/multiframe/src/experiments/main_cvo_gpu_align_semantic_image.cpp) 
+3. [Example code for aligning KITTI stereo semantic point clouds](https://github.com/UMich-CURLY/unified_cvo/blob/release/src/experiments/https://github.com/UMich-CURLY/unified_cvo/blob/multiframe/src/experiments/main_cvo_gpu_align_semantic_image.cpp) 
 
 ```
 add_executable(cvo_align_gpu_semantic_img ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_semantic_image.cpp)
