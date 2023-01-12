@@ -262,6 +262,7 @@ namespace cvo {
       R =  I + (stheta/theta)*A + oneMinusCosTheta2*A2;
       Jl = dt*I + oneMinusCosTheta2*A + ((dt*theta-stheta)/(theta2*theta))*A2;
     }
+
     Eigen::Matrix<float, 3, 4> X;
     X(0,0) = 1.0; X(1,1) = 1.0;  X(2,2) = 1.0;
     X.block<3,3>(0,0) = R;

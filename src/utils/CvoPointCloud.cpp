@@ -40,6 +40,10 @@ namespace cvo{
   static bool is_good_point(const Vec3f & xyz, const std::pair<int, int> & uv, int h, int w ) {
     int u = uv.first;
     int v = uv.second;
+
+    if (std::isnan(xyz(0)) || std::isnan(xyz(1)) || std::isnan(xyz(2)) )
+      return false;
+    
     if ( u < 2 || u > w -2 || v < 100 || v > h-30 )
       return false;
 
@@ -51,6 +55,10 @@ namespace cvo{
 
   // filter away pixels that are too far away
   static bool is_good_point(const Vec3f & xyz ) {
+    if (std::isnan(xyz(0)) || std::isnan(xyz(1)) || std::isnan(xyz(2)) )
+      return false;
+
+    
     if (xyz.norm() > 55) // 55
       return false;
 
@@ -482,6 +490,7 @@ namespace cvo{
  
       //uint16_t dep = depth_image.at<uint16_t>(cv::Point(u, v));
       DepthType dep = depth_image[v * w + u];
+      //std::cout<<__func__<<": dep["<<v<<", "<<u<<"] = "<<dep<<std::endl;
         
       if(dep!=0 && !isnan(dep)){
 

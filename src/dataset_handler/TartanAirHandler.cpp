@@ -111,7 +111,7 @@ namespace cvo {
         if (pix > 100)
           pix = std::nanf("1");
           //  raw_dep.at<float>(r, c) = std::nanf("1");
-        dep_vec[ r * raw_dep.cols + c] =  5000 * pix;
+        dep_vec[ r * raw_dep.cols + c] =  pix;
       }
     }
     // scale by 5000 and flatten to vector
