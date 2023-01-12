@@ -85,6 +85,14 @@ namespace cvo {
     return frame2_.get();
   }
 
+  void BinaryStateGPU::export_association(Association & output) {
+    gpu_association_to_cpu(A_host_,
+                           output,
+                           frame1()->points->size(),
+                           frame2()->points->size(),
+                           num_neighbors_);
+  }
+
   
 }
 

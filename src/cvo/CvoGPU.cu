@@ -2025,6 +2025,39 @@ namespace cvo{
   }
   
   
+  int CvoGPU::align(// inputs
+                    std::vector<CvoFrame::Ptr> & frames,  // point clouds, poses, the outputs are within
+                    const std::vector<bool> & frames_to_hold_const,              
+                    const std::list<BinaryState::Ptr> & edge_states,
+                    // outputs
+                    double *registration_seconds,
+                    std::list<std::shared_ptr<Association>> * inliers
+                    ) const {
+
+    std::cout<<"CvoGPU.cpp:align() get called\n";
+      
+    auto start = std::chrono::system_clock::now();
+    CvoBatchIRLS batch_irls_problem(frames, frames_to_hold_const,
+                                    edge_states, &params);
+    
+    batch_irls_problem.solve();
+    
+    
+    auto end = std::chrono::system_clock::now();
+    std::chrono::duration<double, std::milli> t_all = end - start;
+    if (registration_seconds)
+      *registration_seconds = (double)t_all.count() / 1000;
+    if (inliers) {
+      for (auto state_ptr : edge_states) {
+        Association::Ptr assoc(new Association);
+        state_ptr->export_association(*assoc);
+        inliers->push_back(assoc);
+      }
+    }
+    return 0;
+    
+  }
+  
 
 
 }

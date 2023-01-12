@@ -3,9 +3,11 @@
 #include <Eigen/Dense>
 #include <ceres/ceres.h>
 #include <memory>
+#include "cvo/Association.hpp"
 //#include <ceres/local_parameterization.h>
 
 namespace cvo {
+
   class BinaryState {
   public:
     using Mat34d_row = Eigen::Matrix<double, 3, 4, Eigen::RowMajor>;
@@ -19,6 +21,8 @@ namespace cvo {
                                          // ceres::LocalParameterization * parameterization);
 
     virtual void update_ell () = 0;
+
+    virtual void export_association(Association & output_assocation) = 0;
     
   };
 
