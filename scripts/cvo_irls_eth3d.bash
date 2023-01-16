@@ -8,9 +8,12 @@ frame=$2
 cd build 
 make -j 
 cd ..
-#./build/bin/cvo_irls_tum /home/rayzhang/media/Samsung_T5/tum/freiburg3_structure_notexture_near cvo_params/cvo_intensity_params_irls_tum.yaml graph_defs/fr3/tum_fr3_structure_notexture_near/10_graph.txt /home/rayzhang/media/Samsung_T5/tum/freiburg3_structure_notexture_near/CVO.txt  
+# dsm 
 #gdb -ex run --args \
-./build/bin/cvo_irls_tum /home/rayzhang/media/Samsung_T5/eth3d/${seq} /home/rayzhang/dsm/Examples/TumExample/cvo_rgbd_params_eth3d.yaml /home/rayzhang/dsm/eth3d_${seq}_aug8/${frame}_graph.txt 1 /home/rayzhang/media/Samsung_T5/eth3d/${seq}/
+#./build/bin/cvo_irls_tum /home/rayzhang/media/Samsung_T5/eth3d/${seq} /home/rayzhang/dsm/Examples/TumExample/cvo_rgbd_params_eth3d.yaml /home/rayzhang/dsm/eth3d_${seq}/${frame}_graph.txt 1 /home/rayzhang/media/Samsung_T5/eth3d/${seq}/
+
+# single tests
+./build/bin/cvo_irls_tum /home/rayzhang/media/Samsung_T5/eth3d/${seq} /home/rayzhang/dsm/Examples/TumExample/cvo_rgbd_params_eth3d.yaml /home/rayzhang/unified_cvo/${frame}_graph.txt 1 /home/rayzhang/media/Samsung_T5/eth3d/${seq}/
 
 cat /home/rayzhang/dsm/eth3d_${seq}/${frame}_graph.txt 
 #echo "Evaluation: "

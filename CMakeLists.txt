@@ -799,9 +799,12 @@ target_link_libraries(cu_kd_tree_test cvo_utils_lib cukdtree_lib ${PCL_LIBRARIES
 
 add_executable(cvo_align_two_nn_feature ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_two_nn_feature_pcd.cpp)
 target_include_directories(cvo_align_two_nn_feature PUBLIC
-      "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                  
-    )
+      "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>")
 target_link_libraries(cvo_align_two_nn_feature cvo_gpu_img_deep_feature_lib cvo_utils_lib kitti  boost_filesystem boost_system)
+
+add_executable(gen_kitti_depth_npy ${PROJECT_SOURCE_DIR}/src/experiments/main_depth_gen.cpp )
+target_include_directories(gen_kitti_depth_npy PUBLIC  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>")
+target_link_libraries(gen_kitti_depth_npy cvo_utils_lib kitti boost_filesystem cnpy)
 
 endif()
 
