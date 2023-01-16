@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
                                                                       ));
     //if (i == 0)
     std::cout<<"First point is "<<target->at(0).transpose()<<std::endl;    
-    target->write_to_color_pcd(std::to_string(i+1)+".pcd");  
+    //target->write_to_color_pcd(std::to_string(i+1)+".pcd");  
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
 
     Eigen::Matrix4f result, init_guess_inv;
