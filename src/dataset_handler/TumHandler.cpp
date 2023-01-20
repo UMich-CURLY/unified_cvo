@@ -2,7 +2,7 @@
 #include <fstream>
 #include <string>
 #include <algorithm>
-#include <filesystem>
+#include <experimental/filesystem>
 #include <iterator>
 #include "utils/def_assert.hpp"
 #include <boost/filesystem.hpp>
@@ -102,7 +102,7 @@ namespace cvo {
   void TumHandler::load_file_name(string assoc_pth, vector<string> &vstrRGBName, \
                                   vector<string> &vstrRGBPth, vector<string> &vstrDepPth){
     std::ifstream fAssociation;
-    assert (std::filesystem::exists(assoc_pth));
+    assert (experimental::filesystem::exists(assoc_pth));
 
     fAssociation.open(assoc_pth.c_str());
     while(!fAssociation.eof())
