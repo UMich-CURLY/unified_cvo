@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
     // accum_output<<std::flush;
     
     Eigen::Quaternionf q(accum_mat.block<3,3>(0,0));
-    accum_output<<vstrRGBName[i]<<" ";
+    accum_output<<vstrRGBName[i+1]<<" ";
     accum_output<<accum_mat(0,3)<<" "<<accum_mat(1,3)<<" "<<accum_mat(2,3)<<" "; 
     accum_output<<q.x()<<" "<<q.y()<<" "<<q.z()<<" "<<q.w()<<"\n";
     accum_output.flush();
