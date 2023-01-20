@@ -806,6 +806,13 @@ add_executable(gen_kitti_depth_npy ${PROJECT_SOURCE_DIR}/src/experiments/main_de
 target_include_directories(gen_kitti_depth_npy PUBLIC  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>")
 target_link_libraries(gen_kitti_depth_npy cvo_utils_lib kitti boost_filesystem cnpy)
 
+add_executable(main_cvo_gpu_align_stereo_tartan ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_stereo_tartan.cpp)
+target_include_directories(main_cvo_gpu_align_stereo_tartan PUBLIC
+        #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}>
+        #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(main_cvo_gpu_align_stereo_tartan cvo_gpu_img_lib cvo_cpu_lib tum cvo_utils_lib boost_filesystem boost_system tartan)
 endif()
 
 #add_executable(cvo_local_mapping ${PROJECT_SOURCE_DIR}/src/main_local_mapping.cpp )
