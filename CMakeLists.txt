@@ -26,10 +26,10 @@ endif()
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # Release Mode
-set(CMAKE_BUILD_TYPE Release)
+#set(CMAKE_BUILD_TYPE Release)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -O3 -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -lmkl_intel_lp64 -lmkl_core -lmkl -liomp -msse  -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
-#set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Debug)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -g  -msse -msse2 -msse3 -msse4 -mavx2 -ftree-vectorize" )
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}   -march=native" )
 #set(BUILD_TYPE RelWithDebInfo)
@@ -321,7 +321,7 @@ target_include_directories(bki_mapping_lib PUBLIC
   #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
   "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"  
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_link_libraries(bki_mapping_lib cvo_utils_lib pcl_filters pcl_io pcl_search pcl_visualization )
+target_link_libraries(bki_mapping_lib cvo_utils_lib cvo_gpu_img_lib pcl_filters pcl_io pcl_search pcl_visualization )
 
 #if (${PROJECT_NAME}_ENABLE_CUDA)
 #add_library(bki_mapping_cov_lib SHARED ${BKI_MAPPING_SOURCE})
@@ -810,6 +810,9 @@ endif()
 
 #add_executable(cvo_local_mapping ${PROJECT_SOURCE_DIR}/src/main_local_mapping.cpp )
 #target_link_libraries(cvo_local_mapping cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES}  )
+add_executable(eth3d_local_mapping ${PROJECT_SOURCE_DIR}/src/experiments/main_local_mapping_eth3d.cpp )
+target_link_libraries(eth3d_local_mapping cvo_gpu_img_lib boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES} tum bki_mapping_lib)
+
 
 #################################################################
 # install

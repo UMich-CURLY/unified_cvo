@@ -91,9 +91,9 @@ namespace semantic_bki {
                                float max_range = -1);
 
 
-        //void insert_pointcloud(const PCLPointCloud &cloud, const point3f &origin, float ds_resolution,
-          //                     float free_res = 2.0f,
-            //                   float max_range = -1);
+        void insert_pointcloud(const PCLPointCloud &cloud, const point3f &origin, float ds_resolution,
+                               float free_res = 2.0f,
+                               float max_range = -1);
 
         //void insert_training_data(const GPPointCloud &cloud);
 
@@ -373,15 +373,18 @@ namespace semantic_bki {
         static bool search_callback(GPPointType *p, void *arg);
 
         /// Downsample PCLPointCloud using PCL VoxelGrid Filtering.
-        //void downsample(const PCLPointCloud &in, PCLPointCloud &out, float ds_resolution) const;
+        void downsample(const PCLPointCloud &in, PCLPointCloud &out, float ds_resolution) const;
 
         /// Sample free training points along sensor beams.
         void beam_sample(const point3f &hits, const point3f &origin, PointCloud &frees,
                          float free_resolution) const;
 
         /// Get training data from one sensor scan.
-        void get_training_data(const CVOPointCloud * cloud, const point3f &origin, float ds_resolution,
+        void get_training_data(const PCLPointCloud & cloud, const point3f &origin, float ds_resolution,
                                float free_resolution, float max_range, GPPointCloud &xy) const;
+      void get_training_data(const cvo::CvoPointCloud * cloud, const point3f &origin, float ds_resolution,
+                               float free_resolution, float max_range, GPPointCloud &xy) const;
+      
 
         float resolution;
         float block_size;
