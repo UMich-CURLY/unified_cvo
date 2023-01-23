@@ -142,7 +142,7 @@ namespace cvo {
     int num_classes() const {return num_classes_;}
     int num_features() const {return feature_dimensions_;}
     int feature_dimensions() const {return feature_dimensions_;}
-    //const std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> & positions() const {return positions_;}
+    int num_geometric_types() const {return num_geometric_types_; }
     const std::vector<Eigen::Vector3f> & positions() const {return positions_;}
     Eigen::Vector3f at(unsigned int index) const;
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & labels() const { return labels_;}
@@ -177,6 +177,7 @@ namespace cvo {
     int num_points_;
     int num_classes_;
     int feature_dimensions_;
+    int num_geometric_types_;
     
     //std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> positions_;  // points position. x,y,z
     std::vector<Eigen::Vector3f> positions_; 
