@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
     string cvo_param_file(argv[2]);
     string calib_file;
     calib_file = string(argv[1] ) +"/cvo_calib.txt";
-    cvo::Calibration calib(calib_file, cvo::Calibration::RGBD);
+    cvo::Calibration calib(calib_file);
     std::ofstream accum_output(argv[3]);
     int start_frame = std::stoi(argv[4]);
 //  kitti.set_start_index(start_frame);
