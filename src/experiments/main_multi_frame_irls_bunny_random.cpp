@@ -4,7 +4,7 @@
 #include <list>
 #include <cmath>
 #include <fstream>
-#include <filesystem>
+//#include <experimental/filesystem>
 #include "utils/def_assert.hpp"
 #include "utils/GassianMixture.hpp"
 #include "utils/eigen_utils.hpp"
@@ -31,8 +31,7 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-#include <filesystem>
-namespace fs = std::filesystem;
+namespace fs = boost::filesystem;
 
 void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string & fname,
                           std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > & colors) {
@@ -158,7 +157,7 @@ void eval_poses(std::vector<Sophus::SE3f> & estimates,
                 std::vector<Sophus::SE3f> & gt,
                 std::string & fname
                 ){
-  assert(std::filesystem::exists(fname));
+  assert(filesystem::exists(fname));
   std::ofstream err_f(fname,std::fstream::out |   std::ios::app);
   float total_err = 0;
   for (int i = 0; i < gt.size(); i ++) {
