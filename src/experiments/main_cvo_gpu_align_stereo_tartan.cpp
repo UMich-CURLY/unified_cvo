@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
     int total_iters = tartan.get_total_number();
     string cvo_param_file(argv[2]);
     string calib_file;
-    calib_file = string(argv[1] ) +"/cvo_calib.txt";
+    calib_file = string(argv[1] ) +"/cvo_calib_stereo.txt";
     cvo::Calibration calib(calib_file);
     std::ofstream accum_output(argv[3]);
     int start_frame = std::stoi(argv[4]);
