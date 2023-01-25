@@ -76,8 +76,8 @@ add_definitions(-DOPENMP)
 #)
 
 find_package(CUDA)
-#set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_61,code=sm_61  -gencode arch=compute_52,code=sm_52 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_86,code=sm_86 "  )
-set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_86,code=sm_86 "  )
+set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_61,code=sm_61  -gencode arch=compute_52,code=sm_52 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_86,code=sm_86 "  )
+#set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_86,code=sm_86 "  )
 foreach(flag IN LISTS " -use_fast_math -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -fPIC"  )
   add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${flag}>")
 endforeach()
@@ -620,7 +620,15 @@ target_include_directories(cvo_irls_pcd PUBLIC
 target_link_libraries(cvo_irls_pcd cvo_gpu_img_lib  cvo_utils_lib boost_filesystem boost_system)
 
 
-add_executable(cvo_irls_rand_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_bunny_random.cpp)
+#add_executable(cvo_irls_rand_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_bunny_random.cpp)
+#target_include_directories(cvo_irls_rand_pcd PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+#        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+#        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+#target_link_libraries(cvo_irls_rand_pcd cvo_gpu_img_lib  cvo_utils_lib boost_filesystem boost_system pcl_filters pcl_common)
+
+add_executable(cvo_irls_rand_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_toy_random.cpp)
 target_include_directories(cvo_irls_rand_pcd PUBLIC
 	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>

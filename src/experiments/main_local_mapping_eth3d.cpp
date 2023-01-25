@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
   // list all files in current directory.
   //You could put any file path in here, e.g. "/home/me/mwah" to list that directory
   std::cout<<argc<<std::endl;
-  int num_class= 0;
+  int num_class= 1;
   string n_class_str;
   //if (argc > 5) {
   //  n_class_str = argv[5];

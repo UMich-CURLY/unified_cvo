@@ -55,37 +55,26 @@ namespace cvo {
 
     const int pixel_pattern[8][2] = {{0,0}, {-1, 0},{-1,-1}, {-1,1}, {0,1},{0,-1},{1,1},{1,0} };
 
-    // Constructor for stereo image
-    /*
-    CvoPointCloud(const RawImage & left_raw_image,
-                  const cv::Mat & right_image,
-                  const Calibration &calib,
-                  PointSelectionMethod pt_selection_method=CV_FAST);
-    */
+    /// Constructor for stereo image
     CvoPointCloud(const ImageStereo & left_raw_image,
                   const Calibration &calib,
                   PointSelectionMethod pt_selection_method=CV_FAST);
     
 
-    // Constructor for rgbd image
+    /// Constructor for rgbd image
     template <typename DepthType>
     CvoPointCloud(const ImageRGBD<DepthType> & rgb_raw_image,
                   const Calibration &calib,
                   PointSelectionMethod pt_selection_method=CV_FAST);
-    /*
-    CvoPointCloud(const RawImage & rgb_raw_image,
-                  const std::vector<uint16_t> & depth_image,
-                  const Calibration &calib,
-                  PointSelectionMethod pt_selection_method=CV_FAST);
-    */
+
+    /// Constructor for lidar input
     CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
                   int target_num_points,
                   int beam_num,
                   PointSelectionMethod pt_selection_method=LOAM);
 
-    //CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc_intensity,
-    //              int beam_num=64);
-
+    
+    /// construtor for lidar points with semantics
     CvoPointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr pc, 
                   const std::vector<int> & semantics,
                   int num_classes,
