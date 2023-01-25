@@ -12,11 +12,11 @@ export CUDA_VISIBLE_DEVICES=0
 
 #done
 
-for i in abandonedfactory_night amusement carwelding endofworld
+for i in gascola hospital japanesealley neighborhood ocean office oldtown seasidetown seasonsforest seasonsforest_winter soulcity westerndesert
 do
 	echo "new seq $i"
       ./build/bin/main_cvo_gpu_align_stereo_tartan /media/sdc1/rzh/tartanair/$i/Easy/P001 cvo_params/cvo_outdoor_params.yaml \
-                                       tartan_results/cvo_tartan_outdoor_$i.txt 0 30000
+                                       tartan_results/cvo_tartan_outdoor_$i.txt 0 30000K
 #      python scripts/xyzq2kitti.py cvo_tartan_outdoor_$i.txt results/tartan/outdoor_easy_kitti_$i.txt
 	#python ~/.local/lib/python3.10/site-packages/evo/main_traj.py kitti --ref ground_truth/tartan/outdoor_easy_kitti_$i.txt  results/tartan/outdoor_easy_kitti_$i.txt   --plot_mode xyz --align --save_plot results/tartan/${i}_plot -p
 done
