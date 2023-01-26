@@ -383,7 +383,7 @@ int main(int argc, char** argv) {
     const_flags[0] = true;
     double time = 0;
     cvo_align.align(frames, const_flags,
-                    edge_states,  time, nullptr);
+                    edge_states,  &time, nullptr);
 
     /// log time
     std::ofstream err_time_f(full_time_fname, std::ofstream::out | std::ofstream::app);
