@@ -15,15 +15,15 @@ using namespace std;
 using namespace boost::filesystem;
 
 namespace cvo {
-  KittiHandler::KittiHandler(std::string kitti_folder, int data_type) {
+  KittiHandler::KittiHandler(std::string kitti_folder, DataType data_type) {
     curr_index = 0;
     folder_name = kitti_folder;
     debug_plot = true;
     string data_folder;
-    if(data_type==0){
+    if(data_type==DataType::STEREO){
       data_folder = folder_name + "/image_2/";
     }
-    else if(data_type==1){
+    else if(data_type==DataType::LIDAR){
       data_folder = folder_name + "/velodyne/";
     }
     

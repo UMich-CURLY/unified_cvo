@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
   std::cout<<"start\n";
   // list all files in current directory.
   //You could put any file path in here, e.g. "/home/me/mwah" to list that directory
-  cvo::KittiHandler kitti(argv[1], 1);
+  cvo::KittiHandler kitti(argv[1], cvo::KittiHandler::DataType::LIDAR);
   int total_iters = kitti.get_total_number();
   string cvo_param_file(argv[2]);
   string calib_file;

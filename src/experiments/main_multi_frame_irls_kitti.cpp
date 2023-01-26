@@ -183,7 +183,7 @@ void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string 
 
 int main(int argc, char** argv) {
 
-  cvo::KittiHandler kitti(argv[1], 0);
+  cvo::KittiHandler kitti(argv[1], cvo::KittiHandler::DataType::STEREO);
   string cvo_param_file(argv[2]);  
   std::string graph_file_name(argv[3]);
   std::string tracking_fname(argv[4]);
