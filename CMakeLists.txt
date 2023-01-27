@@ -76,8 +76,8 @@ add_definitions(-DOPENMP)
 #)
 
 find_package(CUDA)
-#set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_61,code=sm_61  -gencode arch=compute_52,code=sm_52 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_86,code=sm_86 "  )
-set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_86,code=sm_86 "  )
+set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_61,code=sm_61  -gencode arch=compute_52,code=sm_52 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_86,code=sm_86 "  )
+#set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_86,code=sm_86 "  )
 foreach(flag IN LISTS " -use_fast_math -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -fPIC"  )
   add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${flag}>")
 endforeach()
@@ -804,7 +804,7 @@ target_link_libraries(cvo_align_two_nn_feature cvo_gpu_img_deep_feature_lib cvo_
 
 add_executable(gen_kitti_depth_npy ${PROJECT_SOURCE_DIR}/src/experiments/main_depth_gen.cpp )
 target_include_directories(gen_kitti_depth_npy PUBLIC  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>")
-target_link_libraries(gen_kitti_depth_npy cvo_utils_lib kitti boost_filesystem cnpy)
+target_link_libraries(gen_kitti_depth_npy cvo_utils_lib kitti boost_filesystem boost_system cnpy)
 
 endif()
 
