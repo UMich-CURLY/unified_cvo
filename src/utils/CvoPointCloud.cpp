@@ -524,6 +524,7 @@ namespace cvo{
 
     num_points_ = good_point_ind.size();
     num_classes_ = raw_image.num_classes();
+    num_geometric_types_ = 2;    
     if (num_classes_ )
       labels_.resize(num_points_, num_classes_);
     feature_dimensions_ = raw_image.channels() + 2;
@@ -578,10 +579,11 @@ namespace cvo{
     num_points_ = pc.size();
     num_classes_ = 0;
     feature_dimensions_ = 3;
+    num_geometric_types_ = 2;
 
     positions_.resize(pc.size());
     features_.resize(num_points_, feature_dimensions_);
-    geometric_types_.resize(num_points_ * 2);
+    geometric_types_.resize(num_points_ * num_geometric_types_);
     for (int i = 0; i < num_points_; i++) {
       Eigen::Vector3f xyz;
       auto & p = (pc)[i];
@@ -604,9 +606,10 @@ namespace cvo{
 
   template <>
   CvoPointCloud::CvoPointCloud(const pcl::PointCloud<pcl::PointXYZRGB> & pc,
-                                                 GeometryType g_type) {
+                               GeometryType g_type) {
     num_points_ = pc.size();
     num_classes_ = 0;
+    num_geometric_types_ = 2;
     feature_dimensions_ = 5;
 
     positions_.resize(pc.size());
@@ -642,6 +645,7 @@ namespace cvo{
     num_points_ = pc.size();
     num_classes_ = 0;
     feature_dimensions_ = 0;
+    num_geometric_types_ = 2;
 
     positions_.resize(pc.size());
     //features_.resize(num_points_, feature_dimensions_);
@@ -657,6 +661,29 @@ namespace cvo{
     }
     
   }
+
+  template <>
+  CvoPointCloud::CvoPointCloud(const pcl::PointCloud<pcl::PointNormal> & pc) {
+    num_points_ = pc.size();
+    num_classes_ = 0;
+    feature_dimensions_ = 0;
+    num_geometric_types_ = 2;
+
+    positions_.resize(pc.size());
+    //features_.resize(num_points_, feature_dimensions_);
+    geometric_types_.resize(num_points_ * 2);
+    for (int i = 0; i < num_points_; i++) {
+      Eigen::Vector3f xyz;
+      auto & p = (pc)[i];
+      xyz << p.x, p.y, p.z;
+      positions_[i] = xyz;
+
+      geometric_types_[i*2] = 1;
+      geometric_types_[i*2+1] = 0;
+    }
+    
+  }
+  
 
   
   /*
@@ -741,6 +768,7 @@ namespace cvo{
     // start to fill in class members
     num_points_ = good_point_ind.size();
     num_classes_ = raw_image.num_classes();
+    num_geometric_types_ = 2;
     if (num_classes_ )
       labels_.resize(num_points_, num_classes_);
     feature_dimensions_ = raw_image.channels() + 2;
@@ -890,7 +918,7 @@ namespace cvo{
     num_points_ = input.num_points_;
     num_classes_ = input.num_classes_;
     feature_dimensions_ = input.feature_dimensions_;
-
+    num_geometric_types_ = input.num_geometric_types_;
     features_.resize(num_points_, feature_dimensions_);
     #pragma omp parallel for
     for (int i = 0; i < feature_dimensions_; i++)
@@ -907,7 +935,7 @@ namespace cvo{
     num_points_ = input.num_points_;
     num_classes_ = input.num_classes_;
     feature_dimensions_ = input.feature_dimensions_;
-
+    num_geometric_types_ = input.num_geometric_types_;
     positions_ = input.positions_;
     features_.resize(num_points_, feature_dimensions_);
     #pragma omp parallel for
@@ -1013,6 +1041,7 @@ namespace cvo{
 
     // fill in class members
     num_classes_ = 0;
+    num_geometric_types_ = 2;
     
     // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
     feature_dimensions_ = 1;
@@ -1099,6 +1128,7 @@ namespace cvo{
     // fill in class members
     num_points_ = selected_indexes.size();
     num_classes_ = num_classes;
+    num_geometric_types_ = 2;      
     
     // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
     feature_dimensions_ = 1;
@@ -1147,7 +1177,7 @@ namespace cvo{
     num_points_=0;
     num_classes_ = 0;
     feature_dimensions_ = 0;
-
+    num_geometric_types_ = 2;      
     
   }
 
@@ -1155,6 +1185,7 @@ namespace cvo{
     num_points_=0;
     num_classes_ = num_classes;
     feature_dimensions_ = feature_dimensions;
+    num_geometric_types_ = 2;          
   }  
   
   CvoPointCloud::~CvoPointCloud() {
@@ -1379,6 +1410,7 @@ namespace cvo{
     output.num_points_ = input.num_points();
     output.num_classes_ = input.num_classes();
     output.feature_dimensions_ = input.feature_dimensions();
+    output.num_geometric_types_ = input.num_geometric_types();          
     //output.features_ = input.features();
     copy_eigen_dynamic_matrix(&input.features_,
                               &output.features_);
@@ -1395,7 +1427,7 @@ namespace cvo{
     num_points_ = num_points;
     num_classes_ = num_classes;
     feature_dimensions_ = feature_dims;
-    
+    num_geometric_types_ = 2;      
     positions_.resize(num_points_);
     if (feature_dims)
       features_.resize(num_points_, feature_dimensions_);
