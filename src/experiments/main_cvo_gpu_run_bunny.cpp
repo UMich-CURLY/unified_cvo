@@ -190,6 +190,7 @@ void eval_poses_SE3_frobenius_norm(std::vector<Sophus::SE3f> & estimates,
                                    std::string & err_framewise_fname,
                                    std::string & pose_fname
                                    ){
+  assert(std::filesystem::exists(fname));
   std::ofstream err_f(err_fname,std::fstream::out |   std::ios::app);
   std::ofstream err_framewise(err_framewise_fname);
   std::ofstream pose_f(pose_fname);
@@ -229,29 +230,24 @@ int main(int argc, char** argv) {
   float ratio = 0.8;
   float sigma = 0.01;
   float uniform_range = 0.5;
+  cvo::CvoGPU cvo_align(cvo_param_file);
   if (is_adding_outliers) {
     ratio = std::stof(argv[8]); /// affects the outlier ratio
     sigma = std::stof(argv[9]); /// affects the noise scale value size
     uniform_range = std::stof(argv[10]); /// affets
   }
-  int is_logging_data_only = std::stoi(argv[11]);
+//   int is_logging_data_only = std::stoi(argv[11]);
 
-  std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > colors(num_frames);
-  gen_rand_colors(colors);
+//   std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > colors(num_frames);
+//   gen_rand_colors(colors);
 
-  cvo::CvoGPU cvo_align(cvo_param_file);
+//   cvo::CvoGPU cvo_align(cvo_param_file);
 
-  /// original input point cloud
+  /// load input point cloud (transfomed from prev step)
   pcl::PointCloud<pcl::PointXYZ>::Ptr raw_pcd(new pcl::PointCloud<pcl::PointXYZ>);
   // Add function to load 4 different point cloud 
   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> raw_pcd_normal;
-  for (int i = 0; i < num_frames; i ++){
-     pcl::PointCloud<pcl::PointNormal>::Ptr dst(new pcl::PointCloud<pcl::PointNormal>);
-    std::string fullName = in_pcd_fname + std::to_string(i + 1) + ".pcd";
-    pcl::io::loadPCDFile (fullName, *dst);
-    raw_pcd_normal.push_back(dst);
-  }
- 
+
 
   /// experiment result folder
   fs::path exp_folder_dir(exp_folder);
@@ -266,21 +262,63 @@ int main(int argc, char** argv) {
   /// start running 
   for (int k = 0; k < num_runs; k++) {
 
-    /// experiment folder for this run
-    fs::path exp_curr_dir = exp_folder_dir / fs::path(std::to_string(k));
-    std::string exp_curr_dir_str = exp_curr_dir.string();
-    std::cout<<"Current exp folder is "<<exp_curr_dir_str<<"\n";
-    fs::create_directories(exp_curr_dir);
 
-    /// generate random poses
-    std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> tracking_poses;
-    gen_random_poses(tracking_poses, num_frames, max_angle_per_axis );
-    std::ofstream pose_f(exp_curr_dir_str + "/gt_poses.txt");
-    for (int l = 0; l < tracking_poses.size(); l++ ) {
-      std::string pose_curr = cvo::mat_to_line<float, Eigen::ColMajor>(tracking_poses[l]);
-      pose_f << pose_curr<<std::endl;
+    // /// convert to Sophus format for ground truth
+    // std::vector<Sophus::SE3f> poses_gt;
+    // std::transform(tracking_poses.begin(), tracking_poses.end(), std::back_inserter(poses_gt),
+    //                [&](const Eigen::Matrix4f & in){
+    //                  Sophus::SE3f pose(in);
+    //                  return pose.inverse();
+    //                });
+
+
+    /// generate point cloud
+    std::vector<cvo::CvoFrame::Ptr> frames;
+    std::vector<std::shared_ptr<cvo::CvoPointCloud>> pcs;
+    std::string foldername = in_pcd_fname + '/' +std::to_string(k) + '/';
+    for (int i = 0; i < num_frames; i++) {
+        pcl::PointCloud<pcl::PointNormal>::Ptr dst(new pcl::PointCloud<pcl::PointNormal>);
+        std::string fullName = foldername  + std::to_string(i) + "normal.pcd";
+        std::cout << "load point cloud " << fullName << std::endl;
+        pcl::io::loadPCDFile (fullName, *dst);
+        pcl::PointCloud<pcl::PointXYZ>::Ptr raw_pcd(new pcl::PointCloud<pcl::PointXYZ>);
+        copyPointCloud(*dst, *raw_pcd);
+        std::shared_ptr<cvo::CvoPointCloud> pc (new cvo::CvoPointCloud(*raw_pcd));  
+        cvo::Mat34d_row pose;
+        cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pc.get(), pose.data()));
+        frames.push_back(new_frame);
+        pcs.push_back(pc);
     }
-    pose_f.close();
+
+
+    // load gt
+    std::string gtfilename = foldername + "gt_poses.txt";
+    std::ifstream gt_file(gtfilename);
+    std::cout <<"read pose file : --- " << gtfilename << std::endl;
+    std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> tracking_poses;
+    tracking_poses.resize(4);
+    for (int pose_index = 0; pose_index < 4; pose_index++)
+    {
+        
+        std::vector<float> numbers; 
+        float num; 
+        for (int t = 0; t < 16; t++){
+          gt_file >> num;
+          numbers.push_back(num);
+        }
+        std::cout <<"ground truth pose is " << std::endl;
+        int index = 0;
+        for (int l = 0; l < 4; l ++){
+            for (int r = 0; r < 4; r++){
+                tracking_poses[pose_index](l,r) = numbers[index]; 
+                // std::cout << tracking_poses[pose_index](l,r) << " ";
+                index++;
+            }
+            std::cout << std::endl;
+        }
+
+    }
+    gt_file.close();
 
     /// convert to Sophus format for ground truth
     std::vector<Sophus::SE3f> poses_gt;
@@ -289,84 +327,7 @@ int main(int argc, char** argv) {
                      Sophus::SE3f pose(in);
                      return pose.inverse();
                    });
-
-
-    /// generate point cloud
-    std::vector<cvo::CvoFrame::Ptr> frames;
-    std::vector<std::shared_ptr<cvo::CvoPointCloud>> pcs;
-    for (int i = 0; i<num_frames; i++) {
-
-      /// transform input based on gt poses
-      pcl::PointCloud<pcl::PointNormal>::Ptr raw_pcd_transformed(new pcl::PointCloud<pcl::PointNormal>);
-      pcl::transformPointCloud (*raw_pcd_normal[i], *raw_pcd_transformed, tracking_poses[i]);
-
-      /// voxel downsampling
-      cvo::VoxelMap<pcl::PointNormal> voxel_map(cvo_align.get_params().multiframe_downsample_voxel_size);
-      for (int l = 0; l < raw_pcd_transformed->size(); l++) {
-        voxel_map.insert_point(&raw_pcd_transformed->at(l));
-      }
-      std::vector<pcl::PointNormal*> sampled =  voxel_map.sample_points();
-      pcl::PointCloud<pcl::PointNormal> raw_pcd_downsampled;
-      for (auto p : sampled)
-        raw_pcd_downsampled.push_back(*p);
-      // TODO: Delete this line 
-      std::cout<<"after downsampling, num of points is "<<raw_pcd_transformed->size()<<std::endl;
-
-      /// add noise and outliers
-      pcl::PointCloud<pcl::PointNormal>::Ptr raw_pcd_curr;//(new pcl::PointCloud<pcl::PointXYZ>);
-      if (is_adding_outliers) {
-        raw_pcd_curr.reset(new pcl::PointCloud<pcl::PointNormal>);
-        add_gaussian_mixture_noise(raw_pcd_downsampled,
-                                   *raw_pcd_curr,
-                                   1-ratio,
-                                   sigma,
-                                   uniform_range,
-                                   false
-                                   );
-      } else {
-        raw_pcd_curr = raw_pcd_normal[i];
-      }
-
-      /// write pcd files for visualzation
-      copyPointCloud(*raw_pcd_curr, *raw_pcd);
-      pcl::io::savePCDFileASCII(exp_curr_dir_str + "/" + std::to_string(i)+"normal.pcd", *raw_pcd);      
-      //pcd_rescale<pcl::PointXYZ>(raw_pcd);
-
-      /// registration init values
-      cvo::Mat34d_row pose;
-      Eigen::Matrix<double, 4,4, Eigen::RowMajor> pose44 = Eigen::Matrix<double, 4,4, Eigen::RowMajor>::Identity();
-      pose = pose44.block<3,4>(0,0);
-
-      /// prepare registration data structures
-      std::shared_ptr<cvo::CvoPointCloud> pc (new cvo::CvoPointCloud(*raw_pcd));  
-      cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pc.get(), pose.data()));
-      frames.push_back(new_frame);
-      pcs.push_back(pc);
-    }
-
- 
-    std::cout<<"write to before_BA.pcd\n";
-    std::string f_name(exp_curr_dir_str + "/before_BA_bunny_");
-    f_name += std::to_string(k)+".pcd";
-    write_transformed_pc(frames, f_name, colors);
-
-    std::cout<<"write gt\n";    
-    for (int i = 0; i < num_frames; i++ ) {
-      cvo::Mat34d_row pose;
-      Eigen::Matrix<double, 4,4, Eigen::RowMajor> pose44 = tracking_poses[i].cast<double>().inverse();
-      memcpy(frames[i]->pose_vec, pose44.data(), sizeof(double) * 12);
-    }
-    f_name =  exp_curr_dir_str + "/gt_BA_bunny_"+std::to_string(k)+".pcd" ;
-    write_transformed_pc(frames, f_name, colors);
-
-    for (int i = 0; i < num_frames; i++ ) {
-      cvo::Mat34d_row pose;
-      Eigen::Matrix<double, 4,4, Eigen::RowMajor> pose44 = Eigen::Matrix<double, 4,4, Eigen::RowMajor>::Identity();
-      memcpy(frames[i]->pose_vec, pose44.data(), sizeof(double) * 12);
-    }
-
-    if (is_logging_data_only)
-      continue;
+    // running cvo
     
     std::cout<<"Start constructing cvo edges\n";
     std::list<cvo::BinaryState::Ptr> edge_states;            
@@ -387,7 +348,7 @@ int main(int argc, char** argv) {
       
       }
     }
-
+    std::string exp_curr_dir_str = in_pcd_fname + '/' +std::to_string(k);
     std::cout<<"start align\n";
     std::vector<bool> const_flags(frames.size(), false);
     const_flags[0] = true;
@@ -401,6 +362,9 @@ int main(int argc, char** argv) {
     err_time_f.close();
     
     /// log resulting stacked point cloud
+    std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > colors(num_frames);
+    gen_rand_colors(colors);
+    std::string f_name;
     f_name=exp_curr_dir_str + "/after_BA_bunny_" + std::to_string(k)+".pcd";
     write_transformed_pc(frames, f_name, colors);
 
