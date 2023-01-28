@@ -36,7 +36,11 @@ int main(int argc, char *argv[]) {
     tartan.set_start_index(start_frame);
     int max_num = std::stoi(argv[5]);
 
-    accum_output <<"1 0 0 0 0 1 0 0 0 0 1 0\n";
+    Eigen::Matrix4f accum_mat = Eigen::Matrix4f::Identity();
+    Eigen::Quaternionf q(accum_mat.block<3,3>(0,0));
+    accum_output<<accum_mat(0,3)<<" "<<accum_mat(1,3)<<" "<<accum_mat(2,3)<<" ";
+    accum_output<<q.x()<<" "<<q.y()<<" "<<q.z()<<" "<<q.w()<<"\n";
+    accum_output.flush();
 
     cvo::CvoGPU cvo_align(cvo_param_file );
     cvo::CvoParams & init_param = cvo_align.get_params();
@@ -54,7 +58,7 @@ int main(int argc, char *argv[]) {
 
     Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
     //init_guess(2,3)=2.22;
-    Eigen::Matrix4f accum_mat = Eigen::Matrix4f::Identity();
+
 
     cv::Mat source_left, source_right;
     //std::vector<float> semantics_source;
