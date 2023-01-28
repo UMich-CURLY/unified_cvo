@@ -327,8 +327,13 @@ int main(int argc, char** argv) {
                      Sophus::SE3f pose(in);
                      return pose.inverse();
                    });
-    // running cvo
     
+    for (int i = 0; i < num_frames; i++ ) {
+      cvo::Mat34d_row pose;
+      Eigen::Matrix<double, 4,4, Eigen::RowMajor> pose44 = Eigen::Matrix<double, 4,4, Eigen::RowMajor>::Identity();
+      memcpy(frames[i]->pose_vec, pose44.data(), sizeof(double) * 12);
+    }
+    // running cvo
     std::cout<<"Start constructing cvo edges\n";
     std::list<cvo::BinaryState::Ptr> edge_states;            
     for (int i = 0; i < num_frames; i++) {
