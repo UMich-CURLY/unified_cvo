@@ -12,11 +12,11 @@ cd build && make -j && cd ..
 
 #done
 
-for i in oldtown
+for i in soulcity seasonsforest_winter
 do
 	echo "new seq $i"
-      ./build/bin/cvo_align_gpu_rgbd_tartan /home/rayzhang/media/Samsung_T5/tartanair/$i/Easy/P000/ cvo_params/cvo_outdoor_params.yaml \
-                                       cvo_tartan_outdoor_$i.txt 0 30000
+      ./build/bin/cvo_align_gpu_rgbd_tartan /data/TarTanAir/$i/ cvo_params/cvo_outdoor_params.yaml \
+                                       cvo_tartan_rgbd_disp_$i.txt 0 30000
 #      python scripts/xyzq2kitti.py cvo_tartan_outdoor_$i.txt results/tartan/outdoor_easy_kitti_$i.txt 
 	#python ~/.local/lib/python3.10/site-packages/evo/main_traj.py kitti --ref ground_truth/tartan/outdoor_easy_kitti_$i.txt  results/tartan/outdoor_easy_kitti_$i.txt   --plot_mode xyz --align --save_plot results/tartan/${i}_plot -p
 done
