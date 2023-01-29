@@ -60,10 +60,12 @@ namespace cvo {
     ss << setw(6) << setfill('0') << curr_index;
     string index_str = ss.str();
     // read rgb image
-    string img_pth = folder_name + "/image_left/" + index_str + "_left.png";
+//    string img_pth = folder_name + "/image_left/" + index_str + "_left.png";
+    string img_pth = folder_name + "/" + index_str + "_left_disp.png";
     rgb_img = cv::imread(img_pth, cv::ImreadModes::IMREAD_COLOR);
     // read depth npy
-    string dep_pth = folder_name + "/depth_left/" + index_str + "_left_depth.npy";
+//    string dep_pth = folder_name + "/depth_left/" + index_str + "_left_depth.npy";
+    string dep_pth = folder_name + "/" + index_str + "_left_disp.npy";
     cnpy::NpyArray dep_arr = cnpy::npy_load(dep_pth);
     float* dep_data = dep_arr.data<float>();
     int dim1 = dep_arr.shape[0];
@@ -99,7 +101,7 @@ namespace cvo {
     // read depth npy
     string dep_pth = folder_name + "/" + index_str + "_left_disp.npy";
     cnpy::NpyArray dep_arr = cnpy::npy_load(dep_pth);
-    float* dep_data = dep_arr.data<float>();
+     float* dep_data = dep_arr.data<float>();
     int dim1 = dep_arr.shape[0];
     int dim2 = dep_arr.shape[1];
     cv::Mat raw_dep(cv::Size(dim2, dim1), CV_32FC1, dep_data);
