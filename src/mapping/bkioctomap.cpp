@@ -469,19 +469,26 @@ namespace semantic_bki {
                                       float free_resolution, float max_range, GPPointCloud &xy) const {
         xy.clear();
         for (int i = 0; i < cloud->num_points(); ++i) {
-            point3f p(cloud->positions()[i][0], cloud->positions()[i][1], cloud->positions()[i][2]);
+          point3f p(cloud->at(i)(0), cloud->at(i)(1), cloud->at(i)(2));
             if (max_range > 0) {
                 double l = (p - origin).norm();
                 if (l > max_range)
                     continue;
             }
             
-            std::vector<float> properties(6, 0);
-            int pix_label;
-            cloud->labels().row(i).maxCoeff(&pix_label);
-            properties[0] = pix_label + 1;
-            for (int j = 0; j < 5; ++j)
-              properties[j + 1] = cloud->features()(i, j);
+            std::vector<float> properties;
+            if (cloud->num_classes()) {
+              int pix_label = 0;
+              cloud->label_at(i).maxCoeff(&pix_label);
+              properties.resize(cloud->num_features() + 1);
+              properties[0] = pix_label + 1;
+              for (int j = 0; j < cloud->num_features(); ++j)
+                properties[j + 1] = cloud->feature_at(i)(j);
+            } else {
+              properties.resize(cloud->num_features());
+              for (int j = 0; j < cloud->num_features(); ++j)
+                properties[j] = cloud->feature_at(i)(j);
+            }
             xy.emplace_back(p, properties);
 
             PointCloud frees_n;
@@ -493,7 +500,11 @@ namespace semantic_bki {
         }
 
         point3f p(origin.x(), origin.y(), origin.z());
-        std::vector<float> properties(6, 0);
+        std::vector<float> properties;
+        if (cloud->num_classes()) 
+          properties.resize(cloud->num_features()+1, 0);
+        else
+          properties.resize(cloud->num_features(), 0);
         xy.emplace_back(p, properties);
     }
 

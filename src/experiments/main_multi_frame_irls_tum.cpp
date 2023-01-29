@@ -377,7 +377,7 @@ int main(int argc, char** argv) {
     std::cout<<"Just loaded pcd\n";
     std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(*covis_pcd));
     pcs.push_back(pc);
-    std::cout<<"Just construct cvopointcloud\n";
+    std::cout<<"Just construct cvopointcloud of size "<<pc->size()<<"\n";
     cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pc.get(), frames[0]->pose_vec));
     cvo::CvoFrame::Ptr new_full_frame(new cvo::CvoFrameGPU(pc.get(), frames[0]->pose_vec));
     frames.push_back(new_frame);

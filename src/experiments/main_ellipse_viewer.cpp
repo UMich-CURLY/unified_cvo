@@ -106,7 +106,7 @@ pcl::visualization::PCLVisualizer::Ptr rgbVis (pcl::PointCloud<pcl::PointXYZRGB>
 int main(int argc, char *argv[]) {
   // list all files in current directory.
   //You could put any file path in here, e.g. "/home/me/mwah" to list that directory
-  cvo::KittiHandler kitti(argv[1], 0);
+  cvo::KittiHandler kitti(argv[1], cvo::KittiHandler::DataType::STEREO);
   int total_iters = kitti.get_total_number();
   string calib_file;
   calib_file = string(argv[1] ) +"/cvo_calib.txt"; 
