@@ -739,6 +739,14 @@ target_include_directories(cvo_align_gpu_rgbd_tartan PUBLIC
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(cvo_align_gpu_rgbd_tartan cvo_gpu_img_lib cvo_cpu_lib tum cvo_utils_lib boost_filesystem boost_system tartan)
 
+add_executable(cvo_export_pointcloud_tartan ${PROJECT_SOURCE_DIR}/src/experiments/main_tartan_exp_point_cloud.cpp)
+target_include_directories(cvo_export_pointcloud_tartan PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_export_pointcloud_tartan cvo_gpu_img_lib cvo_cpu_lib tum cvo_utils_lib boost_filesystem boost_system tartan)
+
 if (${PROJECT_NAME}_ENABLE_QT_VIEWER)
   add_executable(stack_pcd_viewer ${PROJECT_SOURCE_DIR}/src/experiments/main_stack_pcd_viewer.cpp)
   target_include_directories(stack_pcd_viewer PUBLIC
