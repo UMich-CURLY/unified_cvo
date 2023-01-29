@@ -662,6 +662,27 @@ namespace cvo{
     
   }
 
+  void CvoPointCloud::erase(size_t index) {
+    if (index > this->size())
+      return;
+
+    positions_[index] = positions_.back();
+    positions_.pop_back();
+
+    features_.row(index) = features_.row(num_points_-1).eval();
+    features_.conservativeResize(num_points_-1, Eigen::NoChange);
+
+    labels_.row(index) = labels_.row(num_points_-1).eval();
+    labels_.conservativeResize(num_points_-1, Eigen::NoChange);
+
+    geometric_types_[index * num_geometric_types_] = geometric_types_[num_geometric_types_ * num_points_ -2];
+    geometric_types_[index * num_geometric_types_ + 1] = geometric_types_[num_geometric_types_ * num_points_ - 1];
+    geometric_types_.pop_back();
+    geometric_types_.pop_back();
+      
+    num_points_--;
+  }
+
   template <>
   CvoPointCloud::CvoPointCloud(const pcl::PointCloud<pcl::PointNormal> & pc) {
     num_points_ = pc.size();

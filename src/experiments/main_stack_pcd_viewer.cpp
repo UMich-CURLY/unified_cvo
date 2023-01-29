@@ -250,6 +250,7 @@ int main(int argc, char** argv) {
     std::string graph_file_name(pcd_folder + "/" + std::to_string(f) + "_graph.txt");
 
     if ( !boost::filesystem::exists( graph_file_name ) ) {
+	    std::cout<<graph_file_name<<" doesn't exist!\n";
       continue;
     } else
       std::cout<<"Read "<<graph_file_name<<std::endl;
