@@ -30,6 +30,7 @@ int main(int argc, char *argv[]) {
   cvo::Calibration calib(calib_file, cvo::Calibration::RGBD);
   int start_frame = std::stoi(argv[3]);
   tartan.set_start_index(start_frame);
+  string saveFolder(argv[4]);
   
   
   cvo::CvoGPU cvo_align(cvo_param_file );
@@ -62,7 +63,7 @@ int main(int argc, char *argv[]) {
 
   //19, semantics_source, 
   //                                                                    cvo::CvoPointCloud::CV_FAST));
-  pcl::io::savePCDFileASCII ("/home/bigby/result_cvo" + to_string(start_frame) + ".pcd", target_cvo);
+  pcl::io::savePCDFileASCII (saveFolder + "result_cvo" + to_string(start_frame) + ".pcd", target_cvo);
   
   return 0;
 }
