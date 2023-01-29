@@ -15,8 +15,10 @@ using namespace boost::filesystem;
 namespace cvo {
   TartanAirHandler::TartanAirHandler(std::string tartan_traj_folder){
     // use left camera only, rgbd
-    const string depth_pth = tartan_traj_folder + "/depth_left";
-    const string image_pth = tartan_traj_folder + "/image_left";
+//    const string depth_pth = tartan_traj_folder + "/depth_left";
+//    const string image_pth = tartan_traj_folder + "/image_left";
+    const string depth_pth = tartan_traj_folder;
+    const string image_pth = tartan_traj_folder;
     // count number of files in both dirs
     int depth_count = 0;
     directory_iterator end_it;
