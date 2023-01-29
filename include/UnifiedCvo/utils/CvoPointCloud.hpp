@@ -125,6 +125,9 @@ namespace cvo {
                           const CvoPointCloud & input,
                           CvoPointCloud & output);
 
+    // setter
+    void erase(size_t index);
+
     // getters
     int num_points() const {return num_points_;}
     int size() const {return num_points_;}
