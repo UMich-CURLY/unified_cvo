@@ -39,7 +39,7 @@ namespace fs = std::filesystem;
 
 void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string & fname,
                           std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > & colors) {
-  pcl::PointCloud<pcl::PointXYZRGB> pc_all;
+  pcl::PointCloud<cvo::CvoPoint> pc_all;
   for (int i = 0; i <  frames.size(); i++) {
     auto ptr = frames[i];
     cvo::CvoPointCloud new_pc(0,0);
@@ -49,11 +49,11 @@ void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string 
     Eigen::Matrix4f pose_f = pose.cast<float>();
     cvo::CvoPointCloud::transform(pose_f, *ptr->points, new_pc);
 
-    pcl::PointCloud<pcl::PointXYZ> pc_curr_xyz;
+    pcl::PointCloud<cvo::CvoPoint> pc_curr_xyz;
     new_pc.export_to_pcd(pc_curr_xyz);
-    pcl::PointCloud<pcl::PointXYZRGB> pc_curr;
+    pcl::PointCloud<cvo::CvoPoint> pc_curr;
     for (int j = 0; j <  pc_curr_xyz.size(); j++) {
-      pcl::PointXYZRGB p;
+      cvo::CvoPoint p;
       p.getVector3fMap() = pc_curr_xyz[j].getVector3fMap();
       p.r = std::get<0>(colors[i]);
       p.g = std::get<1>(colors[i]);
@@ -100,6 +100,41 @@ void add_gaussian_mixture_noise(pcl::PointCloud<pcl::PointNormal> & input,
   
 }
 
+
+template <typename PointT>
+void add_gaussian_mixture_noise(pcl::PointCloud<cvo::CvoPoint> & input,
+                                pcl::PointCloud<PointT> & output,
+                                float ratio,
+                                float sigma,
+                                float uniform_range,
+                                bool is_using_viewpoint) {
+
+  cvo::GaussianMixtureDepthGenerator gaussion_mixture(ratio, sigma, uniform_range);
+
+  output.resize(input.size());
+  for (int i = 0; i < input.size(); i++) {
+    if (is_using_viewpoint) {
+      // using a far away view point
+    } else {
+      // using normal direction
+      auto pt = input[i];
+      Eigen::Vector3f normal_dir;
+      //std::cout << pt.normal[0] << pt.normal[1] <<pt.normal[2] << std::endl;
+      normal_dir << pt.normal[0], pt.normal[1], pt.normal[2];
+      Eigen::Vector3f center_pt = pt.getVector3fMap();
+      Eigen::Vector3f result = gaussion_mixture.sample(center_pt, normal_dir);
+      cvo::CvoPoint new_pt;
+
+      output[i].getVector3fMap() = result;
+      if (i == 0) {
+        std::cout<<"transform "<<pt.getVector3fMap().transpose()<<" to "<<result.transpose()<<std::endl;
+      }
+    
+    }
+  }
+
+  
+}
 void gen_random_poses(std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> & poses, int num_poses,
                       float max_angle_axis // In degrees
                       ) {
@@ -197,7 +232,7 @@ void eval_poses_SE3_frobenius_norm(std::vector<Sophus::SE3f> & estimates,
   float total_err = 0;
   for (int i = 0; i < gt.size(); i ++) {
     /// element wise norm 
-    float err = ((estimates[i].inverse() * gt[i]).matrix() - Eigen::Matrix4f::Identity()).norm();
+    float err = ((estimates[i].inverse() *gt[i]).matrix() - Eigen::Matrix4f::Identity()).norm();
     err_framewise << err<<"\n";
 
     /// log poses
@@ -247,7 +282,7 @@ int main(int argc, char** argv) {
   cvo::CvoGPU cvo_align(cvo_param_file);
 
   /// original input point cloud
-  pcl::PointCloud<pcl::PointXYZ>::Ptr raw_pcd(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PointCloud<cvo::CvoPoint>::Ptr raw_pcd(new pcl::PointCloud<cvo::CvoPoint>);
   // Add function to load 4 different point cloud 
   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> raw_pcd_normal;
   std::vector<pcl::PointCloud<cvo::CvoPoint>::Ptr> raw_pcd_cvo_normal;
@@ -266,16 +301,17 @@ int main(int argc, char** argv) {
       cvo_dst->points[pointIndex].normal[2] = dst->points[pointIndex].normal_z;
     }
     raw_pcd_normal.push_back(dst);
+    raw_pcd_cvo_normal.push_back(cvo_dst);
   }
  
 
   /// experiment result folder
   fs::path exp_folder_dir(exp_folder);
   fs::create_directories(exp_folder_dir);
-  std::string full_error_fname(exp_folder + "/cvo_err_bunny.txt");
+  std::string full_error_fname(exp_folder + "/cvo_err_tartanair.txt");
   std::ofstream err_f(full_error_fname);
   err_f.close();
-  std::string full_time_fname(exp_folder + "/cvo_time_bunny.txt");
+  std::string full_time_fname(exp_folder + "/cvo_time_tartanair.txt");
   std::ofstream err_time_f(full_time_fname);
   err_time_f.close();
 
@@ -305,7 +341,7 @@ int main(int argc, char** argv) {
                      Sophus::SE3f pose(in);
                      return pose.inverse();
                    });
-
+ 
 
     /// generate point cloud
     std::vector<cvo::CvoFrame::Ptr> frames;
@@ -313,25 +349,26 @@ int main(int argc, char** argv) {
     for (int i = 0; i<num_frames; i++) {
 
       /// transform input based on gt poses
-      pcl::PointCloud<pcl::PointNormal>::Ptr raw_pcd_transformed(new pcl::PointCloud<pcl::PointNormal>);
-      pcl::transformPointCloud (*raw_pcd_normal[i], *raw_pcd_transformed, tracking_poses[i]);
+      pcl::PointCloud<cvo::CvoPoint>::Ptr raw_pcd_transformed(new pcl::PointCloud<cvo::CvoPoint>);
+      pcl::transformPointCloud (*raw_pcd_cvo_normal[i], *raw_pcd_transformed, tracking_poses[i]);
 
       /// voxel downsampling
-      cvo::VoxelMap<pcl::PointNormal> voxel_map(cvo_align.get_params().multiframe_downsample_voxel_size);
+      cvo::VoxelMap<cvo::CvoPoint> voxel_map(cvo_align.get_params().multiframe_downsample_voxel_size);
       for (int l = 0; l < raw_pcd_transformed->size(); l++) {
         voxel_map.insert_point(&raw_pcd_transformed->at(l));
       }
-      std::vector<pcl::PointNormal*> sampled =  voxel_map.sample_points();
-      pcl::PointCloud<pcl::PointNormal> raw_pcd_downsampled;
+      std::vector<cvo::CvoPoint*> sampled =  voxel_map.sample_points();
+      pcl::PointCloud<cvo::CvoPoint> raw_pcd_downsampled;
       for (auto p : sampled)
         raw_pcd_downsampled.push_back(*p);
+
       // TODO: Delete this line 
       std::cout<<"after downsampling, num of points is "<<raw_pcd_transformed->size()<<std::endl;
 
       /// add noise and outliers
-      pcl::PointCloud<pcl::PointNormal>::Ptr raw_pcd_curr;//(new pcl::PointCloud<pcl::PointXYZ>);
+      pcl::PointCloud<cvo::CvoPoint>::Ptr raw_pcd_curr;//(new pcl::PointCloud<pcl::PointXYZ>);
       if (is_adding_outliers) {
-        raw_pcd_curr.reset(new pcl::PointCloud<pcl::PointNormal>);
+        raw_pcd_curr.reset(new pcl::PointCloud<cvo::CvoPoint>);
         add_gaussian_mixture_noise(raw_pcd_downsampled,
                                    *raw_pcd_curr,
                                    1-ratio,
@@ -339,8 +376,11 @@ int main(int argc, char** argv) {
                                    uniform_range,
                                    false
                                    );
+        
+        
+        
       } else {
-        raw_pcd_curr = raw_pcd_normal[i];
+        raw_pcd_curr = raw_pcd_cvo_normal[i];
       }
 
       /// write pcd files for visualzation
