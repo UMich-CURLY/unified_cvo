@@ -29,8 +29,8 @@ namespace cvo {
     for (directory_iterator it(image_pth); it != end_it; it++) {
       image_count++;
     }
-    assert (depth_count == image_count);
-    total_size = depth_count;
+    assert (depth_count / 2 == image_count / 2);
+    total_size = depth_count / 2;
     curr_index = 0;
     folder_name = tartan_traj_folder;
     cout << "Found " << total_size << " image pairs\n";
