@@ -30,8 +30,8 @@ is_ell_adaptive: 0
 is_dense_kernel: 0
 is_full_ip_matrix: 0
 is_using_geometry: 1
-is_using_intensity: 0
-is_using_semantics: 0
+is_using_intensity: 1
+is_using_semantics: 1
 is_using_range_ell: 0
 is_using_kdtree: 0
 is_using_geometric_type: 0
@@ -42,6 +42,6 @@ multiframe_ell_init: 1.0
 multiframe_ell_min: 0.025
 multiframe_ell_decay_rate: 0.5
 multiframe_iterations_per_ell: 10 #15
-multiframe_downsample_voxel_size: 0.01 #3
+multiframe_downsample_voxel_size: 0.00001 #3
 multiframe_iterations_per_solve: 20
 multiframe_min_nonzeros: 400

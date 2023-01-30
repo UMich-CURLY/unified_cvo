@@ -636,6 +636,14 @@ target_include_directories(cvo_irls_rand_pcd PUBLIC
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(cvo_irls_rand_pcd cvo_gpu_img_lib  cvo_utils_lib boost_filesystem boost_system pcl_filters pcl_common)
 
+add_executable(cvo_irls_rand_tartanairpcd ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_tartanair_random.cpp)
+target_include_directories(cvo_irls_rand_tartanairpcd PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_irls_rand_tartanairpcd cvo_gpu_img_lib  cvo_utils_lib boost_filesystem boost_system pcl_filters pcl_common)
+
 add_executable(cvo_irls_run_exp ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_run_bunny.cpp)
 target_include_directories(cvo_irls_run_exp PUBLIC
 	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 

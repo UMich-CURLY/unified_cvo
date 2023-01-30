@@ -19,6 +19,18 @@
 using namespace std;
 using namespace boost::filesystem;
 // read poses in tum format: [x y z qx qy qz qw]
+Eigen::Quaterniond
+euler2Quaternion( const double roll,
+                  const double pitch,
+                  const double yaw )
+{
+    Eigen::AngleAxisd rollAngle(roll, Eigen::Vector3d::UnitX());
+    Eigen::AngleAxisd pitchAngle(pitch, Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd yawAngle(yaw, Eigen::Vector3d::UnitZ());
+
+    Eigen::Quaterniond q = rollAngle * yawAngle;
+    return q;
+}
 inline
 void read_pose_file_tartan_format(const std::string & pose_fname,
                                   int start_frame,
@@ -63,7 +75,14 @@ void read_pose_file_tartan_format(const std::string & pose_fname,
     T.block<3,3>(0,0) = R_mat;
     T.block<3,1>(0,3) = xyz_eigen;
 
-    poses.push_back(T);
+    auto coordinateTransform = euler2Quaternion(-M_PI/2,0,-M_PI/2);
+    Eigen::Matrix3d cR = coordinateTransform.normalized().toRotationMatrix();
+    Eigen::Matrix4d cT = Eigen::Matrix4d::Identity();
+    Eigen::Vector3d xyz_c(0,0,0);
+    cT.block<3,3>(0,0) = cR;
+    cT.block<3,1>(0,3) = xyz_c;
+
+    poses.push_back(T*cT.inverse());
     line_ind ++;
   }
   f.close();
@@ -117,7 +136,10 @@ int main(int argc, char *argv[]) {
   read_pose_file_tartan_format(poseFile,0,start_frame,poses);
   Eigen::Matrix4f pose_start = poses[first_frame].cast <float>();
   Eigen::Matrix4f pose_now = poses[start_frame].cast <float>();
-  Eigen::Matrix4f pose_need = pose_start.inverse() * pose_now;
+  Eigen::Quaternionf quat(pose_now.topLeftCorner<3, 3>());
+  std::cout << "current frame  " <<pose_now << std::endl;
+  std::cout << "start frame is " << start_frame << std::endl;
+  Eigen::Matrix4f pose_need = pose_start.inverse()*pose_now;
   pcl::PointCloud<cvo::CvoPoint>::Ptr raw_pcd_transformed(new pcl::PointCloud<cvo::CvoPoint>);
   pcl::transformPointCloud (target_cvo, *raw_pcd_transformed,pose_need);
    //19, semantics_source, 
@@ -131,7 +153,7 @@ int main(int argc, char *argv[]) {
     newpt.z = pt.z;
     target_xyz.push_back(newpt);
   }
-  pcl::io::savePCDFileASCII (saveFolder + "result_cvo" + to_string(start_frame) + ".pcd", *raw_pcd_transformed);
+  pcl::io::savePCDFileASCII (saveFolder + "result_cvo" + to_string(start_frame) + ".pcd",*raw_pcd_transformed);
 
   pcl::io::savePCDFileASCII (saveFolder + "result_cvoxyz" + to_string(start_frame) + ".pcd", target_xyz);
   

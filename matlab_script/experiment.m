@@ -4,9 +4,9 @@ clear all
 
 
 rotation_angles = {'10','20','30','40','50'};
-errors = {'0.1','0.2','0.3','0.4','0.5'};
+errors = {'0.0','0.1','0.2','0.3','0.4','0.5'};
 rootfolder = '../../exp/';
-maxNumIter = 1000;                    
+maxNumIter = 500;                    
 % number of views
 M = 4;
 % cell with indexes 1:M,
@@ -39,21 +39,21 @@ for ai=1:length(rotation_angles)
                 % load point cloud 
                 
                 
-                V1 = pcread(append(rootfolder,currentfolder,index_s,'/0normal.pcd'))';
+                V1 = pcread(append(rootfolder,currentfolder,index_s,'/0normal.pcd'));
                 [n,m] = size(V1);
                 
-                V2 = pcread(append(rootfolder,currentfolder,index_s,'/1normal.pcd'))';
-                V3 = pcread(append(rootfolder,currentfolder,index_s,'/2normal.pcd'))';
-                V4 = pcread(append(rootfolder,currentfolder,index_s,'/3normal.pcd'))';
+                V2 = pcread(append(rootfolder,currentfolder,index_s,'/1normal.pcd'));
+                V3 = pcread(append(rootfolder,currentfolder,index_s,'/2normal.pcd'));
+                V4 = pcread(append(rootfolder,currentfolder,index_s,'/3normal.pcd'));
                 
                 V1_down = pcdownsample(V1,'random',percentage,PreserveStructure=true);
                 V2_down = pcdownsample(V2,'random',percentage,PreserveStructure=true);
                  V3_down = pcdownsample(V3,'random',percentage,PreserveStructure=true);
                 V4_down = pcdownsample(V4,'random',percentage,PreserveStructure=true);
-                V1_p = bsxfun(@plus,Tgtr{1}(1:3,1:3) *V1_down.Location',Tgtr{1}(1:3,4));
-                V2_p = bsxfun(@plus,Tgtr{2}(1:3,1:3) *V2_down.Location',Tgtr{2}(1:3,4));
-                V3_p = bsxfun(@plus,Tgtr{3}(1:3,1:3) *V3_down.Location',Tgtr{3}(1:3,4));
-                V4_p = bsxfun(@plus,Tgtr{4}(1:3,1:3) *V4_down.Location',Tgtr{4}(1:3,4));
+                V1_p = bsxfun(@plus,Tgtr{1}(1:3,1:3) *V1.Location',Tgtr{1}(1:3,4));
+                V2_p = bsxfun(@plus,Tgtr{2}(1:3,1:3) *V2.Location',Tgtr{2}(1:3,4));
+                V3_p = bsxfun(@plus,Tgtr{3}(1:3,1:3) *V3.Location',Tgtr{3}(1:3,4));
+                V4_p = bsxfun(@plus,Tgtr{4}(1:3,1:3) *V4.Location',Tgtr{4}(1:3,4));
 
                 for j =1:M
                     Tgtr{j} = inv(Tgtr{j});
@@ -72,6 +72,9 @@ for ai=1:length(rotation_angles)
                 Xin = [cos(az).*cos(el); sin(el); sin(az).*cos(el)];% (unit) polar to cartesian conversion
                 
                 Xin = Xin/10; % it is good for the initialization to have initial cluster centers at the same order with the points
+                % Xin = pcdownsample(V1,'random',0.1,PreserveStructure=true).Location';
+                %Xin = pcdownsample(V1,'random',0.1,PreserveStructure=true).Location';
+
                 % since sigma is automatically initialized based on X and V
                 
                 tic

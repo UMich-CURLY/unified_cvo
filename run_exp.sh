@@ -13,9 +13,9 @@ cd ..
 	
 # 	done
 # done
-for init_angle in 10 20 30 40 50 
+for init_angle in 50
 do
-	for ratio in 0.0 0.1 0.2 0.3 0.4 0.5
+	for ratio in 0.5
 	do
 		
 #gdb -ex run --args \
