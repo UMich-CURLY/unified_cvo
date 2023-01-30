@@ -370,13 +370,24 @@ namespace cvo{
     else if (pt_selection_method == CvoPointCloud::FULL) {
 
       output_uv.clear();
+      cv::Mat detected_edges;
+          
+      cv::Canny( left_gray, detected_edges, 50, 50*3, 3 );
+      
       for (int h = 0; h < left_image.cols(); h++){
+
         for (int w = 0; w < left_image.rows(); w++){
           std::pair<int,int> uv {h , w};
           output_uv.push_back(uv);
-          edge_or_surface.push_back(0.5);
-          edge_or_surface.push_back(0.5);
-
+          if (detected_edges.at<uint8_t>(h, w)  > 0 ) {
+            edge_or_surface.push_back(0.95);
+            edge_or_surface.push_back(0.05);
+          }      else {
+            edge_or_surface.push_back(0.05);
+            edge_or_surface.push_back(0.95);
+            
+          }
+          
         }
       }
     } else {

@@ -245,8 +245,10 @@ int main(int argc, char** argv) {
                            "title");
   
   
-  
+  int last_ind = -1;
   for (int f = start_ind; f < total_graphs; f++) {
+    if (f > start_ind && f < last_ind) continue;
+    
     std::string graph_file_name(pcd_folder + "/" + std::to_string(f) + "_graph.txt");
 
     if ( !boost::filesystem::exists( graph_file_name ) ) {
@@ -281,7 +283,8 @@ int main(int argc, char** argv) {
     //std::vector<std::shared_ptr<cvo::CvoPointCloud>> pcs;
     //std::unordered_map<int, int> id_to_index;
     frame_inds.pop_back();
-    BA_poses.pop_back(); 
+    BA_poses.pop_back();
+    
     for (int i = 0; i<frame_inds.size(); i++) {
 
       int curr_frame_id = frame_inds[i];
@@ -320,6 +323,7 @@ int main(int argc, char** argv) {
       //frames.push_back(new_frame);
       //id_to_index[curr_frame_id] = i;
     }
+    last_ind = frame_inds[1];
     if (is_auto_preceed)
       std::this_thread::sleep_for(std::chrono::microseconds(50000));
     else {

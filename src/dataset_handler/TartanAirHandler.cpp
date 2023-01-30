@@ -14,8 +14,10 @@ using namespace boost::filesystem;
 
 namespace cvo {
   TartanAirHandler::TartanAirHandler(std::string tartan_traj_folder){
+    this->folder_name = tartan_traj_folder;
+    this->depth_folder_name =   "depth_left";
     // use left camera only, rgbd
-    const string depth_pth = tartan_traj_folder + "/depth_left";
+    const string depth_pth = tartan_traj_folder + "/" + depth_folder_name;
     const string image_pth = tartan_traj_folder + "/image_left";
     // count number of files in both dirs
     int depth_count = 0;
@@ -30,7 +32,7 @@ namespace cvo {
     assert (depth_count == image_count);
     total_size = depth_count;
     curr_index = 0;
-    folder_name = tartan_traj_folder;
+
     cout << "Found " << total_size << " image pairs\n";
     cout << "Searching for semantic class mapping file\n";
     std::ifstream map_file(tartan_traj_folder + "/seg_map.txt");
@@ -63,7 +65,7 @@ namespace cvo {
     string img_pth = folder_name + "/image_left/" + index_str + "_left.png";
     rgb_img = cv::imread(img_pth, cv::ImreadModes::IMREAD_COLOR);
     // read depth npy
-    string dep_pth = folder_name + "/depth_left/" + index_str + "_left_depth.npy";
+    string dep_pth = depth_folder_name + "/" + index_str + "_left_depth.npy";
     cnpy::NpyArray dep_arr = cnpy::npy_load(dep_pth);
     float* dep_data = dep_arr.data<float>();
     int dim1 = dep_arr.shape[0];
@@ -97,7 +99,8 @@ namespace cvo {
     string img_pth = folder_name + "/image_left/" + index_str + "_left.png";
     rgb_img = cv::imread(img_pth, cv::ImreadModes::IMREAD_COLOR);
     // read depth npy
-    string dep_pth = folder_name + "/depth_left/" + index_str + "_left_depth.npy";
+    const string depth_folder = tartan_traj_folder + "/" + depth_folder_name;
+    string dep_pth = depth_folder "/" + index_str + "_left_depth.npy";
     cnpy::NpyArray dep_arr = cnpy::npy_load(dep_pth);
     float* dep_data = dep_arr.data<float>();
     int dim1 = dep_arr.shape[0];
@@ -161,6 +164,10 @@ namespace cvo {
 
   void TartanAirHandler::next_frame_index() {
     curr_index++;
+  }
+
+  void TartanAirHandler::set_depth_folder_name(const std::string & folder) {
+    this->depth_folder_name = folder;
   }
 
 
