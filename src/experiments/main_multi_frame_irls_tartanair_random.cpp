@@ -68,37 +68,6 @@ void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string 
 
 
 
-template <typename PointT>
-void add_gaussian_mixture_noise(pcl::PointCloud<pcl::PointNormal> & input,
-                                pcl::PointCloud<PointT> & output,
-                                float ratio,
-                                float sigma,
-                                float uniform_range,
-                                bool is_using_viewpoint) {
-
-  cvo::GaussianMixtureDepthGenerator gaussion_mixture(ratio, sigma, uniform_range);
-
-  output.resize(input.size());
-  for (int i = 0; i < input.size(); i++) {
-    if (is_using_viewpoint) {
-      // using a far away view point
-    } else {
-      // using normal direction
-      auto pt = input[i];
-      Eigen::Vector3f normal_dir;
-      normal_dir << pt.normal_x, pt.normal_y, pt.normal_z;
-      Eigen::Vector3f center_pt = pt.getVector3fMap();
-      Eigen::Vector3f result = gaussion_mixture.sample(center_pt, normal_dir);
-      pcl::PointXYZ new_pt;
-      output[i].getVector3fMap() = result;
-      if (i == 0) {
-        std::cout<<"transform "<<pt.getVector3fMap().transpose()<<" to "<<result.transpose()<<std::endl;
-      }
-    }
-  }
-
-  
-}
 
 
 template <typename PointT>
@@ -118,13 +87,12 @@ void add_gaussian_mixture_noise(pcl::PointCloud<cvo::CvoPoint> & input,
     } else {
       // using normal direction
       auto pt = input[i];
+      output[i] = input[i];
       Eigen::Vector3f normal_dir;
       //std::cout << pt.normal[0] << pt.normal[1] <<pt.normal[2] << std::endl;
       normal_dir << pt.normal[0], pt.normal[1], pt.normal[2];
       Eigen::Vector3f center_pt = pt.getVector3fMap();
       Eigen::Vector3f result = gaussion_mixture.sample(center_pt, normal_dir);
-      cvo::CvoPoint new_pt;
-
       output[i].getVector3fMap() = result;
       if (i == 0) {
         std::cout<<"transform "<<pt.getVector3fMap().transpose()<<" to "<<result.transpose()<<std::endl;
@@ -142,7 +110,7 @@ void gen_random_poses(std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eige
   std::random_device rd;
   std::mt19937 e2(rd());
   std::uniform_real_distribution<> dist(0, max_angle_axis);
-  std::uniform_real_distribution<> dist_trans(0,0.3);
+  std::uniform_real_distribution<> dist_trans(0,2);
   for (int i = 0; i < num_poses; i++) {
     if (i != 0) {
       Eigen::Matrix3f rot;
@@ -253,7 +221,7 @@ void eval_poses_SE3_frobenius_norm(std::vector<Sophus::SE3f> & estimates,
 
 
 int main(int argc, char** argv) {
-
+  srand (time(NULL));
   omp_set_num_threads(24);
   std::string in_pcd_fname(argv[1]);
   std::string cvo_param_file(argv[2]);
@@ -351,7 +319,6 @@ int main(int argc, char** argv) {
       /// transform input based on gt poses
       pcl::PointCloud<cvo::CvoPoint>::Ptr raw_pcd_transformed(new pcl::PointCloud<cvo::CvoPoint>);
       pcl::transformPointCloud (*raw_pcd_cvo_normal[i], *raw_pcd_transformed, tracking_poses[i]);
-
       /// voxel downsampling
       cvo::VoxelMap<cvo::CvoPoint> voxel_map(cvo_align.get_params().multiframe_downsample_voxel_size);
       for (int l = 0; l < raw_pcd_transformed->size(); l++) {
@@ -361,9 +328,8 @@ int main(int argc, char** argv) {
       pcl::PointCloud<cvo::CvoPoint> raw_pcd_downsampled;
       for (auto p : sampled)
         raw_pcd_downsampled.push_back(*p);
-
       // TODO: Delete this line 
-      std::cout<<"after downsampling, num of points is "<<raw_pcd_transformed->size()<<std::endl;
+      std::cout<<"after downsampling, num of points is "<<raw_pcd_downsampled.size()<<std::endl;
 
       /// add noise and outliers
       pcl::PointCloud<cvo::CvoPoint>::Ptr raw_pcd_curr;//(new pcl::PointCloud<pcl::PointXYZ>);
@@ -382,9 +348,9 @@ int main(int argc, char** argv) {
       } else {
         raw_pcd_curr = raw_pcd_cvo_normal[i];
       }
-
       /// write pcd files for visualzation
-      copyPointCloud(*raw_pcd_curr, *raw_pcd);
+      raw_pcd = raw_pcd_curr;
+      // copyPointCloud(*raw_pcd_curr, *raw_pcd);
       pcl::io::savePCDFileASCII(exp_curr_dir_str + "/" + std::to_string(i)+"normal.pcd", *raw_pcd);      
       //pcd_rescale<pcl::PointXYZ>(raw_pcd);
 
@@ -394,8 +360,12 @@ int main(int argc, char** argv) {
       pose = pose44.block<3,4>(0,0);
 
       /// prepare registration data structures
+      
       std::shared_ptr<cvo::CvoPointCloud> pc (new cvo::CvoPointCloud(*raw_pcd));  
       cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pc.get(), pose.data()));
+      pcl::PointCloud<cvo::CvoPoint> target_cvo;
+      cvo::CvoPointCloud_to_pcl(*new_frame->points,target_cvo);
+      pcl::io::savePCDFileASCII(exp_curr_dir_str + "/" + std::to_string(i)+"normal_test_cvo_point.pcd", target_cvo);  
       frames.push_back(new_frame);
       pcs.push_back(pc);
     }
@@ -425,7 +395,9 @@ int main(int argc, char** argv) {
       continue;
     
     std::cout<<"Start constructing cvo edges\n";
-    std::list<cvo::BinaryState::Ptr> edge_states;            
+    std::list<cvo::BinaryState::Ptr> edge_states;         
+    const cvo::CvoParams & params = cvo_align.get_params();
+    std::cout << "multiframe_ell_init " << params.multiframe_ell_init << std::endl;   
     for (int i = 0; i < num_frames; i++) {
       for (int j = i+1; j < num_frames; j++ ) {
         //std::pair<cvo::CvoFrame::Ptr, cvo::CvoFrame::Ptr> p(frames[i], frames[j]);

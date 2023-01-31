@@ -1,9 +1,9 @@
 cd build
 make -j
 cd ..
-for init_angle in 10
+for init_angle in 10 50
 do
-	for ratio in 0.0 0.1
+	for ratio in 0.0 0.5
 	do
 		
 #gdb -ex run --args \
