@@ -328,7 +328,7 @@ class LoamScanRegistration{
 };
 
     template <typename T>
-    bool pcl_val_isfinite(T x) {
+    bool pl_isfinite(T x) {
       return std::isfinite(x);
     }
     
