@@ -99,7 +99,7 @@ namespace cvo {
     string img_pth = folder_name + "/image_left/" + index_str + "_left.png";
     rgb_img = cv::imread(img_pth, cv::ImreadModes::IMREAD_COLOR);
     // read depth npy
-    const string depth_folder = folder_name + "/" + depth_folder_name;
+    const string depth_folder = this->folder_name + "/" + depth_folder_name;
     string dep_pth = depth_folder + "/" + index_str + "_left_depth.npy";
     cnpy::NpyArray dep_arr = cnpy::npy_load(dep_pth);
     float* dep_data = dep_arr.data<float>();
@@ -118,7 +118,7 @@ namespace cvo {
       }
     }
     // scale by 5000 and flatten to vector
-    //raw_dep = raw_dep * 5000.0f;
+    raw_dep = raw_dep * 5000.0f;
     //dep_vec.clear();
     //dep_vec = vector<float>(raw_dep.begin<float>(), raw_dep.end<float>());
     return 0;

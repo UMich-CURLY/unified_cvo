@@ -336,10 +336,13 @@ namespace cvo{
                         expected_points,
                         output_uv);
       edge_or_surface.resize(output_uv.size() * 2);
+      std::cout<<"Just resized to "<<edge_or_surface.size()<<"\n";
       for (int i = 0; i < output_uv.size(); i++) {
         edge_or_surface[i*2] = 0.9;
         edge_or_surface[i*2 +1]=0.1;
+        std::cout<<i<<", ";
       }
+      std::cout<<"\n"<<"finish dso sampling\n";
       
     }
     //******************************************/
@@ -374,9 +377,9 @@ namespace cvo{
           
       cv::Canny( left_gray, detected_edges, 50, 50*3, 3 );
       
-      for (int h = 0; h < left_image.cols(); h++){
+      for (int h = 0; h < left_image.rows(); h++){
 
-        for (int w = 0; w < left_image.rows(); w++){
+        for (int w = 0; w < left_image.col(); w++){
           std::pair<int,int> uv {h , w};
           output_uv.push_back(uv);
           if (detected_edges.at<uint8_t>(h, w)  > 0 ) {
@@ -394,7 +397,7 @@ namespace cvo{
       std::cerr<<"This point selection method is not implemented.\n";
       return;
     }
-
+    return;
   }
 
   /*  
@@ -520,8 +523,8 @@ namespace cvo{
           auto labels = Eigen::Map<const VecXf_row>((raw_image.semantic_image().data()+ (v * w + u)*raw_image.num_classes()), raw_image.num_classes() );
           int max_class = 0;
           labels.maxCoeff(&max_class);
-          if(max_class == 10)// exclude unlabeled points
-            continue;
+          //if(max_class == 10)// exclude unlabeled points
+          //  continue;
         }
 
         // add point to pcd
