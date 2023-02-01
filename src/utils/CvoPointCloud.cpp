@@ -339,13 +339,13 @@ namespace cvo{
                         expected_points,
                         output_uv);
       edge_or_surface.resize(output_uv.size() * 2);
-      std::cout<<"Just resized to "<<edge_or_surface.size()<<"\n";
+      //std::cout<<"Just resized to "<<edge_or_surface.size()<<"\n";
       for (int i = 0; i < output_uv.size(); i++) {
         edge_or_surface[i*2] = 0.9;
         edge_or_surface[i*2 +1]=0.1;
-        std::cout<<i<<", ";
+        //std::cout<<i<<", ";
       }
-      std::cout<<"\n"<<"finish dso sampling\n";
+      //std::cout<<"\n"<<"finish dso sampling\n";
       
     }
     //******************************************/
