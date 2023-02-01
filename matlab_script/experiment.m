@@ -13,18 +13,17 @@ M = 4;
 idx = transpose(0:3); 
 percentage = 1;
 num_exp = 10;
-
+experiment_folder = 'tartanair_toy_exp_';
 
 for ai=1:length(rotation_angles)
     for ei=1:length(errors)
        
             
-            currentfolder = append('toy_exp_',rotation_angles{ai},'_',errors{ei},'/');
-            fprintf('start folder %s\n',currentfolder);
+            currentfolder = append(experiment_folder,rotation_angles{ai},'_',errors{ei},'/');
             error = [];
             for index = 1:num_exp
-                index_s = int2str(index);
-            
+                index_s = int2str(index -1);
+                fprintf('start folder %s\n',append(rootfolder,currentfolder,index_s));
                 % load ground truth
                 try
 
@@ -38,23 +37,18 @@ for ai=1:length(rotation_angles)
             
                 % load point cloud 
                 
-                
-                V1 = pcread(append(rootfolder,currentfolder,index_s,'/0normal.pcd'));
-                [n,m] = size(V1);
-                
-                V2 = pcread(append(rootfolder,currentfolder,index_s,'/1normal.pcd'));
-                V3 = pcread(append(rootfolder,currentfolder,index_s,'/2normal.pcd'));
-                V4 = pcread(append(rootfolder,currentfolder,index_s,'/3normal.pcd'));
-                
-                V1_down = pcdownsample(V1,'random',percentage,PreserveStructure=true);
-                V2_down = pcdownsample(V2,'random',percentage,PreserveStructure=true);
-                 V3_down = pcdownsample(V3,'random',percentage,PreserveStructure=true);
-                V4_down = pcdownsample(V4,'random',percentage,PreserveStructure=true);
-                V1_p = bsxfun(@plus,Tgtr{1}(1:3,1:3) *V1.Location',Tgtr{1}(1:3,4));
-                V2_p = bsxfun(@plus,Tgtr{2}(1:3,1:3) *V2.Location',Tgtr{2}(1:3,4));
-                V3_p = bsxfun(@plus,Tgtr{3}(1:3,1:3) *V3.Location',Tgtr{3}(1:3,4));
-                V4_p = bsxfun(@plus,Tgtr{4}(1:3,1:3) *V4.Location',Tgtr{4}(1:3,4));
-
+                V1 = pcread(append(rootfolder,currentfolder,index_s,'/0normal.pcd'))';
+                V2 = pcread(append(rootfolder,currentfolder,index_s,'/1normal.pcd'))';
+                V3 = pcread(append(rootfolder,currentfolder,index_s,'/2normal.pcd'))';
+                V4 = pcread(append(rootfolder,currentfolder,index_s,'/3normal.pcd'))';
+%                 V1_p = bsxfun(@plus,Tgtr{1}(1:3,1:3) *V1.Location',Tgtr{1}(1:3,4)); 
+%                 V2_p = bsxfun(@plus,Tgtr{2}(1:3,1:3) *V2.Location',Tgtr{2}(1:3,4));
+%                 V3_p = bsxfun(@plus,Tgtr{3}(1:3,1:3) *V3.Location',Tgtr{3}(1:3,4));
+%                 V4_p = bsxfun(@plus,Tgtr{4}(1:3,1:3) *V4.Location',Tgtr{4}(1:3,4));
+                V1_p = V1.Location';
+                V2_p = V2.Location';
+                V3_p = V3.Location';
+                V4_p = V4.Location';
                 for j =1:M
                     Tgtr{j} = inv(Tgtr{j});
                 end
@@ -71,14 +65,14 @@ for ai=1:length(rotation_angles)
                 %points on a unit sphere
                 Xin = [cos(az).*cos(el); sin(el); sin(az).*cos(el)];% (unit) polar to cartesian conversion
                 
-                Xin = Xin/10; % it is good for the initialization to have initial cluster centers at the same order with the points
-                % Xin = pcdownsample(V1,'random',0.1,PreserveStructure=true).Location';
+                Xin = Xin*10 ; % it is good for the initialization to have initial cluster centers at the same order with the points
+                %Xin = pcdownsample(V1,'random',0.8,PreserveStructure=true).Location';
                 %Xin = pcdownsample(V1,'random',0.1,PreserveStructure=true).Location';
 
                 % since sigma is automatically initialized based on X and V
                 
                 tic
-                [R,t,X,S,a,~,T] = jrmpc(V,Xin,'maxNumIter',maxNumIter,'gamma',0.1);
+                [R,t,X,S,a,~,T] = jrmpc(V,Xin,'maxNumIter',maxNumIter,'gamma',1);
                 toc
                 
                     % Convert R,t to ground truth T
@@ -89,6 +83,12 @@ for ai=1:length(rotation_angles)
                    Tres{j} = Tres{j};
         
                 end
+                for j=1:M
+                    Tfixed_res{j}= inv(Tres{1})*Tres{j};
+
+                end
+                Tfixed_res = Tfixed_res';
+
                 % measure and display convergency, view 1 is ommited as is the referential.
                 fprintf('                  ||inv(A{j})*Tgtr{j} - I||_F                  \n');
                 
@@ -98,8 +98,9 @@ for ai=1:length(rotation_angles)
                 fprintf('Error:')
                 error_cur = [0];
                 total_error = 0;
+                current_error = 0;
                 for j=2:M
-                    current_error = norm(Tgtr{j}-inv(Tres{1})*(Tres{j}),'fro');
+                    current_error = norm(inv(Tfixed_res{j})*Tgtr{j} - eye(4),'fro');
                     fprintf('  %.4f ',current_error);
                     error_cur(j)=  current_error;
                     total_error = total_error + current_error;
@@ -109,9 +110,10 @@ for ai=1:length(rotation_angles)
                 % log pose 
                 line = zeros(4,16);
                 for j = 1:M
-                    line(j,:) = reshape(Tres{j}',[1,16]);
+                    line(j,:) = reshape(Tfixed_res{j}',[1,16]);
                 end
-                writematrix(line,append(rootfolder,currentfolder,index_s,'/jrmpc.txt'));
+                line = round(line,6);
+                writematrix(line,append(rootfolder,currentfolder,index_s,'/jrmpc.txt'),'Delimiter','tab');
                 writematrix(error_cur',append(rootfolder,currentfolder,index_s,'/error_jrmpc.txt'));
 
             end
