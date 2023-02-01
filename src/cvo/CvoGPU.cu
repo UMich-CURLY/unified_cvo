@@ -16,7 +16,7 @@
 #include "cvo/IRLS_State_GPU.hpp"
 #include "cvo/IRLS.hpp"
 #include "cvo/CvoFrameGPU.hpp"
-
+#include "cvo/CvoGPU_impl.hpp"
 //#include "cukdtree/cukdtree.h"
 
 #include <pcl/point_types.h>
@@ -1413,7 +1413,7 @@ namespace cvo{
     
     int k = 0;
     int num_neighbors = params.is_using_kdtree? perl_registration::KDTREE_K_SIZE : params.nearest_neighbors_max;
-    Eigen::Matrix4d dRT = Eigen::Matrix4d::Identity();    
+    Eigen::Matrix<double, 4, 4, Eigen::DontAlign> dRT = Eigen::Matrix<double, 4,4, Eigen::DontAlign>::Identity();    
     for(; k<params.MAX_ITER; k++){
       if (debug_print) printf("new iteration %d, ell is %f\n", k, cvo_state.ell);
       cvo_state.reset_state_at_new_iter(num_neighbors);
@@ -1502,9 +1502,9 @@ namespace cvo{
       // Eigen::Matrix4d dRT = Eigen::Matrix4d::Identity();
       dRT.block<3,3>(0,0) = dR;
       dRT.block<3,1>(0,3) = dT;
-      Sophus::SE3d dRT_sophus(dRT);
-      double dist_this_iter = dRT_sophus.log().norm();
-      //double dist_this_iter = dist_se3(dR,dT);
+      //Sophus::SE3d dRT_sophus(dRT);
+      //double dist_this_iter = dRT_sophus.log().norm();
+      double dist_this_iter = dist_se3_cpu(dRT);
       if (debug_print)  {
         std::cout<<"just computed distk. dR "<<dR<<"\n dt is "<<dT<<std::endl;
 	std::cout<<"dist: "<<dist_this_iter <<std::endl<<"check bounds....\n";

@@ -379,8 +379,8 @@ namespace cvo{
       
       for (int h = 0; h < left_image.rows(); h++){
 
-        for (int w = 0; w < left_image.col(); w++){
-          std::pair<int,int> uv {h , w};
+        for (int w = 0; w < left_image.cols(); w++){
+          std::pair<int,int> uv {w , h};
           output_uv.push_back(uv);
           if (detected_edges.at<uint8_t>(h, w)  > 0 ) {
             edge_or_surface.push_back(0.95);
