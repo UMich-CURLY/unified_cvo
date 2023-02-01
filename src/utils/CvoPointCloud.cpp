@@ -41,7 +41,9 @@ namespace cvo{
     int u = uv.first;
     int v = uv.second;
 
-    if (std::isnan(xyz(0)) || std::isnan(xyz(1)) || std::isnan(xyz(2)) )
+    if (std::isnan(xyz(0)) || std::isnan(xyz(1)) || std::isnan(xyz(2)) ||
+        !std::isfinite(xyz(0)) || !std::isfinite(xyz(1)) || !std::isfinite(xyz(2)) 
+        )
       return false;
     
     if ( u < 2 || u > w -2 || v < 100 || v > h-30 )
@@ -55,7 +57,8 @@ namespace cvo{
 
   // filter away pixels that are too far away
   static bool is_good_point(const Vec3f & xyz ) {
-    if (std::isnan(xyz(0)) || std::isnan(xyz(1)) || std::isnan(xyz(2)) )
+    if (std::isnan(xyz(0)) || std::isnan(xyz(1)) || std::isnan(xyz(2))
+        ||         !std::isfinite(xyz(0)) || !std::isfinite(xyz(1)) || !std::isfinite(xyz(2)) )
       return false;
 
     
