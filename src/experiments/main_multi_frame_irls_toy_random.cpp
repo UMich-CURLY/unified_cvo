@@ -107,7 +107,7 @@ void gen_random_poses(std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eige
   std::random_device rd;
   std::mt19937 e2(rd());
   std::uniform_real_distribution<> dist(0, max_angle_axis);
-  std::uniform_real_distribution<> dist_trans(0,0.3);
+  std::uniform_real_distribution<> dist_trans(0,3);
   for (int i = 0; i < num_poses; i++) {
     if (i != 0) {
       Eigen::Matrix3f rot;
