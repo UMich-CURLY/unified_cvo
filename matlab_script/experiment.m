@@ -3,17 +3,17 @@ close all
 clear all
 
 
-rotation_angles = {'10','20','30','40','50'};
-errors = {'0.0','0.1','0.2','0.3','0.4','0.5'};
-rootfolder = '../../exp/';
-maxNumIter = 500;                    
+rotation_angles = {'50'};
+errors = {'0.5'};
+rootfolder = '../';
+maxNumIter = 100;                    
 % number of views
 M = 4;
 % cell with indexes 1:M,
 idx = transpose(0:3); 
 percentage = 1;
-num_exp = 10;
-experiment_folder = 'tartanair_toy_exp_';
+num_exp = 1;
+experiment_folder = 'toy_exp_';
 
 for ai=1:length(rotation_angles)
     for ei=1:length(errors)
@@ -65,14 +65,14 @@ for ai=1:length(rotation_angles)
                 %points on a unit sphere
                 Xin = [cos(az).*cos(el); sin(el); sin(az).*cos(el)];% (unit) polar to cartesian conversion
                 
-                Xin = Xin*10 ; % it is good for the initialization to have initial cluster centers at the same order with the points
-                %Xin = pcdownsample(V1,'random',0.8,PreserveStructure=true).Location';
+                Xin = Xin/10 ; % it is good for the initialization to have initial cluster centers at the same order with the points
+%                 Xin = pcdownsample(V1,'random',0.8,PreserveStructure=true).Location';
                 %Xin = pcdownsample(V1,'random',0.1,PreserveStructure=true).Location';
 
                 % since sigma is automatically initialized based on X and V
                 
                 tic
-                [R,t,X,S,a,~,T] = jrmpc(V,Xin,'maxNumIter',maxNumIter,'gamma',1);
+                [R,t,X,S,a,~,T] = jrmpc(V,Xin,'maxNumIter',maxNumIter,'gamma',0.1);
                 toc
                 
                     % Convert R,t to ground truth T
