@@ -21,6 +21,7 @@ if __name__ == "__main__":
     pointcloudFolder = rootpath + prefixpath +  str(angles_defined[0]) + '_' + str(outlier_defined[0]) + '/' + str(exp) + '/'
     colors = [[1,0,0],[0,1,0],[0,0,1],[1,1,0]]
     print(pointcloudFolder)
+    
     # read the pointcloud use point cloud folder with open3d\
     pc = []
     for i in range(4):
@@ -29,7 +30,7 @@ if __name__ == "__main__":
         newpc.paint_uniform_color(colors[i])
         pc.append(newpc)
     o3d.visualization.draw_geometries([pc[0],pc[1],pc[2],pc[3]])
-
+    
 
     # # transform to cvo result 
     # # load cvo pose \
