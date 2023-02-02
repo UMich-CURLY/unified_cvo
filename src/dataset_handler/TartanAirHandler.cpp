@@ -226,7 +226,7 @@ namespace cvo {
     return 0;
   }
 
-  int TartanAirHandler::read_next_rgbd_wihtout_sky(cv::Mat & rgb_img,
+  int TartanAirHandler::read_next_rgbd_without_sky(cv::Mat & rgb_img,
                                                    std::vector<float> & dep_vec,
                                                    int num_semantic_class,
                                                    std::vector<float> & semantics,
