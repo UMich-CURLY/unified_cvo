@@ -226,4 +226,63 @@ namespace cvo {
     return 0;
   }
 
+  int TartanAirHandler::read_next_rgbd_wihtout_sky(cv::Mat & rgb_img,
+                                                   std::vector<float> & dep_vec,
+                                                   int num_semantic_class,
+                                                   std::vector<float> & semantics,
+                                                   int sky_label) {
+    
+    if (read_next_rgbd(rgb_img, dep_vec))
+      return -1;
+
+    
+    if (semantic_class.empty()) {
+      cout << "No useable semantic class mapping\n";
+      return -1;
+    }
+    // format curr_index
+    stringstream ss;
+    ss << setw(6) << setfill('0') << curr_index;
+    string index_str = ss.str();
+    string semantic_name = folder_name + "/seg_left/" + index_str + "_left_seg.npy";
+    cnpy::NpyArray sem_arr = cnpy::npy_load(semantic_name);
+    // if (sem_arr.data == nullptr)
+    //   return -1;
+    uint8_t* sem_data = sem_arr.data<uint8_t>();
+    // visualize to debug
+    // int rows = sem_arr.shape[0];
+    // int cols = sem_arr.shape[1];
+    // cv::Mat raw_sem(cv::Size(cols, rows), CV_8UC1);
+    // for (int r = 0; r < rows; r++ ) {
+    //   for (int c = 0; c < cols; c++){
+    //     uint8_t* orig_label = sem_data + (r * cols + c);
+    //     // scale by 20 to increase contrast
+    //     uint8_t new_label = semantic_class[*orig_label] * 20;
+    //     raw_sem.at<uint8_t>(r, c) = new_label;
+    //   }
+    // }
+    // cv::imshow("img", left);
+    // cv::imshow("semantic", raw_sem);
+    // cv::waitKey(10);
+    // restructure to hold probability for each semantic class
+    int num_pixels = dep_vec.size();
+    semantics.resize(num_pixels * num_semantic_class);
+    fill(semantics.begin(), semantics.end(), 0);
+    for (int i = 0; i < num_pixels; i++) {
+      // find the begin index for current pixel semantic classes
+      int begin_idx = i * num_semantic_class;
+      // find the class attribute for the pixel, 0 ~ num_semantics_class
+      uint8_t* orig_label = sem_data + i;
+      if (*orig_label == sky_label)
+        dep_vec[i] = std::nanf("1");
+
+      uint8_t remapped_label = semantic_class[*orig_label];
+      semantics[begin_idx + remapped_label] = 1.0; // mark groundtruth with prob 1.0
+    }
+    
+    return 0;
+    
+  }
+  
+
 }
