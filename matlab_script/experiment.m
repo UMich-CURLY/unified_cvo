@@ -3,17 +3,19 @@ close all
 clear all
 
 
-rotation_angles = {'50'};
-errors = {'0.5'};
-rootfolder = '../';
+rotation_angles = {'12.5','25','37.5','50'};
+
+%errors = {'0.25','0.375','0.5'};
+errors = {'0.0','0.125','0.25','0.375','0.5'};
+rootfolder = '../../exp/tartanair_full_semantic/';
 maxNumIter = 100;                    
 % number of views
 M = 4;
 % cell with indexes 1:M,
 idx = transpose(0:3); 
 percentage = 1;
-num_exp = 1;
-experiment_folder = 'toy_exp_';
+num_exp = 40;
+experiment_folder = 'tartanair_toy_exp_';
 
 for ai=1:length(rotation_angles)
     for ei=1:length(errors)
@@ -65,7 +67,7 @@ for ai=1:length(rotation_angles)
                 %points on a unit sphere
                 Xin = [cos(az).*cos(el); sin(el); sin(az).*cos(el)];% (unit) polar to cartesian conversion
                 
-                Xin = Xin/10 ; % it is good for the initialization to have initial cluster centers at the same order with the points
+                Xin = Xin  / 10; % it is good for the initialization to have initial cluster centers at the same order with the points
 %                 Xin = pcdownsample(V1,'random',0.8,PreserveStructure=true).Location';
                 %Xin = pcdownsample(V1,'random',0.1,PreserveStructure=true).Location';
 

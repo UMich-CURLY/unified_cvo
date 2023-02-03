@@ -47,22 +47,22 @@ def transformed_pointlcloud(trans,pts):
         result_pt.append(pt)
     return result_pt
 def main():
-    rootpath = '/home/bigby/project/unified_cvo/'
+    rootpath = '/home/bigby/project/exp/tartanair_full_semantic/'
     angles_defined = ['12.5','25','37.5','50']
     outlier_defined = ['0.0','0.125','0.25','0.375','0.5']
     prefixpath = 'tartanair_toy_exp_'
     num_exp = 40
-    exp = 0
-    pointcloudFolder = rootpath + prefixpath +  str(angles_defined[0]) + '_' + str(outlier_defined[0]) + '/' + str(exp) + '/'
+    exp = 2
+    pointcloudFolder = rootpath + prefixpath +  str(angles_defined[3]) + '_' + str(outlier_defined[4]) + '/' + str(exp) + '/'
     max_iter = 100
     pc = []
-    radius = 1
+    radius = 1.5
     for i in range(4):
         filename = pointcloudFolder + str(i) + 'normal_color.pcd'
         newpc = o3d.io.read_point_cloud(filename)
         # newpc.paint_uniform_color(colors[i])
         # calculate normal
-        newpc.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=1, max_nn=40))
+        newpc.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=1.5, max_nn=40))
         pc.append(newpc)
     o3d.visualization.draw_geometries([pc[0],pc[1],pc[2],pc[3]])
     result_transformation = [np.identity(4)]
@@ -78,14 +78,16 @@ def main():
         current_transformation = result_icp.transformation
         result_transformation.append(current_transformation)
     print(result_transformation)
-    pt_t = transformed_pointlcloud(result_transformation,pc)
-    o3d.visualization.draw_geometries([pt_t[0],pt_t[1],pt_t[2],pt_t[3]])
+    # pt_t = transformed_pointlcloud(result_transformation,pc)
+    # o3d.visualization.draw_geometries([pt_t[0],pt_t[1],pt_t[2],pt_t[3]])
     # load gt transformation
     gtpath = pointcloudFolder + 'gt_poses.txt'
     gt_t = load_transform(gtpath)
     # transfer gt
     for i in range(4):
         gt_t[i] = np.linalg.inv(gt_t[i])
+    pt_t = transformed_pointlcloud(result_transformation,pc)
+    o3d.visualization.draw_geometries([pt_t[0],pt_t[1],pt_t[2],pt_t[3]])
     totalerror = calculate_error(result_transformation,gt_t,pointcloudFolder + 'error_color_icp.txt')
     # save icp result 
     save_trans(result_transformation,pointcloudFolder + 'color_icp.txt')

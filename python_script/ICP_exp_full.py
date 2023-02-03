@@ -47,7 +47,7 @@ def transformed_pointlcloud(trans,pts):
         result_pt.append(pt)
     return result_pt
 def main():
-    rootpath = '/home/bigby/project/unified_cvo/'
+    rootpath = '/home/bigby/project/exp/tartanair_full_semantic/'
     angles_defined = ['12.5','25','37.5','50']
     outlier_defined = ['0.0','0.125','0.25','0.375','0.5']
     prefixpath = 'tartanair_toy_exp_'
@@ -83,7 +83,7 @@ def main():
                     #print(current_transformation)
                     result_transformation.append(current_transformation)
                 pt_t = transformed_pointlcloud(result_transformation,pc)
-                o3d.visualization.draw_geometries([pt_t[0],pt_t[1],pt_t[2],pt_t[3]])
+                #o3d.visualization.draw_geometries([pt_t[0],pt_t[1],pt_t[2],pt_t[3]])
                 # load gt transformation
                 gtpath = pointcloudFolder + 'gt_poses.txt'
                 gt_t = load_transform(gtpath)
@@ -93,7 +93,6 @@ def main():
                 totalerror = calculate_error(result_transformation,gt_t,pointcloudFolder + 'error_color_icp.txt')
                 save_trans(result_transformation,pointcloudFolder + 'color_icp.txt')
                 error_file.append(totalerror)
-                exit()
             np.savetxt(rootpath  + prefixpath + angle + '_' + outlier + '/color_icp_err.txt',np.array(error_file), fmt='%.8f')
 
 if __name__ == '__main__':  

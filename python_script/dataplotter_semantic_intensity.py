@@ -2,15 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def main():
-    rootpath = '/home/bigby/project/exp/'
-    angles_defined = ['10','20','30','40','50']
-    outlier_defined = ['0.0','0.1','0.2','0.3','0.4','0.5']
+    rootpath = '/home/bigby/project/exp/tartanair_full_semantic/'
+    angles_defined = ['12.5','25','37.5','50']
+    outlier_defined = ['0.0','0.125','0.25','0.375','0.5']
     mode = "tartanair"
    
     prefixpath1 = 'tartanair_toy_exp_'
 
-    prefixpath2 = 'tartanair_toy_exp_semantic_'
-
+    prefixpath2 ='tartanair_toy_exp_'
    
 
     error_record = {}
@@ -25,7 +24,7 @@ def main():
             foldername_semantics = rootpath  + prefixpath2 + angle + '_' + outlier + '/'
 
             intencity_error_file = foldername_intencity + 'cvo_err_tartanair.txt'
-            semantics_error_file = foldername_semantics + 'cvo_err_tartanair.txt'
+            semantics_error_file = foldername_semantics + 'cvo_err_bunny_semantics.txt'
             intencity_error = np.loadtxt(intencity_error_file)
             semantics_error = np.loadtxt(semantics_error_file)
             average_intencity_error = np.average(intencity_error)
