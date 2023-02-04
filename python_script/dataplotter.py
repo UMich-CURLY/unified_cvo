@@ -98,9 +98,9 @@ def main():
     angles_defined = ['12.5','25','37.5','50']
     outlier_defined = ['0.0','0.125','0.25','0.375','0.5']
     #outlier_defined = ['0.25','0.375','0.5']
-    mode = "tartanair"
-    use_icp = True
-    use_sem = True
+    mode = "bunny"
+    use_icp = False
+    use_sem = False
     if (mode == 'tartanair'):
         rootpath = '/home/bigby/project/exp/tartanair_full_semantic/'
         prefixpath = 'tartanair_toy_exp_'
@@ -133,6 +133,12 @@ def main():
         error_record[outlier]['cvosem_error'] = []
         error_record[outlier]['jrmpc_error'] = []
         error_record[outlier]['icp_error'] = []
+        for angle in angles_defined:
+            error_record[outlier][angle] = {}
+            error_record[outlier][angle]['cvo'] = []
+            error_record[outlier][angle]['jrmpc'] = []
+            error_record[outlier][angle]['cvosem'] = []
+            error_record[outlier][angle]['icp'] = []
     num_exp = 10
     for outlier in outlier_defined:
         for angle in angles_defined:
@@ -161,12 +167,16 @@ def main():
                 error_entry['exp'].append(error_entry['index'])
                 error_record[outlier]['cvo_error'].append(cvo_error[i])
                 error_record[outlier]['jrmpc_error'].append(jrmpc_error[i])
+                error_record[outlier][angle]['cvo'].append(cvo_error[i])
+                error_record[outlier][angle]['jrmpc'].append(jrmpc_error[i])
                 if use_icp:
                     error_entry['icp_error'].append(icp_error[i])
                     error_record[outlier]['icp_error'].append(icp_error[i])
+                    error_record[outlier][angle]['icp'].append(icp_error[i])
                 if use_sem:
                     error_entry['cvosem_error'].append(sem_error[i])
                     error_record[outlier]['cvosem_error'].append(sem_error[i])
+                    error_record[outlier][angle]['cvosem'].append(sem_error[i])
             average_cvo_error = np.average(cvo_error)
             average_jrmpc_error = np.average(jrmpc_error)
             if use_icp:
@@ -216,11 +226,11 @@ def main():
     #     plt.legend()
     # else:
     #     plt.legend(ax,ncol=4,loc="center",bbox_to_anchor=(0.5, 1.1))
-    tablelegend(ax, ncol=3, bbox_to_anchor=(1, 1), 
-            row_labels=['$i=1$', '$i=2$', '$i=3$','$i=4$','$i=5$'], 
-            col_labels=['$j=1$', '$j=2$', '$j=3$'], 
-            title_label='$f_{i,j}$')
-    plt.show()
+    # tablelegend(ax, ncol=3, bbox_to_anchor=(1, 1), 
+    #         row_labels=['$i=1$', '$i=2$', '$i=3$','$i=4$','$i=5$'], 
+    #         col_labels=['$j=1$', '$j=2$', '$j=3$'], 
+    #         title_label='$f_{i,j}$')
+    # plt.show()
 
     ## Plot second type of figure
     # for i in range(len(error_entry['exp'])):
@@ -246,7 +256,95 @@ def main():
         np.savetxt(rootpath  + 'jrmpc_error_list'+ str(outlier ) + '.txt', error_list_jrmpc,fmt='%.8f')
         np.savetxt(rootpath  + 'icp_error_list'+ str(outlier ) + '.txt', error_list_jrmpc,fmt='%.8f')
     
-    
+    # generate data for each of the three box plots in each subplot
+   
+    if use_sem:
+        for angle in angles_defined:
+            # create a figure and axis
+            fig, ax = plt.subplots(1, 5, figsize=(6.4, 4.8), sharey=True)
+            i = 0
+            # fig.suptitle(angle, fontsize=16)
+            for outlier in outlier_defined:
+                # plot the first box plot in the first subplot
+                # print(np.array(error_record[outlier][angle]['cvo']).shape)
+                bp = ax[i].boxplot([np.array(error_record[outlier][angle]['cvo']), np.array(error_record[outlier][angle]['cvosem']) ,  np.array(error_record[outlier][angle]['jrmpc'])], 
+                vert=True, showfliers=False, patch_artist=True,
+                labels=['RKHS_Intencity', 'JRMPC', 'Colored_ICP'])
+                ax[i].set_xlabel(float(outlier)*100)
+                ax[i].set_xticks([])
+                # ax[i].set_title('Box Plot 1 of Error')
+                ax[i].xaxis.label.set_fontsize(15)
+                ax[i].yaxis.label.set_fontsize(15)
+                ax[i].xaxis.set_tick_params(labelsize=12)
+                if (i == 0):
+                    ax[i].set_ylabel(r'$\|\| T^{-1}*G-I \|\|_{F}$')
+                
+                else:
+                    # ax[i].set_yticks([])
+                    
+                    pass
+
+                colors = [[173/255, 216/255, 230/255], [255/255, 255/255, 224/255], [144/255, 238/255, 144/255]]
+                for patch, color in zip(bp['boxes'], colors):
+                    patch.set_facecolor(color)
+                if (i == 0):  
+                    ax[i].legend(handles=bp['boxes'], labels=['RKHS_Intencity', 'RKHS_Semantics', 'JRMPC'],  bbox_to_anchor=(4.8, 1.105), ncol=3)
+                    ax[i].xaxis.set_label_coords(2.5, - 0.07)
+                    ax[i].set_xlabel("Outlier Ratio %", fontsize=18)
+            
+                i = i+1
+            handles, labels = ax[0].get_legend_handles_labels()
+            
+            # fig.legend(*ax[0].get_legend_handles_labels(),loc='center',  bbox_to_anchor=(0.5, 0.91), ncol=3)
+            # fig.legend(['RKHS_Intencity', 'JRMPC', 'Colored_ICP'],loc='center',  bbox_to_anchor=(0.5, 0.91), ncol=3)
+            plt.subplots_adjust(wspace=0)
+            plt.show()
+            # fig.legend(loc='center', bbox_to_anchor=(0.5, -0.1), ncol=3)
+    else:
+        for angle in angles_defined:
+            # create a figure and axis
+            fig, ax = plt.subplots(1, 5, figsize=(6.4, 4.8), sharey=True)
+            i = 0
+            # fig.suptitle(angle, fontsize=16)
+            for outlier in outlier_defined:
+                # plot the first box plot in the first subplot
+                print(np.array(error_record[outlier][angle]['cvo']).shape)
+                print(np.array(error_record[outlier][angle]['jrmpc']).shape)
+                bp = ax[i].boxplot([np.array(error_record[outlier][angle]['cvo']),  np.array(error_record[outlier][angle]['jrmpc'])], 
+                vert=True, showfliers=False, patch_artist=True,
+                labels=['RKHS_Intencity', 'JRMPC'])
+                ax[i].set_xlabel(float(outlier)*100)
+                ax[i].set_xticks([])
+                # ax[i].set_title('Box Plot 1 of Error')
+                ax[i].xaxis.label.set_fontsize(15)
+                ax[i].yaxis.label.set_fontsize(15)
+                ax[i].xaxis.set_tick_params(labelsize=12)
+                if (i == 0):
+                    ax[i].set_ylabel(r'$\|\| T^{-1}*G-I \|\|_{F}$')
+                
+                else:
+                    # ax[i].set_yticks([])
+                    
+                    pass
+
+                colors = [[173/255, 216/255, 230/255], [144/255, 238/255, 144/255]]
+                for patch, color in zip(bp['boxes'], colors):
+                    patch.set_facecolor(color)
+                if (i == 0):  
+                    ax[i].legend(handles=bp['boxes'], labels=['RKHS', 'JRMPC'],  bbox_to_anchor=(3.5, 1.105), ncol=3)
+                    ax[i].xaxis.set_label_coords(2.5, - 0.07)
+                    ax[i].set_xlabel("Outlier Ratio %", fontsize=18)
+            
+                i = i+1
+            handles, labels = ax[0].get_legend_handles_labels()
+            
+            # fig.legend(*ax[0].get_legend_handles_labels(),loc='center',  bbox_to_anchor=(0.5, 0.91), ncol=3)
+            # fig.legend(['RKHS_Intencity', 'JRMPC', 'Colored_ICP'],loc='center',  bbox_to_anchor=(0.5, 0.91), ncol=3)
+            plt.subplots_adjust(wspace=0)
+            plt.show()
+            # fig.legend(loc='center', bbox_to_anchor=(0.5, -0.1), ncol=3)           
+        
+
             
             
 
