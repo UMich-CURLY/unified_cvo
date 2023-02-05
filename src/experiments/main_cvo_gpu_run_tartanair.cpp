@@ -252,10 +252,10 @@ int main(int argc, char** argv) {
   /// experiment result folder
   fs::path exp_folder_dir(exp_folder);
   fs::create_directories(exp_folder_dir);
-  std::string full_error_fname(exp_folder + "/cvo_err_bunny_semantics.txt");
+  std::string full_error_fname(exp_folder + "/cvo_err_bunny_no.txt");
   std::ofstream err_f(full_error_fname);
   err_f.close();
-  std::string full_time_fname(exp_folder + "/cvo_time_bunny_semantics.txt");
+  std::string full_time_fname(exp_folder + "/cvo_time_bunny_no.txt");
   std::ofstream err_time_f(full_time_fname);
   err_time_f.close();
 
@@ -387,8 +387,8 @@ int main(int argc, char** argv) {
 
 
     f_name =  exp_curr_dir_str + "/gt_BA_bunny_"+std::to_string(k)+".pcd" ;
-    std::string pose_fname = exp_curr_dir_str + "/rkhs_results.txt";
-    std::string err_curr_fname = exp_curr_dir_str + "/error_rksh_results.txt";
+    std::string pose_fname = exp_curr_dir_str + "/rkhs_results_no.txt";
+    std::string err_curr_fname = exp_curr_dir_str + "/error_rksh_results_no.txt";
     eval_poses_SE3_frobenius_norm(estimates,
                                   poses_gt,
                                   full_error_fname,
