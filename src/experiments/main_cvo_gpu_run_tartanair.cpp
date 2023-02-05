@@ -35,6 +35,8 @@
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/fpfh.h>
 #include <filesystem>
+#include <pcl/features/normal_3d.h>
+#include <pcl/features/principal_curvatures.h>
 namespace fs = std::filesystem;
 
 void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string & fname,
@@ -236,6 +238,7 @@ int main(int argc, char** argv) {
     sigma = std::stof(argv[9]); /// affects the noise scale value size
     uniform_range = std::stof(argv[10]); /// affets
   }
+  int use_curvature = std::stoi(argv[11]);
 //   int is_logging_data_only = std::stoi(argv[11]);
 
 //   std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > colors(num_frames);
@@ -252,14 +255,15 @@ int main(int argc, char** argv) {
   /// experiment result folder
   fs::path exp_folder_dir(exp_folder);
   fs::create_directories(exp_folder_dir);
-  std::string full_error_fname(exp_folder + "/cvo_err_bunny_semantics.txt");
+  std::string full_error_fname(exp_folder + "/cvo_err_bunny_curvature.txt");
   std::ofstream err_f(full_error_fname);
   err_f.close();
-  std::string full_time_fname(exp_folder + "/cvo_time_bunny_semantics.txt");
+  std::string full_time_fname(exp_folder + "/cvo_time_bunny_curvature.txt");
   std::ofstream err_time_f(full_time_fname);
   err_time_f.close();
 
   /// start running 
+  std::cout <<"use Curvature?  " << use_curvature << std::endl;
   for (int k = 0; k < num_runs; k++) {
 
 
@@ -278,19 +282,48 @@ int main(int argc, char** argv) {
     std::string foldername = in_pcd_fname + '/' +std::to_string(k) + '/';
     for (int i = 0; i < num_frames; i++) {
         pcl::PointCloud<cvo::CvoPoint>::Ptr dst(new pcl::PointCloud<cvo::CvoPoint>);
-        std::string fullName = foldername  + std::to_string(i) + "normal.pcd";
+        std::string fullName = foldername  + std::to_string(i) + "normal.pcd"; 
         std::cout << "load point cloud " << fullName << std::endl;
         pcl::io::loadPCDFile (fullName, *dst);
         pcl::PointCloud<cvo::CvoPoint>::Ptr raw_pcd(new pcl::PointCloud<cvo::CvoPoint>);
+        pcl::PointCloud<pcl::PointNormal>::Ptr dst_curvature(new pcl::PointCloud<pcl::PointNormal>);
+        // if (use_curvature == 0){
+        //   raw_pcd = dst;
+        // }
         raw_pcd = dst;
+        if (use_curvature == 1){
+          std::string curvature_full_name = foldername  + std::to_string(i) + "normal_curvature.pcd";
+          pcl::io::loadPCDFile (curvature_full_name, *dst_curvature);
+          assert(dst->points.size() == dst_curvature->points.size());
+          for (int i = 0; i<  dst->size() ; i ++){
+            cvo::CvoPoint newpt;
+            newpt.x = dst_curvature->points[i].x;
+            newpt.y = dst_curvature->points[i].y;
+            newpt.y = dst_curvature->points[i].z;
+            newpt.features[0] = dst_curvature->points[i].curvature;
+            if (std::isnan(dst_curvature->points[i].curvature)){
+              newpt.features[0] = 0;
+            }else{
+              //  std::cout << dst_curvature->points[i].curvature << std::endl;
+            }
+            newpt.features[1] = 0;
+            newpt.features[2] = 0;
+            newpt.features[3] = 0;
+            newpt.features[4] = 0;
+            std::cout << newpt.r << std::endl;
+            raw_pcd->push_back(newpt);
+            
+          } 
+        }
+        // raw_pcd = dst;
         std::shared_ptr<cvo::CvoPointCloud> pc (new cvo::CvoPointCloud(*raw_pcd));  
         cvo::Mat34d_row pose;
         cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pc.get(), pose.data()));
         frames.push_back(new_frame);
         pcs.push_back(pc);
     }
-
-
+    
+   
     // load gt
     std::string gtfilename = foldername + "gt_poses.txt";
     std::ifstream gt_file(gtfilename);
@@ -311,7 +344,7 @@ int main(int argc, char** argv) {
         for (int l = 0; l < 4; l ++){
             for (int r = 0; r < 4; r++){
                 tracking_poses[pose_index](l,r) = numbers[index]; 
-                // std::cout << tracking_poses[pose_index](l,r) << " ";
+                std::cout << tracking_poses[pose_index](l,r) << " ";
                 index++;
             }
             std::cout << std::endl;
@@ -321,20 +354,24 @@ int main(int argc, char** argv) {
     gt_file.close();
 
     /// convert to Sophus format for ground truth
+    
     std::vector<Sophus::SE3f> poses_gt;
     std::transform(tracking_poses.begin(), tracking_poses.end(), std::back_inserter(poses_gt),
                    [&](const Eigen::Matrix4f & in){
                      Sophus::SE3f pose(in);
                      return pose.inverse();
                    });
-    
+    std::cout<<"Start convert frame \n";
     for (int i = 0; i < num_frames; i++ ) {
       cvo::Mat34d_row pose;
       Eigen::Matrix<double, 4,4, Eigen::RowMajor> pose44 = Eigen::Matrix<double, 4,4, Eigen::RowMajor>::Identity();
-      memcpy(frames[i]->pose_vec, pose44.data(), sizeof(double) * 12);
+      memcpy(frames[i]->pose_vec, pose44.data(), sizeof(double) * 12); // TODO: This line have bug
     }
     // running cvo
+    std::cout<<"Start print\n";
+    std::cout <<frames[0]->pose_vec << std::endl;
     std::cout<<"Start constructing cvo edges\n";
+ 
     std::list<cvo::BinaryState::Ptr> edge_states;            
     for (int i = 0; i < num_frames; i++) {
       for (int j = i+1; j < num_frames; j++ ) {
@@ -370,7 +407,7 @@ int main(int argc, char** argv) {
     std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > colors(num_frames);
     gen_rand_colors(colors);
     std::string f_name;
-    f_name=exp_curr_dir_str + "/after_BA_bunny_semantics" + std::to_string(k)+".pcd";
+    f_name=exp_curr_dir_str + "/after_BA_bunny_curvature" + std::to_string(k)+".pcd";
     write_transformed_pc(frames, f_name, colors);
 
     /// create sophus 
