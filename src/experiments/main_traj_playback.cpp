@@ -305,7 +305,7 @@ int main(int argc, char** argv) {
         Eigen::Vector3f p_t = (transform * point).cast<float>();
         p.getVector3fMap() = p_t;
     }
-    viewer->addColorPointCloud(*cloud, std::to_string(i) + "pc");
+    viewer->updateColorPointCloud(*cloud, std::to_string(i) + "pc");
     if (is_auto_preceed)
         std::this_thread::sleep_for(std::chrono::microseconds(1000));
     else {

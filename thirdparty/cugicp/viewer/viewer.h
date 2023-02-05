@@ -5,7 +5,7 @@
 #include <string>
 #include <thread>
 #include <tuple>
-
+#include <unordered_set>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <Eigen/Dense>
@@ -18,7 +18,7 @@ class Viewer {
  public:
   typedef pcl::PointXYZ PointT;
   
-  Viewer(bool screenshotIn, std::string saveDir) : stopped(false), visualizationTread(&Viewer::runVisualizer, this), screenshot(screenshotIn), screenshotSaveDir(saveDir) {};
+  Viewer(bool screenshotIn, std::string saveDir, bool isFollowingCamera=false) : stopped(false), visualizationTread(&Viewer::runVisualizer, this), screenshot(screenshotIn), screenshotSaveDir(saveDir), isFollowingCamera(isFollowingCamera) {};
 
   Viewer() : Viewer(false, "") {}; 
 
@@ -30,8 +30,8 @@ class Viewer {
   void addPointCloudIntensity(const pcl::PointCloud<pcl::PointXYZI>& Cloud,
                               float min, float max, const std::string& id);
 
-  void addColorPointCloud(const pcl::PointCloud<pcl::PointXYZRGB> & cloud,
-                          const std::string &id);
+  //void addColorPointCloud(const pcl::PointCloud<pcl::PointXYZRGB> & cloud,
+  //                         const std::string &id);
 
   void updateColorPointCloud(const pcl::PointCloud<pcl::PointXYZRGB> & cloud,
                              const std::string &id);
@@ -48,15 +48,17 @@ class Viewer {
   std::thread visualizationTread;
   std::mutex stoppedGuard;
   std::mutex cloudsGuard;
+
   std::vector<std::string> idsCurrent;
   std::vector<std::string> singleIdsToAdd;
-  std::vector<std::string> colorIdsToAdd;
+
   std::map<std::string,
            std::tuple<typename pcl::PointCloud<PointT>::Ptr, int, int, int>>
-      singleCloudsToAdd;
+  singleCloudsToAdd;
   std::map<std::string,
            pcl::PointCloud<pcl::PointXYZRGB>::Ptr
            > colorCloudsToAdd;
+  std::unordered_set<std::string> addedColorCloud;
   std::map<std::string,
            pcl::PointCloud<pcl::PointXYZRGB>::Ptr
            > colorCloudsToUpdate;
@@ -70,9 +72,12 @@ class Viewer {
   bool screenshot;
   std::string screenshotSaveDir;
 
+  std::mutex trajGuard;  
   Eigen::Matrix3f viewerCamInstrinsics;
   std::vector<Mat34d_row, Eigen::aligned_allocator<Mat34d_row>> trajectoryPtsToDraw;
   int trajId;
+  std::unordered_set<int> addedLineIds;
+  bool isFollowingCamera;
 };
 
 }  // namespace perl_registration
