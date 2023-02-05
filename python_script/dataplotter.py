@@ -94,6 +94,10 @@ def tablelegend(ax, col_labels=None, row_labels=None, title_label="", *args, **k
         return ax.legend_
 def main():
     # plt.rcParams['text.usetex'] = True
+    plt.rc('text', usetex=True)
+    plt.rc('font', **{'family' : "sans-serif"})
+    plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
+    
     rootpath = '/home/bigby/project/exp/' 
     angles_defined = ['12.5','25','37.5','50']
     outlier_defined = ['0.0','0.125','0.25','0.375','0.5']
@@ -313,31 +317,41 @@ def main():
                 bp = ax[i].boxplot([np.array(error_record[outlier][angle]['cvo']),  np.array(error_record[outlier][angle]['jrmpc'])], 
                 vert=True, showfliers=False, patch_artist=True,
                 labels=['RKHS_Intencity', 'JRMPC'])
-                ax[i].set_xlabel(float(outlier)*100)
-                ax[i].set_xticks([])
+              
                 # ax[i].set_title('Box Plot 1 of Error')
-                ax[i].xaxis.label.set_fontsize(15)
-                ax[i].yaxis.label.set_fontsize(15)
-                ax[i].xaxis.set_tick_params(labelsize=12)
+               
+                
+
+                ax[i].set_xticks([])
                 if (i == 0):
-                    ax[i].set_ylabel(r'$\|\| T^{-1}*G-I \|\|_{F}$')
+                    ax[i].set_ylabel(r'$\lVert T^{-1}G-I \rVert_{F} $')
                 
                 else:
                     # ax[i].set_yticks([])
                     
                     pass
+                    # ax[i].set_yticks([])
+                ax[i].set_xlabel(str(float(outlier)*100))
+                ax[i].xaxis.label.set_fontsize(18)
+                ax[i].yaxis.label.set_fontsize(18)
 
                 colors = [[173/255, 216/255, 230/255], [144/255, 238/255, 144/255]]
                 for patch, color in zip(bp['boxes'], colors):
                     patch.set_facecolor(color)
                 if (i == 0):  
-                    ax[i].legend(handles=bp['boxes'], labels=['RKHS', 'JRMPC'],  bbox_to_anchor=(3.5, 1.105), ncol=3)
-                    ax[i].xaxis.set_label_coords(2.5, - 0.07)
-                    ax[i].set_xlabel("Outlier Ratio %", fontsize=18)
-            
+                    ax[i].legend(handles=bp['boxes'], labels=['RKHS', 'JRMPC'],  bbox_to_anchor=(4.45, 1.17), ncol=3,prop={'size': 18})
+                    # ax[i].xaxis.set_label_coords(2.5, - 0.07)
+                    # ax[i].set_xlabel("Outlier Ratio %", fontsize=18)
+                ax[i].tick_params(axis='both', which='major', labelsize=18)
                 i = i+1
+                
             handles, labels = ax[0].get_legend_handles_labels()
-            
+            font = {'family': "serif",
+            'weight': 'normal',
+            'size': 18,
+            }
+
+            fig.text(0.5, 0.02, 'Outlier Ratio\%', fontsize=18,ha ='center')
             # fig.legend(*ax[0].get_legend_handles_labels(),loc='center',  bbox_to_anchor=(0.5, 0.91), ncol=3)
             # fig.legend(['RKHS_Intencity', 'JRMPC', 'Colored_ICP'],loc='center',  bbox_to_anchor=(0.5, 0.91), ncol=3)
             plt.subplots_adjust(wspace=0)
