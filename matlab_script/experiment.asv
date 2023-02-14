@@ -16,7 +16,7 @@ idx = transpose(0:3);
 percentage = 1;
 num_exp = 40;
 experiment_folder = 'toy_exp_';
-large_variance = true;
+
 for ai=1:length(rotation_angles)
     for ei=1:length(errors)
        
@@ -68,18 +68,14 @@ for ai=1:length(rotation_angles)
                 %points on a unit sphere
                 Xin = [cos(az).*cos(el); sin(el); sin(az).*cos(el)];% (unit) polar to cartesian conversion
                 
-                Xin = Xin/10; % it is good for the initialization to have initial cluster centers at the same order with the points
+                Xin = Xin  / 10; % it is good for the initialization to have initial cluster centers at the same order with the points
 %                 Xin = pcdownsample(V1,'random',0.8,PreserveStructure=true).Location';
                 %Xin = pcdownsample(V1,'random',0.1,PreserveStructure=true).Location';
 
                 % since sigma is automatically initialized based on X and V
                 
                 tic
-                if (large_variance)
-                    [R,t,X,S,a,~,T] = jrmpc(V,Xin,'maxNumIter',maxNumIter,'gamma',0.5);
-                else
-                    [R,t,X,S,a,~,T] = jrmpc(V,Xin,'maxNumIter',maxNumIter,'gamma',0.1);
-                end
+                [R,t,X,S,a,~,T] = jrmpc(V,Xin,'maxNumIter',maxNumIter,'gamma',0.1);
                 time(index) = toc
                 
                     % Convert R,t to ground truth T
@@ -127,10 +123,8 @@ for ai=1:length(rotation_angles)
         
         
             %log error
-            if large_variance == true
-                writematrix(error',append(rootfolder,currentfolder,'jrmpc_error_large.txt'));
-                writematrix(time',append(rootfolder,currentfolder,'jrmpc_time_large.txt'));
-            end
+            writematrix(error',append(rootfolder,currentfolder,'jrmpc_error.txt'));
+            writematrix(time',append(rootfolder,currentfolder,'jrmpc_time.txt'));
         
         
             

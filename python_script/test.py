@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
-
+plt.rcParams["font.weight"] = "bold"
+plt.rcParams["axes.labelweight"] = "bold"
 # generate data for each of the three box plots in each subplot
 np.random.seed(0)
 data1_1 = np.random.normal(100, 10, 100)

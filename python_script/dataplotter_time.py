@@ -5,16 +5,15 @@ from matplotlib.patches import Rectangle
 import matplotlib.font_manager as fontmanager
 from matplotlib import rc
 import matplotlib
-print(matplotlib.__version__)
+
 rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
 rc('text', usetex=True)
-plt.rcParams["font.weight"] = "bold"
-plt.rcParams["axes.labelweight"] = "bold"
-fontsize = 15
-# plt.style.use(['science'])
+
+
 def main():
-    plt.rcParams['text.usetex'] = True
-    
+    # plt.rcParams['text.usetex'] = True
+    plt.rc('text', usetex=True)
+    plt.rc('font', **{'family' : "sans-serif"})
     plt.rc('text.latex', preamble=[r'\usepackage{amsmath}',r'\usepackage{amsfonts}'])
     
     rootpath = '/home/bigby/project/exp/' 
@@ -37,24 +36,23 @@ def main():
 
     error_entry= {}
    
-￼
 
     error_entry['cvo_error'] = []
     error_entry['cvosem_error'] = []
     error_entry['jrmpc_error'] = []
     error_entry['jrmpc_error_large'] = []
+
     error_entry['icp_error'] = []
     error_entry['index'] = 0
     error_entry['exp'] = []
     
-
+    semantic_total_time = 0
     error_record = {}
     for outlier in outlier_defined:
         error_record[outlier] = {}
         error_record[outlier]['cvo'] = []
         error_record[outlier]['cvosem'] = []
         error_record[outlier]['jrmpc'] = []
-        error_record[outlier]['jrmpc_large'] = []
         error_record[outlier]['icp'] = []
         error_record[outlier]['cvo_error'] = []
         error_record[outlier]['cvosem_error'] = []
@@ -65,8 +63,8 @@ def main():
             error_record[outlier][angle] = {}
             error_record[outlier][angle]['cvo'] = []
             error_record[outlier][angle]['jrmpc'] = []
-            error_record[outlier][angle]['jrmpc_large'] = []
             error_record[outlier][angle]['cvosem'] = []
+            error_record[outlier][angle]['jrmpc_large'] = []
             error_record[outlier][angle]['icp'] = []
     num_exp = 10
     for outlier in outlier_defined:
@@ -74,20 +72,18 @@ def main():
             foldername = rootpath  + prefixpath + angle + '_' + outlier + '/'
             print(foldername)
             if (mode == "tartanair"):
-                cvo_error_file = foldername + 'cvo_err_tartanair.txt'
-                jrmpc_error_file = foldername + 'jrmpc_error.txt'
+                cvo_error_file = foldername + 'cvo_time_tartanair.txt'
+                jrmpc_error_file = foldername + 'jrmpc_time.txt'
             elif (mode == "bunny"):
-                cvo_error_file = foldername + 'cvo_err_bunny.txt'
-                jrmpc_error_file = foldername + 'jrmpc_error.txt'
+                cvo_error_file = foldername + 'cvo_time_bunny.txt'
+                jrmpc_error_file = foldername + 'jrmpc_time.txt'
             if use_icp:
                 icp_error_file = foldername + 'color_icp_err.txt'
                 icp_error = np.loadtxt(icp_error_file)
-            if use_sem:
-                sem_error_file = foldername + 'cvo_err_bunny_semantics.txt'
+            if use_sem: 
+                sem_error_file = foldername + 'cvo_time_bunny_semantics.txt'
                 sem_error = np.loadtxt(sem_error_file)
-                jrmpc_large_error_file = foldername + 'jrmpc_error_large.txt'
-                jrmpc_large_error = np.loadtxt(jrmpc_large_error_file)
-            jrmpc_large_error_file = foldername + 'jrmpc_error_large.txt'
+            jrmpc_large_error_file = foldername + 'jrmpc_time_large.txt'
             jrmpc_large_error = np.loadtxt(jrmpc_large_error_file)
 
             cvo_error = np.loadtxt(cvo_error_file)
@@ -104,17 +100,16 @@ def main():
                 error_entry['jrmpc_error_large'].append(jrmpc_large_error[i])
                 error_record[outlier]['jrmpc_error_large'].append(jrmpc_large_error[i])
                 error_record[outlier][angle]['jrmpc_large'].append(jrmpc_large_error[i])
-
                 if use_icp:
                     error_entry['icp_error'].append(icp_error[i])
                     error_record[outlier]['icp_error'].append(icp_error[i])
                     error_record[outlier][angle]['icp'].append(icp_error[i])
+                    
                 if use_sem:
                     error_entry['cvosem_error'].append(sem_error[i])
                     error_record[outlier]['cvosem_error'].append(sem_error[i])
                     error_record[outlier][angle]['cvosem'].append(sem_error[i])
-                   
-
+                    semantic_total_time += sem_error[i]
             average_cvo_error = np.average(cvo_error)
             average_jrmpc_error = np.average(jrmpc_error)
             if use_icp:
@@ -128,7 +123,8 @@ def main():
     angles = []
     for angle in angles_defined:
         angles.append(float(angle))
-
+    print("semantic_total_time ",semantic_total_time)
+    fontsize = 15
     # color = ['b', 'g', 'r', 'c', 'm', 'y']
     # index = 0
     # for outlier in outlier_defined:
@@ -182,15 +178,12 @@ def main():
     
     error_list_cvo = np.array(error_entry['cvo_error'])
     error_list_jrmpc = np.array(error_entry['jrmpc_error'])
-    error_list_jrmpc_large = np.array(error_entry['jrmpc_error_large'])
     error_list_icp = np.array(error_entry['icp_error'])
     error_list_sem = np.array(error_entry['cvosem_error'])
     np.savetxt(rootpath  + 'cvo_error_list.txt', error_list_cvo,fmt='%.8f')
     np.savetxt(rootpath  + 'jrmpc_error_list.txt', error_list_jrmpc,fmt='%.8f')
     np.savetxt(rootpath  + 'icp_error_list.txt', error_list_icp,fmt='%.8f')
     np.savetxt(rootpath  + 'cvosem_error_list.txt', error_list_sem,fmt='%.8f')
-    np.savetxt(rootpath  + 'jrmpc_large_error_list.txt', error_list_jrmpc_large,fmt='%.8f')
-
     for outlier in outlier_defined:
         print(outlier)
         error_list_cvo = np.array(error_record[outlier]['cvo_error'])
@@ -203,7 +196,7 @@ def main():
     # generate data for each of the three box plots in each subplot
     ls = ['0.0','12.0','25.0','37.5','50.0']
     if mode == "tartanair":
-        for angle in angles_defined:
+        # for angle in angles_defined:
           
 
             # rc('axes',**{'labelweight': 'bold'})
@@ -217,9 +210,9 @@ def main():
                 rc('text', usetex=True)
                 rc('font', weight='bold')
                 # plot the first box plot in the first subplot
-               
-                bp = ax[i].boxplot([np.array(error_record[outlier][angle]['cvo']), np.array(error_record[outlier][angle]['cvosem']) ,  np.array(error_record[outlier][angle]['jrmpc']), np.array(error_record[outlier][angle]['jrmpc_large'])],  widths = 0.6,
-                vert=True, showfliers=False, patch_artist=True,
+                medianprops = dict(color="red",linewidth=1.5)
+                bp = ax[i].boxplot([np.array(error_record[outlier]['cvo']), np.array(error_record[outlier]['cvosem']) ,  np.array(error_record[outlier]['jrmpc']), np.array(error_record[outlier]['jrmpc_error_large'])],  widths = 1,
+                vert=True, showfliers=False, patch_artist=True,medianprops=medianprops
                 )
               
                 # ax[i].set_title('Box Plot 1 of Error')
@@ -229,7 +222,7 @@ def main():
                 ax[i].set_xticks([])
               
                 if (i == 0):
-                    ax[i].set_ylabel(r'$\lVert T^{-1}G-I \rVert_{F} $')
+                    ax[i].set_ylabel('Time (s)')
                 
                     pass
                 
@@ -280,18 +273,19 @@ wspace=0.0)
             plt.show()
             # fig.legend(loc='center', bbox_to_anchor=(0.5, -0.1), ncol=3)     
     else:
-        for angle in angles_defined:
+        # for angle in angles_defined:
             rc('font', **{'family': 'serif', 'serif': ['Computer Modern'],'weight' : 'bold'})
             rc('text', usetex=True)
             # create a figure and axis
             fig, ax = plt.subplots(1, 5, figsize=(4.8, 3.6), sharey=True)
             i = 0
             # fig.suptitle(angle, fontsize=16)
+            medianprops = dict(color="red",linewidth=1.5)
             for outlier in outlier_defined:
                 # plot the first box plot in the first subplot
                
-                bp = ax[i].boxplot([np.array(error_record[outlier][angle]['cvo']),  np.array(error_record[outlier][angle]['jrmpc']),np.array(error_record[outlier][angle]['jrmpc_large'])], 
-                vert=True, showfliers=False, patch_artist=True,widths = 0.5
+                bp = ax[i].boxplot([np.array(error_record[outlier]['cvo']),  np.array(error_record[outlier]['jrmpc']),np.array(error_record[outlier]['jrmpc_error_large'])], 
+                vert=True, showfliers=False, patch_artist=True,widths = 1,medianprops=medianprops
                 )
               
                 # ax[i].set_title('Box Plot 1 of Error')
@@ -301,7 +295,7 @@ wspace=0.0)
                 ax[i].set_xticks([])
               
                 if (i == 0):
-                    ax[i].set_ylabel(r'$\lVert T^{-1}G-I \rVert_{F} $')
+                    ax[i].set_ylabel('Time (s)')
                 
                 else:
                     #ax[i].set_yticks([])
@@ -346,8 +340,8 @@ wspace=0.0)
             wspace=0.0)
             fig.canvas.draw()
             plt.show()
-            # fig.legend(loc='center', bbox_to_anchor=(0.5, -0.1), ncol=3)           
-       
+            # fig.legend(loc='center',       
+        
 
             
             
