@@ -10,20 +10,27 @@
 namespace cvo {
 
   class CvoFrameGPU_Impl;
-
+  class CvoPointCloudGPU;
+  class CuKdTree;
+  
   struct CvoFrameGPU : public CvoFrame  {
   public:
     CvoFrameGPU(const CvoPointCloud * pts,
-                const double poses[12]);
+                const double poses[12],
+                bool is_using_kdtree);
 
     ~CvoFrameGPU();
 
     void transform_pointcloud();
 
     // access
-    const CvoPoint * points_transformed_gpu() const;
+    std::shared_ptr<CvoPointCloudGPU> points_init_gpu() const;
+    std::shared_ptr<CvoPointCloudGPU> points_transformed_gpu() const;
+    const CuKdTree & kdtree() const;
+    
     //void set_points_transformed_gpu();
     const float * pose_vec_gpu() const; // 12, row major
+    Eigen::Matrix4f pose_cpu() const;
     //void set_pose_vec_gpu(float * new_pose_vec_cpu); // 12, row major
 
   private:

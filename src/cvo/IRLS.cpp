@@ -1,6 +1,7 @@
 #include "cvo/IRLS.hpp"
 //#include "cvo/IRLS_State_CPU.hpp"
 #include "cvo/local_parameterization_se3.hpp"
+//#include "cvo/IRLS_cuSolver.hpp"
 #include <sophus/se3.hpp>
 #include <ceres/local_parameterization.h>
 #include <memory>
@@ -74,14 +75,22 @@ namespace cvo {
     return change;
   }
 
+  static void solve_with_ceres() {
+    
+  }
+
+  static void solve_with_cuSolver() {
+    
+  }
+
   void CvoBatchIRLS::solve() {
     
     int iter_ = 0;
     bool converged = false;
     double ell = params_->multiframe_ell_init;
 
-    std::ofstream nonzeros("nonzeros.txt");
-    std::ofstream loss_change("loss_change.txt");
+    //std::ofstream nonzeros("nonzeros.txt");
+    //std::ofstream loss_change("loss_change.txt");
 
     double ceres_time = 0;
     int num_ells = 0;
@@ -122,7 +131,7 @@ namespace cvo {
           
         }
       }
-      nonzeros <<ell<<", "<< total_nonzeros<<"\n"<<std::flush;
+      //nonzeros <<ell<<", "<< total_nonzeros<<"\n"<<std::flush;
 
       std::cout<<"Total nonzeros "<<total_nonzeros<<", last_nonzeros "<<last_nonzeros<<std::endl;
       std::cout<<"iter_ "<<iter_<<", multiframe_iterations_per_ell "<<params_->multiframe_iterations_per_ell<<std::endl;
@@ -134,6 +143,7 @@ namespace cvo {
       if (total_nonzeros > last_nonzeros
           || iter_ < params_->multiframe_iterations_per_ell 
           ) {
+        
         last_nonzeros = total_nonzeros;
         //   for (auto && frame : *frames_) {
         for (int k = 0; k < frames_->size(); k++) {
@@ -168,7 +178,7 @@ namespace cvo {
         
 
         std::cout << summary.FullReport() << std::endl;
-        loss_change << ell <<", "<< summary.final_cost - summary.initial_cost <<std::endl;
+        //loss_change << ell <<", "<< summary.final_cost - summary.initial_cost <<std::endl;
 
         std::vector<Sophus::SE3d> poses_new(frames_->size());
         pose_snapshot(*frames_, poses_new);
@@ -208,8 +218,8 @@ namespace cvo {
         
     }
 
-    nonzeros.close();
-    loss_change.close();
+    //nonzeros.close();
+    //loss_change.close();
 
     std::cout<<"ceres running time is "<<ceres_time<<"\n";
   }

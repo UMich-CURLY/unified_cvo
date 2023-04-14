@@ -381,10 +381,11 @@ namespace cvo{
     float s_ell = cvo_params->s_ell;
     float s_sigma2 = cvo_params->s_sigma * cvo_params->s_sigma;
 
-    CvoPoint * p_a =  &points_a[i];
+    CvoPoint * p_a =  &points_b[i];
 
-    float a_to_sensor = sqrtf(p_a->x * p_a->x + p_a->y * p_a->y + p_a->z * p_a->z);
-    float l = compute_range_ell(ell, a_to_sensor , 1, 80 );
+    //float a_to_sensor = sqrtf(p_a->x * p_a->x + p_a->y * p_a->y + p_a->z * p_a->z);
+    //float l = compute_range_ell(ell, a_to_sensor , 1, 80 );
+    float l = ell;
 
     float d2_thres=1, d2_c_thres=1, d2_s_thres=1;
     if (cvo_params->is_using_geometry)
@@ -461,8 +462,8 @@ namespace cvo{
 
   void find_nearby_source_points_cukdtree(//const CvoParams *cvo_params,
                                           std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu,
-                                          perl_registration::cuKdTree<CvoPoint> & kdtree,
-                                          const Eigen::Matrix4f & transform_cpu_tf2sf,
+                                          perl_registration::cuKdTree<CvoPoint> & kdtree_cloud_y,
+                                          const Eigen::Matrix4f & transform_cpu_yf2xf,
                                           int num_neighbors,
                                           // output
                                           std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu_transformed_kdtree,
@@ -473,22 +474,22 @@ namespace cvo{
     cudaEventCreate(&cuda_stop);
     cudaEventRecord(cuda_start, 0);
 
-    Eigen::Matrix3f * R_gpu_t2s;
-    Eigen::Vector3f * T_gpu_t2s;
-    cudaMalloc(&R_gpu_t2s, sizeof(Eigen::Matrix3f));
-    cudaMalloc(&T_gpu_t2s, sizeof(Eigen::Vector3f));
-    Eigen::Matrix3f R_cpu_t2s = transform_cpu_tf2sf.block<3,3>(0,0);
-    Eigen::Vector3f T_cpu_t2s = transform_cpu_tf2sf.block<3,1>(0,3);
-    cudaMemcpy(R_gpu_t2s, &R_cpu_t2s, sizeof(decltype(R_cpu_t2s)), cudaMemcpyHostToDevice);
-    cudaMemcpy(T_gpu_t2s, &T_cpu_t2s, sizeof(decltype(T_cpu_t2s)), cudaMemcpyHostToDevice);
+    Eigen::Matrix3f * R_gpu_yf2xf;
+    Eigen::Vector3f * T_gpu_yf2xf;
+    cudaMalloc(&R_gpu_yf2xf, sizeof(Eigen::Matrix3f));
+    cudaMalloc(&T_gpu_yf2xf, sizeof(Eigen::Vector3f));
+    Eigen::Matrix3f R_cpu_yf2xf = transform_cpu_yf2xf.block<3,3>(0,0);
+    Eigen::Vector3f T_cpu_yf2xf = transform_cpu_yf2xf.block<3,1>(0,3);
+    cudaMemcpy(R_gpu_yf2xf, &R_cpu_yf2xf, sizeof(decltype(R_cpu_yf2xf)), cudaMemcpyHostToDevice);
+    cudaMemcpy(T_gpu_yf2xf, &T_cpu_yf2xf, sizeof(decltype(T_cpu_yf2xf)), cudaMemcpyHostToDevice);
     
     transform_pointcloud_thrust(cloud_x_gpu, cloud_x_gpu_transformed_kdtree,
-                                R_gpu_t2s, T_gpu_t2s, false);
+                                R_gpu_yf2xf, T_gpu_yf2xf, false);
     
-    kdtree.NearestKSearch(cloud_x_gpu_transformed_kdtree, num_neighbors , cukdtree_inds_results);
+    kdtree_cloud_y.NearestKSearch(cloud_x_gpu_transformed_kdtree, num_neighbors , cukdtree_inds_results);
 
-    cudaFree(R_gpu_t2s);
-    cudaFree(T_gpu_t2s);
+    cudaFree(R_gpu_yf2xf);
+    cudaFree(T_gpu_yf2xf);
 
     cudaEventRecord(cuda_stop, 0);
     cudaEventSynchronize(cuda_stop);
@@ -517,11 +518,9 @@ namespace cvo{
                          ) {
 
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    //printf("\ni is %d, a_size is %d, ", i, a_size);
     if (i > a_size - 1)
       return;
     
-    //A_mat->max_index[i] = -1;
     float curr_max_ip = cvo_params->sp_thres;
 
     float sigma2= cvo_params->sigma * cvo_params->sigma;
@@ -546,8 +545,6 @@ namespace cvo{
     
 
     const float * label_a = p_a ->label_distribution; //nullptr;
-    //if (cvo_params->is_using_semantics)
-    //  label_a = p_a ->label_distribution;
 
     unsigned int num_inds = 0;
     //printf("a_size is %d, i=%d, b_size=%d, num_neighbors=%d\n", a_size, i, b_size, num_neighbors);
@@ -568,13 +565,14 @@ namespace cvo{
                                             2
                                             );
         
-        /*
+        /* for debug use
         if (i == 0 )
           printf("p_a is (%f, %f, %f), p_b is (%f, %f, %f), geo_sim is %f\n", p_a->x,p_a->y, p_a->z, p_b->x, p_b->y, p_b->z, geo_sim);
         */
         if(geo_sim < 0.01)
           continue;        
       }
+
       
       if (cvo_params->is_using_geometry) {
         float d2 = (squared_dist( *p_b ,*p_a ));
@@ -582,7 +580,18 @@ namespace cvo{
           k= sigma2*exp(-d2/(2.0*l*l));
         else continue;
       }
-      //}
+
+                              //if (i==0)  {
+                              /*
+                              float d2 = (squared_dist( *p_b ,*p_a ));
+        float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
+          
+        printf("point_a is (%f,%f,%f), point_b with index %d is (%f,%f,%f), d2=%f,d2_thresh=%f, d2_semantic=%f, d2_semantic_thresh=%f \n", p_a->x, p_a->y, p_a->z, ind_b,  p_b->x, p_b->y, p_b->z,  d2, d2_thres, d2_semantic, d2_s_thres );
+                                                                                                                                         */
+                              //}
+      
+                              
+
       if (cvo_params->is_using_intensity) {
         float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
         if (d2_color < d2_c_thres)
@@ -590,8 +599,10 @@ namespace cvo{
         else
           continue;
       }
+      
       if (cvo_params->is_using_semantics) {
         float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
+                
         if (d2_semantic < d2_s_thres )
           sk = cvo_params->s_sigma*cvo_params->s_sigma*exp(-d2_semantic/(2.0*s_ell*s_ell));
         else

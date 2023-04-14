@@ -76,6 +76,9 @@ namespace cvo {
     CvoFrame * frame1();
     CvoFrame * frame2();
 
+    CvoPoint * points_transformed_buffer_gpu_;
+    int * cukdtree_ints_results_gpu_;
+    
     unsigned int num_neighbors_;
     SparseKernelMat  A_host_;
     //std::shared_ptr<Kdtree> pc1_kdtree_;

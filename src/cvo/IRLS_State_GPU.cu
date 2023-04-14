@@ -50,19 +50,50 @@ namespace cvo {
 
     clear_SparseKernelMat(&A_host_, num_neighbors_);
 
-    fill_in_A_mat_gpu<<< (frame1_->points->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(
-                                                                                            params_gpu_,
-                                                                                            //thrust::raw_pointer_cast(frame1_->points_transformed_gpu().data()),
-                                                                                            frame1_->points_transformed_gpu(),
-                                                                                            frame1_->points->size(),
-                                                                                            //thrust::raw_pointer_cast(frame2_->points_transformed_gpu().data()),
-                                                                                            frame2_->points_transformed_gpu(),
-                                                                                            frame2_->points->size(),
-                                                                                            num_neighbors_,
-                                                                                            (float)ell_,
-                                                                                            A_device_
-                                                                                            );
+    if (params_cpu_->is_using_kdtree) {
+      //thrust::device_vector<int> cukdtree_inds_results;
+      Eigen::Matrix4f T_f1_to_f2 = frame1_->pose_cpu().inverse() * frame2_->pose_cpu();
 
+      find_nearby_source_points_cukdtree(//const CvoParams *cvo_params,
+                                         frame2_->points_init_gpu(),
+                                         frame1_->kdtree(),
+                                         T_f1_to_f2,
+                                         num_neighbors_,
+                                         // output
+                                         points_transformed_buffer_gpu_,
+                                         cukdtree_inds_results_gpu_
+                                         );
+
+
+      thrust::device_vector<CvoPoint> & f1_points = frame1_->points_init_gpu()->points;
+      thrust::device_vector<CvoPoint> & f2_points = frame2_->points_init_gpu()->points;
+
+      fill_in_A_mat_cukdtree<<< (f1_points.size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>
+        (params_gpu_,
+        thrust::raw_pointer_cast(f1_points.data()),
+        f1_points.size(),
+        points_transformed_buffer_,
+        f2_points.size(),
+        cukdtree_inds_results_gpu_,
+        num_neighbors_, ell,
+        A_device_);
+      
+
+    } else {
+
+      fill_in_A_mat_gpu<<< (frame1_->points->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(
+                                                                                               params_gpu_,
+                                                                                               //thrust::raw_pointer_cast(frame1_->points_transformed_gpu().data()),
+                                                                                               frame1_->points_transformed_gpu(),
+                                                                                               frame1_->points->size(),
+                                                                                               //thrust::raw_pointer_cast(frame2_->points_transformed_gpu().data()),
+                                                                                               frame2_->points_transformed_gpu(),
+                                                                                               frame2_->points->size(),
+                                                                                               num_neighbors_,
+                                                                                               (float)ell_,
+                                                                                               A_device_
+                                                                                               );
+    }
     compute_nonzeros(&A_host_);
 
     copy_internal_SparseKernelMat_gpu_to_cpu(&A_host_, &A_result_cpu_,

@@ -29,7 +29,7 @@ namespace cvo {
     for (directory_iterator it(image_pth); it != end_it; it++) {
       image_count++;
     }
-    assert (depth_count == image_count);
+    //assert (depth_count == image_count);
     total_size = depth_count;
     curr_index = 0;
 
@@ -65,7 +65,15 @@ namespace cvo {
     string img_pth = folder_name + "/image_left/" + index_str + "_left.png";
     rgb_img = cv::imread(img_pth, cv::ImreadModes::IMREAD_COLOR);
     // read depth npy
-    string dep_pth = depth_folder_name + "/" + index_str + "_left_depth.npy";
+    string dep_pth = folder_name + "/" + depth_folder_name + "/" + index_str + "_left_depth.png";
+    std::cout<<"Read depth"<< dep_pth<<"\n";
+    dep_img = cv::imread(dep_pth, cv::IMREAD_UNCHANGED);
+    if (rgb_img.data == nullptr || dep_img.data == nullptr) {
+      cerr<<"Image doesn't read successfully: "<<img_pth<<", "<<dep_pth<<"\n";
+      return -1;
+    }
+    
+    /*
     cnpy::NpyArray dep_arr = cnpy::npy_load(dep_pth);
     float* dep_data = dep_arr.data<float>();
     int dim1 = dep_arr.shape[0];
@@ -80,9 +88,10 @@ namespace cvo {
         raw_dep.at<float>(r, c) = std::nanf("1");
       }
     }
+    */
     // scale by 5000 and convert to uint16_t
-    raw_dep = raw_dep * 5000.0f;
-    raw_dep.convertTo(dep_img, CV_16UC1);
+    //aw_dep = raw_dep * 5000.0f;
+      //raw_dep.convertTo(dep_img, CV_16UC1);
     return 0;
   }
 
@@ -105,20 +114,21 @@ namespace cvo {
     float* dep_data = dep_arr.data<float>();
     int dim1 = dep_arr.shape[0];
     int dim2 = dep_arr.shape[1];
+    std::cout<<"dim1="<<dim1<<", dim2="<<dim2<<"\n";
     cv::Mat raw_dep(cv::Size(dim2, dim1), CV_32FC1, dep_data);
-    // set high depth pixels (sky) to nan
+    // set high depth pixels (sky) to nanb
     dep_vec.resize(dim1 * dim2);
     for (int r = 0; r < raw_dep.rows; r++) {
       for (int c = 0; c < raw_dep.cols; c++) {
         float pix = raw_dep.at<float>(r, c);
-        if (pix > 100)
+        if (pix > 60000)
           pix = std::nanf("1");
           //  raw_dep.at<float>(r, c) = std::nanf("1");
         dep_vec[ r * raw_dep.cols + c] =  pix;
       }
     }
     // scale by 5000 and flatten to vector
-    raw_dep = raw_dep * 5000.0f;
+    raw_dep = raw_dep; //* 5000.0f;
     //dep_vec.clear();
     //dep_vec = vector<float>(raw_dep.begin<float>(), raw_dep.end<float>());
     return 0;
