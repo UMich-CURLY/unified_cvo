@@ -35,10 +35,17 @@ namespace cvo {
 
   private:
     
-    ///CvoPoint * points_init_gpu_;
-    //CvoPoint * points_transformed_gpu_;
-    //float * pose_vec_gpu_; // 12, row major
-    std::unique_ptr<CvoFrameGPU_Impl> impl;
+
+    //std::unique_ptr<CvoFrameGPU_Impl> impl;
+    std::shared_ptr<CvoPointCloudGPU> points_init_gpu_;
+    std::shared_ptr<CvoPointCloudGPU> points_transformed_gpu_; // place holder
+
+    //perl_registration::cuKdTree<CvoPoint>::SharedPtr kdtree_points;
+    //
+    std::shared_ptr<CuKdTree> kdtree_;
+
+    
+    float * pose_vec_gpu_; // 12, row major
 
   };
 }

@@ -31,6 +31,12 @@ namespace cvo {
     clear_SparseKernelMat(&A_host_, num_neighbors_);
     //std::cout<<"Construct BinaryStateGPU: ell is "<<ell_<<", init_num_neighbors_ is "<<init_num_neighbors_<<"\n";
 
+    if (params_cpu_->is_using_kdtree) {
+      points_transformed_buffer_gpu_.reset(new CvoPointCloudGPU);
+      cudaMalloc((int**)&cukdtree_inds_results_gpu_, sizeof(int)*init_num_neighbors_*pc2->size());
+    
+    }
+
     iter_ = 0;
 
   }
@@ -38,6 +44,9 @@ namespace cvo {
   BinaryStateGPU::~BinaryStateGPU() {
     delete_internal_SparseKernelMat_cpu(&A_result_cpu_);
     delete_SparseKernelMat_gpu(A_device_, &A_host_);
+    if (params_cpu_->is_using_kdtree) {
+      cudaFree(cukdtree_inds_results_gpu_);
+    }
   }
 
   int BinaryStateGPU::update_inner_product() {
@@ -52,12 +61,12 @@ namespace cvo {
 
     if (params_cpu_->is_using_kdtree) {
       //thrust::device_vector<int> cukdtree_inds_results;
-      Eigen::Matrix4f T_f1_to_f2 = frame1_->pose_cpu().inverse() * frame2_->pose_cpu();
+      Eigen::Matrix4f T_f2_to_f1 = frame2_->pose_cpu().inverse() * frame1_->pose_cpu();
 
       find_nearby_source_points_cukdtree(//const CvoParams *cvo_params,
-                                         frame2_->points_init_gpu(),
-                                         frame1_->kdtree(),
-                                         T_f1_to_f2,
+                                         frame1_->points_init_gpu(),
+                                         frame2_->kdtree(),
+                                         T_f2_to_f1,
                                          num_neighbors_,
                                          // output
                                          points_transformed_buffer_gpu_,
@@ -70,14 +79,13 @@ namespace cvo {
 
       fill_in_A_mat_cukdtree<<< (f1_points.size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>
         (params_gpu_,
-        thrust::raw_pointer_cast(f1_points.data()),
-        f1_points.size(),
-        points_transformed_buffer_,
-        f2_points.size(),
-        cukdtree_inds_results_gpu_,
-        num_neighbors_, ell,
-        A_device_);
-      
+         points_transformed_buffer_gpu_,         
+         f1_points.size(),
+         thrust::raw_pointer_cast(f2_points.data()),
+         f2_points.size(),
+         cukdtree_inds_results_gpu_,
+         num_neighbors_, ell,
+         A_device_);
 
     } else {
 

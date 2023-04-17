@@ -21,4 +21,11 @@ namespace cvo {
     
   }
 
+  std::shared_ptr<CvoPointCloudGPU> CvoFrame::points_init_gpu() const {
+    
+  }
+    std::shared_ptr<CvoPointCloudGPU> points_transformed_gpu() const;
+    const CuKdTree & kdtree() const;
+   
+
 }

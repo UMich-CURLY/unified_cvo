@@ -1,3 +1,4 @@
+#include "CvoFrameGPU.hpp"
 #include "cvo/IRLS_State.hpp"
 //#include "cvo/KDTreeVectorOfVectorsAdaptor.h"
 //#include "cvo/CvoParams.hpp"
@@ -76,7 +77,7 @@ namespace cvo {
     CvoFrame * frame1();
     CvoFrame * frame2();
 
-    CvoPoint * points_transformed_buffer_gpu_;
+    std::shared_ptr<CvoPointCloudGPU> points_transformed_buffer_gpu_;
     int * cukdtree_ints_results_gpu_;
     
     unsigned int num_neighbors_;
