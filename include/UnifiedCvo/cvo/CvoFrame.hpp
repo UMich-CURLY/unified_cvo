@@ -15,7 +15,8 @@ namespace cvo {
     typedef std::shared_ptr<CvoFrame> Ptr;
     
     CvoFrame(const CvoPointCloud * pts,
-             const double poses[12]);
+             const double poses[12],
+             bool is_using_kdtree);
 
     virtual ~CvoFrame() {}
 

@@ -5,7 +5,8 @@
 namespace cvo {
 
   CvoFrame::CvoFrame(const CvoPointCloud * pts,
-                     const double poses[12]) : points(pts)
+                     const double poses[12],
+                     bool is_using_kdtree) : points(pts)
 
                                                // points_transformed_(pts->num_features(), pts->num_classes()){
   {
@@ -21,11 +22,5 @@ namespace cvo {
     
   }
 
-  std::shared_ptr<CvoPointCloudGPU> CvoFrame::points_init_gpu() const {
-    
-  }
-    std::shared_ptr<CvoPointCloudGPU> points_transformed_gpu() const;
-    const CuKdTree & kdtree() const;
-   
 
 }

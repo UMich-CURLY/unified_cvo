@@ -3,8 +3,10 @@
 #include "cvo/CvoFrameGPU.hpp"
 #include "cvo/CvoFrame.hpp"
 #include "cvo/CvoGPU_impl.cuh"
+#include "cvo/CudaTypes.cuh"
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/local_parameterization_se3.hpp"
+#include "cupointcloud/cupointcloud.h"
 #include "utils/data_type.hpp"
 #include "cvo/SparseKernelMat.hpp"
 #include <Eigen/Dense>
@@ -33,8 +35,7 @@ namespace cvo {
 
     if (params_cpu_->is_using_kdtree) {
       points_transformed_buffer_gpu_.reset(new CvoPointCloudGPU);
-      cudaMalloc((int**)&cukdtree_inds_results_gpu_, sizeof(int)*init_num_neighbors_*pc2->size());
-    
+      cudaMalloc((int**)&cukdtree_inds_results_gpu_, sizeof(int)*init_num_neighbors_*pc1->size());
     }
 
     iter_ = 0;
@@ -62,7 +63,9 @@ namespace cvo {
     if (params_cpu_->is_using_kdtree) {
       //thrust::device_vector<int> cukdtree_inds_results;
       Eigen::Matrix4f T_f2_to_f1 = frame2_->pose_cpu().inverse() * frame1_->pose_cpu();
-
+      thrust::device_ptr<int> inds_ptr_gpu(cukdtree_inds_results_gpu_);
+      thrust::device_vector<int> inds_device_vec(inds_ptr_gpu, inds_ptr_gpu + num_neighbors_ * frame1_->size());
+    
       find_nearby_source_points_cukdtree(//const CvoParams *cvo_params,
                                          frame1_->points_init_gpu(),
                                          frame2_->kdtree(),
@@ -70,7 +73,7 @@ namespace cvo {
                                          num_neighbors_,
                                          // output
                                          points_transformed_buffer_gpu_,
-                                         cukdtree_inds_results_gpu_
+                                         inds_device_vec
                                          );
 
 
@@ -79,23 +82,23 @@ namespace cvo {
 
       fill_in_A_mat_cukdtree<<< (f1_points.size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>
         (params_gpu_,
-         points_transformed_buffer_gpu_,         
+         thrust::raw_pointer_cast(points_transformed_buffer_gpu_->points),         
          f1_points.size(),
          thrust::raw_pointer_cast(f2_points.data()),
          f2_points.size(),
          cukdtree_inds_results_gpu_,
-         num_neighbors_, ell,
+         num_neighbors_, ell_,
          A_device_);
 
     } else {
 
       fill_in_A_mat_gpu<<< (frame1_->points->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(
                                                                                                params_gpu_,
-                                                                                               //thrust::raw_pointer_cast(frame1_->points_transformed_gpu().data()),
-                                                                                               frame1_->points_transformed_gpu(),
+                                                                                               thrust::raw_pointer_cast(frame1_->points_transformed_gpu()->points),
+                                                                                               //frame1_->points_transformed_gpu(),
                                                                                                frame1_->points->size(),
-                                                                                               //thrust::raw_pointer_cast(frame2_->points_transformed_gpu().data()),
-                                                                                               frame2_->points_transformed_gpu(),
+                                                                                               thrust::raw_pointer_cast(frame2_->points_transformed_gpu()->points),
+                                                                                               //frame2_->points_transformed_gpu(),
                                                                                                frame2_->points->size(),
                                                                                                num_neighbors_,
                                                                                                (float)ell_,

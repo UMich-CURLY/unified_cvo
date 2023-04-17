@@ -3,7 +3,7 @@
 #include "CvoParams.hpp"
 #include "utils/PointSegmentedDistribution.hpp"
 #include "utils/CvoPointCloud.hpp"
-#include "cukdtree/cukdtree.h"
+#include "cvo/CudaTypes.cuh"
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include <Eigen/Dense>
@@ -11,16 +11,6 @@
 namespace Eigen {
   typedef Matrix<float,1,3> Vector3f_row;                 
 }
-
-
-
-namespace cvo {
-
-  //const int CVO_POINT_NEIGHBORS = 512;  
-  typedef pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS,NUM_CLASSES> CvoPoint;
-  typedef perl_registration::cuPointCloud<CvoPoint> CvoPointCloudGPU;
-}
-
 
 
 namespace cvo {

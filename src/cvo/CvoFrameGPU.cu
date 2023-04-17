@@ -1,6 +1,9 @@
-//#include "cvo/CvoFrameGPU.cuh"
+// #include "cvo/CvoFrameGPU.cuh"
+#include "cvo/CudaTypes.cuh"
 #include "cvo/CvoFrameGPU.hpp"
 #include "cvo/CvoGPU_impl.cuh"
+
+#include <memory>
 
 namespace cvo {
 
@@ -10,7 +13,7 @@ namespace cvo {
                                      bool is_using_kdtree) :
     points_transformed_gpu_(pts->size()){
     points_init_gpu_ = CvoPointCloud_to_gpu(*pts);
-    cloud_transformed_gpu_.reset(new CvoPointCloudGPU(pts->size()));
+    point_transformed_gpu_.reset(new CvoPointCloudGPU(pts->size()));
       
     cudaMalloc((void**)&pose_vec_gpu_, sizeof(float)*12);
     float pose_float[12];
@@ -36,7 +39,7 @@ namespace cvo {
     //    cudaMalloc((void**)&points_init_gpu_, sizeof(CvoPoint)*pts->size() );
     //cudaMalloc((void**)&points_transformed_gpu_, sizeof(CvoPoint)*pts->size() );
     points_init_gpu_ = CvoPointCloud_to_gpu(*pts);
-    cloud_transformed_gpu_.reset(new CvoPointCloudGPU(pts->size()));
+    points_transformed_gpu_ = std::make_shared<CvoPointCloudGPU>((pts->size()));
       
     cudaMalloc((void**)&pose_vec_gpu_, sizeof(float)*12);
     float pose_float[12];
@@ -47,7 +50,7 @@ namespace cvo {
 
     if (is_using_kdtree) {
       //kdtree.reset(new perl_registration::cuKdTree<CvoPoint> );
-      kdtree->SetInputCloud(points_init_gpu_);
+      kdtree_->SetInputCloud(points_init_gpu_);
       //kdtree_inds_results.resize(cvo_params.is_using_kdtree * num_fixed);
     }
     
@@ -57,7 +60,8 @@ namespace cvo {
   CvoFrameGPU::~CvoFrameGPU() {
     cudaFree((void*)pose_vec_gpu_);    
   }
-  
+
+  /*
   void CvoFrameGPU_Impl::transform_pointcloud_from_input_pose(const double * pose_vec_cpu ) {
 
     float pose_float_cpu[12];
@@ -76,7 +80,7 @@ namespace cvo {
                                 );
     
   }
-
+  */
   /*
   const CvoPoint * CvoFrameGPU::points_transformed_gpu() {
     return points_transformed_gpu_;
@@ -106,11 +110,31 @@ namespace cvo {
   // }
 
   void CvoFrameGPU::transform_pointcloud() {
-    impl->transform_pointcloud_from_input_pose(pose_vec);
+  //  impl->transform_pointcloud_from_input_pose(pose_vec);
+
+    float pose_float_cpu[12];
+    
+    #pragma omp parallel for
+    for (int i = 0; i < 12; i++) {
+      pose_float_cpu[i] = static_cast<float>(pose_vec[i]);
+    }
+    
+    cudaMemcpy((void*)pose_vec_gpu_, (void*)pose_float_cpu, sizeof(float)*12, cudaMemcpyHostToDevice);
+
+    transform_pointcloud_thrust(points_init_gpu_,
+                                points_transformed_gpu_,
+                                pose_vec_gpu_,
+                                false
+                                );
+    
   }
 
   const float * CvoFrameGPU::pose_vec_gpu() const {
-    return pose_vec_gpu;
+    return pose_vec_gpu_;
+  }
+
+  size_t CvoFrameGPU::size() const {
+    return points_init_gpu_->size();
   }
  
 

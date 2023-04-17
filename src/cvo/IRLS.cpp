@@ -113,6 +113,7 @@ namespace cvo {
       for (auto & frame : *frames_) {
 
         std::cout<<"Frame number of points "<<frame->points->num_points()<<std::endl;
+        //if (params_->is_using_kdtree == false)
         frame->transform_pointcloud();
         problem.AddParameterBlock(frame->pose_vec, 12, se3_parameterization);
       }

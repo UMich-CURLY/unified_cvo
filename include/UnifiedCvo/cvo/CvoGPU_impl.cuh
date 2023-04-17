@@ -1,4 +1,5 @@
 #pragma once
+#include "CvoFrameGPU.hpp"
 #include "cvo/Association.hpp"
 #include "cvo/SparseKernelMat.hpp"
 #include "cvo/CvoState.cuh"
@@ -10,7 +11,9 @@
 #include "cupointcloud/point_types.h"
 #include "cupointcloud/cupointcloud.h"
 #include "cukdtree/cukdtree.cuh"
+#include "cvo/CudaTypes.cuh"
 
+#include <memory>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
@@ -90,7 +93,16 @@ namespace cvo {
                          SparseKernelMat * A_mat // the kernel matrix!
                          );
 
-  
+
+  __global__
+  void fill_in_A_mat_cukdtree(const CvoParams * cvo_params,
+                              CvoPoint * points_a, int a_size,
+                              CvoPoint * points_b, int size_y,
+                              int * kdtree_inds_results,
+                              int num_neighbors,                              
+                              float ell,
+                              // output
+                              SparseKernelMat * A_mat);
 
   float compute_ranged_lengthscale(float curr_dist_square, float curr_ell, float min_ell, float max_ell );
 
@@ -120,9 +132,20 @@ namespace cvo {
   void dense_covariance_kernel(const CvoParams * params_gpu,
                                std::shared_ptr<CvoPointCloudGPU> points_fixed,
                                std::shared_ptr<CvoPointCloudGPU> points_moving,
-                               perl_registration::cuKdTree<CvoPoint>::SharedPtr kdtree,
+                               std::shared_ptr<CuKdTree> kdtree,
                                // output
                                SparseKernelMat * A_mat, SparseKernelMat * A_mat_gpu);
+
+  void find_nearby_source_points_cukdtree(//const CvoParams *cvo_params,
+                                          std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu,
+                                          perl_registration::cuKdTree<CvoPoint> & kdtree_cloud_y,
+                                          const Eigen::Matrix4f & transform_cpu_yf2xf,
+                                          int num_neighbors,
+                                          // output
+                                          std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu_transformed_kdtree,
+                                          thrust::device_vector<int> & cukdtree_inds_results
+                                          );
+  
 
   /**
    * @brief computes the Lie algebra transformation elements

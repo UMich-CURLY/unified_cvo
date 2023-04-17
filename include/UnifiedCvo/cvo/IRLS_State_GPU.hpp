@@ -18,6 +18,7 @@ namespace ceres {
 namespace cvo {
   class CvoFrame;
   class CvoFrameGPU;
+  class CvoPointCloudGPU;
   class CvoParams;
   
   class BinaryStateGPU : public BinaryState {
@@ -77,8 +78,9 @@ namespace cvo {
     CvoFrame * frame1();
     CvoFrame * frame2();
 
+    int * cukdtree_inds_results_gpu_;
     std::shared_ptr<CvoPointCloudGPU> points_transformed_buffer_gpu_;
-    int * cukdtree_ints_results_gpu_;
+
     
     unsigned int num_neighbors_;
     SparseKernelMat  A_host_;
