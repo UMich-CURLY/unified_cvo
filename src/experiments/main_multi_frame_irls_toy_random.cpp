@@ -187,7 +187,6 @@ void eval_poses_SE3_frobenius_norm(std::vector<Sophus::SE3f> & estimates,
                                    std::string & err_framewise_fname,
                                    std::string & pose_fname
                                    ){
-  assert(std::filesystem::exists(fname));
   std::ofstream err_f(err_fname,std::fstream::out |   std::ios::app);
   std::ofstream err_framewise(err_framewise_fname);
   std::ofstream pose_f(pose_fname);

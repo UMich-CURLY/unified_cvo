@@ -24,6 +24,7 @@ namespace cvo {
       intrinsic_.setIdentity();
       baseline_ = 0;
       scaling_factor_ = 0;
+      std::cout<<"Calib file "<<file<<"\n";
 
       if(data_type == STEREO){
         scaling_factor_ = 1;

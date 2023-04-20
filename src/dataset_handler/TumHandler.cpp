@@ -29,6 +29,20 @@ namespace cvo {
     cout<<"Tum contains "<<vstrRGBName.size()<<" files\n";
   }
 
+  TumHandler::TumHandler(std::string tum_folder, const std::string & assoc_file){
+    curr_index = 0;
+    folder_name = tum_folder;
+    debug_plot = true;
+		
+    // load associate file
+    string assoc_pth = tum_folder + "/" + assoc_file;
+    std::cout<<"assoc path: "<<assoc_pth<<std::endl;
+    load_file_name(assoc_pth, vstrRGBName, vstrRGBPth, vstrDepPth);
+    cout<<"Tum contains "<<vstrRGBName.size()<<" files\n";
+
+  }
+
+
   TumHandler::~TumHandler() {}
   
   int TumHandler::read_next_rgbd(cv::Mat & rgb_img, 

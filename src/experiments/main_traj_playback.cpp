@@ -249,14 +249,45 @@ int main(int argc, char** argv) {
   // string cvo_param_file(argv[1]);  
   //cvo::CvoGPU cvo_align(cvo_param_file);
   std::string pcd_folder(argv[1]);
-  std::string total_graphs_arg(argv[4]);
-  std::string traj_file(argv[2]);
-  int start_ind = std::stoi(std::string(argv[5]));
-  int is_auto_preceed = std::stoi(std::string(argv[6]));
+  std::string total_graphs_arg(argv[2]);
+  int start_ind = std::stoi(std::string(argv[3]));
+  int is_auto_preceed = std::stoi(std::string(argv[4]));
 
   std::unique_ptr<perl_registration::Viewer> viewer;
-  if (argc == 7) {
-      std::string screenDir(argv[3]);
+  if (argc > 5) {
+    pose_file_format = std::string(argv[5]);
+    std::string pose_fname = std::string(argv[6]);
+    assert (pose_file_format.compare(std::string("kitti")) == 0
+            || pose_file_format.compare(std::string("tum")) == 0
+            || pose_file_format.compare(std::string("tartan")) == 0);
+
+    if (pose_file_format.compare(std::string("kitti")) == 0) {
+      cvo::read_pose_file_kitti_format(pose_fname,
+                                       0,
+                                       10000,
+                                       all_poses);
+    } else if (pose_file_format.compare(std::string("tum")) == 0) {
+      cvo::read_pose_file_tum_format(pose_fname,
+                                     0,
+                                     10000,
+                                     all_poses);
+    } else if (pose_file_format.compare(std::string("tartan")) == 0) {
+      cvo::read_pose_file_tartan_format(pose_fname,
+                                        0,
+                                        10000,
+                                        all_poses);
+    } else {
+      std::cerr<<"Pose format unknown\n";
+    }
+
+    std::cout<<"all poses size is "<<all_poses.size()<<"\n";
+
+  }
+
+
+  
+  if (argc > 7) {
+      std::string screenDir(argv[7]);
       std::cout << "Screenshots will be saved to: " << screenDir << std::endl;
       viewer = std::make_unique<perl_registration::Viewer>(true, screenDir);
   } else {
@@ -264,10 +295,6 @@ int main(int argc, char** argv) {
       
   }
 
-  std::vector<Mat34d_row, Eigen::aligned_allocator<Mat34d_row>> poses_all;
-  read_trajectory_file(traj_file, poses_all);
-  
-  
   //std::string graph_file_name(argv[2]);
 
   std::unordered_map<int, std::string> idx_to_viewerid;
@@ -305,7 +332,7 @@ int main(int argc, char** argv) {
         Eigen::Vector3f p_t = (transform * point).cast<float>();
         p.getVector3fMap() = p_t;
     }
-    viewer->addColorPointCloud(*cloud, std::to_string(i) + "pc");
+    viewer->updateColorPointCloud(*cloud, std::to_string(i) + "pc");
     if (is_auto_preceed)
         std::this_thread::sleep_for(std::chrono::microseconds(1000));
     else {

@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <boost/filesystem.hpp>
+#include "dataset_handler/PoseLoader.hpp"
 #include "viewer/viewer.h"
 #include <Eigen/Dense>
 using Mat34d_row = Eigen::Matrix<double, 3, 4, Eigen::RowMajor>;
@@ -224,6 +225,38 @@ int main(int argc, char** argv) {
   std::string total_graphs_arg(argv[2]);
   int start_ind = std::stoi(std::string(argv[3]));
   int is_auto_preceed = std::stoi(std::string(argv[4]));
+  std::string pose_file_format;
+  std::vector<Eigen::Matrix4d,
+              Eigen::aligned_allocator<Eigen::Matrix4d>> all_poses;
+  if (argc > 5) {
+    pose_file_format = std::string(argv[5]);
+    std::string pose_fname = std::string(argv[6]);
+    assert (pose_file_format.compare(std::string("kitti")) == 0
+            || pose_file_format.compare(std::string("tum")) == 0
+            || pose_file_format.compare(std::string("tartan")) == 0);
+
+    if (pose_file_format.compare(std::string("kitti")) == 0) {
+      cvo::read_pose_file_kitti_format(pose_fname,
+                                  0,
+                                  10000,
+                                  all_poses);
+    } else if (pose_file_format.compare(std::string("tum")) == 0) {
+      cvo::read_pose_file_tum_format(pose_fname,
+                                0,
+                                10000,
+                                all_poses);
+    } else if (pose_file_format.compare(std::string("tartan")) == 0) {
+      cvo::read_pose_file_tartan_format(pose_fname,
+                                   0,
+                                   10000,
+                                   all_poses);
+    } else {
+      std::cerr<<"Pose format unknown\n";
+    }
+
+    std::cout<<"all poses size is "<<all_poses.size()<<"\n";
+
+  }
 
   
   int total_graphs = std::stoi(total_graphs_arg);
@@ -237,7 +270,7 @@ int main(int argc, char** argv) {
   //std::string graph_file_name(argv[2]);
 
   std::unordered_map<int, std::string> idx_to_viewerid;
-
+  std::unordered_map<int, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pcs_local_frame;
   std::string s("title");
   viewer->addOrUpdateText (s,
                            0,
@@ -245,8 +278,11 @@ int main(int argc, char** argv) {
                            "title");
   
   
-  
+  int last_ind = -1;
+  int last_traj_ind = -1;  
   for (int f = start_ind; f < total_graphs; f++) {
+    if (f > start_ind && f < last_ind) continue;
+    
     std::string graph_file_name(pcd_folder + "/" + std::to_string(f) + "_graph.txt");
 
     if ( !boost::filesystem::exists( graph_file_name ) ) {
@@ -281,7 +317,8 @@ int main(int argc, char** argv) {
     //std::vector<std::shared_ptr<cvo::CvoPointCloud>> pcs;
     //std::unordered_map<int, int> id_to_index;
     frame_inds.pop_back();
-    BA_poses.pop_back(); 
+    BA_poses.pop_back();
+
     for (int i = 0; i<frame_inds.size(); i++) {
 
       int curr_frame_id = frame_inds[i];
@@ -289,6 +326,9 @@ int main(int argc, char** argv) {
       pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
       pcl::io::loadPCDFile<pcl::PointXYZRGB> (frame_fname, *cloud);
 
+      std::cout<<__func__<<"Before transform: "<<static_cast<int>((*cloud)[0].r)
+               <<", "<<static_cast<int>((*cloud)[0].g)
+               <<", "<<static_cast<int>((*cloud)[0].b)<<"\n";
       for (auto && p : *cloud) {
         Mat34d_row transform = Eigen::Map<Mat34d_row>(BA_poses[i].data());
         Eigen::Vector4d point;
@@ -296,18 +336,32 @@ int main(int argc, char** argv) {
         Eigen::Vector3f p_t = (transform * point).cast<float>();
         p.getVector3fMap() = p_t;
       }
+      std::cout<<__func__<<"After transform: "<<static_cast<int>((*cloud)[0].r)<<", "<<static_cast<int>((*cloud)[0].g)<<", "<<static_cast<int>((*cloud)[0].b)<<"\n";      
+
+      if (all_poses.size()) {
+        for (int j = last_traj_ind+1; j <= frame_inds[1]; j++) {
+          if (all_poses.size() <= j) {
+            std::cout<<"pose file size "<<all_poses.size() <<" less than "<<j<<"\n";
+          }
+            
+          Eigen::Matrix<double, 3, 4, Eigen::RowMajor> m = all_poses[j].block<3,4>(0,0);
+          std::cout<<__func__<<": send \n"<<m.col(3).transpose()<<" for index "<<j<<" to viewer\n";
+         
+          viewer->drawTrajectory(m);
+
+        }
+        last_traj_ind = curr_frame_id;
+
+      }
 
       // std::shared_ptr<cvo::CvoPointCloud> pc (new cvo::CvoPointCloud(*cloud));
       //std::cout<<"Load "<<frame_fname<<", "<<pc->positions().size()<<" number of points\n";
       //pcs.push_back(pc);
       std::string viewer_id = std::to_string(curr_frame_id);
       if (idx_to_viewerid.find(curr_frame_id) != idx_to_viewerid.end()) {
-
-        
-        
-        //viewer->updateColorPointCloud(*cloud, viewer_id);
+        viewer->updateColorPointCloud(*cloud, viewer_id);
       } else {
-        viewer->addColorPointCloud(*cloud, viewer_id);
+        viewer->updateColorPointCloud(*cloud, viewer_id);
         std::pair<int, std::string> p;
         p.first = curr_frame_id;
         p.second = viewer_id;
@@ -320,6 +374,7 @@ int main(int argc, char** argv) {
       //frames.push_back(new_frame);
       //id_to_index[curr_frame_id] = i;
     }
+    last_ind = frame_inds[1];
     if (is_auto_preceed)
       std::this_thread::sleep_for(std::chrono::microseconds(50000));
     else {

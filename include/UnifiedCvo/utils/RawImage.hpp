@@ -13,7 +13,7 @@ namespace cvo {
     RawImage();
     virtual ~RawImage() {}
 
-    const std::vector<float> intensity() const { return intensity_; }
+    const std::vector<float> & intensity() const { return intensity_; }
     const cv::Mat & image() const { return image_;}
     const std::vector<float> & gradient() const {return gradient_;}
     const std::vector<float> & gradient_square() const {return gradient_square_;}
