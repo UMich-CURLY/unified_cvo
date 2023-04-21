@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
     std::cout<<"Load "<<frame_fname<<", "<<pc->positions().size()<<" number of points\n";
     pcs.push_back(pc);
 
-    cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrame(pc.get(), tracking_poses[i].data()));
+    cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrame(pc.get(), tracking_poses[i].data(), false));
     frames.push_back(new_frame);
     id_to_index[curr_frame_id] = i;
   }

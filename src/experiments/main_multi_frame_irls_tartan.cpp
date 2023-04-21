@@ -163,6 +163,7 @@ void write_traj_file(std::string & fname,
 
 void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string & fname, int max_frames=-1) {
   pcl::PointCloud<pcl::PointXYZRGB> pc_all;
+  pcl::PointCloud<pcl::PointXYZ> pc_xyz_all;
   int counter = 0;
   for (auto ptr : frames) {
     if (counter == max_frames) break;
@@ -174,12 +175,16 @@ void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string 
     cvo::CvoPointCloud::transform(pose_f, *ptr->points, new_pc);
 
     pcl::PointCloud<pcl::PointXYZRGB> pc_curr;
+    pcl::PointCloud<pcl::PointXYZ> pc_xyz_curr;
     new_pc.export_to_pcd(pc_curr);
+    new_pc.export_to_pcd(pc_xyz_curr);
 
     pc_all += pc_curr;
+    pc_xyz_all += pc_xyz_curr;
     counter++;
   }
-  pcl::io::savePCDFileASCII(fname, pc_all);
+  //pcl::io::savePCDFileASCII(fname, pc_all);
+  pcl::io::savePCDFileASCII(fname, pc_xyz_all);
 }
 
 int main(int argc, char** argv) {
@@ -187,6 +192,7 @@ int main(int argc, char** argv) {
   //  omp_set_num_threads(24);
 
   cvo::TartanAirHandler tartan(argv[1]);
+  //  tartan.set_depth_folder_name("deep_depth");
   string cvo_param_file(argv[2]);    
   std::string graph_file_name(argv[3]);
 
@@ -201,11 +207,12 @@ int main(int argc, char** argv) {
   graph_file_folder = std::string(argv[5]);
 
   //int is_using_gpu = std::stoi(argv[6]);
-  
+
+  int is_edge_only = std::stoi(argv[6]);
 
   std::string covisMapFile;
-  if (argc > 6)
-    covisMapFile = std::string(argv[6]);
+  if (argc > 7)
+    covisMapFile = std::string(argv[7]);
   
   int total_iters = tartan.get_total_number();
   //vector<string> vstrRGBName = tum.get_rgb_name_list();
@@ -213,7 +220,7 @@ int main(int argc, char** argv) {
 
   cvo::CvoGPU cvo_align(cvo_param_file);
   string calib_file;
-  calib_file = string(argv[1] ) +"/cvo_calib.txt"; 
+  calib_file = string(argv[1] ) +"/cvo_calib_deep_depth.txt"; 
   cvo::Calibration calib(calib_file, cvo::Calibration::RGBD);
 
   
@@ -259,86 +266,94 @@ int main(int argc, char** argv) {
     
     std::shared_ptr<cvo::CvoPointCloud> pc_full(new cvo::CvoPointCloud(*raw,  calib, cvo::CvoPointCloud::FULL));
     std::shared_ptr<cvo::CvoPointCloud> pc_edge_raw(new cvo::CvoPointCloud(*raw, calib, cvo::CvoPointCloud::DSO_EDGES));
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr raw_pcd_edge(new pcl::PointCloud<pcl::PointXYZRGB>);
-    pc_edge_raw->export_to_pcd<pcl::PointXYZRGB>(*raw_pcd_edge);
+
+    std::cout<<"is_edge_only is "<<is_edge_only<<"\n";
+    if ( is_edge_only == 0) {
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr raw_pcd_edge(new pcl::PointCloud<pcl::PointXYZRGB>);
+      pc_edge_raw->export_to_pcd<pcl::PointXYZRGB>(*raw_pcd_edge);
     
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr raw_pcd_surface(new pcl::PointCloud<pcl::PointXYZRGB>);    
-    pc_full->export_to_pcd<pcl::PointXYZRGB>(*raw_pcd_surface);
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr raw_pcd_surface(new pcl::PointCloud<pcl::PointXYZRGB>);    
+      pc_full->export_to_pcd<pcl::PointXYZRGB>(*raw_pcd_surface);
 
     
     
-    pcl::PointCloud<pcl::PointXYZRGB> edge_pcl;
-    pcl::PointCloud<pcl::PointXYZRGB> surface_pcl;
+      pcl::PointCloud<pcl::PointXYZRGB> edge_pcl;
+      pcl::PointCloud<pcl::PointXYZRGB> surface_pcl;
     
-    while (true) {
-      std::cout<<"Current leaf size is "<<leaf_size<<std::endl;
-      edge_pcl.clear();
-      surface_pcl.clear();
-      cvo::VoxelMap<pcl::PointXYZRGB> edge_voxel(leaf_size / 5); // /10
-      cvo::VoxelMap<pcl::PointXYZRGB> surface_voxel(leaf_size);
+      while (true) {
+        std::cout<<"Current leaf size is "<<leaf_size<<std::endl;
+        edge_pcl.clear();
+        surface_pcl.clear();
+        cvo::VoxelMap<pcl::PointXYZRGB> edge_voxel(leaf_size / 5); // /10
+        cvo::VoxelMap<pcl::PointXYZRGB> surface_voxel(leaf_size);
 
       
     
-      for (int k = 0; k < raw_pcd_edge->size(); k++) {
-        edge_voxel.insert_point(&raw_pcd_edge->points[k]);
-      }
-      std::vector<pcl::PointXYZRGB*> edge_results = edge_voxel.sample_points();
+        for (int k = 0; k < raw_pcd_edge->size(); k++) {
+          edge_voxel.insert_point(&raw_pcd_edge->points[k]);
+        }
+        std::vector<pcl::PointXYZRGB*> edge_results = edge_voxel.sample_points();
 
-      for (int k = 0; k < edge_results.size(); k++)
-        edge_pcl.push_back(*edge_results[k]);
-      std::cout<<"edge voxel selected points "<<edge_pcl.size()<<std::endl;
-      for (int k = 0; k < raw_pcd_surface->size(); k++) {
-        surface_voxel.insert_point(&raw_pcd_surface->points[k]);
-      }
-      std::vector<pcl::PointXYZRGB*> surface_results = surface_voxel.sample_points();
-      for (int k = 0; k < surface_results.size(); k++)
-        surface_pcl.push_back(*surface_results[k]);
-      std::cout<<"surface voxel selected points "<<surface_pcl.size()<<std::endl;
+        for (int k = 0; k < edge_results.size(); k++)
+          edge_pcl.push_back(*edge_results[k]);
+        std::cout<<"edge voxel selected points "<<edge_pcl.size()<<std::endl;
+        for (int k = 0; k < raw_pcd_surface->size(); k++) {
+          surface_voxel.insert_point(&raw_pcd_surface->points[k]);
+        }
+        std::vector<pcl::PointXYZRGB*> surface_results = surface_voxel.sample_points();
+        for (int k = 0; k < surface_results.size(); k++)
+          surface_pcl.push_back(*surface_results[k]);
+        std::cout<<"surface voxel selected points "<<surface_pcl.size()<<std::endl;
 
-      int total_selected_pts_num = edge_results.size() + surface_results.size();
-      /*if (total_selected_pts_num > 1500)
-        leaf_size = leaf_size * 1.2;
-      else if (total_selected_pts_num < 500)
-        leaf_size = leaf_size * 0.8;
-      else
-      */
-      break;
+        int total_selected_pts_num = edge_results.size() + surface_results.size();
+        /*if (total_selected_pts_num > 1500)
+          leaf_size = leaf_size * 1.2;
+          else if (total_selected_pts_num < 500)
+          leaf_size = leaf_size * 0.8;
+          else
+        */
+        break;
     
+      }
+      // std::cout<<"start voxel filtering...\n"<<std::flush;
+      //sor.setInputCloud (raw_pcd);
+
+      //sor.setLeafSize (leaf_size, leaf_size, leaf_size);
+      //sor.filter (*raw_pcd);
+      //std::cout<<"construct filtered cvo points with voxel size "<<leaf_size<<"\n"<<std::flush;
+      std::shared_ptr<cvo::CvoPointCloud> pc_edge(new cvo::CvoPointCloud(edge_pcl, cvo::CvoPointCloud::GeometryType::EDGE));
+      std::shared_ptr<cvo::CvoPointCloud> pc_surface(new cvo::CvoPointCloud(surface_pcl, cvo::CvoPointCloud::GeometryType::SURFACE));
+      std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud);
+      *pc = *pc_edge + *pc_surface;
+    
+      std::cout<<"Voxel number points is "<<pc->num_points()<<std::endl;
+    
+    
+      std::cout<<"Load "<<curr_frame_id<<", "<<pc->positions().size()<<" number of points\n"<<std::flush;
+      pcs.push_back(pc);
+      pcs_full.push_back(pc_full);
+      
+    } else {
+      pcs.push_back(pc_edge_raw);
+      pcs_full.push_back(pc_full);
+
     }
-    // std::cout<<"start voxel filtering...\n"<<std::flush;
-    //sor.setInputCloud (raw_pcd);
-
-    //sor.setLeafSize (leaf_size, leaf_size, leaf_size);
-    //sor.filter (*raw_pcd);
-    //std::cout<<"construct filtered cvo points with voxel size "<<leaf_size<<"\n"<<std::flush;
-    std::shared_ptr<cvo::CvoPointCloud> pc_edge(new cvo::CvoPointCloud(edge_pcl, cvo::CvoPointCloud::GeometryType::EDGE));
-    std::shared_ptr<cvo::CvoPointCloud> pc_surface(new cvo::CvoPointCloud(surface_pcl, cvo::CvoPointCloud::GeometryType::SURFACE));
-    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud);
-    *pc = *pc_edge + *pc_surface;
-    
-    std::cout<<"Voxel number points is "<<pc->num_points()<<std::endl;
-
     // pcl::PointCloud<pcl::PointXYZRGB> pcd_to_save;
     //pc->write_to_color_pcd(std::to_string(curr_frame_id)+".pcd");
 
 
-    
-    
-    std::cout<<"Load "<<curr_frame_id<<", "<<pc->positions().size()<<" number of points\n"<<std::flush;
-    pcs.push_back(pc);
-    pcs_full.push_back(pc_full);
 
     double * poses_data = nullptr;
     //if (BA_poses.size())
 
     Eigen::Matrix4d id_mat = Eigen::Matrix4d::Identity();
-    if (BA_poses.size() == frame_inds.size())
-      poses_data = BA_poses[i].data();
-    else 
+    //if (BA_poses.size() == frame_inds.size())
+    //  poses_data = BA_poses[i].data();
+    //else 
       poses_data = id_mat.data();
     
-    cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pc.get(), poses_data));
-    cvo::CvoFrame::Ptr new_full_frame(new cvo::CvoFrameGPU(pc_full.get(), poses_data));
+    cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pcs.back().get(), poses_data, cvo_align.get_params().is_using_kdtree));
+    cvo::CvoFrame::Ptr new_full_frame(new cvo::CvoFrameGPU(pc_full.get(), poses_data,  cvo_align.get_params().is_using_kdtree));
     frames.push_back(new_frame);
     frames_full.push_back(new_full_frame);
     id_to_index[curr_frame_id] = i;
@@ -360,8 +375,8 @@ int main(int argc, char** argv) {
     std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(*covis_pcd));
     pcs.push_back(pc);
     std::cout<<"Just construct cvopointcloud\n";
-    cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pc.get(), frames[0]->pose_vec));
-    cvo::CvoFrame::Ptr new_full_frame(new cvo::CvoFrameGPU(pc.get(), frames[0]->pose_vec));
+    cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pc.get(), frames[0]->pose_vec,  cvo_align.get_params().is_using_kdtree));
+    cvo::CvoFrame::Ptr new_full_frame(new cvo::CvoFrameGPU(pc.get(), frames[0]->pose_vec,  cvo_align.get_params().is_using_kdtree));
     frames.push_back(new_frame);
     frames_full.push_back(new_frame);      
     std::cout<<"read number points is "<<pc->num_points()<<std::endl<<std::endl;

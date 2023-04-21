@@ -5,6 +5,7 @@
 //#include "utils/PointSegmentedDistribution.hpp"
 //#include "utils/CvoFrameGPU.hpp"
 #include "utils/CvoPoint.hpp"
+#include "CudaTypes.hpp"
 //#include "utils/CvoPointCloud.hpp"
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
@@ -17,8 +18,8 @@ namespace ceres {
 
 namespace cvo {
   class CvoFrame;
-  class CvoFrameGPU;
-  class CvoPointCloudGPU;
+  //using CvoPointCloudGPU = perl_registration::cuPointCloud<cvo::CvoPoint>;
+  //using CuKdTree = perl_registration::cukdtree<cvo::CvoPoint>;
   class CvoParams;
   
   class BinaryStateGPU : public BinaryState {

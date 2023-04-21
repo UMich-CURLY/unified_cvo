@@ -516,10 +516,14 @@ namespace cvo{
 
         //if (xyz(2) > 15.0)
         //  continue;
+
         
         // construct x and y
         xyz(0) = (u-intrinsic(0,2)) * xyz(2) / intrinsic(0,0);
         xyz(1) = (v-intrinsic(1,2)) * xyz(2) / intrinsic(1,1);
+
+        if (!is_good_point(xyz))
+          continue;
         
         // check for labels
         if (raw_image.num_classes()) {

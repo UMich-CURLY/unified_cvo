@@ -145,6 +145,17 @@ namespace cvo {
                                           std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu_transformed_kdtree,
                                           thrust::device_vector<int> & cukdtree_inds_results
                                           );
+
+  void find_nearby_source_points_cukdtree(//const CvoParams *cvo_params,
+                                          std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu,
+                                          CuKdTree & kdtree_cloud_y,
+                                          const Eigen::Matrix4f & transform_cpu_yf2xf,
+                                          int num_neighbors,
+                                          // output
+                                          std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu_transformed_kdtree,
+                                          int * cukdtree_inds_results
+                                          );
+  
   
 
   /**
@@ -164,6 +175,12 @@ namespace cvo {
                                    Mat33f * R_gpu, Vec3f * T_gpu,
                                    bool update_normal_and_cov
                                    );
+
+  void  transform_pointcloud_thrust(std::shared_ptr<CvoPointCloudGPU> init_cloud,
+                                    std::shared_ptr<CvoPointCloudGPU> transformed_cloud,
+                                    float * T12_row_gpu_,
+                                    bool update_normal_and_cov
+                                    );
 
   void transform_pointcloud_thrust(thrust::device_vector<CvoPoint> & init_cloud,
                                    thrust::device_vector<CvoPoint> & transformed_cloud,

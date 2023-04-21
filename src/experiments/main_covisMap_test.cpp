@@ -352,8 +352,8 @@ int main(int argc, char** argv) {
     else 
       poses_data = id_mat.data();
     
-    cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrame(pc.get(), poses_data));
-    cvo::CvoFrame::Ptr new_full_frame(new cvo::CvoFrame(pc_full.get(), poses_data));
+    cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrame(pc.get(), poses_data, false));
+    cvo::CvoFrame::Ptr new_full_frame(new cvo::CvoFrame(pc_full.get(), poses_data, false));
     frames.push_back(new_frame);
     frames_full.push_back(new_full_frame);
     id_to_index[curr_frame_id] = i;
@@ -497,8 +497,8 @@ int main(int argc, char** argv) {
     std::cout<<"covis Map with points "<<covis_pc->num_points()<<std::endl;
     
     //pcs.push_back(pc);
-    cvo::CvoFrame::Ptr tmp_pc_frame(new cvo::CvoFrame(tmp_pc.get(), frames[0]->pose_vec));
-    cvo::CvoFrame::Ptr covis_pc_frame(new cvo::CvoFrame(covis_pc.get(), frames[0]->pose_vec));
+    cvo::CvoFrame::Ptr tmp_pc_frame(new cvo::CvoFrame(tmp_pc.get(), frames[0]->pose_vec, false));
+    cvo::CvoFrame::Ptr covis_pc_frame(new cvo::CvoFrame(covis_pc.get(), frames[0]->pose_vec, false));
 
     std::cout<<"just constructed frames\n";
     std::vector<cvo::CvoFrame::Ptr> covisFrames;

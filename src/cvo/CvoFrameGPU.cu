@@ -50,6 +50,7 @@ namespace cvo {
 
     if (is_using_kdtree) {
       //kdtree.reset(new perl_registration::cuKdTree<CvoPoint> );
+      kdtree_ = std::make_shared<CuKdTree>();
       kdtree_->SetInputCloud(points_init_gpu_);
       //kdtree_inds_results.resize(cvo_params.is_using_kdtree * num_fixed);
     }
@@ -59,6 +60,10 @@ namespace cvo {
   
   CvoFrameGPU::~CvoFrameGPU() {
     cudaFree((void*)pose_vec_gpu_);    
+  }
+
+  CuKdTree & CvoFrameGPU::kdtree() const {
+    return *kdtree_;
   }
 
   /*

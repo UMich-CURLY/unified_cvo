@@ -34,7 +34,7 @@ namespace cvo {
     //std::cout<<"Construct BinaryStateGPU: ell is "<<ell_<<", init_num_neighbors_ is "<<init_num_neighbors_<<"\n";
 
     if (params_cpu_->is_using_kdtree) {
-      points_transformed_buffer_gpu_.reset(new CvoPointCloudGPU);
+      points_transformed_buffer_gpu_ = std::make_shared<CvoPointCloudGPU>(pc1->size());
       cudaMalloc((int**)&cukdtree_inds_results_gpu_, sizeof(int)*init_num_neighbors_*pc1->size());
     }
 
@@ -55,16 +55,17 @@ namespace cvo {
     unsigned int last_num_neibors = max_neighbors(&A_host_);
     if (last_num_neibors > 0)
       num_neighbors_ = std::min(init_num_neighbors_, (unsigned int)(last_num_neibors*1.1));
-    //std::cout<< "Current num_neighbors_ is "<<num_neighbors_<<"\n";
+    std::cout<< "Current num_neighbors_ is "<<num_neighbors_<<"\n";
     
 
     clear_SparseKernelMat(&A_host_, num_neighbors_);
 
     if (params_cpu_->is_using_kdtree) {
       //thrust::device_vector<int> cukdtree_inds_results;
-      Eigen::Matrix4f T_f2_to_f1 = frame2_->pose_cpu().inverse() * frame1_->pose_cpu();
-      thrust::device_ptr<int> inds_ptr_gpu(cukdtree_inds_results_gpu_);
-      thrust::device_vector<int> inds_device_vec(inds_ptr_gpu, inds_ptr_gpu + num_neighbors_ * frame1_->size());
+      Eigen::Matrix4f T_f2_to_f1 = (frame2_->pose_cpu().inverse() * frame1_->pose_cpu()).cast<float>();
+      //thrust::device_ptr<int> inds_ptr_gpu = thrust::device_pointer_cast(cukdtree_inds_results_gpu_);
+      //thrust::device_vector<int> inds_device_vec;
+      //(inds_ptr_gpu, inds_ptr_gpu + num_neighbors_ * frame1_->size());
     
       find_nearby_source_points_cukdtree(//const CvoParams *cvo_params,
                                          frame1_->points_init_gpu(),
@@ -73,19 +74,23 @@ namespace cvo {
                                          num_neighbors_,
                                          // output
                                          points_transformed_buffer_gpu_,
-                                         inds_device_vec
+                                         cukdtree_inds_results_gpu_
+                                         //inds_device_vec
                                          );
-
+      //std::cout<<"First few indices: ";
+      //for (int k = 0; k < num_neighbors_; k++) std::cout<<inds_device_vec[k]<<", ";
+      //std::cout<<"\n";
 
       thrust::device_vector<CvoPoint> & f1_points = frame1_->points_init_gpu()->points;
       thrust::device_vector<CvoPoint> & f2_points = frame2_->points_init_gpu()->points;
 
       fill_in_A_mat_cukdtree<<< (f1_points.size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>
         (params_gpu_,
-         thrust::raw_pointer_cast(points_transformed_buffer_gpu_->points),         
+         thrust::raw_pointer_cast(points_transformed_buffer_gpu_->points.data()),         
          f1_points.size(),
          thrust::raw_pointer_cast(f2_points.data()),
          f2_points.size(),
+         //thrust::raw_pointer_cast(inds_device_vec.data()),
          cukdtree_inds_results_gpu_,
          num_neighbors_, ell_,
          A_device_);
@@ -94,10 +99,10 @@ namespace cvo {
 
       fill_in_A_mat_gpu<<< (frame1_->points->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(
                                                                                                params_gpu_,
-                                                                                               thrust::raw_pointer_cast(frame1_->points_transformed_gpu()->points),
+                                                                                               thrust::raw_pointer_cast(frame1_->points_transformed_gpu()->points.data()),
                                                                                                //frame1_->points_transformed_gpu(),
                                                                                                frame1_->points->size(),
-                                                                                               thrust::raw_pointer_cast(frame2_->points_transformed_gpu()->points),
+                                                                                               thrust::raw_pointer_cast(frame2_->points_transformed_gpu()->points.data()),
                                                                                                //frame2_->points_transformed_gpu(),
                                                                                                frame2_->points->size(),
                                                                                                num_neighbors_,

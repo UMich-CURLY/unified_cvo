@@ -3,6 +3,8 @@
 #include "CvoParams.hpp"
 #include "utils/PointSegmentedDistribution.hpp"
 #include "utils/CvoPointCloud.hpp"
+#include "utils/CvoPoint.hpp"
+#include "cvo/CudaTypes.hpp"
 #include "cvo/CudaTypes.cuh"
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
@@ -14,6 +16,8 @@ namespace Eigen {
 
 
 namespace cvo {
+  //class CvoPointCloudGPU;
+  
   // all the GPU memory are allocated when construction CvoState, and deleted in CvoState's destructor
   struct CvoState {
     CvoState(std::shared_ptr<CvoPointCloudGPU> source_points, // ownership: user
@@ -45,7 +49,7 @@ namespace cvo {
     std::shared_ptr<CvoPointCloudGPU> cloud_y_gpu;
     std::shared_ptr<CvoPointCloudGPU> cloud_y_gpu_init;
     //perl_registration::cuKdTree<CvoPoint>::SharedPtr kdtree_fixed_points;
-    perl_registration::cuKdTree<CvoPoint>::SharedPtr kdtree_moving_points;
+    std::shared_ptr<CuKdTree> kdtree_moving_points;
     std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu_transformed_kdtree;
     thrust::device_vector<int> kdtree_inds_results;
     

@@ -4,6 +4,7 @@
 #include "cvo/Association.hpp"
 #include "utils/PointSegmentedDistribution.hpp"
 #include "cvo/gpu_utils.cuh"
+#include "cvo/CudaTypes.cuh"
 #include "cupointcloud/point_types.h"
 #include "cupointcloud/cupointcloud.h"
 #include <pcl/point_types.h>
@@ -171,6 +172,19 @@ namespace cvo {
                        transform_point_R_T(R_gpu, T_gpu, update_normal_and_cov));
   
   }
+
+  void  transform_pointcloud_thrust(std::shared_ptr<CvoPointCloudGPU> init_cloud,
+                                    std::shared_ptr<CvoPointCloudGPU> transformed_cloud,
+                                    float * T12_row_gpu_,
+                                    bool update_normal_and_cov
+                                    ) {
+
+    thrust::transform( init_cloud->begin(), init_cloud->end(),  transformed_cloud->begin(),
+                       transform_point_pose_vec(T12_row_gpu_, update_normal_and_cov));
+    // transform_point_R_T(R_gpu, T_gpu, update_normal_and_cov));
+  
+  }
+  
 
   void  transform_pointcloud_thrust(thrust::device_vector<CvoPoint> & init_cloud,
                                     thrust::device_vector<CvoPoint> & transformed_cloud,
@@ -426,6 +440,97 @@ namespace cvo {
   
   }
 
+
+  void find_nearby_source_points_cukdtree(//const CvoParams *cvo_params,
+                                          std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu,
+                                          CuKdTree & kdtree_cloud_y,
+                                          const Eigen::Matrix4f & transform_cpu_yf2xf,
+                                          int num_neighbors,
+                                          // output
+                                          std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu_transformed_kdtree,
+                                          thrust::device_vector<int> & cukdtree_inds_results
+                                          ) {
+    cudaEvent_t cuda_start, cuda_stop;
+    cudaEventCreate(&cuda_start);
+    cudaEventCreate(&cuda_stop);
+    cudaEventRecord(cuda_start, 0);
+
+    Eigen::Matrix3f * R_gpu_yf2xf;
+    Eigen::Vector3f * T_gpu_yf2xf;
+    cudaMalloc(&R_gpu_yf2xf, sizeof(Eigen::Matrix3f));
+    cudaMalloc(&T_gpu_yf2xf, sizeof(Eigen::Vector3f));
+    Eigen::Matrix3f R_cpu_yf2xf = transform_cpu_yf2xf.block<3,3>(0,0);
+    Eigen::Vector3f T_cpu_yf2xf = transform_cpu_yf2xf.block<3,1>(0,3);
+    cudaMemcpy(R_gpu_yf2xf, &R_cpu_yf2xf, sizeof(decltype(R_cpu_yf2xf)), cudaMemcpyHostToDevice);
+    cudaMemcpy(T_gpu_yf2xf, &T_cpu_yf2xf, sizeof(decltype(T_cpu_yf2xf)), cudaMemcpyHostToDevice);
+    
+    transform_pointcloud_thrust(cloud_x_gpu, cloud_x_gpu_transformed_kdtree,
+                                R_gpu_yf2xf, T_gpu_yf2xf, false);
+    
+    kdtree_cloud_y.NearestKSearch(cloud_x_gpu_transformed_kdtree, num_neighbors , cukdtree_inds_results);
+
+    cudaFree(R_gpu_yf2xf);
+    cudaFree(T_gpu_yf2xf);
+
+    cudaEventRecord(cuda_stop, 0);
+    cudaEventSynchronize(cuda_stop);
+    float elapsedTime, totalTime;
+    
+    cudaEventElapsedTime(&elapsedTime, cuda_start, cuda_stop);
+    cudaEventDestroy(cuda_start);
+    cudaEventDestroy(cuda_stop);
+    totalTime = elapsedTime/(1000);
+    if (debug_print)std::cout<<"Kdtree query time is "<<totalTime<<std::endl;
+    
+  }
+
+  void find_nearby_source_points_cukdtree(//const CvoParams *cvo_params,
+                                          std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu,
+                                          CuKdTree & kdtree_cloud_y,
+                                          const Eigen::Matrix4f & transform_cpu_yf2xf,
+                                          int num_neighbors,
+                                          // output
+                                          std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu_transformed_kdtree,
+                                          int * cukdtree_inds_results
+                                          ) {
+    cudaEvent_t cuda_start, cuda_stop;
+    cudaEventCreate(&cuda_start);
+    cudaEventCreate(&cuda_stop);
+    cudaEventRecord(cuda_start, 0);
+
+    Eigen::Matrix3f * R_gpu_yf2xf;
+    Eigen::Vector3f * T_gpu_yf2xf;
+    cudaMalloc(&R_gpu_yf2xf, sizeof(Eigen::Matrix3f));
+    cudaMalloc(&T_gpu_yf2xf, sizeof(Eigen::Vector3f));
+    Eigen::Matrix3f R_cpu_yf2xf = transform_cpu_yf2xf.block<3,3>(0,0);
+    Eigen::Vector3f T_cpu_yf2xf = transform_cpu_yf2xf.block<3,1>(0,3);
+    cudaMemcpy(R_gpu_yf2xf, &R_cpu_yf2xf, sizeof(decltype(R_cpu_yf2xf)), cudaMemcpyHostToDevice);
+    cudaMemcpy(T_gpu_yf2xf, &T_cpu_yf2xf, sizeof(decltype(T_cpu_yf2xf)), cudaMemcpyHostToDevice);
+    
+    transform_pointcloud_thrust(cloud_x_gpu, cloud_x_gpu_transformed_kdtree,
+                                R_gpu_yf2xf, T_gpu_yf2xf, false);
+    
+    kdtree_cloud_y.NearestKSearch(cloud_x_gpu_transformed_kdtree, num_neighbors ,
+                                  cukdtree_inds_results, num_neighbors * cloud_x_gpu->size());
+
+    cudaFree(R_gpu_yf2xf);
+    cudaFree(T_gpu_yf2xf);
+
+    cudaEventRecord(cuda_stop, 0);
+    cudaEventSynchronize(cuda_stop);
+    float elapsedTime, totalTime;
+    
+    cudaEventElapsedTime(&elapsedTime, cuda_start, cuda_stop);
+    cudaEventDestroy(cuda_start);
+    cudaEventDestroy(cuda_stop);
+    totalTime = elapsedTime/(1000);
+    if (debug_print)std::cout<<"Kdtree query time is "<<totalTime<<std::endl;
+    
+  }
+  
+  
+  
+  
   
 
 

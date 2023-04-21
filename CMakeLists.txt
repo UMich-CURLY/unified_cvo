@@ -649,13 +649,13 @@ target_include_directories(cvo_covis_tartan PUBLIC
 target_link_libraries(cvo_covis_tartan cvo_gpu_img_lib cvo_gpu_img_lib cvo_utils_lib tartan boost_filesystem boost_system pcl_filters)
 
 
-add_executable(cvo_irls_tartan_translation ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_translation_only_tartan.cpp)
-target_include_directories(cvo_irls_tartan_translation PUBLIC
+#add_executable(cvo_irls_tartan_translation ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_translation_only_tartan.cpp)
+#target_include_directories(cvo_irls_tartan_translation PUBLIC
 	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
-        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
-        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_link_libraries(cvo_irls_tartan_translation cvo_gpu_img_lib cvo_gpu_img_lib cvo_utils_lib tartan boost_filesystem boost_system pcl_filters)
+#        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+#        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+#target_link_libraries(cvo_irls_tartan_translation cvo_gpu_img_lib cvo_gpu_img_lib cvo_utils_lib tartan boost_filesystem boost_system pcl_filters)
 
 
 add_executable(cvo_irls_kitti ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_kitti.cpp)

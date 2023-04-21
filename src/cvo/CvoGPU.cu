@@ -17,6 +17,8 @@
 #include "cvo/IRLS.hpp"
 #include "cvo/CvoFrameGPU.hpp"
 #include "cvo/CvoGPU_impl.hpp"
+#include "cvo/CudaTypes.cuh"
+#include "cvo/CudaTypes.hpp"
 //#include "cukdtree/cukdtree.h"
 
 #include <pcl/point_types.h>
@@ -381,7 +383,7 @@ namespace cvo{
     float s_ell = cvo_params->s_ell;
     float s_sigma2 = cvo_params->s_sigma * cvo_params->s_sigma;
 
-    CvoPoint * p_a =  &points_b[i];
+    CvoPoint * p_a =  &points_a[i];
 
     //float a_to_sensor = sqrtf(p_a->x * p_a->x + p_a->y * p_a->y + p_a->z * p_a->z);
     //float l = compute_range_ell(ell, a_to_sensor , 1, 80 );
@@ -425,7 +427,7 @@ namespace cvo{
           k= sigma2*exp(-d2/(2.0*l*l));
         else continue;
       }
-      //}
+
       if (cvo_params->is_using_intensity) {
         float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
         if (d2_color < d2_c_thres)
@@ -441,12 +443,13 @@ namespace cvo{
           continue;
       }
       a = ck*k*sk*geo_sim;      
-      //if (i==0) 
-      //   printf("point_a is (%f,%f,%f), point_b is (%f,%f,%f), k=%f,ck=%f, sk=%f, a=%f, \n", p_a->x, p_a->y, p_a->z, p_b->x, p_b->y, p_b->z, k, ck, sk,a );
 
       if (a > cvo_params->sp_thres){
         A_mat->mat[i * num_neighbors + num_inds] = a;
         A_mat->ind_row2col[i * num_neighbors + num_inds] = ind_b;
+        //if (i==0) 
+        //  printf("point_a is (%f,%f,%f), point_b is (%f,%f,%f), ind_b=%d, k=%f,ck=%f, sk=%f, a=%f, \n", p_a->x, p_a->y, p_a->z, p_b->x, p_b->y, p_b->z, ind_b,  k, ck, sk,a );
+        
         //if (a > curr_max_ip) {
         //  curr_max_ip = a;
         //  A_mat->max_index[i] = ind_b;
@@ -459,51 +462,6 @@ namespace cvo{
     A_mat->nonzeros[i] = num_inds;
 
   }
-
-  void find_nearby_source_points_cukdtree(//const CvoParams *cvo_params,
-                                          std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu,
-                                          perl_registration::cuKdTree<CvoPoint> & kdtree_cloud_y,
-                                          const Eigen::Matrix4f & transform_cpu_yf2xf,
-                                          int num_neighbors,
-                                          // output
-                                          std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu_transformed_kdtree,
-                                          thrust::device_vector<int> & cukdtree_inds_results
-                                          ) {
-    cudaEvent_t cuda_start, cuda_stop;
-    cudaEventCreate(&cuda_start);
-    cudaEventCreate(&cuda_stop);
-    cudaEventRecord(cuda_start, 0);
-
-    Eigen::Matrix3f * R_gpu_yf2xf;
-    Eigen::Vector3f * T_gpu_yf2xf;
-    cudaMalloc(&R_gpu_yf2xf, sizeof(Eigen::Matrix3f));
-    cudaMalloc(&T_gpu_yf2xf, sizeof(Eigen::Vector3f));
-    Eigen::Matrix3f R_cpu_yf2xf = transform_cpu_yf2xf.block<3,3>(0,0);
-    Eigen::Vector3f T_cpu_yf2xf = transform_cpu_yf2xf.block<3,1>(0,3);
-    cudaMemcpy(R_gpu_yf2xf, &R_cpu_yf2xf, sizeof(decltype(R_cpu_yf2xf)), cudaMemcpyHostToDevice);
-    cudaMemcpy(T_gpu_yf2xf, &T_cpu_yf2xf, sizeof(decltype(T_cpu_yf2xf)), cudaMemcpyHostToDevice);
-    
-    transform_pointcloud_thrust(cloud_x_gpu, cloud_x_gpu_transformed_kdtree,
-                                R_gpu_yf2xf, T_gpu_yf2xf, false);
-    
-    kdtree_cloud_y.NearestKSearch(cloud_x_gpu_transformed_kdtree, num_neighbors , cukdtree_inds_results);
-
-    cudaFree(R_gpu_yf2xf);
-    cudaFree(T_gpu_yf2xf);
-
-    cudaEventRecord(cuda_stop, 0);
-    cudaEventSynchronize(cuda_stop);
-    float elapsedTime, totalTime;
-    
-    cudaEventElapsedTime(&elapsedTime, cuda_start, cuda_stop);
-    cudaEventDestroy(cuda_start);
-    cudaEventDestroy(cuda_stop);
-    totalTime = elapsedTime/(1000);
-    if (debug_print)std::cout<<"Kdtree query time is "<<totalTime<<std::endl;
-    
-  }
-  
-  
 
   __global__
   void fill_in_A_mat_gpu(const CvoParams * cvo_params,

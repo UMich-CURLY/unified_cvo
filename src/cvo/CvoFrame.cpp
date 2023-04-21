@@ -22,5 +22,17 @@ namespace cvo {
     
   }
 
+  Eigen::Matrix4d CvoFrame::pose_cpu() const {
+    Eigen::Matrix4d pose;
+    pose << pose_vec[0], pose_vec[1], pose_vec[2], pose_vec[3],
+      pose_vec[4],pose_vec[5], pose_vec[6],pose_vec[7],
+      pose_vec[8],pose_vec[9],pose_vec[10],pose_vec[11],
+      0,0,0,1;
+    return pose;
+  }
+      
+      
+
+
 
 }

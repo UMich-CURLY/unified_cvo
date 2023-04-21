@@ -5,14 +5,20 @@
 #include <cstdlib>
 #include "CvoFrame.hpp"
 #include "utils/CvoPoint.hpp"
-
+#include "CudaTypes.hpp"
 //#include "cvo/CvoGPU_impl.cuh"
 #include <memory>
+
+/*namespace perl_registration {
+  template <typename T> class cukdtree;
+  template <typename T> class cuPointCloud;
+  }*/
+
 namespace cvo {
 
   //class CvoFrameGPU_Impl;
-  class CvoPointCloudGPU;
-  class CuKdTree;
+  //using CvoPointCloudGPU = perl_registration::cuPointCloud<cvo::CvoPoint>;
+  //using CuKdTree = perl_registration::cukdtree<cvo::CvoPoint>;
   class CvoPointCloud;
   
   struct CvoFrameGPU : public CvoFrame  {
@@ -29,11 +35,12 @@ namespace cvo {
     std::shared_ptr<CvoPointCloudGPU> points_init_gpu();
     std::shared_ptr<CvoPointCloudGPU> points_transformed_gpu();
     size_t size() const;
-    const CuKdTree & kdtree() const;
+    CuKdTree & kdtree() const;
+    //CuKdTree * kdtree() const;
     
     //void set_points_transformed_gpu();
     const float * pose_vec_gpu() const; // 12, row major
-    Eigen::Matrix4f pose_cpu() const;
+
     //void set_pose_vec_gpu(float * new_pose_vec_cpu); // 12, row major
 
   private:
@@ -45,7 +52,8 @@ namespace cvo {
 
     //perl_registration::cuKdTree<CvoPoint>::SharedPtr kdtree_points;
     //
-    std::shared_ptr<CuKdTree> kdtree_;
+     std::shared_ptr<CuKdTree> kdtree_;
+    //CuKdTree * kdtree_;
 
     
     float * pose_vec_gpu_; // 12, row major

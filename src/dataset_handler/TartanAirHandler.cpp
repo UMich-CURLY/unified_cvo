@@ -128,7 +128,7 @@ namespace cvo {
       }
     }
     // scale by 5000 and flatten to vector
-    raw_dep = raw_dep; //* 5000.0f;
+    //raw_dep = raw_dep; //* 5000.0f;
     //dep_vec.clear();
     //dep_vec = vector<float>(raw_dep.begin<float>(), raw_dep.end<float>());
     return 0;
