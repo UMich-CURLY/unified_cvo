@@ -463,9 +463,13 @@ namespace cvo {
     Eigen::Vector3f T_cpu_yf2xf = transform_cpu_yf2xf.block<3,1>(0,3);
     cudaMemcpy(R_gpu_yf2xf, &R_cpu_yf2xf, sizeof(decltype(R_cpu_yf2xf)), cudaMemcpyHostToDevice);
     cudaMemcpy(T_gpu_yf2xf, &T_cpu_yf2xf, sizeof(decltype(T_cpu_yf2xf)), cudaMemcpyHostToDevice);
-    
+
+    // cvo::CvoPoint xx = cloud_x_gpu->points[0];
+    //std::cout<<"Before transform: "<<xx.x<<"\n";
     transform_pointcloud_thrust(cloud_x_gpu, cloud_x_gpu_transformed_kdtree,
                                 R_gpu_yf2xf, T_gpu_yf2xf, false);
+    //cvo::CvoPoint xx_y = cloud_x_gpu_transformed_kdtree->points[0];    
+    //std::cout<<"After transform: "<<xx_y.x<<"\n";
     
     kdtree_cloud_y.NearestKSearch(cloud_x_gpu_transformed_kdtree, num_neighbors , cukdtree_inds_results);
 
@@ -480,7 +484,7 @@ namespace cvo {
     cudaEventDestroy(cuda_start);
     cudaEventDestroy(cuda_stop);
     totalTime = elapsedTime/(1000);
-    if (debug_print)std::cout<<"Kdtree query time is "<<totalTime<<std::endl;
+    //if (debug_print)std::cout<<"Kdtree query time is "<<totalTime<<std::endl;
     
   }
 
@@ -507,8 +511,12 @@ namespace cvo {
     cudaMemcpy(R_gpu_yf2xf, &R_cpu_yf2xf, sizeof(decltype(R_cpu_yf2xf)), cudaMemcpyHostToDevice);
     cudaMemcpy(T_gpu_yf2xf, &T_cpu_yf2xf, sizeof(decltype(T_cpu_yf2xf)), cudaMemcpyHostToDevice);
     
+    //cvo::CvoPoint xx = cloud_x_gpu->points[0];
+    //std::cout<<"Before transform: "<<xx.x<<"\n";    
     transform_pointcloud_thrust(cloud_x_gpu, cloud_x_gpu_transformed_kdtree,
                                 R_gpu_yf2xf, T_gpu_yf2xf, false);
+    //cvo::CvoPoint xx_y = cloud_x_gpu_transformed_kdtree->points[0];    
+    //std::cout<<"After transform: "<<xx_y.x<<"\n";
     
     kdtree_cloud_y.NearestKSearch(cloud_x_gpu_transformed_kdtree, num_neighbors ,
                                   cukdtree_inds_results, num_neighbors * cloud_x_gpu->size());
@@ -524,7 +532,7 @@ namespace cvo {
     cudaEventDestroy(cuda_start);
     cudaEventDestroy(cuda_stop);
     totalTime = elapsedTime/(1000);
-    if (debug_print)std::cout<<"Kdtree query time is "<<totalTime<<std::endl;
+    //if (debug_print)std::cout<<"Kdtree query time is "<<totalTime<<std::endl;
     
   }
   

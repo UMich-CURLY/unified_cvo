@@ -20,7 +20,7 @@ void run_test() {
   pcl::PointCloud<pcl::PointXYZ> pc;
 
   for (size_t i = 0; i < 10000; i++) {
-    pcl::PointXYZ p(i , 0, 0);
+    pcl::PointXYZ p(i+0.1 , 0, 0);
     pc.push_back(p);
   }
   int loops = 1;
@@ -42,7 +42,7 @@ void run_test() {
   pcl::PointCloud<pcl::PointXYZ> query;
   pcl::PointXYZ q(0, 1, 0);
   query.push_back(q);
-  pcl::PointXYZ q2 (10.5,2,2);
+  pcl::PointXYZ q2 (10,2,2);
   query.push_back(q2);
   auto d_query = std::make_shared<
     perl_registration::cuPointCloud<perl_registration::cuPointXYZ>>(query);
@@ -61,7 +61,7 @@ void run_test() {
   printf("2D: thrust time = %f\n", totalTime2d);
 
   for (int i = 0 ; i < 6; i++) {
-    perl_registration::cuPointXYZ p = d_pc->points[i];
+    perl_registration::cuPointXYZ p = d_pc->points[results[i]];
 
 
     std::cout << "cuKdTREE\n";

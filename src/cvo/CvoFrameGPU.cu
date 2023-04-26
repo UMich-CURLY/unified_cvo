@@ -40,6 +40,9 @@ namespace cvo {
     //cudaMalloc((void**)&points_transformed_gpu_, sizeof(CvoPoint)*pts->size() );
     points_init_gpu_ = CvoPointCloud_to_gpu(*pts);
     points_transformed_gpu_ = std::make_shared<CvoPointCloudGPU>((pts->size()));
+    //cvo::CvoPoint xx = points_init_gpu_->points[0];
+    //std::cout<<"Before transform: "<<xx.x<<"\n";
+
       
     cudaMalloc((void**)&pose_vec_gpu_, sizeof(float)*12);
     float pose_float[12];

@@ -17,8 +17,10 @@
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/CvoFrame.hpp"
 #include "cvo/CvoFrameGPU.hpp"
+#include "cvo/IRLS.hpp"
 #include "utils/VoxelMap.hpp"
 #include "dataset_handler/TartanAirHandler.hpp"
+#include "dataset_handler/PoseLoader.hpp"
 #include "utils/ImageRGBD.hpp"
 #include "utils/Calibration.hpp"
 
@@ -219,8 +221,9 @@ int main(int argc, char** argv) {
 
 
   cvo::CvoGPU cvo_align(cvo_param_file);
-  string calib_file;
-  calib_file = string(argv[1] ) +"/cvo_calib_deep_depth.txt"; 
+  string calib_file, gt_pose_name;
+  calib_file = string(argv[1] ) +"/cvo_calib_deep_depth.txt";
+  gt_pose_name = std::string(argv[1]) + "/pose_left.txt";
   cvo::Calibration calib(calib_file, cvo::Calibration::RGBD);
 
   
@@ -230,7 +233,17 @@ int main(int argc, char** argv) {
   std::vector<cvo::Mat34d_row, Eigen::aligned_allocator<cvo::Mat34d_row>> BA_poses;
   read_graph_file(graph_file_name, frame_inds, edge_inds, BA_poses);
 
-  std::vector<cvo::Mat34d_row, Eigen::aligned_allocator<cvo::Mat34d_row>> gt_poses;
+  std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> gt_poses_all, gt_poses(frame_inds.size());
+  cvo::read_pose_file_tartan_format(gt_pose_name,
+                               0,
+                               frame_inds.back(),
+                               gt_poses_all);
+  for (int j = 0; j < frame_inds.size(); j++) {
+    gt_poses[j] = gt_poses_all[frame_inds[j]];
+    std::cout<<"gt pose at "<<frame_inds[j]<<"\n"<<gt_poses[j]<<"\n";
+  }
+
+  
   std::vector<cvo::Mat34d_row, Eigen::aligned_allocator<cvo::Mat34d_row>> tracking_poses;
   std::vector<std::string> timestamps;
 
@@ -265,7 +278,7 @@ int main(int argc, char** argv) {
     std::shared_ptr<cvo::ImageRGBD<float>> raw(new cvo::ImageRGBD<float>(rgb, depth));
     
     std::shared_ptr<cvo::CvoPointCloud> pc_full(new cvo::CvoPointCloud(*raw,  calib, cvo::CvoPointCloud::FULL));
-    std::shared_ptr<cvo::CvoPointCloud> pc_edge_raw(new cvo::CvoPointCloud(*raw, calib, cvo::CvoPointCloud::DSO_EDGES));
+    std::shared_ptr<cvo::CvoPointCloud> pc_edge_raw(new cvo::CvoPointCloud(*raw, calib, cvo::CvoPointCloud::CV_FAST));
 
     std::cout<<"is_edge_only is "<<is_edge_only<<"\n";
     if ( is_edge_only == 0) {
@@ -332,14 +345,15 @@ int main(int argc, char** argv) {
       std::cout<<"Load "<<curr_frame_id<<", "<<pc->positions().size()<<" number of points\n"<<std::flush;
       pcs.push_back(pc);
       pcs_full.push_back(pc_full);
+      pcl::PointCloud<pcl::PointXYZRGB> pcd_to_save;
+      pc->write_to_color_pcd(std::to_string(curr_frame_id)+".pcd");
+      
       
     } else {
       pcs.push_back(pc_edge_raw);
       pcs_full.push_back(pc_full);
 
     }
-    // pcl::PointCloud<pcl::PointXYZRGB> pcd_to_save;
-    //pc->write_to_color_pcd(std::to_string(curr_frame_id)+".pcd");
 
 
 
@@ -347,9 +361,9 @@ int main(int argc, char** argv) {
     //if (BA_poses.size())
 
     Eigen::Matrix4d id_mat = Eigen::Matrix4d::Identity();
-    //if (BA_poses.size() == frame_inds.size())
-    //  poses_data = BA_poses[i].data();
-    //else 
+    if (BA_poses.size() == frame_inds.size())
+      poses_data = BA_poses[i].data();
+    else 
       poses_data = id_mat.data();
     
     cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pcs.back().get(), poses_data, cvo_align.get_params().is_using_kdtree));
@@ -451,7 +465,7 @@ int main(int argc, char** argv) {
 										      
 										      
 												)<<std::endl;
-    
+    //break;
   }
 
   if (covisMapFile.size()) {
@@ -532,11 +546,17 @@ int main(int argc, char** argv) {
   write_transformed_pc(frames_full, f_name_full);
   write_transformed_pc(frames, f_name);
   
-  
-  cvo_align.align(frames, const_flags,
-                 edge_states, &time);
+  auto start = std::chrono::system_clock::now();
+  cvo::CvoBatchIRLS batch_irls_problem(frames, const_flags,
+                                       edge_states, &cvo_align.get_params());
+  std::string err_file("err_wrt_iters.txt");
+  batch_irls_problem.solve(gt_poses, err_file);
+  auto end = std::chrono::system_clock::now();
+  std::chrono::duration<double, std::milli> t_all = end - start;
+  // cvo_align.align(frames, const_flags,
+  //               edge_states, &time);
 
-  std::cout<<"GPU Align ends. Total time is "<<time<<" seconds."<<std::endl;
+  std::cout<<"GPU Align ends. Total time is "<<double(t_all.count()) / 1000<<" seconds."<<std::endl;
 
   
 //for (int i = 0; i < frames.size(); i++) {

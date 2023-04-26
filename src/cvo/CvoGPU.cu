@@ -405,9 +405,22 @@ namespace cvo{
     unsigned int num_inds = 0;
     for (int j = 0; j < num_neighbors ; j++) {
       int ind_b = kdtree_inds_results[j + i * num_neighbors];
+
+      if (ind_b == -1) break;
+      
       CvoPoint * p_b = &points_b[ind_b];
       //if (i <= 1)
       //  printf("p_a is (%f, %f, %f), p_b is (%f, %f, %f\n)", p_a->x,p_a->y, p_a->z, p_b->x, p_b->y, p_b->z);
+
+      /*
+      if (i==0)  {
+        float d2 = (squared_dist( *p_b ,*p_a ));
+        float d2_semantic = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
+        
+        printf("point_a is (%f,%f,%f), point_b with index %d is (%f,%f,%f), d2=%f,d2_thresh=%f, d2_color=%f, d2_color_thresh=%f \n", p_a->x, p_a->y, p_a->z, ind_b,  p_b->x, p_b->y, p_b->z,  d2, d2_thres, d2_semantic, d2_c_thres );
+      }
+      */
+      
 
       float a = 1, sk=1, ck=1, k=1, geo_sim=1;
       if (cvo_params->is_using_geometric_type) {
@@ -442,13 +455,14 @@ namespace cvo{
         else
           continue;
       }
-      a = ck*k*sk*geo_sim;      
+      a = ck*k*sk*geo_sim;
+      // if (i==0) 
+      //  printf("point_a is (%f,%f,%f), point_b is (%f,%f,%f), ind_b=%d, k=%f,ck=%f, sk=%f, a=%f, \n", p_a->x, p_a->y, p_a->z, p_b->x, p_b->y, p_b->z, ind_b,  k, ck, sk,a );
+      
 
       if (a > cvo_params->sp_thres){
         A_mat->mat[i * num_neighbors + num_inds] = a;
         A_mat->ind_row2col[i * num_neighbors + num_inds] = ind_b;
-        //if (i==0) 
-        //  printf("point_a is (%f,%f,%f), point_b is (%f,%f,%f), ind_b=%d, k=%f,ck=%f, sk=%f, a=%f, \n", p_a->x, p_a->y, p_a->z, p_b->x, p_b->y, p_b->z, ind_b,  k, ck, sk,a );
         
         //if (a > curr_max_ip) {
         //  curr_max_ip = a;
@@ -460,7 +474,7 @@ namespace cvo{
 
     }
     A_mat->nonzeros[i] = num_inds;
-
+    //printf("i=%d, nonzeros is %d\n",i, num_inds);
   }
 
   __global__
@@ -567,9 +581,10 @@ namespace cvo{
           continue;
       }
       a = ck*k*sk*geo_sim;
+      
       /*
       if (i==0)  {
-        printf("point_a is (%f,%f,%f), point_b with index %d is (%f,%f,%f), k=%f,ck=%f, sk=%f \n", p_a->x, p_a->y, p_a->z, ind_b,  p_b->x, p_b->y, p_b->z,  k, ck, sk );
+        printf("point_a is (%f,%f,%f), point_b with index %d is (%f,%f,%f), k=%f,ck=%f, sk=%f , a=%f\n", p_a->x, p_a->y, p_a->z, ind_b,  p_b->x, p_b->y, p_b->z,  k, ck, sk, a );
         }*/
       
       if (a > cvo_params->sp_thres){
@@ -589,6 +604,7 @@ namespace cvo{
 
     }
     A_mat->nonzeros[i] = num_inds;
+
   }
 
   static

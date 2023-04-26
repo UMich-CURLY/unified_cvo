@@ -261,7 +261,7 @@ target_link_libraries(tartan PUBLIC opencv_core cnpy opencv_photo opencv_highgui
 
 if (${PROJECT_NAME}_ENABLE_CUDA)
   add_library(cukdtree_lib SHARED ${CUKDTREE_LIB_SOURCE})
-  target_compile_definitions(cukdtree_lib PUBLIC -DCVO_POINT_NEIGHBORS=256)  
+ # target_compile_definitions(cukdtree_lib PUBLIC -DKDTREE_K_SIZE=2048)  
   target_include_directories(cukdtree_lib PUBLIC
     "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
     $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
@@ -464,7 +464,7 @@ target_include_directories(cvo_gpu_img_lib PUBLIC
   "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
   #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_compile_definitions(cvo_gpu_img_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=256
+target_compile_definitions(cvo_gpu_img_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DCUDA_BLOCK_SIZE=256 -DCVO_POINT_NEIGHBORS=256
 #  ${PCL_DEFINITIONS}
 )
 set_target_properties(cvo_gpu_img_lib PROPERTIES
