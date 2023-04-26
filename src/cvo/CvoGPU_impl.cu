@@ -2,7 +2,7 @@
 #include "cvo/SparseKernelMat.hpp"
 #include "utils/PointSegmentedDistribution.hpp"
 #include "cvo/Association.hpp"
-#include "utils/PointSegmentedDistribution.hpp"
+#include "utils/CvoPoint.hpp"
 #include "cvo/gpu_utils.cuh"
 #include "cupointcloud/point_types.h"
 #include "cupointcloud/cupointcloud.h"
@@ -216,31 +216,33 @@ namespace cvo {
 
     int actual_num = 0;
     for(int i=0; i<num_points; ++i){
-      (host_cloud)[i].x = positions[i](0);
-      (host_cloud)[i].y = positions[i](1);
-      (host_cloud)[i].z = positions[i](2);
+      const cvo::CvoPoint point = cvo_cloud.point_at(i);
+      (host_cloud)[i].x = point.x;
+      (host_cloud)[i].y = point.y;
+      (host_cloud)[i].z = point.z;
       if (FEATURE_DIMENSIONS == 5 &&
           features.rows() == num_points &&
           features.cols() == FEATURE_DIMENSIONS) {
-        (host_cloud)[i].r = (uint8_t)std::min(255.0, (features(i,0) * 255.0));
-        (host_cloud)[i].g = (uint8_t)std::min(255.0, (features(i,1) * 255.0));
-        (host_cloud)[i].b = (uint8_t)std::min(255.0, (features(i,2) * 255.0));
+        (host_cloud)[i].r = (uint8_t)std::min(255.0, (point.features[0] * 255.0));
+        (host_cloud)[i].g = (uint8_t)std::min(255.0, (point.features[1] * 255.0));
+        (host_cloud)[i].b = (uint8_t)std::min(255.0, (point.features[2] * 255.0));
       }
 
       ///memcpy(host_cloud[i].features, features.row(i).data(), FEATURE_DIMENSIONS * sizeof(float));
       for (int j = 0; j < 2; j++)
-        host_cloud[i].geometric_type[j] = cvo_cloud.geometric_types()[i*2+j];
+//        host_cloud[i].geometric_type[j] = cvo_cloud.geometric_types()[i*2+j];
+        host_cloud[i].geometric_type[j] = point.geometric_type[j];
 
       if (features.rows() == num_points &&  features.cols() > 0 ) {
         for (int j = 0; j < FEATURE_DIMENSIONS; j++)
-          host_cloud[i].features[j] = features(i,j);
+          host_cloud[i].features[j] = point.features[j];
       }
       
-      if (cvo_cloud.num_classes() > 0) {
-        labels.row(i).maxCoeff(&host_cloud[i].label);
-        for (int j = 0; j < cvo_cloud.num_classes(); j++)
-          host_cloud[i].label_distribution[j] = labels(i,j);
-      }
+//      if (cvo_cloud.num_classes() > 0) {
+//        labels.row(i).maxCoeff(&host_cloud[i].label);
+//        for (int j = 0; j < cvo_cloud.num_classes(); j++)
+//          host_cloud[i].label_distribution[j] = labels(i,j);
+//      }
       
       //if (normals.rows() > 0 && normals.cols()>0) {
       //  for (int j = 0; j < 3; j++)

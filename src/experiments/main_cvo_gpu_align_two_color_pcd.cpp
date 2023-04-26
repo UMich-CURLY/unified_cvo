@@ -27,7 +27,8 @@ extern template class cvo::Voxel<pcl::PointXYZRGB>;
 Eigen::Vector3f get_pc_mean(const cvo::CvoPointCloud & pc) {
   Eigen::Vector3f p_mean_tmp = Eigen::Vector3f::Zero();
   for (int k = 0; k < pc.num_points(); k++)
-    p_mean_tmp = (p_mean_tmp + pc.positions()[k]).eval();
+//    p_mean_tmp = (p_mean_tmp + pc.positions()[k]).eval();
+    p_mean_tmp = (p_mean_tmp + Eigen::Vector3f(pc.point_at(k).x, pc.point_at(k).y, pc.point_at(k).z)).eval();
   p_mean_tmp = (p_mean_tmp) / pc.num_points();    
   return p_mean_tmp;
 }

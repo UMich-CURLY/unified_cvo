@@ -8,6 +8,7 @@
 #include "utils/PointSegmentedDistribution.hpp"
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
+#include <utils/CvoPoint.hpp>
 
 
 namespace semantic_bki {
@@ -129,6 +130,8 @@ namespace cvo {
     void erase(size_t index);
 
     // getters
+    std::vector<cvo::CvoPoint> get_points() const {return points_;}
+    cvo::CvoPoint point_at(unsigned int index) const {return points_[index];}
     int num_points() const {return num_points_;}
     int size() const {return num_points_;}
     int num_classes() const {return num_classes_;}
@@ -139,7 +142,7 @@ namespace cvo {
     Eigen::Vector3f at(unsigned int index) const;
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & labels() const { return labels_;}
     Eigen::VectorXf label_at(unsigned int index) const { return labels_.row(index); }
-    Eigen::VectorXf feature_at(unsigned int index) const { return features_.row(index); }
+    const float* feature_at(unsigned int index) const { return points_[index].features; }
     Eigen::Vector2f geometry_type_at(unsigned int index) const;
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & semantics() const { return labels_;}
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & features() const {return features_;}
@@ -170,7 +173,8 @@ namespace cvo {
     int num_classes_;
     int feature_dimensions_;
     int num_geometric_types_;
-    
+
+    std::vector<cvo::CvoPoint> points_;
     //std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> positions_;  // points position. x,y,z
     std::vector<Eigen::Vector3f> positions_; 
     //Eigen::Matrix<float, Eigen::Dynamic, 3> positions_;
