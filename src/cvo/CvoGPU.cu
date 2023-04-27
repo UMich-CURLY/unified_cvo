@@ -582,10 +582,10 @@ namespace cvo{
       }
       a = ck*k*sk*geo_sim;
       
-      /*
-      if (i==0)  {
-        printf("point_a is (%f,%f,%f), point_b with index %d is (%f,%f,%f), k=%f,ck=%f, sk=%f , a=%f\n", p_a->x, p_a->y, p_a->z, ind_b,  p_b->x, p_b->y, p_b->z,  k, ck, sk, a );
-        }*/
+
+      //if (i==0)  {
+      //  printf("point_a is (%f,%f,%f), point_b with index %d is (%f,%f,%f), k=%f,ck=%f, sk=%f , a=%f\n", p_a->x, p_a->y, p_a->z, ind_b,  p_b->x, p_b->y, p_b->z,  k, ck, sk, a );
+      //  }
       
       if (a > cvo_params->sp_thres){
         A_mat->mat[i * num_neighbors + num_inds] = a;

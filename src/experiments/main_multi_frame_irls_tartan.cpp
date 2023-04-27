@@ -239,7 +239,14 @@ int main(int argc, char** argv) {
                                frame_inds.back(),
                                gt_poses_all);
   for (int j = 0; j < frame_inds.size(); j++) {
-    gt_poses[j] = gt_poses_all[frame_inds[j]];
+    Eigen::Matrix3d m;
+    m = Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitZ())
+      * Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitX());
+    Eigen::Matrix4d ned_from_us = Eigen::Matrix4d::Identity();
+    ned_from_us.block<3,3>(0,0) = m.inverse();
+    /// convert from NED to our coordinate system    
+    gt_poses[j] = ned_from_us * gt_poses_all[frame_inds[j]] * ned_from_us.inverse();
+
     std::cout<<"gt pose at "<<frame_inds[j]<<"\n"<<gt_poses[j]<<"\n";
   }
 
@@ -278,7 +285,7 @@ int main(int argc, char** argv) {
     std::shared_ptr<cvo::ImageRGBD<float>> raw(new cvo::ImageRGBD<float>(rgb, depth));
     
     std::shared_ptr<cvo::CvoPointCloud> pc_full(new cvo::CvoPointCloud(*raw,  calib, cvo::CvoPointCloud::FULL));
-    std::shared_ptr<cvo::CvoPointCloud> pc_edge_raw(new cvo::CvoPointCloud(*raw, calib, cvo::CvoPointCloud::CV_FAST));
+    std::shared_ptr<cvo::CvoPointCloud> pc_edge_raw(new cvo::CvoPointCloud(*raw, calib, cvo::CvoPointCloud::DSO_EDGES));
 
     std::cout<<"is_edge_only is "<<is_edge_only<<"\n";
     if ( is_edge_only == 0) {
@@ -338,6 +345,7 @@ int main(int argc, char** argv) {
       std::shared_ptr<cvo::CvoPointCloud> pc_surface(new cvo::CvoPointCloud(surface_pcl, cvo::CvoPointCloud::GeometryType::SURFACE));
       std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud);
       *pc = *pc_edge + *pc_surface;
+      //*pc = *pc_edge;
     
       std::cout<<"Voxel number points is "<<pc->num_points()<<std::endl;
     
@@ -361,9 +369,9 @@ int main(int argc, char** argv) {
     //if (BA_poses.size())
 
     Eigen::Matrix4d id_mat = Eigen::Matrix4d::Identity();
-    if (BA_poses.size() == frame_inds.size())
-      poses_data = BA_poses[i].data();
-    else 
+    //if (BA_poses.size() == frame_inds.size())
+    //  poses_data = BA_poses[i].data();
+    //else 
       poses_data = id_mat.data();
     
     cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pcs.back().get(), poses_data, cvo_align.get_params().is_using_kdtree));

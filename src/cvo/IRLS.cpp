@@ -136,7 +136,7 @@ namespace cvo {
     double ceres_add_residual_time = 0;
     int num_ells = 0;
     int last_nonzeros = 0;
-    bool ell_should_decay = false;
+    bool ell_should_decay_when_nonzero_max = false;
     std::cout<<"Solve: total number of states is "<<states_->size()<<std::endl;
     while (!converged) {
 
@@ -182,7 +182,7 @@ namespace cvo {
         }
       }
       if (is_comparing_with_gt) {
-        double param_err = change_of_all_poses(poses_old, gt_aligned);
+        double param_err = change_of_all_poses(gt_aligned, poses_old);
         std::cout<<"Before iter" <<iter_<<"'s optimization, error w.r.t gt is "<<param_err<<std::endl;
         err_f << ell<<","<<total_nonzeros<<","<<param_err<<"\n";
         err_history.push_back(param_err);
@@ -195,10 +195,11 @@ namespace cvo {
       if (counter == 0
           || iter_ == params_->multiframe_max_iters
           ) break;
-      if (total_nonzeros > last_nonzeros)
-        ell_should_decay = true;
+      if (iter_ > 0 &&  iter_ % params_->multiframe_iterations_per_ell == 0 )
+        ell_should_decay_when_nonzero_max = true;
+      
       if (total_nonzeros > last_nonzeros
-          || iter_ < params_->multiframe_iterations_per_ell 
+          || !ell_should_decay_when_nonzero_max
           ) {
         
         last_nonzeros = total_nonzeros;
@@ -252,7 +253,7 @@ namespace cvo {
         //    ) {
           //break;
           num_ells ++;
-          ell_should_decay = false;
+          ell_should_decay_when_nonzero_max = false;
           //if (num_ells == 2)
           //  break;
         
@@ -288,7 +289,7 @@ namespace cvo {
       
       std::vector<Sophus::SE3d> poses_new(frames_->size());
       pose_snapshot(*frames_, poses_new);
-      double param_err = change_of_all_poses(poses_new, gt_aligned);
+      double param_err = change_of_all_poses( gt_aligned, poses_new);
       err_history.push_back(param_err);
       std::cout<<"Finish registration at iter " <<iter_<<", error w.r.t gt changes from "<<err_history[0]<<" to " <<param_err<<std::endl;
       
