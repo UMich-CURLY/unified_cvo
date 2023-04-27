@@ -11,8 +11,8 @@ set(${PROJECT_NAME}_VERSION 0.1)
 cmake_minimum_required(VERSION 3.0)
 option(${PROJECT_NAME}_ENABLE_CUDA "ENABLE_CUDA" ON)
 option(${PROJECT_NAME}_ENABLE_ACVO "ENABLE_ACVO" OFF)
-option(${PROJECT_NAME}_ENABLE_LIDAR "ENABLE_LIDAR" ON)
-option(${PROJECT_NAME}_ENABLE_QT_VIEWER "ENABLE_QT_VIEWER" ON)
+option(${PROJECT_NAME}_ENABLE_LIDAR "ENABLE_LIDAR" OFF)
+option(${PROJECT_NAME}_ENABLE_QT_VIEWER "ENABLE_QT_VIEWER" OFF)
 option(${PROJECT_NAME}_ENABLE_CUKDTREE "ENABLE_CUKDTREE" OFF)
 include(CheckLanguage)
 if (${PROJECT_NAME}_ENABLE_CUDA)
@@ -336,6 +336,7 @@ target_include_directories(cvo_cpu_lib PUBLIC
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
 	"$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+      target_compile_definitions(cvo_cpu_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
       target_link_libraries(cvo_cpu_lib PRIVATE  lie_group_utils ${TBB_LIBRARIES} pcl_io pcl_search pcl_visualization cxsparse)
 
 #add_library(cvo_irls_lib SHARED ${CVO_IRLS_SOURCE} )
