@@ -19,6 +19,7 @@ namespace pcl {
   struct CvoPoint;
 }
 
+extern template struct pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS, NUM_CLASSES>;
 
 namespace cvo {
   
@@ -142,7 +143,8 @@ namespace cvo {
     Eigen::Vector3f at(unsigned int index) const;
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & labels() const { return labels_;}
     Eigen::VectorXf label_at(unsigned int index) const { return labels_.row(index); }
-    const float* feature_at(unsigned int index) const { return points_[index].features; }
+//    Eigen::VectorXf feature_at(unsigned int index) const { return features_.row(index);
+    const Eigen::VectorXf feature_at(unsigned int index) const { return Eigen::Map<const Eigen::VectorXf>(points_[index].features, FEATURE_DIMENSIONS); }
     Eigen::Vector2f geometry_type_at(unsigned int index) const;
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & semantics() const { return labels_;}
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & features() const {return features_;}

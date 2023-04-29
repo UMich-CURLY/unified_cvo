@@ -961,33 +961,34 @@ namespace cvo{
     //new_points.positions_.resize(0);
     //new_points.positions_.insert(new_points.positions_.end(),  this->positions_.begin(), this->positions_.end());
     //new_points.positions_.insert(new_points.positions_.end(),  to_add.positions_.begin(), to_add.positions_.end());
-    this->positions_.insert(this->positions_.end(),  to_add.positions_.begin(), to_add.positions_.end());
-
-    if (this->feature_dimensions_) {
-      this->features_.conservativeResize(this->num_points_ + to_add.num_points_, this->feature_dimensions_);
-      //new_points.features_.resize(this->num_points_ + to_add.num_points_,
-      //                            this->feature_dimensions_);
-      //new_points.features_.block(0, 0, this->num_points_, this->feature_dimensions_) = this->features_;
-      this->features_.block(this->num_points_, 0, to_add.num_points_, this->feature_dimensions_) = to_add.features_;
-    }
-
-    if (this->num_classes_) {
-      //new_points.labels_.resize(this->num_points_ + to_add.num_points_,
-      //                          this->num_classes_);
-      this->labels_.conservativeResize( this->num_points_ + to_add.num_points_, this->num_classes_);
-      //new_points.labels_.block(0, 0, this->num_points_, this->num_classes_) = this->labels_;
-      this->labels_.block(this->num_points_, 0, to_add.num_points_, this->num_classes_) = to_add.labels_;
-    }
+//    this->positions_.insert(this->positions_.end(),  to_add.positions_.begin(), to_add.positions_.end());
+    this->points_.insert(this->points_.end(),  to_add.points_.begin(), to_add.points_.end());
+//    if (this->feature_dimensions_) {
+//      this->features_.conservativeResize(this->num_points_ + to_add.num_points_, this->feature_dimensions_);
+//      //new_points.features_.resize(this->num_points_ + to_add.num_points_,
+//      //                            this->feature_dimensions_);
+//      //new_points.features_.block(0, 0, this->num_points_, this->feature_dimensions_) = this->features_;
+//      this->features_.block(this->num_points_, 0, to_add.num_points_, this->feature_dimensions_) = to_add.features_;
+//    }
+//
+//    if (this->num_classes_) {
+//      //new_points.labels_.resize(this->num_points_ + to_add.num_points_,
+//      //                          this->num_classes_);
+//      this->labels_.conservativeResize( this->num_points_ + to_add.num_points_, this->num_classes_);
+//      //new_points.labels_.block(0, 0, this->num_points_, this->num_classes_) = this->labels_;
+//      this->labels_.block(this->num_points_, 0, to_add.num_points_, this->num_classes_) = to_add.labels_;
+//    }
     
     //new_points.geometric_types_.resize(0);
     //new_points.geometric_types_.insert(new_points.geometric_types_.end(),
     //                                   this->geometric_types_.begin(),this->geometric_types_.end() );
-    this->geometric_types_.insert(this->geometric_types_.end(),
-                                  to_add.geometric_types_.begin(),to_add.geometric_types_.end() );
+//    this->geometric_types_.insert(this->geometric_types_.end(),
+//                                  to_add.geometric_types_.begin(),to_add.geometric_types_.end() );
 
     this->num_points_ = this->num_points_ + to_add.num_points_;
     //this>feature_dimensions_ = this->feature_dimensions_;
     // new_points.num_classes_ = this->num_classes_;
+
     return *this;
   }
 
@@ -1271,14 +1272,17 @@ namespace cvo{
     pc.resize(num_points_);
     for (int i = 0; i < num_points_; i++) {
       pcl::PointXYZRGB p;
-      p.x = positions_[i]( 0);
-      p.y = positions_[i]( 1);
-      p.z = positions_[i]( 2);
+//      p.x = positions_[i]( 0);
+//      p.y = positions_[i]( 1);
+//      p.z = positions_[i]( 2);
+      p.x = points_[i].x;
+      p.y = points_[i].y;
+      p.z = points_[i].z;
 
       if (feature_dimensions_) {
-        uint8_t r = static_cast<uint8_t>(std::min(255, (int)(features_(i,2) * 255) ) );
-        uint8_t g = static_cast<uint8_t>(std::min(255, (int)(features_(i,1) * 255) ) );
-        uint8_t b = static_cast<uint8_t>(std::min(255, (int)(features_(i,0) * 255)));
+        uint8_t r = static_cast<uint8_t>(std::min(255, (int)(points_[i].features[2] * 255) ) );
+        uint8_t g = static_cast<uint8_t>(std::min(255, (int)(points_[i].features[1] * 255) ) );
+        uint8_t b = static_cast<uint8_t>(std::min(255, (int)(points_[i].features[0] * 255)));
         //if (num_classes_ ) {
         //  int max_class;
         //  labels_.row(i).maxCoeff(&max_class);
@@ -1306,10 +1310,12 @@ namespace cvo{
     pc.resize(num_points_);
     for (int i = 0; i < num_points_; i++) {
       pcl::PointXYZ p;
-      p.x = positions_[i](0);
-      p.y = positions_[i](1);
-      p.z = positions_[i](2);
-      
+//      p.x = positions_[i](0);
+//      p.y = positions_[i](1);
+//      p.z = positions_[i](2);
+      p.x = points_[i].x;
+      p.y = points_[i].y;
+      p.z = points_[i].z;
       pc[i] = p;
     }
     
@@ -1412,17 +1418,21 @@ namespace cvo{
     output.num_points_ = input.num_points();
     output.num_classes_ = input.num_classes();
     output.feature_dimensions_ = input.feature_dimensions();
-    output.num_geometric_types_ = input.num_geometric_types();          
-    //output.features_ = input.features();
-    copy_eigen_dynamic_matrix(&input.features_,
-                              &output.features_);
+    output.points_ = input.get_points();
+//    output.features_ = input.features();
+//    copy_eigen_dynamic_matrix(&input.features_,
+//                              &output.features_);
     
-    output.labels_ = input.labels();
-    output.positions_.resize(output.num_points_);
+//    output.labels_ = input.labels();
+//    output.positions_.resize(output.num_points_);
     tbb::parallel_for(int(0), input.num_points(), [&](int j) {
-      output.positions_[j] = (pose.block(0, 0, 3, 3) * input.positions()[j] + pose.block(0, 3, 3, 1)).eval();
+        Eigen::Vector3f jth_position = Eigen::Vector3f(input.point_at(j).x, input.point_at(j).y, input.point_at(j).z);
+        Eigen::Vector3f temp = (pose.block(0, 0, 3, 3) * jth_position +
+                pose.block(0, 3, 3, 1)).eval();
+        output.points_[j].x = temp.x();
+        output.points_[j].y = temp.y();
+        output.points_[j].z = temp.z();
     });
-    output.geometric_types_ = input.geometric_types_;
   }
 
   void CvoPointCloud::reserve(int num_points, int feature_dims, int num_classes) {
