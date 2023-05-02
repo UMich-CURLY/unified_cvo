@@ -69,6 +69,16 @@ namespace cvo {
     return *kdtree_;
   }
 
+  void CvoFrameGPU::clear_points() {
+    points_init_gpu_->points.clear();
+    points_init_gpu_->points.shrink_to_fit();
+
+    points_transformed_gpu_->points.clear();
+    points_transformed_gpu_->points.shrink_to_fit();
+
+    kdtree_.reset();
+  }
+
   /*
   void CvoFrameGPU_Impl::transform_pointcloud_from_input_pose(const double * pose_vec_cpu ) {
 

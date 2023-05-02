@@ -36,6 +36,7 @@ namespace cvo {
     std::shared_ptr<CvoPointCloudGPU> points_transformed_gpu();
     size_t size() const;
     CuKdTree & kdtree() const;
+    void clear_points();
     //CuKdTree * kdtree() const;
     
     //void set_points_transformed_gpu();

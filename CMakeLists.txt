@@ -260,20 +260,20 @@ target_include_directories(tartan PUBLIC
 target_link_libraries(tartan PUBLIC opencv_core cnpy opencv_photo opencv_highgui opencv_features2d opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search pcl_common boost_system boost_filesystem)
 
 if (${PROJECT_NAME}_ENABLE_CUDA)
-  add_library(cukdtree_lib SHARED ${CUKDTREE_LIB_SOURCE})
+  add_library(cukdtree SHARED ${CUKDTREE_LIB_SOURCE})
  # target_compile_definitions(cukdtree_lib PUBLIC -DKDTREE_K_SIZE=2048)  
-  target_include_directories(cukdtree_lib PUBLIC
+  target_include_directories(cukdtree PUBLIC
     "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
     $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-  set_target_properties(cukdtree_lib PROPERTIES LINKER_LANGUAGE CUDA  CUDA_SOURCE_PROPERTY_FORMAT OBJ )
+  set_target_properties(cukdtree PROPERTIES LINKER_LANGUAGE CUDA  CUDA_SOURCE_PROPERTY_FORMAT OBJ )
 endif()  
 
 if (${PROJECT_NAME}_ENABLE_QT_VIEWER)
-  add_library(pcd_qt_viewer_lib SHARED ${QT_VIEWER_SOURCE})
-  target_include_directories(pcd_qt_viewer_lib PUBLIC
+  add_library(pcd_qt_viewer SHARED ${QT_VIEWER_SOURCE})
+  target_include_directories(pcd_qt_viewer PUBLIC
     "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
     $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-  target_link_libraries(pcd_qt_viewer_lib PUBLIC pcl_common pcl_visualization)
+  target_link_libraries(pcd_qt_viewer PUBLIC pcl_common pcl_visualization)
 
 endif()
 
@@ -457,15 +457,10 @@ if (${PROJECT_NAME}_ENABLE_CUDA)
 add_library(cvo_gpu_img_lib SHARED ${CVO_GPU_SOURCE})
 add_dependencies(cvo_gpu_img_lib cvo_utils_lib lie_group_utils)
 target_link_libraries(cvo_gpu_img_lib PRIVATE lie_group_utils cvo_utils_lib yaml-cpp  Ceres::ceres )
-#target_compile_definitions(cvo_gpu_img_lib ${PCL_DEFINITIONS})   
-#set_target_properties(cvo_gpu_img_lib PROPERTIES PUBLIC_HEADER "${CVO_PUBLIC_HEADERS}")
 target_include_directories(cvo_gpu_img_lib PUBLIC
-  #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/UnifiedCvo>
   "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
-  #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_compile_definitions(cvo_gpu_img_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DCUDA_BLOCK_SIZE=256 -DCVO_POINT_NEIGHBORS=256
-#  ${PCL_DEFINITIONS}
 )
 set_target_properties(cvo_gpu_img_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
@@ -638,7 +633,15 @@ target_include_directories(cvo_irls_tartan PUBLIC
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_link_libraries(cvo_irls_tartan cvo_gpu_img_lib cvo_utils_lib tartan boost_filesystem boost_system pcl_filters)
+      target_link_libraries(cvo_irls_tartan cvo_gpu_img_lib cvo_utils_lib tartan boost_filesystem boost_system pcl_filters)
+
+add_executable(cvo_irls_tartan_odom ${PROJECT_SOURCE_DIR}/src/experiments/main_irls_tartan_rgbd_odom.cpp)
+target_include_directories(cvo_irls_tartan_odom PUBLIC
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_irls_tartan_odom cvo_gpu_img_lib cvo_utils_lib tartan boost_filesystem boost_system)
+#target_compile_definitions(cvo_irls_tartan PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=256)      
+      
 
 add_executable(cvo_covis_tartan ${PROJECT_SOURCE_DIR}/src/experiments/main_covisMap_test.cpp)
 target_include_directories(cvo_covis_tartan PUBLIC
@@ -708,7 +711,7 @@ if (${PROJECT_NAME}_ENABLE_QT_VIEWER)
     #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
     "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
     $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-  target_link_libraries(stack_pcd_viewer cvo_utils_lib boost_filesystem boost_system  pcl_common pcl_io pcl_visualization  pcd_qt_viewer_lib tartan cvo_gpu_img_lib)
+  target_link_libraries(stack_pcd_viewer cvo_utils_lib boost_filesystem boost_system  pcl_common pcl_io pcl_visualization  pcd_qt_viewer tartan cvo_gpu_img_lib)
 
   add_executable(ellipse_viewer ${PROJECT_SOURCE_DIR}/src/experiments/main_ellipse_viewer.cpp)
   target_compile_definitions(ellipse_viewer PRIVATE -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
@@ -717,7 +720,7 @@ if (${PROJECT_NAME}_ENABLE_QT_VIEWER)
     #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
     "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
     $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-  target_link_libraries(ellipse_viewer cvo_gpu_img_lib cvo_utils_lib boost_filesystem boost_system  pcl_common pcl_io pcl_visualization  pcd_qt_viewer_lib  kitti)
+  target_link_libraries(ellipse_viewer cvo_gpu_img_lib cvo_utils_lib boost_filesystem boost_system  pcl_common pcl_io pcl_visualization  pcd_qt_viewer  kitti)
   
   
 endif()
@@ -771,7 +774,7 @@ add_executable(cu_kd_tree_test ${PROJECT_SOURCE_DIR}/src/experiments/cu_kd_tree_
 target_include_directories(cu_kd_tree_test PUBLIC
       "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                  
     )
-target_link_libraries(cu_kd_tree_test cvo_utils_lib cukdtree_lib ${PCL_LIBRARIES})
+target_link_libraries(cu_kd_tree_test cvo_utils_lib cukdtree ${PCL_LIBRARIES})
 
 add_executable(cvo_align_two_nn_feature ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_two_nn_feature_pcd.cpp)
 target_include_directories(cvo_align_two_nn_feature PUBLIC
@@ -805,7 +808,7 @@ set(${PROJECT_NAME}_LIB_DEST "lib/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}")
 
 
 export(                                                                                                                                                                                                    
-  TARGETS    elas tum kitti cnpy tartan lie_group_utils cvo_utils_lib cvo_gpu_img_lib  #cvo_irls_lib
+  TARGETS    elas tum kitti cnpy tartan lie_group_utils cvo_utils_lib cvo_gpu_img_lib pcd_qt_viewer  #cvo_irls_lib
   NAMESPACE  ${PROJECT_NAME}::        
   FILE ${PROJECT_NAME}Targets.cmake                                                                                                                                                                     
   )                                                                                                                                                                                                        
@@ -813,7 +816,7 @@ export(
 
 install(
     # targets to install
-    TARGETS elas tum kitti cnpy tartan lie_group_utils cvo_utils_lib cvo_gpu_img_lib #cvo_irls_lib
+    TARGETS elas tum kitti cnpy cukdtree tartan lie_group_utils cvo_utils_lib cvo_gpu_img_lib #cvo_irls_lib
     # name of the CMake "export group" containing the targets we want to install
     EXPORT ${PROJECT_NAME}Targets
     # Dynamic, static library and include destination locations after running

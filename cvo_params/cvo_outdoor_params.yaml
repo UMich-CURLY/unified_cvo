@@ -1,13 +1,13 @@
 %YAML:1.0
 ---
 ell_init_first_frame: 0.4
-ell_init: 0.2 
+ell_init: 0.4 #0.2 
 ell_min: 0.05
 ell_max: 0.9
 dl: 0.0
 dl_step: 0.3
 sigma: 0.1
-sp_thres: 0.009 #0.007 #for tracking
+sp_thres: 0.007 #for tracking   0.009
 c: 7.0
 d: 7.0
 c_ell: 0.075 
@@ -38,11 +38,11 @@ is_using_geometric_type: 1
 # for irls solver
 multiframe_using_cpu: 0
 multiframe_num_neighbors: 256 #1024
-multiframe_max_iters: 1999
-multiframe_ell_init: 4
-multiframe_ell_min: 1.0 #1.0
+multiframe_max_iters: 20 #1999
+multiframe_ell_init: 0.2
+multiframe_ell_min: 0.1 #1.0
 multiframe_ell_decay_rate:  0.95
-multiframe_iterations_per_ell: 10
+multiframe_iterations_per_ell: 5
 multiframe_downsample_voxel_size: 1 #5 #3
 multiframe_iterations_per_solve: 2
 
