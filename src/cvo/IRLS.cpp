@@ -101,6 +101,7 @@ namespace cvo {
     for (int i = 1; i < poses_in.size(); i++) {
       Eigen::Matrix4d i_from_0 = poses_in[0].inverse() * poses_in[i];
       Sophus::SE3d poses_in_0_i(i_from_0.block<3,3>(0,0), i_from_0.block<3,1>(0,3));
+      std::cout<<__func__<<"\n"<<i_from_0<<"\n"<<poses_in_0_i.matrix()<<"\m"<<poses_in[i]<<"\n";
       poses_out[i] = pose_anchor * poses_in_0_i;
       std::cout<<"Pose_out: "<<poses_out[i].matrix()<<"\n";
     }

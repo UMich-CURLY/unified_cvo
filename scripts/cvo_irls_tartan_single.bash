@@ -9,8 +9,8 @@ for difficulty in Easy #Hard
 do
     #skylabel=(196 112 -- 130  196 146 130)
     #seqs=(abandonedfactory gascola hospital seasidetown seasonsforest seasonsforest_winter soulcity)
-    skylabel=( 130 )
-    seqs=( soulcity )
+    skylabel=( 196 )
+    seqs=( abandonedfactory )
 
     for ind in ${!seqs[@]}
     do
@@ -23,8 +23,9 @@ do
 	mkdir -p $folder
 	rm *.pcd
 
-#                gdb -ex run --args \
-        ./build/bin/cvo_irls_tartan_odom $dataset_folder cvo_params/cvo_outdoor_params.yaml cvo_calib_deep_depth.txt 4 tracking.txt ba.txt 0 270 100000 $sky # > log_tartan_rgbd_${difficulty}_${i}.txt
+                gdb -ex run --args \
+#	valgrind --tool=memcheck --leak-check=yes \
+        ./build/bin/cvo_irls_tartan_odom $dataset_folder cvo_params/cvo_outdoor_params.yaml cvo_calib_deep_depth.txt 4 tracking.txt ba.txt 0 0 100000 $sky # > log_tartan_rgbd_${difficulty}_${i}.txt
         mv *.pcd $folder/
         mv tracking.txt ba.txt err_wrt_iters_*.txt groundtruth.txt $folder/
         cp ${dataset_folder}/pose_left.txt $folder/

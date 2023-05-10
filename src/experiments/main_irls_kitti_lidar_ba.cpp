@@ -19,8 +19,10 @@
 #include "cvo/IRLS.hpp"
 #include "utils/VoxelMap.hpp"
 #include "utils/data_type.hpp"
-#include "dataset_handler/TartanAirHandler.hpp"
+#include "dataset_handler/KittiHandler.hpp"
 #include "dataset_handler/PoseLoader.hpp"
+#include "utils/LidarPointSelector.hpp"
+#include "utils/LidarPointType.hpp"
 #include "utils/ImageRGBD.hpp"
 #include "utils/Calibration.hpp"
 
@@ -28,6 +30,9 @@ using namespace std;
 
 extern template class cvo::VoxelMap<pcl::PointXYZRGB>;
 extern template class cvo::Voxel<pcl::PointXYZRGB>;
+extern template class cvo::Voxel<pcl::PointXYZI>;
+extern template class cvo::VoxelMap<pcl::PointXYZI>;
+
 // extern template class Foo<double>;
 
 
@@ -63,7 +68,6 @@ void construct_BA_problem(cvo::CvoGPU & cvo_align,
   double time = 0;
   std::vector<bool> const_flags(frames.size(), false);
   const_flags[0] = true;
-  const_flags[1] = true;
   std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>>
     gt_poses_sub(gt_poses.begin()+start_frame_ind, gt_poses.begin()+last_frame_ind+1);
   std::vector<cvo::CvoFrame::Ptr> frames_sub(frames.begin()+start_frame_ind, frames.begin()+last_frame_ind+1);
@@ -80,8 +84,45 @@ void construct_BA_problem(cvo::CvoGPU & cvo_align,
   //               edge_states, &time);
 
   std::cout<<"GPU Align ends. Total time is "<<double(t_all.count()) / 1000<<" seconds."<<std::endl;
-  
 }
+
+std::shared_ptr<cvo::CvoPointCloud> downsample_lidar_points(bool is_edge_only,
+                                                            pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
+                                                            float leaf_size) {
+
+  /*
+  int expected_points = 5000;
+  double intensity_bound = 0.4;
+  double depth_bound = 4.0;
+  double distance_bound = 40.0;
+  
+  LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
+
+  // running edge detection + lego loam point selection
+  pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
+  pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
+  std::vector<int> selected_edge_inds, selected_loam_inds;
+  lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_edge_inds);
+  
+  lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface, selected_loam_inds);    
+  //*pc_out += *pc_out_edge;
+  //*pc_out += *pc_out_surface;
+  //
+  num_points_ = selected_indexes.size();
+  */
+
+  cvo::VoxelMap<pcl::PointXYZI> full_voxel(leaf_size);
+  for (int k = 0; k < pc_in->size(); k++) {
+    full_voxel.insert_point(&pc_in->points[k]);
+  }
+  std::vector<pcl::PointXYZI*> downsampled_results = full_voxel.sample_points();
+  pcl::PointCloud<pcl::PointXYZI>::Ptr downsampled(new pcl::PointCloud<pcl::PointXYZI>);
+  for (int k = 0; k < downsampled_results.size(); k++)
+    downsampled->push_back(*downsampled_results[k]);
+  std::shared_ptr<cvo::CvoPointCloud> ret(new cvo::CvoPointCloud(downsampled, 5000, 64, cvo::CvoPointCloud::PointSelectionMethod::FULL));
+  return ret;
+}
+
 
 std::shared_ptr<cvo::CvoPointCloud> downsample_points(bool is_edge_only,
                                                       std::shared_ptr<cvo::ImageRGBD<float>> raw,
@@ -356,89 +397,58 @@ int main(int argc, char** argv) {
 
   //  omp_set_num_threads(24);
 
-  cvo::TartanAirHandler tartan(argv[1]);
-  tartan.set_depth_folder_name("deep_depth");
+  cvo::KittiHandler kitti(argv[1], cvo::KittiHandler::DataType::LIDAR);
   string cvo_param_file(argv[2]);    
-  string calib_file_name(argv[3]);
-  int num_BA_frames = std::stoi(argv[4]);
-  std::string tracking_traj_file(argv[5]);
-  std::string BA_traj_file(argv[6]);
-  int is_edge_only = std::stoi(argv[7]);
+  int num_BA_frames = std::stoi(argv[3]);
+  std::string tracking_traj_file(argv[4]);
+  std::string BA_traj_file(argv[5]);
+  int is_edge_only = std::stoi(argv[6]);
   std::cout<<"is edge only is "<<is_edge_only<<"\n";
-  int start_ind = std::stoi(argv[8]);
+  int start_ind = std::stoi(argv[7]);
   std::cout<<"start_ind is  "<<start_ind<<"\n";
-  int max_last_ind = std::stoi(argv[9]);
+  int max_last_ind = std::stoi(argv[8]);
   std::cout<<"last_ind is  "<<max_last_ind<<"\n";
-  int sky_label = std::stoi(argv[10]);
-  std::cout<<"sky_label is  "<<sky_label<<"\n";
-  int last_ind = std::min(max_last_ind+1, tartan.get_total_number())-1;
-  bool is_recording_full = false;
+  int last_ind = std::min(max_last_ind+1, kitti.get_total_number());
 
   std::cout<<"Finish reading all arguments\n";
-  int total_iters = last_ind - start_ind ;
+  int total_iters = last_ind - start_ind + 1;
 
   cvo::CvoGPU cvo_align(cvo_param_file);
-  string calib_file, gt_pose_name;
-  calib_file = string(argv[1] ) +"/" + calib_file_name;
-  gt_pose_name = std::string(argv[1]) + "/pose_left.txt";
-  cvo::Calibration calib(calib_file, cvo::Calibration::RGBD);
+  string gt_pose_name;
+  gt_pose_name = std::string(argv[1]) + "/poses.txt";
 
   /// read poses
-  std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> gt_poses_gt_frame,
-    gt_poses(total_iters);
+  std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> gt_poses_raw(total_iters), gt_poses;
+  std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> tracking_poses(total_iters);
   std::vector<cvo::Mat34d_row,
               Eigen::aligned_allocator<cvo::Mat34d_row>> BA_poses(total_iters);
 
-  std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> tracking_poses(total_iters);
-  cvo::read_pose_file_tartan_format(gt_pose_name,
-                                    start_ind,
-                                    last_ind,
-                                    gt_poses_gt_frame);
-
-  /// change frame from gt frame to camera frame
-  Eigen::Matrix4d our_frame_from_gt_cam_frame;
-  for (int j = 0; j < gt_poses_gt_frame.size(); j++) {
-    Eigen::Matrix3d m;
-    m = Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitZ())
-      * Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitX());
-    Eigen::Matrix4d ned_from_us = Eigen::Matrix4d::Identity();
-    ned_from_us.block<3,3>(0,0) = m.inverse();
-    /// convert from NED to our coordinate system    
-    gt_poses[j] = ned_from_us * gt_poses_gt_frame[j] * ned_from_us.inverse();
-    if (j == 0) {
-      our_frame_from_gt_cam_frame = gt_poses[0].inverse();
-      gt_poses[0] = Eigen::Matrix4d::Identity();
-    }  else {
-      gt_poses[j] = (our_frame_from_gt_cam_frame * gt_poses[j]).eval();
-    }
-      
-  }
-
+  cvo::read_pose_file_kitti_format(gt_pose_name,
+                                   start_ind,
+                                   last_ind,
+                                   gt_poses_raw);
+  Eigen::Matrix4d identity = Eigen::Matrix4d::Identity();
+  cvo::transform_vector_of_poses(gt_poses_raw, identity, gt_poses );
+  std::cout<<"gt poses size is "<<gt_poses.size()<<"\n";
   // read point cloud
   std::vector<cvo::CvoFrame::Ptr> frames;
   std::vector<std::shared_ptr<cvo::CvoPointCloud>> pcs;
   std::vector<std::shared_ptr<cvo::CvoPointCloud>> pcs_full;
   std::vector<std::shared_ptr<cvo::CvoFrame>> frames_full;
   for (int i = 0; i<gt_poses.size(); i++) {
+
     std::cout<<"new frame "<<i+start_ind<<" out of "<<gt_poses.size() + start_ind<<"\n";
     
-    tartan.set_start_index(i+start_ind);
-    cv::Mat rgb;
-    vector<float> depth, semantics;
-    tartan.read_next_rgbd_without_sky(rgb, depth, NUM_CLASSES, semantics, sky_label);
+    kitti.set_start_index(i+start_ind);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_pcl(new pcl::PointCloud<pcl::PointXYZI>);
+    if (-1 == kitti.read_next_lidar(pc_pcl)) 
+      break;
     
-    std::shared_ptr<cvo::ImageRGBD<float>> raw(new cvo::ImageRGBD<float>(rgb, depth));
-    std::shared_ptr<cvo::CvoPointCloud> pc_full;
-    pc_full = std::make_shared<cvo::CvoPointCloud> (*raw,  calib, cvo::CvoPointCloud::FULL);
-    std::shared_ptr<cvo::CvoPointCloud> pc_edge_raw(new cvo::CvoPointCloud(*raw, calib, cvo::CvoPointCloud::DSO_EDGES));
-
-    std::cout<<"is_edge_only is "<<is_edge_only<<"\n";
-    std::shared_ptr<cvo::CvoPointCloud> pc;
-    float leaf_size = cvo_align.get_params().multiframe_downsample_voxel_size;  
-    if (is_edge_only)
-      pc = downsample_points(is_edge_only, raw, pc_full, pc_edge_raw, leaf_size);
-    else
-      pc = pc_edge_raw;
+    float leaf_size = cvo_align.get_params().multiframe_downsample_voxel_size;
+    std::shared_ptr<cvo::CvoPointCloud> pc_full(new cvo::CvoPointCloud(pc_pcl, 10000, 64 ));
+    std::shared_ptr<cvo::CvoPointCloud> pc = downsample_lidar_points(is_edge_only,
+                                                                     pc_pcl,
+                                                                     leaf_size);
     pcs.push_back(pc);
     pcs_full.push_back(pc_full);
 

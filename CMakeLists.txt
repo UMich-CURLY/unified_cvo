@@ -507,7 +507,7 @@ target_include_directories(cvo_gpu_lidar_lib PUBLIC
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 add_dependencies(cvo_gpu_lidar_lib cvo_utils_lib lie_group_utils)
 target_compile_definitions(cvo_gpu_lidar_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=256)
-target_link_libraries(cvo_gpu_lidar_lib PRIVATE lie_group_utils cvo_utils_lib cvo_gpu_img_lib yaml-cpp Ceres::ceres)
+target_link_libraries(cvo_gpu_lidar_lib PRIVATE lie_group_utils cvo_utils_lib yaml-cpp Ceres::ceres)
 set_target_properties(cvo_gpu_lidar_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
     CUDA_SEPERABLE_COMPILATION ON
@@ -743,6 +743,21 @@ if (${PROJECT_NAME}_ENABLE_LIDAR)
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(cvo_align_gpu_lidar_raw cvo_gpu_lidar_lib kitti cvo_utils_lib boost_filesystem boost_system)
+
+
+add_executable(cvo_irls_lidar_ba ${PROJECT_SOURCE_DIR}/src/experiments/main_irls_kitti_lidar_ba.cpp)
+target_include_directories(cvo_irls_lidar_ba PUBLIC
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_irls_lidar_ba cvo_gpu_lidar_lib cvo_utils_lib boost_filesystem boost_system kitti)
+
+add_executable(cvo_irls_lidar_loop ${PROJECT_SOURCE_DIR}/src/experiments/main_irls_kitti_lidar_loop.cpp)
+target_include_directories(cvo_irls_lidar_loop PUBLIC
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_irls_lidar_loop cvo_gpu_lidar_lib cvo_utils_lib boost_filesystem boost_system kitti)
+      
+      
 endif()
 
 add_executable(gicp_align_two ${PROJECT_SOURCE_DIR}/src/experiments/gicp_align_two.cpp)

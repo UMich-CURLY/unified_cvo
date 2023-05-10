@@ -38,8 +38,8 @@ is_using_geometric_type: 1
 # for irls solver
 multiframe_using_cpu: 0
 multiframe_num_neighbors: 256 #1024
-multiframe_max_iters: 20 #1999
-multiframe_ell_init: 0.2
+multiframe_max_iters: 20 
+multiframe_ell_init: 0.2 #0.2
 multiframe_ell_min: 0.1 #1.0
 multiframe_ell_decay_rate:  0.95
 multiframe_iterations_per_ell: 5

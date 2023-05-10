@@ -376,7 +376,7 @@ namespace cvo{
     else if (pt_selection_method == CvoPointCloud::FULL) {
 
       output_uv.clear();
-      cv::Mat detected_edges;
+      cv::Mat detected_edges(left_gray.rows, left_gray.cols, CV_8UC1);
           
       cv::Canny( left_gray, detected_edges, 50, 50*3, 3 );
       
@@ -1075,6 +1075,10 @@ namespace cvo{
       random_surface_with_edges(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
                                 output_depth_grad, output_intenstity_grad, selected_indexes);
       num_points_ = selected_indexes.size();
+    } else if (pt_selection_method == FULL) {
+      selected_indexes.resize(pc->size());
+      std::iota (std::begin(selected_indexes), std::end(selected_indexes), 0);
+      num_points_ = pc->size();
     } else {
       std::cerr<<" This point selection method is not implemented\n";
       return;
