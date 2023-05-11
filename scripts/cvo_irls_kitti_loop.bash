@@ -18,17 +18,9 @@ clear
 	mkdir -p $folder
 	rm *.pcd
 
-        ### conver the kitti format traj to g2o
-
-        ### launch a two-frame registration on two loop closing frames, write the pose to a file
-
-        ### append the two-frame registration result to the g2o format file
-        
-        ### launch ceres' pose graph BA
-        
         ### run global BA
-        #gdb -ex run --args \
-        ./build/bin/cvo_irls_lidar_loop $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 1 tracking.txt ba.txt 0 720 725 # > log_tartan_rgbd_${difficulty}_${i}.txt
+        gdb -ex run --args \
+        ./build/bin/cvo_irls_lidar_loop $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 1 tracking.txt ba.txt 0 720 725 1.0 # > log_tartan_rgbd_${difficulty}_${i}.txt
         mv *.pcd $folder/
         mv tracking.txt ba.txt err_wrt_iters_*.txt groundtruth.txt $folder/
         cp ${dataset_folder}/poses.txt $folder/
