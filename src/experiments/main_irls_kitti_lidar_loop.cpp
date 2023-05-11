@@ -19,6 +19,7 @@
 #include "cvo/IRLS.hpp"
 #include "utils/VoxelMap.hpp"
 #include "utils/data_type.hpp"
+#include "graph_optimizer/PoseGraphOptimization.hpp"
 #include "dataset_handler/KittiHandler.hpp"
 #include "dataset_handler/PoseLoader.hpp"
 #include "utils/LidarPointSelector.hpp"
@@ -33,8 +34,81 @@ extern template class cvo::Voxel<pcl::PointXYZRGB>;
 extern template class cvo::Voxel<pcl::PointXYZI>;
 extern template class cvo::VoxelMap<pcl::PointXYZI>;
 
-// extern template class Foo<double>;
 
+
+void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & tracking_poses,
+                              const Eigen::Matrix4d & T_last_to_first,
+                              cvo::aligned_vector<cvo::Mat34d_row> & BA_poses,
+                              double cov_scale,
+                              int num_neighbors_per_node){
+  Eigen::Matrix<double, 6,6> information = Eigen::Matrix<double, 6,6>::Identity() / cov_scale / cov_scale;
+  
+  ceres::Problem problem;
+  cvo::pgo::MapOfPoses poses;
+  cvo::pgo::VectorOfConstraints constrains;
+  /// copy from tracking_poses to poses and constrains
+  for (int i = 0; i < tracking_poses.size(); i++) {
+    cvo::pgo::Pose3d pose = cvo::pgo::pose3d_from_eigen<double, Eigen::ColMajor>(tracking_poses[i]);
+    poses.insert(std::make_pair(i, pose));
+  }
+  for (int i = 0; i < tracking_poses.size(); i++) {
+    for (int j = i+1; j < i+1+num_neighbors_per_node; j++) {
+      Eigen::Matrix4d T_Fi_to_Fj = tracking_poses[i].inverse() * tracking_poses[j];
+      cvo::pgo::Pose3d t_be = cvo::pgo::pose3d_from_eigen<double, Eigen::ColMajor>(T_Fi_to_Fj);
+      cvo::pgo::Constraint3d constrain{i, j, t_be, information};
+      constrains.push_back(constrain);
+    }
+  }
+  /// the loop closing one
+  Eigen::Matrix4d T_Fe_to_F0 = T_last_to_first;
+  cvo::pgo::Pose3d t_be = cvo::pgo::pose3d_from_eigen<double, Eigen::ColMajor>(T_Fe_to_F0);
+  cvo::pgo::Constraint3d constrain{static_cast<int>(tracking_poses.size()-1), 0, t_be, information};
+  constrains.push_back(constrain);
+
+  /// optimization
+  cvo::pgo::BuildOptimizationProblem(constrains, &poses, &problem);
+  cvo::pgo::SolveOptimizationProblem(&problem);
+
+  /// copy PGO results to BA_poses
+  BA_poses.resize(tracking_poses.size());
+  for (auto pose_pair : poses) {
+    int i = pose_pair.first;
+    cvo::pgo::Pose3d pose = pose_pair.second;
+    BA_poses[i] = cvo::pgo::pose3d_to_eigen<double, Eigen::RowMajor>(pose).block(0,0,3,4);
+  }
+}
+
+
+// extern template class Foo<double>;
+Eigen::Matrix4d global_registration_last_frame_to_first_frame(cvo::CvoGPU & cvo_align,
+                                                              const cvo::CvoPointCloud & p0,
+                                                              const Eigen::Matrix4d & T0,
+                                                              const cvo::CvoPointCloud & p_last,
+                                                              const Eigen::Matrix4d & T_last) {
+  Eigen::Matrix4f result;
+  double time;
+  Eigen::Matrix4f init_guess_inv = Eigen::Matrix4f::Identity();
+
+  cvo::CvoParams & init_param = cvo_align.get_params();
+  float ell_init = init_param.ell_init;
+  float ell_decay_rate = init_param.ell_decay_rate;
+  int ell_decay_start = init_param.ell_decay_start;
+  init_param.ell_init = init_param.ell_init_first_frame;
+  init_param.ell_decay_rate = init_param.ell_decay_rate_first_frame;
+  init_param.ell_decay_start  = init_param.ell_decay_start_first_frame;
+  cvo_align.write_params(&init_param);
+  
+  cvo_align.align(p_last, p0, init_guess_inv, result, nullptr, &time);
+  
+  init_param.ell_init = ell_init;
+  init_param.ell_decay_rate = ell_decay_rate;
+  init_param.ell_decay_start = ell_decay_start;
+  cvo_align.write_params(&init_param);
+  
+
+  std::cout<<"Global Registration completes. Time is "<<time<<" seconds\n";
+  return result.cast<double>();
+}
 
 void construct_loop_BA_problem(cvo::CvoGPU & cvo_align,
                                std::vector<cvo::CvoFrame::Ptr> frames,
@@ -119,193 +193,6 @@ std::shared_ptr<cvo::CvoPointCloud> downsample_lidar_points(bool is_edge_only,
 }
 
 
-std::shared_ptr<cvo::CvoPointCloud> downsample_points(bool is_edge_only,
-                                                      std::shared_ptr<cvo::ImageRGBD<float>> raw,
-                                                      std::shared_ptr<cvo::CvoPointCloud> pc_full,
-                                                      std::shared_ptr<cvo::CvoPointCloud> pc_edge_raw,
-                                                      float leaf_size
-                                                      ) {
-  std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud);  
-  std::cout<<"is_edge_only is "<<is_edge_only<<"\n";
-  if ( is_edge_only == 0) {
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr raw_pcd_edge(new pcl::PointCloud<pcl::PointXYZRGB>);
-    pc_edge_raw->export_to_pcd<pcl::PointXYZRGB>(*raw_pcd_edge);
-    
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr raw_pcd_surface(new pcl::PointCloud<pcl::PointXYZRGB>);    
-    pc_full->export_to_pcd<pcl::PointXYZRGB>(*raw_pcd_surface);
-    
-    pcl::PointCloud<pcl::PointXYZRGB> edge_pcl;
-    pcl::PointCloud<pcl::PointXYZRGB> surface_pcl;
-    
-    while (true) {
-
-      edge_pcl.clear();
-      surface_pcl.clear();
-      cvo::VoxelMap<pcl::PointXYZRGB> edge_voxel(leaf_size / 5); // /10
-      cvo::VoxelMap<pcl::PointXYZRGB> surface_voxel(leaf_size);
-      
-      for (int k = 0; k < raw_pcd_edge->size(); k++) {
-        edge_voxel.insert_point(&raw_pcd_edge->points[k]);
-      }
-      std::vector<pcl::PointXYZRGB*> edge_results = edge_voxel.sample_points();
-      
-      for (int k = 0; k < edge_results.size(); k++)
-        edge_pcl.push_back(*edge_results[k]);
-      std::cout<<"edge voxel selected points "<<edge_pcl.size()<<std::endl;
-      for (int k = 0; k < raw_pcd_surface->size(); k++) {
-        surface_voxel.insert_point(&raw_pcd_surface->points[k]);
-      }
-      std::vector<pcl::PointXYZRGB*> surface_results = surface_voxel.sample_points();
-        for (int k = 0; k < surface_results.size(); k++)
-          surface_pcl.push_back(*surface_results[k]);
-        std::cout<<"surface voxel selected points "<<surface_pcl.size()<<std::endl;
-        
-        int total_selected_pts_num = edge_results.size() + surface_results.size();
-        /*if (total_selected_pts_num > 1500)
-          leaf_size = leaf_size * 1.2;
-          else if (total_selected_pts_num < 500)
-          leaf_size = leaf_size * 0.8;
-          else
-        */
-        break;
-    
-      }
-      std::shared_ptr<cvo::CvoPointCloud> pc_edge(new cvo::CvoPointCloud(edge_pcl, cvo::CvoPointCloud::GeometryType::EDGE));
-      std::shared_ptr<cvo::CvoPointCloud> pc_surface(new cvo::CvoPointCloud(surface_pcl, cvo::CvoPointCloud::GeometryType::SURFACE));
-
-      *pc = *pc_edge + *pc_surface;
-      std::cout<<"number of downsampled points is "<<pc->num_points()<<std::endl;
-      /*
-      pcs.push_back(pc);
-      pcs_full.push_back(pc_full);
-      pcl::PointCloud<pcl::PointXYZRGB> pcd_to_save;
-      pc->write_to_color_pcd(std::to_string(curr_frame_id)+".pcd");
-      */
-      
-    } else {
-    // pcs.push_back(pc_edge_raw);
-    //  pcs_full.push_back(pc_full);
-
-    }
-
-    return pc;
-}
-
-void read_graph_file(std::string &graph_file_path,
-                     std::vector<int> & frame_inds,
-                     std::vector<std::pair<int, int>> & edges,
-                     // optional
-                     std::vector<cvo::Mat34d_row,
-                      Eigen::aligned_allocator<cvo::Mat34d_row>> & poses_all) {
-  std::ifstream graph_file(graph_file_path);
-  
-  int num_frames, num_edges;
-  graph_file>>num_frames >> num_edges;
-  frame_inds.resize(num_frames);
-  std::cout<<"Frame indices include ";
-  for (int i = 0; i < num_frames; i++) {
-    graph_file >> frame_inds[i];
-    std::cout<<frame_inds[i]<<", ";
-  }
-  std::cout<<"\nEdges include ";
-
-  for (int i =0; i < num_edges; i++ ) {
-    std::pair<int, int> p;
-    graph_file >> p.first >> p.second;
-    edges.push_back(p);
-    std::cout<<"("<<p.first<<", "<<p.second <<"), ";
-  }
-  std::cout<<"\n";
-  if (graph_file.eof() == false){
-    std::cout<<"poses included in the graph file\n";
-    poses_all.resize(num_frames);
-    for (int i = 0; i < num_frames; i++) {
-      double pose_vec[12];
-      for (int j = 0; j < 12; j++) {
-        graph_file>>pose_vec[j];
-      }
-      poses_all[i]  << pose_vec[0] , pose_vec[1], pose_vec[2], pose_vec[3],
-        pose_vec[4], pose_vec[5], pose_vec[6], pose_vec[7],
-        pose_vec[8], pose_vec[9], pose_vec[10], pose_vec[11];
-      std::cout<<"read pose["<<i<<"] as \n"<<poses_all[i]<<"\n";
-    }
-  }
-  
-  graph_file.close();  
-}
-
-
-void read_pose_file(std::string & gt_fname,
-                    std::string & selected_pose_fname,
-                    std::vector<int> & frame_inds,
-                    std::vector<string> & timestamps,
-                    std::vector<cvo::Mat34d_row,
-                      Eigen::aligned_allocator<cvo::Mat34d_row>> & poses_all) {
-
-  poses_all.resize(frame_inds.size());
-  timestamps.resize(frame_inds.size());
-  std::ifstream gt_file(gt_fname);
-
-  std::string line;
-  int line_ind = 0, curr_frame_ind = 0;
-
-  std::string gt_file_subset(selected_pose_fname);
-  ofstream outfile(gt_file_subset);
-  
-  while (std::getline(gt_file, line)) {
-    
-    if (line_ind < frame_inds[curr_frame_ind]) {
-      line_ind ++;
-      continue;
-    }
-
-    outfile<< line<<std::endl;
-    
-    std::stringstream line_stream(line);
-    std::string timestamp;
-    double xyz[3];
-    double q[4]; // x y z w
-    int pose_counter = 0;
-
-    line_stream >> timestamp;
-    std::string xyz_str[3];
-    line_stream >> xyz_str[0] >> xyz_str[1] >> xyz_str[2];
-    xyz[0] = std::stod(xyz_str[0]);
-    xyz[1] = std::stod(xyz_str[1]);
-    xyz[2] = std::stod(xyz_str[2]);
-    std::string q_str[4];
-    line_stream >> q_str[0] >> q_str[1] >> q_str[2] >> q_str[3];
-    q[0] = stod(q_str[0]);
-    q[1] = stod(q_str[1]);
-    q[2] = stod(q_str[2]);
-    q[3] = stod(q_str[3]);
-    Eigen::Quaterniond q_eigen(q[3], q[0], q[1], q[2]);
-    Sophus::SO3d quat(q_eigen);
-    Eigen::Vector3d trans = Eigen::Map<Eigen::Vector3d>(xyz);
-    Sophus::SE3d pose_sophus(quat, trans);
-
-    cvo::Mat34d_row pose = pose_sophus.matrix().block<3,4>(0,0);
-    
-    //Eigen::Map<cvo::Mat34d_row> pose(pose_v);
-    poses_all[curr_frame_ind] = pose;    
-    //Eigen::Matrix<double, 4,4, Eigen::RowMajor> pose_id = Eigen::Matrix<double, 4,4, Eigen::RowMajor>::Identity();
-    //poses_all[curr_frame_ind] = pose_id.block<3,4>(0,0);    
-    timestamps[curr_frame_ind] = timestamp;
-    //if (curr_frame_ind == 2) {
-    //  std::cout<<"read: line "<<frame_inds[curr_frame_ind]<<" pose is "<<poses_all[curr_frame_ind]<<std::endl;
-    //}
-    
-    line_ind ++;
-    curr_frame_ind++;
-    //if (line_ind == frame_inds.size())
-    if (curr_frame_ind == frame_inds.size())
-      break;
-  }
-
-  outfile.close();
-  gt_file.close();
-}
-
 void write_traj_file(std::string & fname,
                      std::vector<cvo::CvoFrame::Ptr> & frames ) {
   std::ofstream outfile(fname);
@@ -322,25 +209,6 @@ void write_traj_file(std::string & fname,
   }
   outfile.close();
 }
-
-template <typename T>
-void write_traj_file(std::string & fname,
-                     std::vector<Eigen::Matrix<T, 4, 4>,
-                     Eigen::aligned_allocator<Eigen::Matrix<T, 4, 4>>> &  poses) {
-
-  std::ofstream outfile(fname);
-  for (int i = 0; i< poses.size(); i++) {
-    Eigen::Matrix<T, 4, 4> pose = poses[i];//Eigen::Matrix4f::Identity();
-    Sophus::SO3<T> q(pose.block(0,0,3,3));
-    auto q_eigen = q.unit_quaternion().coeffs();
-    Eigen::Matrix<T, 3, 1> t(pose.block(0,3,3,1));
-    outfile << t(0) <<" "<< t(1)<<" "<<t(2)<<" "
-            <<q_eigen[0]<<" "<<q_eigen[1]<<" "<<q_eigen[2]<<" "<<q_eigen[3]<<std::endl;
-    
-  }
-  outfile.close();
-}
-
 
 void write_traj_file(std::string & fname,
                      std::vector<std::string> & timestamps,
@@ -405,6 +273,7 @@ int main(int argc, char** argv) {
   std::cout<<"input start_ind is  "<<start_ind<<"\n";
   int max_last_ind = std::stoi(argv[8]);
   std::cout<<"input last_ind is  "<<max_last_ind<<"\n";
+  double cov_scale = std::stod(argv[9]);
 
   
   int last_ind = std::min(max_last_ind+1, kitti.get_total_number());
@@ -434,16 +303,15 @@ int main(int argc, char** argv) {
                                    tracking_poses);
   std::cout<<"init tracking pose size is "<<tracking_poses.size()<<"\n";
   assert(gt_poses.size() == tracking_poses.size());
-  for (int i = 0; i < tracking_poses.size(); i++)  {
-    BA_poses[i].block(0,0,3,4) = tracking_poses[i].block(0,0,3,4); 
-  }
+  
+  //for (int i = 0; i < tracking_poses.size(); i++)  {
+  //  BA_poses[i].block(0,0,3,4) = tracking_poses[i].block(0,0,3,4); 
+  //}
   
   
   // read point cloud
   std::vector<cvo::CvoFrame::Ptr> frames;
   std::vector<std::shared_ptr<cvo::CvoPointCloud>> pcs;
-  //std::vector<std::shared_ptr<cvo::CvoPointCloud>> pcs_full;
-  //std::vector<std::shared_ptr<cvo::CvoFrame>> frames_full;
   for (int i = 0; i<gt_poses.size(); i++) {
 
     std::cout<<"new frame "<<i+start_ind<<" out of "<<gt_poses.size() + start_ind<<"\n";
@@ -458,12 +326,25 @@ int main(int argc, char** argv) {
                                                                      pc_pcl,
                                                                      leaf_size);
     pcs.push_back(pc);
+  }
 
-    /// construct CvoFrame 
+
+  /// global registration
+  Eigen::Matrix4d T_last_to_first = global_registration_last_frame_to_first_frame(cvo_align,
+                                                                                  *pcs[0], tracking_poses[0],
+                                                                                  *pcs.back(), tracking_poses.back());
+
+  /// pose graph optimization
+  pose_graph_optimization(tracking_poses, T_last_to_first, BA_poses, cov_scale, num_neighbors_per_node);
+
+
+  /// construct BA CvoFrame struct
+  for (int i = 0; i<gt_poses.size(); i++) {
     double * poses_data = BA_poses[i].data();
     cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pcs.back().get(), poses_data, cvo_align.get_params().is_using_kdtree));
     frames.push_back(new_frame);
   }
+  
 
   std::string f_name = std::string("before_BA_loop.pcd");
   write_transformed_pc(frames, f_name, 0, frames.size()-1);
@@ -471,31 +352,13 @@ int main(int argc, char** argv) {
   /// Multiframe alignment
   construct_loop_BA_problem(cvo_align, frames, gt_poses, num_neighbors_per_node);
 
-  /*
-  std::cout<<"copy result to frames_full\n";
-  for (int j =  ; j < end_frame+1; j++) 
-    memcpy(frames_full[j]->pose_vec, frames[j]->pose_vec, sizeof(double)*12);
-    std::cout<<"write results to pcd\n";
-    f_name = std::string("after_BA_") + std::to_string(i+start_ind) + std::string(".pcd") ;
-    f_name_full = std::string("after_BA_full_") + std::to_string(i+start_ind) + std::string(".pcd") ;
-    //write_transformed_pc(frames_full, f_name_full, start_frame, end_frame);
-    write_transformed_pc(frames, f_name, start_frame, end_frame);
-    
-    pcs[start_frame].reset();
-    pcs_full[start_frame].reset();
-    dynamic_pointer_cast<cvo::CvoFrameGPU>(frames[start_frame])->clear_points();
-    dynamic_pointer_cast<cvo::CvoFrameGPU>(frames_full[start_frame])->clear_points();
-    
-    }*/
-
-
   std::cout<<"Write stacked point cloud\n";
   f_name = std::string("after_BA_loop.pcd") ;
   write_transformed_pc(frames, f_name,0, frames.size()-1);
   std::cout<<"Write traj to file\n";
   write_traj_file(BA_traj_file,frames);
   std::string gt_fname("groundtruth.txt");
-  write_traj_file<double>(gt_fname,gt_poses);  
+  cvo::write_traj_file<double, Eigen::ColMajor>(gt_fname,gt_poses);  
   //write_traj_file<float>(tracking_traj_file, tracking_poses);
   return 0;
 }

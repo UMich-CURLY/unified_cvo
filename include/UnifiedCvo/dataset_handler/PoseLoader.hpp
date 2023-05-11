@@ -5,7 +5,7 @@
 #include <fstream>
 #include <Eigen/Dense>
 #include <map>
-
+#include <sophus/so3.hpp>
 namespace cvo {
   
   // read poses in tum format: [time x y z qx qy qz qw]
@@ -258,6 +258,26 @@ namespace cvo {
     }
     return true;
   }
+
+
+  template <typename T, unsigned int major>
+  void write_traj_file(std::string & fname,
+                       std::vector<Eigen::Matrix<T, 4, 4, major>,
+                       Eigen::aligned_allocator<Eigen::Matrix<T, 4, 4, major>>> &  poses) {
+
+    std::ofstream outfile(fname);
+    for (int i = 0; i< poses.size(); i++) {
+      Eigen::Matrix<T, 4, 4, major> pose = poses[i];//Eigen::Matrix4f::Identity();
+      Sophus::SO3<T> q(pose.block(0,0,3,3));
+      auto q_eigen = q.unit_quaternion().coeffs();
+      Eigen::Matrix<T, 3, 1, major> t(pose.block(0,3,3,1));
+      outfile << t(0) <<" "<< t(1)<<" "<<t(2)<<" "
+              <<q_eigen[0]<<" "<<q_eigen[1]<<" "<<q_eigen[2]<<" "<<q_eigen[3]<<std::endl;
+    
+    }
+    outfile.close();
+  }
+
   
   
 }

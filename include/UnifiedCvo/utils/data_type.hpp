@@ -42,6 +42,8 @@ namespace cvo{
   //typedef Sophus::Sim3d Sim3;
   typedef Sophus::SO3d SO3;
 
+  template <typename Mat>
+  using aligned_vector =  std::vector<Mat, Eigen::aligned_allocator<Mat>>;
 
 
 #define CPARS 4
