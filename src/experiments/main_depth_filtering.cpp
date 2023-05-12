@@ -77,7 +77,7 @@ int main(int argc, char ** argv) {
 
   omp_set_num_threads(24);
 
-  cvo::KittiHandler kitti(argv[1], 0);
+  cvo::KittiHandler kitti(argv[1], cvo::KittiHandler::DataType::STEREO);
   std::string cvo_param_file(argv[2]);    
   //std::string graph_file_name(argv[3]);
   std::string tracking_fname(argv[3]);

@@ -19,10 +19,11 @@ namespace cvo {
                 const  std::vector<float> & semantics);
 
     const std::vector<float> & disparity() const {return disparity_;}
+    const cv::Mat & right() const {return right_;}
     
   private:
 
     std::vector<float> disparity_;
-    
+    cv::Mat right_;
   };
 }

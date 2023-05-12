@@ -1,9 +1,11 @@
+#include "CvoFrameGPU.hpp"
 #include "cvo/IRLS_State.hpp"
 //#include "cvo/KDTreeVectorOfVectorsAdaptor.h"
 //#include "cvo/CvoParams.hpp"
 //#include "utils/PointSegmentedDistribution.hpp"
 //#include "utils/CvoFrameGPU.hpp"
 #include "utils/CvoPoint.hpp"
+#include "CudaTypes.hpp"
 //#include "utils/CvoPointCloud.hpp"
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
@@ -16,7 +18,8 @@ namespace ceres {
 
 namespace cvo {
   class CvoFrame;
-  class CvoFrameGPU;
+  //using CvoPointCloudGPU = perl_registration::cuPointCloud<cvo::CvoPoint>;
+  //using CuKdTree = perl_registration::cukdtree<cvo::CvoPoint>;
   class CvoParams;
   
   class BinaryStateGPU : public BinaryState {
@@ -76,6 +79,10 @@ namespace cvo {
     CvoFrame * frame1();
     CvoFrame * frame2();
 
+    int * cukdtree_inds_results_gpu_;
+    std::shared_ptr<CvoPointCloudGPU> points_transformed_buffer_gpu_;
+
+    
     unsigned int num_neighbors_;
     SparseKernelMat  A_host_;
     //std::shared_ptr<Kdtree> pc1_kdtree_;

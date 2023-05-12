@@ -6,7 +6,7 @@
 #include "cvo/CvoParams.hpp"
 #include "cvo/CvoGPU.hpp"
 #include "cvo/CvoFrame.hpp"
-#include "cvo/CvoFrameGPU.hpp"
+//#include "cvo/CvoFrameGPU.hpp"
 #include "cvo/IRLS_State.hpp"
 #include "cvo/IRLS_State_CPU.hpp"
 #include "cvo/IRLS_State_GPU.hpp"
@@ -18,9 +18,23 @@
 #include <Eigen/Dense>
 #include <cstdlib>
 #include <chrono>
+#include <sophus/se3.hpp>
 
 namespace cvo {
   typedef Eigen::Triplet<float> Trip_t;
+
+
+  // template <Eigen::StorageOptions option>
+  double dist_se3_cpu(const Eigen::Matrix<double, 4,4, Eigen::DontAlign> & m ) {
+    Eigen::Matrix4d m_eig = m;
+    Sophus::SE3d dRT_sophus(m_eig);
+    double dist_this_iter = dRT_sophus.log().norm();
+    return dist_this_iter;
+  }
+
+  //template
+  //double dist_se3_cpu<Eigen::DontAlign>(const Eigen::Matrix<double,4,4, Eigen::DontAlign> & m);
+
   
   void CvoPointCloud_to_pcl(const CvoPointCloud & cvo_cloud,
                             pcl::PointCloud<CvoPoint> &pcl_cloud

@@ -493,4 +493,20 @@ int cuKdTree<PointT>::NearestKSearch(const cuPointCloudSharedPtr &d_query_cloud,
   return k;
 }
 
+template <typename PointT>
+int cuKdTree<PointT>::NearestKSearch(const cuPointCloudSharedPtr &d_query_cloud, int k,
+                                     int * indices, int indices_size) {
+  size_t num_indices = d_query_cloud->points.size() * k;
+  //indices.resize(num_indices);
+
+  int blocks = ceil((float)d_query_cloud->points.size() / (float)thread_num);
+  KernelArray<int> indices_arr(indices, indices_size);
+  NKSearch<PointT><<<blocks, thread_num>>>(d_point_cloud_->points, d_tree_,
+                                           d_query_cloud->points, indices_arr, k);
+  cudaSafe(cudaDeviceSynchronize());
+
+  return k;  
+}
+  
+
 }  // namespace perl_registration

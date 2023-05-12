@@ -14,8 +14,10 @@ using namespace boost::filesystem;
 
 namespace cvo {
   TartanAirHandler::TartanAirHandler(std::string tartan_traj_folder){
+    this->folder_name = tartan_traj_folder;
+    this->depth_folder_name =   "depth_left";
     // use left camera only, rgbd
-    const string depth_pth = tartan_traj_folder + "/depth_left";
+    const string depth_pth = tartan_traj_folder + "/" + depth_folder_name;
     const string image_pth = tartan_traj_folder + "/image_left";
     // count number of files in both dirs
     int depth_count = 0;
@@ -27,10 +29,10 @@ namespace cvo {
     for (directory_iterator it(image_pth); it != end_it; it++) {
       image_count++;
     }
-    assert (depth_count == image_count);
+    //assert (depth_count == image_count);
     total_size = depth_count;
     curr_index = 0;
-    folder_name = tartan_traj_folder;
+
     cout << "Found " << total_size << " image pairs\n";
     cout << "Searching for semantic class mapping file\n";
     std::ifstream map_file(tartan_traj_folder + "/seg_map.txt");
@@ -63,7 +65,15 @@ namespace cvo {
     string img_pth = folder_name + "/image_left/" + index_str + "_left.png";
     rgb_img = cv::imread(img_pth, cv::ImreadModes::IMREAD_COLOR);
     // read depth npy
-    string dep_pth = folder_name + "/depth_left/" + index_str + "_left_depth.npy";
+    string dep_pth = folder_name + "/" + depth_folder_name + "/" + index_str + "_left_depth.png";
+    std::cout<<"Read depth"<< dep_pth<<"\n";
+    dep_img = cv::imread(dep_pth, cv::IMREAD_UNCHANGED);
+    if (rgb_img.data == nullptr || dep_img.data == nullptr) {
+      cerr<<"Image doesn't read successfully: "<<img_pth<<", "<<dep_pth<<"\n";
+      return -1;
+    }
+    
+    /*
     cnpy::NpyArray dep_arr = cnpy::npy_load(dep_pth);
     float* dep_data = dep_arr.data<float>();
     int dim1 = dep_arr.shape[0];
@@ -78,9 +88,10 @@ namespace cvo {
         raw_dep.at<float>(r, c) = std::nanf("1");
       }
     }
+    */
     // scale by 5000 and convert to uint16_t
-    raw_dep = raw_dep * 5000.0f;
-    raw_dep.convertTo(dep_img, CV_16UC1);
+    //aw_dep = raw_dep * 5000.0f;
+      //raw_dep.convertTo(dep_img, CV_16UC1);
     return 0;
   }
 
@@ -97,25 +108,27 @@ namespace cvo {
     string img_pth = folder_name + "/image_left/" + index_str + "_left.png";
     rgb_img = cv::imread(img_pth, cv::ImreadModes::IMREAD_COLOR);
     // read depth npy
-    string dep_pth = folder_name + "/depth_left/" + index_str + "_left_depth.npy";
+    const string depth_folder = this->folder_name + "/" + depth_folder_name;
+    string dep_pth = depth_folder + "/" + index_str + "_left_depth.npy";
     cnpy::NpyArray dep_arr = cnpy::npy_load(dep_pth);
     float* dep_data = dep_arr.data<float>();
     int dim1 = dep_arr.shape[0];
     int dim2 = dep_arr.shape[1];
+    std::cout<<"dim1="<<dim1<<", dim2="<<dim2<<"\n";
     cv::Mat raw_dep(cv::Size(dim2, dim1), CV_32FC1, dep_data);
-    // set high depth pixels (sky) to nan
+    // set high depth pixels (sky) to nanb
     dep_vec.resize(dim1 * dim2);
     for (int r = 0; r < raw_dep.rows; r++) {
       for (int c = 0; c < raw_dep.cols; c++) {
         float pix = raw_dep.at<float>(r, c);
-        if (pix > 100)
+        if (pix > 60000)
           pix = std::nanf("1");
           //  raw_dep.at<float>(r, c) = std::nanf("1");
         dep_vec[ r * raw_dep.cols + c] =  pix;
       }
     }
     // scale by 5000 and flatten to vector
-    //raw_dep = raw_dep * 5000.0f;
+    //raw_dep = raw_dep; //* 5000.0f;
     //dep_vec.clear();
     //dep_vec = vector<float>(raw_dep.begin<float>(), raw_dep.end<float>());
     return 0;
@@ -161,6 +174,10 @@ namespace cvo {
 
   void TartanAirHandler::next_frame_index() {
     curr_index++;
+  }
+
+  void TartanAirHandler::set_depth_folder_name(const std::string & folder) {
+    this->depth_folder_name = folder;
   }
 
 
@@ -218,5 +235,64 @@ namespace cvo {
     }
     return 0;
   }
+
+  int TartanAirHandler::read_next_rgbd_without_sky(cv::Mat & rgb_img,
+                                                   std::vector<float> & dep_vec,
+                                                   int num_semantic_class,
+                                                   std::vector<float> & semantics,
+                                                   int sky_label) {
+    
+    if (read_next_rgbd(rgb_img, dep_vec))
+      return -1;
+
+    
+    if (semantic_class.empty()) {
+      cout << "No useable semantic class mapping\n";
+      return -1;
+    }
+    // format curr_index
+    stringstream ss;
+    ss << setw(6) << setfill('0') << curr_index;
+    string index_str = ss.str();
+    string semantic_name = folder_name + "/seg_left/" + index_str + "_left_seg.npy";
+    cnpy::NpyArray sem_arr = cnpy::npy_load(semantic_name);
+    // if (sem_arr.data == nullptr)
+    //   return -1;
+    uint8_t* sem_data = sem_arr.data<uint8_t>();
+    // visualize to debug
+    // int rows = sem_arr.shape[0];
+    // int cols = sem_arr.shape[1];
+    // cv::Mat raw_sem(cv::Size(cols, rows), CV_8UC1);
+    // for (int r = 0; r < rows; r++ ) {
+    //   for (int c = 0; c < cols; c++){
+    //     uint8_t* orig_label = sem_data + (r * cols + c);
+    //     // scale by 20 to increase contrast
+    //     uint8_t new_label = semantic_class[*orig_label] * 20;
+    //     raw_sem.at<uint8_t>(r, c) = new_label;
+    //   }
+    // }
+    // cv::imshow("img", left);
+    // cv::imshow("semantic", raw_sem);
+    // cv::waitKey(10);
+    // restructure to hold probability for each semantic class
+    int num_pixels = dep_vec.size();
+    semantics.resize(num_pixels * num_semantic_class);
+    fill(semantics.begin(), semantics.end(), 0);
+    for (int i = 0; i < num_pixels; i++) {
+      // find the begin index for current pixel semantic classes
+      int begin_idx = i * num_semantic_class;
+      // find the class attribute for the pixel, 0 ~ num_semantics_class
+      uint8_t* orig_label = sem_data + i;
+      if (*orig_label == sky_label)
+        dep_vec[i] = std::nanf("1");
+
+      uint8_t remapped_label = semantic_class[*orig_label];
+      semantics[begin_idx + remapped_label] = 1.0; // mark groundtruth with prob 1.0
+    }
+    
+    return 0;
+    
+  }
+  
 
 }

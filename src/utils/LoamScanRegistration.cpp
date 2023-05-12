@@ -110,9 +110,9 @@ namespace cvo
       // point.z = laserCloudIn[i].x;
 
       // skip NaN and INF valued points
-      if (!pcl_isfinite(point.x) ||
-          !pcl_isfinite(point.y) ||
-          !pcl_isfinite(point.z)) {
+      if (!pcl_val_isfinite(point.x) ||
+          !pcl_val_isfinite(point.y) ||
+          !pcl_val_isfinite(point.z)) {
         continue;
       }
 
@@ -516,4 +516,4 @@ namespace cvo
 
 
 
-} // namespcae cvo
+} // namespace cvo

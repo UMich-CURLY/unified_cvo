@@ -24,6 +24,7 @@ int main(int argc, char *argv[]) {
   //You could put any file path in here, e.g. "/home/me/mwah" to list that directory
   cvo::TartanAirHandler tartan(argv[1]);
   int total_iters = tartan.get_total_number();
+  std::cout<<"total num : "<<total_iters<<"\n";
   //vector<string> vstrRGBName = tum.get_rgb_name_list();
   string cvo_param_file(argv[2]);
   string calib_file;
@@ -32,8 +33,10 @@ int main(int argc, char *argv[]) {
   std::ofstream accum_output(argv[3]);
   int start_frame = std::stoi(argv[4]);
   tartan.set_start_index(start_frame);
+  std::cout<<"start int "<<start_frame<<"\n";
   int max_num = std::stoi(argv[5]);
-  
+
+
   
   cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();
@@ -63,10 +66,12 @@ int main(int argc, char *argv[]) {
   vector<float> source_depth;
   tartan.read_next_rgbd(source_rgb, source_depth);
   std::shared_ptr<cvo::ImageRGBD<float>> source_raw(new cvo::ImageRGBD<float>(source_rgb, source_depth));
+  std::cout<<"read source_raw\n";
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw,
                                                                     calib
 								    ,cvo::CvoPointCloud::DSO_EDGES
                                                                     ));
+  std::cout<<"read source cvo point cloud\n";  
   std::cout<<"First point is "<<source->at(0).transpose()<<std::endl;
   //19, semantics_source, 
   //                                                                    cvo::CvoPointCloud::CV_FAST));

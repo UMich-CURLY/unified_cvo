@@ -14,5 +14,6 @@ namespace cvo {
   template class VoxelMap<SimplePoint>;
   template class Voxel<pcl::PointXYZRGB>;
   template class VoxelMap<pcl::PointXYZRGB>;
-  
+  template class Voxel<pcl::PointXYZI>;
+  template class VoxelMap<pcl::PointXYZI>;
 }

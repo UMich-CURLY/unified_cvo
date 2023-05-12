@@ -22,6 +22,7 @@ namespace perl_registration {
   };
 
 
+  /*
   void Viewer::addColorPointCloud(const pcl::PointCloud<pcl::PointXYZRGB> & cloud,
                              const std::string &id
                              ) {
@@ -30,7 +31,7 @@ namespace perl_registration {
     std::lock_guard<std::mutex> lockClouds(cloudsGuard);
     colorIdsToAdd.push_back(id);
     colorCloudsToAdd[id] = cloudPtr;    
-  }
+    }*/
 
   void Viewer::updateColorPointCloud(const pcl::PointCloud<pcl::PointXYZRGB> & cloud,
                                      const std::string &id) {
@@ -38,7 +39,12 @@ namespace perl_registration {
                                                     new pcl::PointCloud<pcl::PointXYZRGB>(cloud));
     std::lock_guard<std::mutex> lockClouds(cloudsGuard);
 
-    colorCloudsToUpdate[id] = cloudPtr;    
+    if (addedColorCloud.find(id) != addedColorCloud.end()) {
+
+      colorCloudsToUpdate[id] = cloudPtr;
+    } else
+      colorCloudsToAdd[id] = cloudPtr;    
+      
     
   }
   
@@ -71,7 +77,7 @@ namespace perl_registration {
     viewer.setCameraPosition(0, 15, 0, 0, -1, 0, 1, 0, 0);
     viewer.addCoordinateSystem(0.25);
     viewer.initCameraParameters();
-
+    //viewer.setBackgroundColor (0, 0, 0);
 
     while (!viewer.wasStopped()) {
       viewer.spinOnce(100);
@@ -89,6 +95,9 @@ namespace perl_registration {
         //singleCloudsToAdd.erase(id);
       }
       singleIdsToAdd.clear();
+
+
+      //// intensity
       for (auto id : intensityIdsToAdd) {
         auto tuple = intensityCloudsToAdd[id];
         PointCloudColorHandlerIntensityMap intensity_colormap(
@@ -96,27 +105,31 @@ namespace perl_registration {
         viewer.addPointCloud<pcl::PointXYZI>(std::get<0>(tuple),
                                              intensity_colormap, id);
         viewer.setPointCloudRenderingProperties(
-                                                pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, id);
+                                                pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 5, id);
         //intensityCloudsToAdd.erase(id);
       }
       intensityIdsToAdd.clear();
-      for (auto id : colorIdsToAdd) {
-        auto cloudPtr = colorCloudsToAdd[id];
+
+
+      /// color pc
+      for (auto & pp : colorCloudsToAdd) {
+        auto id = pp.first;
+        auto cloudPtr = pp.second;
         // pcl::visualization::PointCloudColorHandler<pcl::PointXYZRGB> colorHandler()
         viewer.addPointCloud<pcl::PointXYZRGB>(cloudPtr, id);
         viewer.setPointCloudRenderingProperties(
                                                 pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, id);
-        
+        addedColorCloud.insert(id);
       }
+      colorCloudsToAdd.clear();
       for (auto & p : colorCloudsToUpdate) {
         auto cloudPtr = p.second;
         auto id  = p.first;
-        // pcl::visualization::PointCloudColorHandler<pcl::PointXYZRGB> colorHandler()
-        viewer.updatePointCloud<pcl::PointXYZRGB>(cloudPtr, id);
-        //viewer.setPointCloudRenderingProperties(
-        //                                        pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, id);
-        
+        std::cout<<__func__<<"before transform: "<<static_cast<int>((*cloudPtr)[0].r)<<", "<<static_cast<int>((*cloudPtr)[0].g)<<", "<<static_cast<int>((*cloudPtr)[0].b)<<"\n";
+        viewer.removePointCloud( id);
+        viewer.addPointCloud<pcl::PointXYZRGB>(cloudPtr, id);
       }
+      colorCloudsToUpdate.clear();
 
       for (auto & p : textsAll) {
         std::string id = p.first;
@@ -129,29 +142,38 @@ namespace perl_registration {
       }
       
       //colorCloudsToUpdate.clear();
-      colorIdsToAdd.clear();
+      //colorIdsToAdd.clear();
       
-
-      if (trajectoryPtsToDraw.empty() || trajectoryPtsToDraw.size() == 1) continue;
-      for (int i = 1; i < trajectoryPtsToDraw.size(); i++) {
-        pcl::PointXYZ prevPt(trajectoryPtsToDraw[i - 1](0, 3), trajectoryPtsToDraw[i - 1](1, 3), trajectoryPtsToDraw[i - 1](2, 3));
-        pcl::PointXYZ currPt(trajectoryPtsToDraw[i](0, 3), trajectoryPtsToDraw[i](1, 3), trajectoryPtsToDraw[i](2, 3));
-        viewer.addLine(prevPt, currPt, 1, 0, 0, std::to_string(trajId++));
+      {
+        std::lock_guard<std::mutex> lockStopped(trajGuard);            
+        if (trajectoryPtsToDraw.empty() || trajectoryPtsToDraw.size() == 1) continue;
+        
+        for (int i = 1; i < trajectoryPtsToDraw.size(); i++) {
+          pcl::PointXYZ prevPt(trajectoryPtsToDraw[i - 1](0, 3), trajectoryPtsToDraw[i - 1](1, 3), trajectoryPtsToDraw[i - 1](2, 3));
+          pcl::PointXYZ currPt(trajectoryPtsToDraw[i](0, 3), trajectoryPtsToDraw[i](1, 3), trajectoryPtsToDraw[i](2, 3));
+          std::cout<<__func__<<": draw pose last is "<<prevPt.getVector3fMap().transpose()<<", curr is "<<currPt.getVector3fMap().transpose()<<"\n";
+          viewer.addLine(prevPt, currPt, 1, 0, 0, std::to_string(trajId) + "_line");
+          addedLineIds.insert(trajId);
+          trajId++;
+        }
+        Mat34d_row prevPose = trajectoryPtsToDraw.back();
+        trajectoryPtsToDraw.clear();
+        trajectoryPtsToDraw.push_back(prevPose);
+        //std::cout<<__func__<<": push back "<<prevPose<<"\n";
+      
+        // update camera to follow the trajectory
+        if (isFollowingCamera) {
+          Eigen::Matrix4f Twc = Eigen::Matrix4f::Identity();
+          Twc.block<3, 4>(0, 0) = prevPose.cast<float>();
+          Eigen::Matrix4f Tcv;
+          Tcv << -1,  0, 0, -1,
+            0, -1, 0, -1,
+            0,  0, 1, -5,
+            0,  0, 0, 1;
+          Eigen::Matrix4f Twv = Twc * Tcv;
+          viewer.setCameraParameters(viewerCamInstrinsics, Twv);
+        }
       }
-      Mat34d_row prevPose = trajectoryPtsToDraw.back();
-      trajectoryPtsToDraw.clear();
-      trajectoryPtsToDraw.push_back(prevPose);
-      
-      // update camera to follow the trajectory
-      Eigen::Matrix4f Twc = Eigen::Matrix4f::Identity();
-      Twc.block<3, 4>(0, 0) = prevPose.cast<float>();
-      Eigen::Matrix4f Tcv;
-      Tcv << -1,  0, 0, -1,
-              0, -1, 0, -1,
-              0,  0, 1, -15,
-              0,  0, 0, 1;
-      Eigen::Matrix4f Twv = Twc * Tcv;
-      viewer.setCameraParameters(viewerCamInstrinsics, Twv);
       if (screenshot) {
         std::string filename = screenshotSaveDir + "/" + std::to_string(trajId) + ".png";
         viewer.saveScreenshot(filename);
@@ -161,6 +183,7 @@ namespace perl_registration {
     }
 
     std::lock_guard<std::mutex> lockStopped(stoppedGuard);
+
     stopped = true;
   };
 
@@ -171,7 +194,9 @@ namespace perl_registration {
   };
 
   void Viewer::drawTrajectory(const Mat34d_row& current_pose) {
-      trajectoryPtsToDraw.push_back(current_pose);
+    std::lock_guard<std::mutex> lockStopped(trajGuard);
+    
+    trajectoryPtsToDraw.push_back(current_pose);
   }
 
 }  // namespace perl_registration

@@ -1,6 +1,7 @@
 #include "cvo/IRLS.hpp"
 //#include "cvo/IRLS_State_CPU.hpp"
 #include "cvo/local_parameterization_se3.hpp"
+//#include "cvo/IRLS_cuSolver.hpp"
 #include <sophus/se3.hpp>
 #include <ceres/local_parameterization.h>
 #include <memory>
@@ -74,19 +75,69 @@ namespace cvo {
     return change;
   }
 
+  static void solve_with_ceres() {
+    
+  }
+
+  static void solve_with_cuSolver() {
+    
+  }
+
+
   void CvoBatchIRLS::solve() {
+    std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> gt;
+    std::string err_file_name;
+    solve(gt, err_file_name);
+  }
+
+  static void transform_vector_of_poses(const std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> & poses_in,
+                                        //const Sophus::SE3d & pose_anchor,
+                                        const CvoBatchIRLS::Mat34d_row & pose_anchor_eigen,
+                                        std::vector<Sophus::SE3d> & poses_out) {
+    poses_out.resize(poses_in.size());
+    
+    Sophus::SE3d pose_anchor(pose_anchor_eigen.block<3,3>(0,0), pose_anchor_eigen.block<3,1>(0,3));
+    
+    for (int i = 1; i < poses_in.size(); i++) {
+      Eigen::Matrix4d i_from_0 = poses_in[0].inverse() * poses_in[i];
+      Sophus::SE3d poses_in_0_i(i_from_0.block<3,3>(0,0), i_from_0.block<3,1>(0,3));
+      std::cout<<__func__<<"\n"<<i_from_0<<"\n"<<poses_in_0_i.matrix()<<"\m"<<poses_in[i]<<"\n";
+      poses_out[i] = pose_anchor * poses_in_0_i;
+      std::cout<<"Pose_out: "<<poses_out[i].matrix()<<"\n";
+    }
+    if (poses_out.size() > 0) {
+      poses_out[0] = pose_anchor;
+    }
+    
+  }
+
+  void CvoBatchIRLS::solve(const std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> & gt,
+                           const std::string & err_file_name) {
+
     
     int iter_ = 0;
     bool converged = false;
     double ell = params_->multiframe_ell_init;
 
-    std::ofstream nonzeros("nonzeros.txt");
-    std::ofstream loss_change("loss_change.txt");
-
+    //std::ofstream nonzeros("nonzeros.txt");
+    //std::ofstream loss_change("loss_change.txt");
+    bool is_comparing_with_gt = (gt.size() == frames_->size() && err_file_name.size() > 0); 
+    std::vector<Sophus::SE3d> gt_aligned(gt.size());
+    std::vector<double> err_history;
+    std::ofstream err_f;
+    if (is_comparing_with_gt) {
+      Mat34d_row pose_anchor_eigen = Eigen::Map<Mat34d_row>((*frames_)[0]->pose_vec);
+      transform_vector_of_poses(gt, pose_anchor_eigen, gt_aligned);
+      err_f.open(err_file_name);
+      err_f<<"#ell, nonzeros, err\n";
+    }
+    
     double ceres_time = 0;
+    double kernel_eval_time = 0;
+    double ceres_add_residual_time = 0;
     int num_ells = 0;
     int last_nonzeros = 0;
-    bool ell_should_decay = false;
+    bool ell_should_decay_when_nonzero_max = false;
     std::cout<<"Solve: total number of states is "<<states_->size()<<std::endl;
     while (!converged) {
 
@@ -104,6 +155,7 @@ namespace cvo {
       for (auto & frame : *frames_) {
 
         std::cout<<"Frame number of points "<<frame->points->num_points()<<std::endl;
+        //if (params_->is_using_kdtree == false)
         frame->transform_pointcloud();
         problem.AddParameterBlock(frame->pose_vec, 12, se3_parameterization);
       }
@@ -112,28 +164,45 @@ namespace cvo {
       int counter = 0;
       int total_nonzeros = 0;
       for (auto && state : *states_) {
+        auto start = std::chrono::system_clock::now();
         int nonzeros_ip_mat = state->update_inner_product();
+        auto end = std::chrono::system_clock::now();
+        std::chrono::duration<double, std::milli> t_all = end - start;
+        kernel_eval_time += ( (static_cast<double>(t_all.count())) / 1000);
         total_nonzeros += nonzeros_ip_mat;
         //invalid_factors[counter] = invalid_ip_mat;
         if (nonzeros_ip_mat > params_->multiframe_min_nonzeros) {
+          start = std::chrono::system_clock::now();
           state->add_residual_to_problem(problem);
+          end = std::chrono::system_clock::now();
+          t_all = end - start;
+          ceres_add_residual_time += ( (static_cast<double>(t_all.count())) / 1000);
           counter++;
         } else {
           
         }
       }
-      nonzeros <<ell<<", "<< total_nonzeros<<"\n"<<std::flush;
+      if (is_comparing_with_gt) {
+        double param_err = change_of_all_poses(gt_aligned, poses_old);
+        std::cout<<"Before iter" <<iter_<<"'s optimization, error w.r.t gt is "<<param_err<<std::endl;
+        err_f << ell<<","<<total_nonzeros<<","<<param_err<<"\n";
+        err_history.push_back(param_err);
+      }
+      
+      //nonzeros <<ell<<", "<< total_nonzeros<<"\n"<<std::flush;
 
       std::cout<<"Total nonzeros "<<total_nonzeros<<", last_nonzeros "<<last_nonzeros<<std::endl;
       std::cout<<"iter_ "<<iter_<<", multiframe_iterations_per_ell "<<params_->multiframe_iterations_per_ell<<std::endl;
       if (counter == 0
           || iter_ == params_->multiframe_max_iters
           ) break;
-      if (total_nonzeros > last_nonzeros)
-        ell_should_decay = true;
+      if (iter_ > 0 &&  iter_ % params_->multiframe_iterations_per_ell == 0 )
+        ell_should_decay_when_nonzero_max = true;
+      
       if (total_nonzeros > last_nonzeros
-          || iter_ < params_->multiframe_iterations_per_ell 
+          || !ell_should_decay_when_nonzero_max
           ) {
+        
         last_nonzeros = total_nonzeros;
         //   for (auto && frame : *frames_) {
         for (int k = 0; k < frames_->size(); k++) {
@@ -150,9 +219,10 @@ namespace cvo {
         //options.check_gradients = true;
         //options.line_search_direction_type = ceres::BFGS;
         options.sparse_linear_algebra_library_type = ceres::SUITE_SPARSE;
-        options.linear_solver_type = ceres::SPARSE_SCHUR;
-        options.preconditioner_type = ceres::JACOBI;
-        options.visibility_clustering_type = ceres::CANONICAL_VIEWS;
+        options.linear_solver_type = ceres::DENSE_NORMAL_CHOLESKY; //ceres::SPARSE_SCHUR;
+        //options.preconditioner_type = ceres::JACOBI;
+        //options.visibility_clustering_type = ceres::CANONICAL_VIEWS;
+
       
       
         options.num_threads = params_->multiframe_least_squares_num_threads;
@@ -168,12 +238,14 @@ namespace cvo {
         
 
         std::cout << summary.FullReport() << std::endl;
-        loss_change << ell <<", "<< summary.final_cost - summary.initial_cost <<std::endl;
+        //loss_change << ell <<", "<< summary.final_cost - summary.initial_cost <<std::endl;
 
         std::vector<Sophus::SE3d> poses_new(frames_->size());
         pose_snapshot(*frames_, poses_new);
         double param_change = change_of_all_poses(poses_old, poses_new);
         std::cout<<"Update is "<<param_change<<std::endl;
+
+        
       } else  {
         //  if (//param_change < 1e-5 * poses_new.size()
         //    //||
@@ -182,7 +254,7 @@ namespace cvo {
         //    ) {
           //break;
           num_ells ++;
-          ell_should_decay = false;
+          ell_should_decay_when_nonzero_max = false;
           //if (num_ells == 2)
           //  break;
         
@@ -208,9 +280,26 @@ namespace cvo {
         
     }
 
-    nonzeros.close();
-    loss_change.close();
+    //nonzeros.close();
+    //loss_change.close();
+    if (is_comparing_with_gt) {
+      std::cout<<"The gt poses putting into the local frame is \n";
+      for (int j = 0; j < gt_aligned.size(); j++) {
+        std::cout<<gt_aligned[j].matrix()<<"\n";
+      }
+      
+      std::vector<Sophus::SE3d> poses_new(frames_->size());
+      pose_snapshot(*frames_, poses_new);
+      double param_err = change_of_all_poses( gt_aligned, poses_new);
+      err_history.push_back(param_err);
+      std::cout<<"Finish registration at iter " <<iter_<<", error w.r.t gt changes from "<<err_history[0]<<" to " <<param_err<<std::endl;
+      
+      //err_f << param_err<<"\n";
+      err_f.close();
+    }
 
+    std::cout<<"kernel eval time is "<<kernel_eval_time<<"\n";
+    std::cout<<"ceres add residual time is "<<ceres_add_residual_time<<"\n";    
     std::cout<<"ceres running time is "<<ceres_time<<"\n";
   }
 

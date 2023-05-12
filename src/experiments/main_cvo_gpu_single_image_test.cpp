@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
 
     infile.close();
     
-    cvo::KittiHandler kitti(kitti_folder + "/" + seq_name, 0);
+    cvo::KittiHandler kitti(kitti_folder + "/" + seq_name, cvo::KittiHandler::DataType::STEREO);
     kitti.set_start_index(frame_id);
     
     cv::Mat source_left, source_right;
