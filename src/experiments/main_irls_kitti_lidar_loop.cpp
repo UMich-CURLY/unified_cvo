@@ -52,9 +52,10 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
     poses.insert(std::make_pair(i, pose));
   }
   for (int i = 0; i < tracking_poses.size(); i++) {
-    for (int j = i+1; j < i+1+num_neighbors_per_node; j++) {
+    for (int j = i+1; j < std::min((int)tracking_poses.size(), i+1+num_neighbors_per_node); j++) {
       Eigen::Matrix4d T_Fi_to_Fj = tracking_poses[i].inverse() * tracking_poses[j];
       cvo::pgo::Pose3d t_be = cvo::pgo::pose3d_from_eigen<double, Eigen::ColMajor>(T_Fi_to_Fj);
+      std::cout<<__func__<<": Add constrain between "<<i<<" and "<<j<<"\n";
       cvo::pgo::Constraint3d constrain{i, j, t_be, information};
       constrains.push_back(constrain);
     }
@@ -70,11 +71,13 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
   cvo::pgo::SolveOptimizationProblem(&problem);
 
   /// copy PGO results to BA_poses
+  std::cout<<"Global PGO results:\n";
   BA_poses.resize(tracking_poses.size());
   for (auto pose_pair : poses) {
     int i = pose_pair.first;
     cvo::pgo::Pose3d pose = pose_pair.second;
     BA_poses[i] = cvo::pgo::pose3d_to_eigen<double, Eigen::RowMajor>(pose).block(0,0,3,4);
+    std::cout<<BA_poses[i]<<"\n";
   }
 }
 
@@ -120,7 +123,7 @@ void construct_loop_BA_problem(cvo::CvoGPU & cvo_align,
   std::list<cvo::BinaryState::Ptr> edge_states;
   //std::list<cvo::BinaryState::Ptr> edge_states_cpu;
   for (int i = 0; i < frames.size(); i++) {
-    for (int j = i+1; j < i+1+num_neighbors_per_node; j++) {
+    for (int j = i+1; j < std::min((int)frames.size(), i+1+num_neighbors_per_node); j++) {
 
       std::cout<<"first ind "<<i<<", second ind "<<j<<std::endl;
       std::pair<cvo::CvoFrame::Ptr, cvo::CvoFrame::Ptr> p(frames[i], frames[j]);
@@ -136,7 +139,38 @@ void construct_loop_BA_problem(cvo::CvoGPU & cvo_align,
                                                                   ));
       edge_states.push_back((edge_state));
     }
-  }    
+
+  }
+
+  /// loop closing constrains
+  const cvo::CvoParams & params = cvo_align.get_params();
+  cvo::BinaryStateGPU::Ptr edge_state_0_n(new cvo::BinaryStateGPU(std::dynamic_pointer_cast<cvo::CvoFrameGPU>(frames[0]),
+                                                              std::dynamic_pointer_cast<cvo::CvoFrameGPU>(frames.back()),
+                                                              &params,
+                                                              cvo_align.get_params_gpu(),
+                                                              params.multiframe_num_neighbors,
+                                                              params.multiframe_ell_init
+                                                              ));
+  edge_states.push_back((edge_state_0_n));
+  cvo::BinaryStateGPU::Ptr edge_state_1_n(new cvo::BinaryStateGPU(std::dynamic_pointer_cast<cvo::CvoFrameGPU>(frames[1]),
+                                                              std::dynamic_pointer_cast<cvo::CvoFrameGPU>(frames.back()),
+                                                              &params,
+                                                              cvo_align.get_params_gpu(),
+                                                              params.multiframe_num_neighbors,
+                                                              params.multiframe_ell_init
+                                                              ));
+  edge_states.push_back((edge_state_1_n));
+  cvo::BinaryStateGPU::Ptr edge_state_0_n1(new cvo::BinaryStateGPU(std::dynamic_pointer_cast<cvo::CvoFrameGPU>(frames[0]),
+                                                              std::dynamic_pointer_cast<cvo::CvoFrameGPU>(frames[frames.size()-2]),
+                                                              &params,
+                                                              cvo_align.get_params_gpu(),
+                                                              params.multiframe_num_neighbors,
+                                                              params.multiframe_ell_init
+                                                              ));
+  edge_states.push_back((edge_state_0_n1));
+  
+  
+  
   double time = 0;
   std::vector<bool> const_flags(frames.size(), false);
   const_flags[0] = true;
@@ -274,6 +308,7 @@ int main(int argc, char** argv) {
   int max_last_ind = std::stoi(argv[8]);
   std::cout<<"input last_ind is  "<<max_last_ind<<"\n";
   double cov_scale = std::stod(argv[9]);
+  int skipped_frames = std::stoi(argv[10]);
 
   
   int last_ind = std::min(max_last_ind+1, kitti.get_total_number());
@@ -287,7 +322,8 @@ int main(int argc, char** argv) {
   gt_pose_name = std::string(argv[1]) + "/poses.txt";
 
   /// read poses
-  std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> gt_poses(total_iters),
+  std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> gt_poses_raw(total_iters),
+    gt_poses(total_iters),
     tracking_poses(total_iters);
   std::vector<cvo::Mat34d_row,
               Eigen::aligned_allocator<cvo::Mat34d_row>> BA_poses(total_iters, cvo::Mat34d_row::Zero());
@@ -295,14 +331,20 @@ int main(int argc, char** argv) {
   cvo::read_pose_file_kitti_format(gt_pose_name,
                                    start_ind,
                                    last_ind,
-                                   gt_poses);
-  std::cout<<"gt poses size is "<<gt_poses.size()<<"\n";
+                                   gt_poses_raw);
+  std::cout<<"gt poses size is "<<gt_poses_raw.size()<<"\n";
+  Eigen::Matrix4d identity = Eigen::Matrix4d::Identity();
+  cvo::transform_vector_of_poses(gt_poses_raw, identity, gt_poses );
+  
   cvo::read_pose_file_kitti_format(tracking_traj_file,
                                    start_ind,
                                    last_ind,
                                    tracking_poses);
   std::cout<<"init tracking pose size is "<<tracking_poses.size()<<"\n";
   assert(gt_poses.size() == tracking_poses.size());
+  //Eigen::Matrix4d identity = Eigen::Matrix4d::Identity();
+ 
+  
   
   //for (int i = 0; i < tracking_poses.size(); i++)  {
   //  BA_poses[i].block(0,0,3,4) = tracking_poses[i].block(0,0,3,4); 
@@ -333,15 +375,19 @@ int main(int argc, char** argv) {
   Eigen::Matrix4d T_last_to_first = global_registration_last_frame_to_first_frame(cvo_align,
                                                                                   *pcs[0], tracking_poses[0],
                                                                                   *pcs.back(), tracking_poses.back());
+  std::cout<<"global registration result is \n"<<T_last_to_first<<"\n";
 
   /// pose graph optimization
   pose_graph_optimization(tracking_poses, T_last_to_first, BA_poses, cov_scale, num_neighbors_per_node);
+  std::string pgo_fname("pgo.txt");
+  cvo::write_traj_file<double, 3, Eigen::RowMajor>(pgo_fname, BA_poses);
 
 
   /// construct BA CvoFrame struct
   for (int i = 0; i<gt_poses.size(); i++) {
+    std::cout<<"Copy "<<i<<"th point cloud to gpu \n";
     double * poses_data = BA_poses[i].data();
-    cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pcs.back().get(), poses_data, cvo_align.get_params().is_using_kdtree));
+    cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pcs[i].get(), poses_data, cvo_align.get_params().is_using_kdtree));
     frames.push_back(new_frame);
   }
   
@@ -358,7 +404,8 @@ int main(int argc, char** argv) {
   std::cout<<"Write traj to file\n";
   write_traj_file(BA_traj_file,frames);
   std::string gt_fname("groundtruth.txt");
-  cvo::write_traj_file<double, Eigen::ColMajor>(gt_fname,gt_poses);  
-  //write_traj_file<float>(tracking_traj_file, tracking_poses);
+  cvo::write_traj_file<double, 4, Eigen::ColMajor>(gt_fname,gt_poses);
+  std::string track_fname("tracking.txt");
+  cvo::write_traj_file<double, 4, Eigen::ColMajor>(track_fname, tracking_poses);
   return 0;
 }
