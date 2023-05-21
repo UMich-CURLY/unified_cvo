@@ -41,19 +41,27 @@ void parse_lc_file(std::vector<std::pair<int, int>> & loop_closures,
                    const std::string & loop_closure_pairs_file,
                    int start_ind) {
   std::ifstream f(loop_closure_pairs_file);
+  std::cout<<"Read loop closure file "<<loop_closure_pairs_file<<"\n";
   if (f.is_open()) {
     std::string line;
     std::getline(f, line);
     while(std::getline(f, line)) {
-      std::istringstream ss;
+      std::istringstream ss(line);
       int id1, id2;
       ss>>id1>>id2;
+      std::cout<<"read lc between "<<id1<<" and "<<id2<<"\n";
       id1 -= start_ind;
       id2 -= start_ind;
       loop_closures.push_back(std::make_pair(std::min(id1, id2), std::max(id1, id2)));
     }
 
+
     f.close();
+    char a;
+    std::cin>>a;
+  } else {
+	std::cerr<<"loop closure file "<<loop_closure_pairs_file<<" doesn't exist\n";
+	exit(0);
   }
 }
 
@@ -113,7 +121,7 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
 void global_registration_batch(cvo::CvoGPU & cvo_align,
                                const std::vector<std::pair<int, int>> & loop_closures,
                                const std::vector<std::shared_ptr<cvo::CvoPointCloud>> & pcs,
-                               
+                               const std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> & gt_poses,                             
                                std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> & lc_poses_f1_to_f2
                                ) {
 
@@ -137,6 +145,11 @@ void global_registration_batch(cvo::CvoGPU & cvo_align,
     cvo_align.align(*pcs[p.first], *pcs[p.second], init_guess_inv, result, nullptr, &time_curr);
 
     lc_poses_f1_to_f2[i] = result;
+    
+    std::cout<<"Finish running global registration between "<<p.first<<" and "<<p.second<<", result is\n"
+	    <<result<<"\n ground truth between "<<p.first<<" and "<<p.second<<" is \n"
+	    <<gt_poses[p.first].inverse() * gt_poses[p.second]<<"\n\n";
+
     time += time_curr;
   }
   init_param.ell_init = ell_init;
@@ -182,17 +195,18 @@ void construct_loop_BA_problem(cvo::CvoGPU & cvo_align,
   }
 
   /// loop closing constrains
+  std::cout<<"BA: Adding loop closing constrains\n";
   const cvo::CvoParams & params = cvo_align.get_params();
-
   for (int i = 0; i < loop_closures.size(); i++) {
     std::pair<int, int> p = loop_closures[i];
     for (int j = -1; j < 2; j++) {
       int id1 = p.first + j;
       int id2 = p.second + j;
-
+      if (id1 < 0 || id1 > frames.size()-1 || id2 < 0 || id2 > frames.size() -1 )
+	continue;
       if (added_edges.exists(id1, id2))
         continue;
-      
+      std::cout<<"BA: Adding edge between "<<id1<<" and "<<id2<<"\n"; 
       cvo::BinaryStateGPU::Ptr edge_state(new cvo::BinaryStateGPU(std::dynamic_pointer_cast<cvo::CvoFrameGPU>(frames[id1]),
                                                                   std::dynamic_pointer_cast<cvo::CvoFrameGPU>(frames[id2]),
                                                                   &params,
@@ -415,8 +429,8 @@ int main(int argc, char** argv) {
   global_registration_batch(cvo_align,
                             loop_closures,
                             pcs,
+			    gt_poses,
                             lc_poses);
-
 
   /// pose graph optimization
   pose_graph_optimization(tracking_poses, loop_closures,
@@ -425,8 +439,8 @@ int main(int argc, char** argv) {
   std::string pgo_fname("pgo.txt");
   cvo::write_traj_file<double, 3, Eigen::RowMajor>(pgo_fname, BA_poses);
   
-  std::cout<<"global registration result is \n"<<T_last_to_first<<"\n";
-  std::cout<<"groundtruth result is \n"<<gt_poses.back().inverse()*gt_poses[0]<<"\n";
+  //std::cout<<"global registration result is \n"<<T_last_to_first<<"\n";
+  //std::cout<<"groundtruth result is \n"<<gt_poses.back().inverse()*gt_poses[0]<<"\n";
   
 
   if (is_pgo_only) return 0;
