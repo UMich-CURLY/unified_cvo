@@ -343,11 +343,9 @@ int main(int argc, char** argv) {
   std::cout<<"input start_ind is  "<<start_ind<<"\n";
   int max_last_ind = std::stoi(argv[9]);
   std::cout<<"input last_ind is  "<<max_last_ind<<"\n";
-  
   double cov_scale = std::stod(argv[10]);
   int skipped_frames = std::stoi(argv[11]);
-  
-
+  int is_pgo_only = std::stoi(argv[12]);
   
   int last_ind = std::min(max_last_ind+1, kitti.get_total_number());
   std::cout<<"actual last ind is "<<last_ind<<"\n";
@@ -426,7 +424,12 @@ int main(int argc, char** argv) {
                           BA_poses, cov_scale, num_neighbors_per_node);
   std::string pgo_fname("pgo.txt");
   cvo::write_traj_file<double, 3, Eigen::RowMajor>(pgo_fname, BA_poses);
+  
+  std::cout<<"global registration result is \n"<<T_last_to_first<<"\n";
+  std::cout<<"groundtruth result is \n"<<gt_poses.back().inverse()*gt_poses[0]<<"\n";
+  
 
+  if (is_pgo_only) return 0;
 
   /// construct BA CvoFrame struct
   for (int i = 0; i<gt_poses.size(); i++) {

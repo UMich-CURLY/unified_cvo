@@ -261,6 +261,7 @@ namespace cvo {
       ceres::Solver::Options options;
       options.max_num_iterations = 200;
       options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
+      options.num_threads = 32;
 
       ceres::Solver::Summary summary;
       ceres::Solve(options, problem, &summary);

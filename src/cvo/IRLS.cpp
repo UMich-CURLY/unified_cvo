@@ -219,7 +219,7 @@ namespace cvo {
         //options.check_gradients = true;
         //options.line_search_direction_type = ceres::BFGS;
         options.sparse_linear_algebra_library_type = ceres::SUITE_SPARSE;
-        options.linear_solver_type = ceres::DENSE_NORMAL_CHOLESKY; //ceres::SPARSE_SCHUR;
+        options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY; //ceres::SPARSE_SCHUR;
         //options.preconditioner_type = ceres::JACOBI;
         //options.visibility_clustering_type = ceres::CANONICAL_VIEWS;
 

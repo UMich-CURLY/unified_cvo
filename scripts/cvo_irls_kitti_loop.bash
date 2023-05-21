@@ -7,7 +7,7 @@ date=$1
 clear
 
     #skylabel=(196 112 -- 130  196 146 130)
-    seqs=( 00 )
+    seqs=( 07 )
     for ind in ${!seqs[@]}
     do
         i=${seqs[ind]}
@@ -24,7 +24,7 @@ clear
 
         ### run global BA
         #gdb -ex run --args \
-        ./build/bin/cvo_irls_lidar_loop $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 1 $folder/tracking_full.txt $lc_file  ba.txt 0 0 1000000 2.0 0 # > log_tartan_rgbd_${difficulty}_${i}.txt
+        ./build/bin/cvo_irls_lidar_loop $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 1 $folder/tracking_full.txt $lc_file  ba.txt 0 0 1000000 2.0 0 0 # > log_tartan_rgbd_${difficulty}_${i}.txt
         mv *.pcd $folder/
         mv pgo.txt tracking.txt ba.txt err_wrt_iters_*.txt groundtruth.txt $folder/
         cp ${dataset_folder}/poses.txt $folder/
