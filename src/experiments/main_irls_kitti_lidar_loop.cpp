@@ -57,8 +57,8 @@ void parse_lc_file(std::vector<std::pair<int, int>> & loop_closures,
 
 
     f.close();
-    char a;
-    std::cin>>a;
+    //char a;
+    //std::cin>>a;
   } else {
 	std::cerr<<"loop closure file "<<loop_closure_pairs_file<<" doesn't exist\n";
 	exit(0);

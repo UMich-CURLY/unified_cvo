@@ -7,7 +7,7 @@ date=$1
 clear
 
     #skylabel=(196 112 -- 130  196 146 130)
-    seqs=( "07" )
+    seqs=( 06 09 05 00 02 08 )
     for ind in ${!seqs[@]}
     do
         echo " Current Seq: ${i}"        
