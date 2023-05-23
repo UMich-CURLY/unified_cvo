@@ -82,6 +82,7 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
     cvo::pgo::Pose3d pose = cvo::pgo::pose3d_from_eigen<double, Eigen::ColMajor>(tracking_poses[i]);
     poses.insert(std::make_pair(i, pose));
   }
+  /*
   for (int i = 0; i < tracking_poses.size(); i++) {
     for (int j = i+1; j < std::min((int)tracking_poses.size(), i+1+num_neighbors_per_node); j++) {
       Eigen::Matrix4d T_Fi_to_Fj = tracking_poses[i].inverse() * tracking_poses[j];
@@ -91,12 +92,15 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
       constrains.push_back(constrain);
     }
   }
-  /// the loop closing one
+  */
+  
+  /// the loop closing pose factors
   for (int i =0 ; i < loop_closures.size(); i++) {
     Eigen::Matrix4d T_f1_to_f2 = lc_poses[i].cast<double>();
     cvo::pgo::Pose3d t_be = cvo::pgo::pose3d_from_eigen<double, Eigen::ColMajor>(T_f1_to_f2);
     auto pair = loop_closures[i];
-    cvo::pgo::Constraint3d constrain{static_cast<int>(pair.first), pair.second, t_be, information};
+    cvo::pgo::Constraint3d constrain{static_cast<int>(pair.first), static_cast<int>(pair.second),
+                                     t_be, information};
     constrains.push_back(constrain);
     std::cout<<__func__<<": Add constrain from "<<pair.first<<" to "<<pair.second<<"\n";
   }
