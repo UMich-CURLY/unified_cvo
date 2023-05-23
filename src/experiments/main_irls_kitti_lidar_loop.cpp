@@ -432,11 +432,13 @@ int main(int argc, char** argv) {
   std::vector<std::pair<int, int>> loop_closures;
   parse_lc_file(loop_closures, loop_closure_pairs_file, start_ind);
 
+  std::string g_reg_f("global.txt");
   std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> lc_poses;
   global_registration_batch(cvo_align,
                             loop_closures,
                             pcs,
 			    gt_poses,
+			    g_reg_f,
                             lc_poses);
 
   /// pose graph optimization
