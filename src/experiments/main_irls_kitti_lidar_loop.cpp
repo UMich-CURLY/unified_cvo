@@ -154,7 +154,11 @@ void global_registration_batch(cvo::CvoGPU & cvo_align,
 
     f<<"====================================\nFinish running global registration between "<<p.first<<" and "<<p.second<<", result is\n"
      <<result<<"\n ground truth between "<<p.first<<" and "<<p.second<<" is \n"
-     <<gt_poses[p.first].inverse() * gt_poses[p.second]<<"\n\n";
+     <<gt_poses[p.first].inverse() * gt_poses[p.second]<<"\n";
+    auto gt_pose_curr = (gt_poses[p.first].inverse() * gt_poses[p.second]).cast<float>();
+    Sophus::SE3f gt_sophus(gt_pose_curr.block(0,0,3,3), gt_pose_curr.block(0,3,3,1));
+    Sophus::SE3f result_sophus(result.block(0,0,3,3), result.block(0,3,3,1));
+    f<<"Error wrt gt is "<<(gt_sophus.inverse() * result_sophus).log().norm()<<"\n";
     
 
     time += time_curr;
