@@ -121,7 +121,8 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
 void global_registration_batch(cvo::CvoGPU & cvo_align,
                                const std::vector<std::pair<int, int>> & loop_closures,
                                const std::vector<std::shared_ptr<cvo::CvoPointCloud>> & pcs,
-                               const std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> & gt_poses,                             
+                               const std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> & gt_poses,
+                               const std::string & registration_result_file,
                                std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> & lc_poses_f1_to_f2
                                ) {
 
@@ -135,6 +136,7 @@ void global_registration_batch(cvo::CvoGPU & cvo_align,
   cvo_align.write_params(&init_param);
 
   lc_poses_f1_to_f2.resize(loop_closures.size());
+  std::ofstream f(registration_result_file);
   double time = 0;
   for (int i = 0; i < loop_closures.size(); i++) {
     Eigen::Matrix4f result;
@@ -150,13 +152,18 @@ void global_registration_batch(cvo::CvoGPU & cvo_align,
 	    <<result<<"\n ground truth between "<<p.first<<" and "<<p.second<<" is \n"
 	    <<gt_poses[p.first].inverse() * gt_poses[p.second]<<"\n\n";
 
+    f<<"====================================\nFinish running global registration between "<<p.first<<" and "<<p.second<<", result is\n"
+     <<result<<"\n ground truth between "<<p.first<<" and "<<p.second<<" is \n"
+     <<gt_poses[p.first].inverse() * gt_poses[p.second]<<"\n\n";
+    
+
     time += time_curr;
   }
   init_param.ell_init = ell_init;
   init_param.ell_decay_rate = ell_decay_rate;
   init_param.ell_decay_start = ell_decay_start;
   cvo_align.write_params(&init_param);
-  
+  f.close();
   std::cout<<"Global Registration completes. Time is "<<time<<" seconds\n";
   return; //result.cast<double>();
 }
