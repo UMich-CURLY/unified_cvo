@@ -1,6 +1,6 @@
 %YAML:1.0
 ---
-ell_init_first_frame: 4
+ell_init_first_frame: 8
 ell_init: 0.2 #0.15 
 ell_min: 0.05
 ell_max: 0.9
@@ -43,6 +43,6 @@ multiframe_ell_init: 1.0
 multiframe_ell_min: 0.05
 multiframe_ell_decay_rate:  0.8 
 multiframe_iterations_per_ell: 10
-multiframe_downsample_voxel_size: 2
+multiframe_downsample_voxel_size: 1.0
 multiframe_iterations_per_solve: 20
 multiframe_least_squares_num_threads: 30
