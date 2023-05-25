@@ -37,6 +37,98 @@ extern template class cvo::Voxel<pcl::PointXYZRGB>;
 extern template class cvo::Voxel<pcl::PointXYZI>;
 extern template class cvo::VoxelMap<pcl::PointXYZI>;
 
+
+// Reads a single pose from the input and inserts it into the map. Returns false
+// if there is a duplicate entry.
+bool ReadVertex(std::ifstream* infile,
+                cvo::pgo::MapOfPoses* poses) {
+  int id;
+  cvo::pgo::Pose3d pose;
+  *infile >> id >> pose;
+  // Ensure we don't have duplicate poses.
+  if (poses->find(id) != poses->end()) {
+    std::cerr << "Duplicate vertex with ID: " << id;
+    return false;
+  }
+  (*poses)[id] = pose;
+  return true;
+}
+// Reads the contraints between two vertices in the pose graph
+void ReadConstraint(std::ifstream* infile,
+                    cvo::pgo::VectorOfConstraints* constraints) {
+  cvo::pgo::Constraint3d constraint;
+  *infile >> constraint;
+  constraints->push_back(constraint);
+}
+// Reads a file in the g2o filename format that describes a pose graph
+// problem. The g2o format consists of two entries, vertices and constraints.
+//
+// In 2D, a vertex is defined as follows:
+//
+// VERTEX_SE2 ID x_meters y_meters yaw_radians
+//
+// A constraint is defined as follows:
+//
+// EDGE_SE2 ID_A ID_B A_x_B A_y_B A_yaw_B I_11 I_12 I_13 I_22 I_23 I_33
+//
+// where I_ij is the (i, j)-th entry of the information matrix for the
+// measurement.
+//
+//
+// In 3D, a vertex is defined as follows:
+//
+// VERTEX_SE3:QUAT ID x y z q_x q_y q_z q_w
+//
+// where the quaternion is in Hamilton form.
+// A constraint is defined as follows:
+//
+// EDGE_SE3:QUAT ID_a ID_b x_ab y_ab z_ab q_x_ab q_y_ab q_z_ab q_w_ab I_11 I_12 I_13 ... I_16 I_22 I_23 ... I_26 ... I_66 // NOLINT
+//
+// where I_ij is the (i, j)-th entry of the information matrix for the
+// measurement. Only the upper-triangular part is stored. The measurement order
+// is the delta position followed by the delta orientation.
+bool ReadG2oFile(const std::string& filename,
+                 std::vector<std::pair<int, int>> & loop_closures,
+                 std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>&  lc_poses
+                 ){
+  
+  cvo::pgo::MapOfPoses  poses;
+  cvo::pgo::VectorOfConstraints constraints;
+
+  std::ifstream infile(filename.c_str());
+  if (!infile) {
+    return false;
+  }
+  std::string data_type;
+  while (infile.good()) {
+    // Read whether the type is a node or a constraint.
+    infile >> data_type;
+    if (data_type == cvo::pgo::Pose3d::name()) {
+      if (!ReadVertex(&infile, &poses)) {
+        return false;
+      }
+    } else if (data_type == cvo::pgo::Constraint3d::name()) {
+      ReadConstraint(&infile, &constraints);
+    } else {
+      std::cerr << "Unknown data type: " << data_type;
+      return false;
+    }
+    // Clear any trailing whitespace from the line.
+    infile >> std::ws;
+  }
+
+  for (auto && constrain: constraints ) {
+    int id1 = constrain.id_begin;
+    int id2 = constrain.id_end;
+    loop_closures.push_back(std::make_pair(id1, id2));
+    Eigen::Matrix4f pose = cvo::pgo::pose3d_to_eigen<float, Eigen::ColMajor>(constrain.t_be);
+    lc_poses.push_back(pose);
+  }  
+  return true;
+}
+
+
+
 void parse_lc_file(std::vector<std::pair<int, int>> & loop_closures,
                    const std::string & loop_closure_pairs_file,
                    int start_ind) {
@@ -60,15 +152,19 @@ void parse_lc_file(std::vector<std::pair<int, int>> & loop_closures,
     //char a;
     //std::cin>>a;
   } else {
-	std::cerr<<"loop closure file "<<loop_closure_pairs_file<<" doesn't exist\n";
-	exit(0);
+    std::cerr<<"loop closure file "<<loop_closure_pairs_file<<" doesn't exist\n";
+    exit(0);
   }
 }
+
+
+
 
 void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & tracking_poses,
                               //const Eigen::Matrix4d & T_last_to_first,
                               const std::vector<std::pair<int, int>> & loop_closures,
                               const std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> & lc_poses,
+                              const std::string & lc_constrains_file_before_BA,
                               cvo::aligned_vector<cvo::Mat34d_row> & BA_poses,
                               double cov_scale,
                               int num_neighbors_per_node){
@@ -77,14 +173,18 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
   ceres::Problem problem;
   cvo::pgo::MapOfPoses poses;
   cvo::pgo::VectorOfConstraints constrains;
+  std::ofstream lc_g2o(lc_constrains_file_before_BA);
+
   /// copy from tracking_poses to poses and constrains
   for (int i = 0; i < tracking_poses.size(); i++) {
     cvo::pgo::Pose3d pose = cvo::pgo::pose3d_from_eigen<double, Eigen::ColMajor>(tracking_poses[i]);
     poses.insert(std::make_pair(i, pose));
+    lc_g2o <<cvo::pgo::Pose3d::name()<<" "<<i<<" "<<pose<<"\n";
   }
-  /*
+  
   for (int i = 0; i < tracking_poses.size(); i++) {
-    for (int j = i+1; j < std::min((int)tracking_poses.size(), i+1+num_neighbors_per_node); j++) {
+    //for (int j = i+1; j < std::min((int)tracking_poses.size(), i+1+num_neighbors_per_node); j++) {
+    for (int j = i+1; j < std::min((int)tracking_poses.size(), i+2); j++) {
       Eigen::Matrix4d T_Fi_to_Fj = tracking_poses[i].inverse() * tracking_poses[j];
       cvo::pgo::Pose3d t_be = cvo::pgo::pose3d_from_eigen<double, Eigen::ColMajor>(T_Fi_to_Fj);
       std::cout<<__func__<<": Add constrain from "<<i<<" to "<<j<<"\n";
@@ -92,7 +192,7 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
       constrains.push_back(constrain);
     }
   }
-  */
+  
   
   /// the loop closing pose factors
   for (int i =0 ; i < loop_closures.size(); i++) {
@@ -102,8 +202,10 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
     cvo::pgo::Constraint3d constrain{static_cast<int>(pair.first), static_cast<int>(pair.second),
                                      t_be, information};
     constrains.push_back(constrain);
+    lc_g2o<<cvo::pgo::Constraint3d::name()<<" "<<constrain<<"\n";
     std::cout<<__func__<<": Add constrain from "<<pair.first<<" to "<<pair.second<<"\n";
   }
+  lc_g2o.close();
 
   /// optimization
   cvo::pgo::BuildOptimizationProblem(constrains, &poses, &problem);
@@ -153,8 +255,8 @@ void global_registration_batch(cvo::CvoGPU & cvo_align,
     lc_poses_f1_to_f2[i] = result;
     
     std::cout<<"Finish running global registration between "<<p.first<<" and "<<p.second<<", result is\n"
-	    <<result<<"\n ground truth between "<<p.first<<" and "<<p.second<<" is \n"
-	    <<gt_poses[p.first].inverse() * gt_poses[p.second]<<"\n\n";
+             <<result<<"\n ground truth between "<<p.first<<" and "<<p.second<<" is \n"
+             <<gt_poses[p.first].inverse() * gt_poses[p.second]<<"\n\n";
 
     f<<"====================================\nFinish running global registration between "<<p.first<<" and "<<p.second<<", result is\n"
      <<result<<"\n ground truth between "<<p.first<<" and "<<p.second<<" is \n"
@@ -257,24 +359,24 @@ std::shared_ptr<cvo::CvoPointCloud> downsample_lidar_points(bool is_edge_only,
                                                             float leaf_size) {
 
   /*
-  int expected_points = 5000;
-  double intensity_bound = 0.4;
-  double depth_bound = 4.0;
-  double distance_bound = 40.0;
+    int expected_points = 5000;
+    double intensity_bound = 0.4;
+    double depth_bound = 4.0;
+    double distance_bound = 40.0;
   
-  LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
+    LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
 
-  // running edge detection + lego loam point selection
-  pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
-  pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
-  std::vector<int> selected_edge_inds, selected_loam_inds;
-  lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_edge_inds);
+    // running edge detection + lego loam point selection
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
+    std::vector<int> selected_edge_inds, selected_loam_inds;
+    lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_edge_inds);
   
-  lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface, selected_loam_inds);    
-  //*pc_out += *pc_out_edge;
-  //*pc_out += *pc_out_surface;
-  //
-  num_points_ = selected_indexes.size();
+    lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface, selected_loam_inds);    
+    // *pc_out += *pc_out_edge;
+    // *pc_out += *pc_out_surface;
+    //
+    num_points_ = selected_indexes.size();
   */
 
   cvo::VoxelMap<pcl::PointXYZI> full_voxel(leaf_size);
@@ -364,7 +466,7 @@ int main(int argc, char** argv) {
   string cvo_param_file(argv[2]);    
   int num_neighbors_per_node = std::stoi(argv[3]); // forward neighbors
   std::string tracking_traj_file(argv[4]);
-  std::string loop_closure_pairs_file(argv[5]);
+  std::string loop_closure_input_file(argv[5]);
   std::string BA_traj_file(argv[6]);
   int is_edge_only = std::stoi(argv[7]);
   std::cout<<"is edge only is "<<is_edge_only<<"\n";
@@ -375,6 +477,7 @@ int main(int argc, char** argv) {
   double cov_scale = std::stod(argv[10]);
   int skipped_frames = std::stoi(argv[11]);
   int is_pgo_only = std::stoi(argv[12]);
+  int is_read_loop_closure_poses_from_file = std::stoi(argv[13]);
   
   int last_ind = std::min(max_last_ind+1, kitti.get_total_number());
   std::cout<<"actual last ind is "<<last_ind<<"\n";
@@ -407,14 +510,6 @@ int main(int argc, char** argv) {
                                    tracking_poses);
   std::cout<<"init tracking pose size is "<<tracking_poses.size()<<"\n";
   assert(gt_poses.size() == tracking_poses.size());
-  //Eigen::Matrix4d identity = Eigen::Matrix4d::Identity();
- 
-  
-  
-  //for (int i = 0; i < tracking_poses.size(); i++)  {
-  //  BA_poses[i].block(0,0,3,4) = tracking_poses[i].block(0,0,3,4); 
-  //}
-  
   
   // read point cloud
   std::vector<cvo::CvoFrame::Ptr> frames;
@@ -438,20 +533,25 @@ int main(int argc, char** argv) {
 
   /// global registration
   std::vector<std::pair<int, int>> loop_closures;
-  parse_lc_file(loop_closures, loop_closure_pairs_file, start_ind);
-
-  std::string g_reg_f("global.txt");
   std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> lc_poses;
-  global_registration_batch(cvo_align,
-                            loop_closures,
-                            pcs,
-			    gt_poses,
-			    g_reg_f,
-                            lc_poses);
+  if (is_read_loop_closure_poses_from_file) {
+    ReadG2oFile(loop_closure_input_file, loop_closures, lc_poses) ;
+  } else {
+    std::string g_reg_f("global.txt");    
+    parse_lc_file(loop_closures, loop_closure_input_file, start_ind);    
+    global_registration_batch(cvo_align,
+                              loop_closures,
+                              pcs,
+                              gt_poses,
+                              g_reg_f,
+                              lc_poses);
+  }
+  
 
   /// pose graph optimization
+  std::string lc_g2o("loop_closures.g2o");
   pose_graph_optimization(tracking_poses, loop_closures,
-                          lc_poses,
+                          lc_poses, lc_g2o,
                           BA_poses, cov_scale, num_neighbors_per_node);
   std::string pgo_fname("pgo.txt");
   cvo::write_traj_file<double, 3, Eigen::RowMajor>(pgo_fname, BA_poses);

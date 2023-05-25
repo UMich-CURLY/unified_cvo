@@ -45,8 +45,8 @@ namespace cvo {
     Eigen::Matrix<T, 4,4, major> pose3d_to_eigen(const Pose3d & pose) {
 
       typename Eigen::Matrix<T, 4,4, major> mat;
-      mat.block(0,0,3,3) = pose.q.toRotationMatrix();
-      mat.block(0,3,3,1) = pose.p;
+      mat.block(0,0,3,3) = pose.q.toRotationMatrix().cast<T>();
+      mat.block(0,3,3,1) = pose.p.cast<T>();
       return mat;
     }
     
@@ -60,6 +60,23 @@ namespace cvo {
       pose.q.normalize();
       return input;
     }
+
+    inline std::ostream& operator<<(std::ostream& output, Pose3d& pose) {
+      pose.q.normalize();
+      output //<<Pose3d::name()<<" "
+             <<pose.p.x()<<" "
+             <<pose.p.y()<<" "
+             <<pose.p.z()<<" "
+             <<pose.q.x()<<" "
+             << pose.q.y()<<" "
+             <<pose.q.z()<<" "
+             << pose.q.w();
+      // Normalize the quaternion to account for precision loss due to
+      // serialization.
+
+      return output;
+    }
+    
 
     using MapOfPoses =
       std::map<int,
@@ -103,9 +120,24 @@ namespace cvo {
       return input;
     }
 
-    using VectorOfConstraints =
-      std::vector<Constraint3d, Eigen::aligned_allocator<Constraint3d>>;
+    inline std::ostream& operator<<(std::ostream& output, Constraint3d& constraint) {
+      Pose3d& t_be = constraint.t_be;
+      output << constraint.id_begin<<" "
+             << constraint.id_end<<" "
+             << t_be<<" ";
 
+      for (int i = 0; i < 6; ++i) {
+        for (int j = i; j < 6; ++j) {
+      output << constraint.information(i, j) << " ";
+        }
+      }
+      return output;
+    }
+    
+
+    using VectorOfConstraints = std::vector<Constraint3d, Eigen::aligned_allocator<Constraint3d>>;
+      
+      
 
     // Computes the error term for two poses that have a relative pose measurement
     // between them. Let the hat variables be the measurement. We have two poses x_a
