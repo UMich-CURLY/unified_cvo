@@ -184,7 +184,7 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
   
   for (int i = 0; i < tracking_poses.size(); i++) {
     //for (int j = i+1; j < std::min((int)tracking_poses.size(), i+1+num_neighbors_per_node); j++) {
-    for (int j = i+1; j < i+2; j++) {
+    for (int j = i+1; j < std::min((int)tracking_poses.size(), i+2); j++) {
       Eigen::Matrix4d T_Fi_to_Fj = tracking_poses[i].inverse() * tracking_poses[j];
       cvo::pgo::Pose3d t_be = cvo::pgo::pose3d_from_eigen<double, Eigen::ColMajor>(T_Fi_to_Fj);
       std::cout<<__func__<<": Add constrain from "<<i<<" to "<<j<<"\n";
