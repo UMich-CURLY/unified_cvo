@@ -320,10 +320,11 @@ void construct_loop_BA_problem(cvo::CvoGPU & cvo_align,
   std::list<cvo::BinaryState::Ptr> edge_states;
   cvo::BinaryCommutativeMap<int> added_edges;
   //std::list<cvo::BinaryState::Ptr> edge_states_cpu;
+
   for (int i = 0; i < frames.size(); i++) {
     for (int j = i+1; j < std::min((int)frames.size(), i+1+num_neighbors_per_node); j++) {
 
-      std::cout<<"first ind "<<i<<", second ind "<<j<<std::endl;
+
       std::pair<cvo::CvoFrame::Ptr, cvo::CvoFrame::Ptr> p(frames[i], frames[j]);
       edges.push_back(p);
     
@@ -337,6 +338,8 @@ void construct_loop_BA_problem(cvo::CvoGPU & cvo_align,
                                                                   ));
       edge_states.push_back((edge_state));
       added_edges.insert(i, j, 1);
+
+      std::cout<<"Added edge between ind "<<i<<" and  ind "<<j<<" with edge ptr "<<edge_state.get()<<std::endl;      
     }
 
   }
@@ -353,7 +356,6 @@ void construct_loop_BA_problem(cvo::CvoGPU & cvo_align,
 	continue;
       if (added_edges.exists(id1, id2))
         continue;
-      std::cout<<"BA: Adding loop closure edge between "<<id1<<" and "<<id2<<"\n"; 
       cvo::BinaryStateGPU::Ptr edge_state(new cvo::BinaryStateGPU(std::dynamic_pointer_cast<cvo::CvoFrameGPU>(frames[id1]),
                                                                   std::dynamic_pointer_cast<cvo::CvoFrameGPU>(frames[id2]),
                                                                   &params,
@@ -363,6 +365,7 @@ void construct_loop_BA_problem(cvo::CvoGPU & cvo_align,
                                                                   ));
       edge_states.push_back(edge_state);
       added_edges.insert(id1, id2, 1);
+      std::cout<<"Added edge between ind "<<id1<<" and  ind "<<id2<<" with edge ptr "<<edge_state.get()<<std::endl;      
     }
   }
   
@@ -592,7 +595,7 @@ int main(int argc, char** argv) {
   
   //std::cout<<"global registration result is \n"<<T_last_to_first<<"\n";
   //std::cout<<"groundtruth result is \n"<<gt_poses.back().inverse()*gt_poses[0]<<"\n";
-  
+
 
   if (is_pgo_only) return 0;
 

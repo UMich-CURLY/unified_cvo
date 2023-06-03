@@ -61,7 +61,7 @@ void gpu_last_error_check(const char* const file, const int line)
 }
 #endif
 */
-#define GpuErrorCheck(ans) { gpu_assert((ans), __FILE__, __LINE__); }
+#define gpuErrorCheck(ans) { gpu_assert((ans), __FILE__, __LINE__); }
 inline void gpu_assert(cudaError_t code, const char *file, int line, bool abort=true)
 {
   if (code != cudaSuccess)

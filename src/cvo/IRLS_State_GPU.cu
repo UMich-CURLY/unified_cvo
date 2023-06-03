@@ -137,6 +137,13 @@ namespace cvo {
       for (int k = 0; k < num_neighbors_; k++) std::cout<<inds_device_vec[k]<<", ";
       std::cout<<"\n";
       */
+      cudaDeviceSynchronize();    
+      cudaError_t err = cudaGetLastError();
+      if (err != cudaSuccess) { 
+        fprintf(stderr, "IRLS_State_GPU.cu: fill_in_A_mat_gpu: Failed to run fill_in_A_mat_cukdtree %s .\n", cudaGetErrorString(err)); 
+        exit(EXIT_FAILURE); 
+      }
+      
     }
     compute_nonzeros(&A_host_);
     std::cout<<"Nonzeros is "<<A_host_.nonzero_sum<<"\n";
@@ -153,6 +160,7 @@ namespace cvo {
       //}
       
       // Eigen::Map<Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>
+      std::cout<<"Edge state ptr "<<this<<" is zero\n";
 	std::cout<<"T1:\n "<<Eigen::Map<Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>(frame1_->pose_vec)<<"\n";
 	std::cout<<"T2:\n "<<Eigen::Map<Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>(frame2_->pose_vec)<<"\n";
 	//std::cout<<"f1 #: "<<frame1_->points_transformed_gpu()->points[0].getVector3fMap()<<"\n";
