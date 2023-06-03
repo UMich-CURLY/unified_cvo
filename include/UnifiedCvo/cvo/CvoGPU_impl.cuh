@@ -69,10 +69,20 @@ inline void gpu_assert(cudaError_t code, const char *file, int line, bool abort=
     fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
     if (abort) exit(code);
   }
-  
 }
 
 namespace cvo {
+
+
+  inline
+  __host__ cudaError_t cudaMemGetInfoPrint (const std::string & prefix )  {
+    size_t free,  total;
+    auto err = cudaMemGetInfo(&free, &total);
+    std::cout<<prefix<<": Free Cuda mem is "<<free<<", total gpu mem is "<<total<<"\n";
+    return err;
+  }
+
+  
   //const int CUDA_BLOCK_SIZE = 1024 ;//128;
   CvoPointCloudGPU::SharedPtr CvoPointCloud_to_gpu(const CvoPointCloud& cvo_cloud );
   CvoPointCloudGPU::SharedPtr pcl_PointCloud_to_gpu(const pcl::PointCloud<CvoPoint> & cvo_cloud );

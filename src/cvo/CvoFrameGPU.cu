@@ -58,7 +58,7 @@ namespace cvo {
       //kdtree_inds_results.resize(cvo_params.is_using_kdtree * num_fixed);
     }
     
-    
+    cudaMemGetInfoPrint(__func__);    
   }
   
   CvoFrameGPU::~CvoFrameGPU() {
@@ -144,6 +144,7 @@ namespace cvo {
                                 pose_vec_gpu_,
                                 false
                                 );
+    cudaMemGetInfoPrint(__func__);    
     
   }
 

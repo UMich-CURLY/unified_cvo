@@ -47,6 +47,7 @@ namespace cvo {
       typename Eigen::Matrix<T, 4,4, major> mat;
       mat.block(0,0,3,3) = pose.q.toRotationMatrix().cast<T>();
       mat.block(0,3,3,1) = pose.p.cast<T>();
+      mat.block(3,0,1,4) << 0,0,0,1;
       return mat;
     }
     
