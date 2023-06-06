@@ -39,6 +39,8 @@ namespace cvo {
     }
 
     iter_ = 0;
+    
+    cudaMemGetInfoPrint(__func__);
 
   }
 
@@ -135,14 +137,43 @@ namespace cvo {
       for (int k = 0; k < num_neighbors_; k++) std::cout<<inds_device_vec[k]<<", ";
       std::cout<<"\n";
       */
+      cudaDeviceSynchronize();    
+      cudaError_t err = cudaGetLastError();
+      if (err != cudaSuccess) { 
+        fprintf(stderr, "IRLS_State_GPU.cu: fill_in_A_mat_gpu: Failed to run fill_in_A_mat_cukdtree %s .\n", cudaGetErrorString(err)); 
+        exit(EXIT_FAILURE); 
+      }
+      
     }
     compute_nonzeros(&A_host_);
     std::cout<<"Nonzeros is "<<A_host_.nonzero_sum<<"\n";
+    if (A_host_.nonzero_sum == 0) {
+      cvo::Mat44d_row T1_ = cvo::Mat44d_row::Identity();
+      cvo::Mat44d_row T2_ = cvo::Mat44d_row::Identity();
+      T1_.block(0,0,3,4) = Eigen::Map<Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>(frame1_->pose_vec);
+      T2_.block(0,0,3,4) = Eigen::Map<Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>(frame2_->pose_vec);
+
+      //Sophus::SE3d T1_s(T1_.block(0,0,3,3), T1_.block(0,3,3,1));
+      //Sophus::SE3d T2_s(T2_.block(0,0,3,3), T2_.block(0,3,3,1));
+      //if ((T1_s.inverse() * T2_s).log().norm() < 3  ) {
+        
+      //}
+      
+      // Eigen::Map<Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>
+      std::cout<<"Edge state ptr "<<this<<" is zero\n";
+	std::cout<<"T1:\n "<<Eigen::Map<Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>(frame1_->pose_vec)<<"\n";
+	std::cout<<"T2:\n "<<Eigen::Map<Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>(frame2_->pose_vec)<<"\n";
+	//std::cout<<"f1 #: "<<frame1_->points_transformed_gpu()->points[0].getVector3fMap()<<"\n";
+	//std::cout<<"f2 #: "<<frame2_->points_transformed_gpu()->points[0].getVector3fMap()<<"\n";
+    }
 
     copy_internal_SparseKernelMat_gpu_to_cpu(&A_host_, &A_result_cpu_,
                                              num_neighbors_);
 
     iter_++;
+    
+    cudaMemGetInfoPrint(__func__);    
+    
     return A_result_cpu_.nonzero_sum;;
     //if (ip_mat_.nonZeros() < 100) {
     //  std::cout<<"too sparse inner product mat "<<ip_mat_.nonZeros()<<std::endl;

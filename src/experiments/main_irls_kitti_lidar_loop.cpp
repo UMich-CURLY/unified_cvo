@@ -38,6 +38,30 @@ extern template class cvo::Voxel<pcl::PointXYZI>;
 extern template class cvo::VoxelMap<pcl::PointXYZI>;
 
 
+void  log_lc_pc_pairs( const cvo::aligned_vector<cvo::Mat34d_row> &BA_poses,
+                       const std::vector<std::pair<int, int>> &loop_closures,
+                       const std::vector<std::shared_ptr<cvo::CvoPointCloud>>& pcs,
+                       std::string &fname_prefix) {
+  
+  for (int i = 0; i < loop_closures.size(); i++) {
+    int id1 = loop_closures[i].first;
+    int id2 = loop_closures[i].second;
+    cvo::CvoPointCloud pc1_T, pc2_T;
+    Eigen::Matrix4f pose1 = Eigen::Matrix4f::Identity();
+    pose1.block(0,0,3,4) = BA_poses[id1].cast<float>();
+    Eigen::Matrix4f pose2 = Eigen::Matrix4f::Identity();
+    pose2.block(0,0,3,4) = BA_poses[id2].cast<float>();
+    
+    cvo::CvoPointCloud::transform(pose1, *pcs[id1], pc1_T);
+    cvo::CvoPointCloud::transform(pose2, *pcs[id2], pc2_T);
+
+    cvo::CvoPointCloud pc;
+    pc = pc1_T + pc2_T;
+    pc.write_to_intensity_pcd(fname_prefix + std::to_string(id1)+"_"+std::to_string(id2)+".pcd");
+  }
+}
+
+
 // Reads a single pose from the input and inserts it into the map. Returns false
 // if there is a duplicate entry.
 bool ReadVertex(std::ifstream* infile,
@@ -50,6 +74,7 @@ bool ReadVertex(std::ifstream* infile,
     std::cerr << "Duplicate vertex with ID: " << id;
     return false;
   }
+  std::cout<<"Read pose "<<id<<"\n";
   (*poses)[id] = pose;
   return true;
 }
@@ -58,6 +83,7 @@ void ReadConstraint(std::ifstream* infile,
                     cvo::pgo::VectorOfConstraints* constraints) {
   cvo::pgo::Constraint3d constraint;
   *infile >> constraint;
+  std::cout<<"Read constrain: "<<constraint<<"\n";
   constraints->push_back(constraint);
 }
 // Reads a file in the g2o filename format that describes a pose graph
@@ -117,12 +143,15 @@ bool ReadG2oFile(const std::string& filename,
     infile >> std::ws;
   }
 
+  
+  std::cout<<__func__<<"Read from file, # of lc constrains is  "<<constraints.size()<<"\n";
   for (auto && constrain: constraints ) {
     int id1 = constrain.id_begin;
     int id2 = constrain.id_end;
     loop_closures.push_back(std::make_pair(id1, id2));
     Eigen::Matrix4f pose = cvo::pgo::pose3d_to_eigen<float, Eigen::ColMajor>(constrain.t_be);
     lc_poses.push_back(pose);
+    std::cout<<__func__<<"Read from file, loop closure constrain between "<<id1<<" and "<<id2<<" is \n"<<pose<<"\n";
   }  
   return true;
 }
@@ -195,6 +224,7 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
   
   
   /// the loop closing pose factors
+  std::cout<<__func__<<"Loop closure number is "<<loop_closures.size()<<"\n"; 
   for (int i =0 ; i < loop_closures.size(); i++) {
     Eigen::Matrix4d T_f1_to_f2 = lc_poses[i].cast<double>();
     cvo::pgo::Pose3d t_be = cvo::pgo::pose3d_from_eigen<double, Eigen::ColMajor>(T_f1_to_f2);
@@ -290,10 +320,11 @@ void construct_loop_BA_problem(cvo::CvoGPU & cvo_align,
   std::list<cvo::BinaryState::Ptr> edge_states;
   cvo::BinaryCommutativeMap<int> added_edges;
   //std::list<cvo::BinaryState::Ptr> edge_states_cpu;
+
   for (int i = 0; i < frames.size(); i++) {
     for (int j = i+1; j < std::min((int)frames.size(), i+1+num_neighbors_per_node); j++) {
 
-      std::cout<<"first ind "<<i<<", second ind "<<j<<std::endl;
+
       std::pair<cvo::CvoFrame::Ptr, cvo::CvoFrame::Ptr> p(frames[i], frames[j]);
       edges.push_back(p);
     
@@ -307,6 +338,8 @@ void construct_loop_BA_problem(cvo::CvoGPU & cvo_align,
                                                                   ));
       edge_states.push_back((edge_state));
       added_edges.insert(i, j, 1);
+
+      std::cout<<"Added edge between ind "<<i<<" and  ind "<<j<<" with edge ptr "<<edge_state.get()<<std::endl;      
     }
 
   }
@@ -323,16 +356,16 @@ void construct_loop_BA_problem(cvo::CvoGPU & cvo_align,
 	continue;
       if (added_edges.exists(id1, id2))
         continue;
-      std::cout<<"BA: Adding edge between "<<id1<<" and "<<id2<<"\n"; 
       cvo::BinaryStateGPU::Ptr edge_state(new cvo::BinaryStateGPU(std::dynamic_pointer_cast<cvo::CvoFrameGPU>(frames[id1]),
                                                                   std::dynamic_pointer_cast<cvo::CvoFrameGPU>(frames[id2]),
                                                                   &params,
                                                                   cvo_align.get_params_gpu(),
                                                                   params.multiframe_num_neighbors,
-                                                                  params.multiframe_ell_init
+                                                                  params.multiframe_ell_init * 4 
                                                                   ));
       edge_states.push_back(edge_state);
       added_edges.insert(id1, id2, 1);
+      std::cout<<"Added edge between ind "<<id1<<" and  ind "<<id2<<" with edge ptr "<<edge_state.get()<<std::endl;      
     }
   }
   
@@ -550,15 +583,19 @@ int main(int argc, char** argv) {
 
   /// pose graph optimization
   std::string lc_g2o("loop_closures.g2o");
+  std::cout<<"Start PGO...\n";
   pose_graph_optimization(tracking_poses, loop_closures,
                           lc_poses, lc_g2o,
                           BA_poses, cov_scale, num_neighbors_per_node);
+  std::cout<<"Finish PGO...\n";  
   std::string pgo_fname("pgo.txt");
   cvo::write_traj_file<double, 3, Eigen::RowMajor>(pgo_fname, BA_poses);
+  std::string lc_prefix(("loop_closure_"));
+  log_lc_pc_pairs(BA_poses, loop_closures, pcs, lc_prefix);
   
   //std::cout<<"global registration result is \n"<<T_last_to_first<<"\n";
   //std::cout<<"groundtruth result is \n"<<gt_poses.back().inverse()*gt_poses[0]<<"\n";
-  
+
 
   if (is_pgo_only) return 0;
 
