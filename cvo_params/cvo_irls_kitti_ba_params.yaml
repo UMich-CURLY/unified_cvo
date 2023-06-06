@@ -38,7 +38,7 @@ is_using_cpu: 1
 
 # for irls solver
 multiframe_using_cpu: 0
-multiframe_max_iters: 2 #1999
+multiframe_max_iters: 1999
 multiframe_ell_init: 2.0
 multiframe_ell_min: 0.05
 multiframe_ell_decay_rate:  0.8 
