@@ -29,7 +29,8 @@ clear
         #gdb -ex run --args \
         #./build/bin/cvo_irls_lidar_loop $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 2 $folder/tracking_full.txt $lc_file  ba.txt 0 0 1000000 2.0 0 0 0 # > log_tartan_rgbd_${difficulty}_${i}.txt
         #gdb -ex run --args \
-        ./build/bin/cvo_irls_lidar_loop $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 2 $folder/tracking_full.txt $lc_file  ba.txt 0 0 1000000 0.5 0 0 1  > log_kitti_loop_${i}.txt
+        ./build/bin/cvo_irls_lidar_loop $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 1 $folder/tracking_full.txt $lc_file  ba.txt 0 0 1000000 1.0 0.1  0 0 1  > log_kitti_loop_${i}.txt
+	
         mv *.pcd $folder/
         mv pgo.txt global.txt loop_closures.g2o tracking.txt ba.txt err_wrt_iters_*.txt groundtruth.txt $folder/
         cp ${dataset_folder}/poses.txt $folder/

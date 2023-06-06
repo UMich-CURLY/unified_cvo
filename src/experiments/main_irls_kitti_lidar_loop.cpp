@@ -195,9 +195,12 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
                               const std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> & lc_poses,
                               const std::string & lc_constrains_file_before_BA,
                               cvo::aligned_vector<cvo::Mat34d_row> & BA_poses,
-                              double cov_scale,
+                              double cov_scale_t,
+			      double cov_scale_r,
                               int num_neighbors_per_node){
-  Eigen::Matrix<double, 6,6> information = Eigen::Matrix<double, 6,6>::Identity() / cov_scale / cov_scale;
+  Eigen::Matrix<double, 6,6> information = Eigen::Matrix<double, 6,6>::Identity(); 
+  information.block(0,0,3,3) = Eigen::Matrix<double, 3,3>::Identity() / cov_scale_t / cov_scale_t;
+  information.block(3,3,3,3) = Eigen::Matrix<double, 3,3>::Identity() / cov_scale_r / cov_scale_r;
   
   ceres::Problem problem;
   cvo::pgo::MapOfPoses poses;
@@ -507,10 +510,11 @@ int main(int argc, char** argv) {
   std::cout<<"input start_ind is  "<<start_ind<<"\n";
   int max_last_ind = std::stoi(argv[9]);
   std::cout<<"input last_ind is  "<<max_last_ind<<"\n";
-  double cov_scale = std::stod(argv[10]);
-  int skipped_frames = std::stoi(argv[11]);
-  int is_pgo_only = std::stoi(argv[12]);
-  int is_read_loop_closure_poses_from_file = std::stoi(argv[13]);
+  double cov_scale_t = std::stod(argv[10]);
+  double cov_scale_r = std::stod(argv[11]);
+  int skipped_frames = std::stoi(argv[12]);
+  int is_pgo_only = std::stoi(argv[13]);
+  int is_read_loop_closure_poses_from_file = std::stoi(argv[14]);
   
   int last_ind = std::min(max_last_ind+1, kitti.get_total_number());
   std::cout<<"actual last ind is "<<last_ind<<"\n";
@@ -543,26 +547,32 @@ int main(int argc, char** argv) {
                                    tracking_poses);
   std::cout<<"init tracking pose size is "<<tracking_poses.size()<<"\n";
   assert(gt_poses.size() == tracking_poses.size());
+  std::string gt_fname("groundtruth.txt");
+  cvo::write_traj_file<double, 4, Eigen::ColMajor>(gt_fname,gt_poses);
+  std::string track_fname("tracking.txt");
+  cvo::write_traj_file<double, 4, Eigen::ColMajor>(track_fname, tracking_poses);
   
   // read point cloud
   std::vector<cvo::CvoFrame::Ptr> frames;
   std::vector<std::shared_ptr<cvo::CvoPointCloud>> pcs;
-  for (int i = 0; i<gt_poses.size(); i++) {
-
-    std::cout<<"new frame "<<i+start_ind<<" out of "<<gt_poses.size() + start_ind<<"\n";
-    
-    kitti.set_start_index(i+start_ind);
-    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_pcl(new pcl::PointCloud<pcl::PointXYZI>);
-    if (-1 == kitti.read_next_lidar(pc_pcl)) 
-      break;
-    
-    float leaf_size = cvo_align.get_params().multiframe_downsample_voxel_size;
-    std::shared_ptr<cvo::CvoPointCloud> pc = downsample_lidar_points(is_edge_only,
-                                                                     pc_pcl,
+  if (!(is_pgo_only && is_read_loop_closure_poses_from_file)) {
+    for (int i = 0; i<gt_poses.size(); i++) {
+      
+      std::cout<<"new frame "<<i+start_ind<<" out of "<<gt_poses.size() + start_ind<<"\n";
+      
+      kitti.set_start_index(i+start_ind);
+      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_pcl(new pcl::PointCloud<pcl::PointXYZI>);
+      if (-1 == kitti.read_next_lidar(pc_pcl)) 
+        break;
+      
+      float leaf_size = cvo_align.get_params().multiframe_downsample_voxel_size;
+      std::shared_ptr<cvo::CvoPointCloud> pc = downsample_lidar_points(is_edge_only,
+                                                                       pc_pcl,
                                                                      leaf_size);
-    pcs.push_back(pc);
+      pcs.push_back(pc);
+    }
   }
-
+  
 
   /// global registration
   std::vector<std::pair<int, int>> loop_closures;
@@ -586,12 +596,14 @@ int main(int argc, char** argv) {
   std::cout<<"Start PGO...\n";
   pose_graph_optimization(tracking_poses, loop_closures,
                           lc_poses, lc_g2o,
-                          BA_poses, cov_scale, num_neighbors_per_node);
+                          BA_poses, 
+			  cov_scale_t, cov_scale_r, num_neighbors_per_node);
   std::cout<<"Finish PGO...\n";  
   std::string pgo_fname("pgo.txt");
   cvo::write_traj_file<double, 3, Eigen::RowMajor>(pgo_fname, BA_poses);
   std::string lc_prefix(("loop_closure_"));
-  log_lc_pc_pairs(BA_poses, loop_closures, pcs, lc_prefix);
+  if (pcs.size())
+    log_lc_pc_pairs(BA_poses, loop_closures, pcs, lc_prefix);
   
   //std::cout<<"global registration result is \n"<<T_last_to_first<<"\n";
   //std::cout<<"groundtruth result is \n"<<gt_poses.back().inverse()*gt_poses[0]<<"\n";
@@ -621,9 +633,5 @@ int main(int argc, char** argv) {
   write_transformed_pc(frames, f_name,0, frames.size()-1);
   std::cout<<"Write traj to file\n";
   write_traj_file(BA_traj_file,frames);
-  std::string gt_fname("groundtruth.txt");
-  cvo::write_traj_file<double, 4, Eigen::ColMajor>(gt_fname,gt_poses);
-  std::string track_fname("tracking.txt");
-  cvo::write_traj_file<double, 4, Eigen::ColMajor>(track_fname, tracking_poses);
   return 0;
 }
