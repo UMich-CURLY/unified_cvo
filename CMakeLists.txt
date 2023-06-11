@@ -76,8 +76,8 @@ add_definitions(-DOPENMP)
 #)
 
 find_package(CUDA)
-set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_61,code=sm_61  -gencode arch=compute_52,code=sm_52 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_86,code=sm_86 "  )
-#set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_86,code=sm_86 "  )
+#set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_61,code=sm_61  -gencode arch=compute_52,code=sm_52 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_86,code=sm_86 "  )
+set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_86,code=sm_86  -gencode arch=compute_75,code=sm_75 "  )
 foreach(flag IN LISTS " -use_fast_math -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -fPIC"  )
   add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${flag}>")
 endforeach()
@@ -468,20 +468,14 @@ set_target_properties(cvo_gpu_img PROPERTIES
   CUDA_SEPERABLE_COMPILATION ON
   COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 
-add_library(cvo_gpu_rgb_lib SHARED ${CVO_GPU_SOURCE})
-add_dependencies(cvo_gpu_rgb_lib cvo_utils_lib lie_group_utils)
-target_link_libraries(cvo_gpu_rgb_lib PRIVATE lie_group_utils cvo_utils_lib yaml-cpp  Ceres::ceres )
-#target_compile_definitions(cvo_gpu_img ${PCL_DEFINITIONS})   
-#set_target_properties(cvo_gpu_img PROPERTIES PUBLIC_HEADER "${CVO_PUBLIC_HEADERS}")
-target_include_directories(cvo_gpu_rgb_lib PUBLIC
-  #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/UnifiedCvo>
+add_library(cvo_gpu_rgb SHARED ${CVO_GPU_SOURCE})
+add_dependencies(cvo_gpu_rgb cvo_utils_lib lie_group_utils)
+target_link_libraries(cvo_gpu_rgb PRIVATE lie_group_utils cvo_utils_lib yaml-cpp  Ceres::ceres )
+target_include_directories(cvo_gpu_rgb PUBLIC
   "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"        
-  #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include> 
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_compile_definitions(cvo_gpu_rgb_lib PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=3 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=256
-#  ${PCL_DEFINITIONS}
-)
-set_target_properties(cvo_gpu_rgb_lib PROPERTIES
+target_compile_definitions(cvo_gpu_rgb PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=3 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=256)
+set_target_properties(cvo_gpu_rgb PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   CUDA_SEPERABLE_COMPILATION ON
   COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
@@ -600,7 +594,7 @@ target_include_directories(cvo_align_gpu_two_pcd PUBLIC
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-      target_link_libraries(cvo_align_gpu_two_pcd cvo_gpu_rgb_lib cvo_utils_lib boost_filesystem boost_system pcl_io pcl_common)
+      target_link_libraries(cvo_align_gpu_two_pcd cvo_gpu_rgb cvo_utils_lib boost_filesystem boost_system pcl_io pcl_common)
 
 add_executable(kitti_depth_filtering ${PROJECT_SOURCE_DIR}/src/experiments/main_depth_filtering.cpp)
 target_include_directories(kitti_depth_filtering PUBLIC
@@ -617,7 +611,7 @@ target_include_directories(cvo_align_gpu_two_color_pcd PUBLIC
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_link_libraries(cvo_align_gpu_two_color_pcd cvo_gpu_rgb_lib cvo_utils_lib boost_filesystem boost_system pcl_io pcl_common)
+target_link_libraries(cvo_align_gpu_two_color_pcd cvo_gpu_rgb cvo_utils_lib boost_filesystem boost_system pcl_io pcl_common)
 
 
 add_executable(cvo_irls_tum ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_tum.cpp)
@@ -737,13 +731,27 @@ endif()
 
 
 if (${PROJECT_NAME}_ENABLE_LIDAR)
-  add_executable(cvo_align_gpu_lidar_raw ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_geometric.cpp)
-  target_include_directories(cvo_align_gpu_lidar_raw PUBLIC
+  add_executable(cvo_align_gpu_lidar_geometric ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_geometric.cpp)
+  target_include_directories(cvo_align_gpu_lidar_geometric PUBLIC
 	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_link_libraries(cvo_align_gpu_lidar_raw cvo_gpu_lidar kitti cvo_utils_lib boost_filesystem boost_system)
+target_link_libraries(cvo_align_gpu_lidar_geometric cvo_gpu_lidar kitti cvo_utils_lib boost_filesystem boost_system)
+
+add_executable(cvo_align_gpu_lidar_intensity ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_intensity.cpp)
+  target_include_directories(cvo_align_gpu_lidar_intensity PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_align_gpu_lidar_intensity cvo_gpu_lidar kitti cvo_utils_lib boost_filesystem boost_system)
+
+#add_executable(cvo_align_gpu_lidar_semantic ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_lidar_raw_semantic.cpp)
+#target_include_directories(cvo_align_gpu_lidar_semantic PUBLIC
+#  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+#  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+#target_link_libraries(cvo_align_gpu_lidar_semantic cvo_gpu_lidar kitti cvo_utils_lib boost_filesystem boost_system)
 
 
 add_executable(cvo_irls_lidar_ba ${PROJECT_SOURCE_DIR}/src/experiments/main_irls_kitti_lidar_ba.cpp)
