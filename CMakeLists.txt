@@ -715,7 +715,7 @@ if (${PROJECT_NAME}_ENABLE_QT_VIEWER)
     #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
     "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
     $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-  target_link_libraries(ellipse_viewer cvo_gpu_img cvo_utils_lib boost_filesystem boost_system  pcl_common pcl_io pcl_visualization  pcd_qt_viewer  kitti)
+  target_link_libraries(ellipse_viewer cvo_gpu_img cvo_utils_lib boost_filesystem boost_system  pcl_common pcl_io pcl_visualization  pcd_qt_viewer  kitti pcl_features)
   
   
 endif()

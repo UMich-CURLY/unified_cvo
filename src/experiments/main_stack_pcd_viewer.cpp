@@ -368,7 +368,7 @@ int main(int argc, char** argv) {
         cvo::CvoPointCloud source_cvo(*source_raw, calib, cvo::CvoPointCloud::DSO_EDGES);
         //cvo::CvoPointCloud_to_pcl(source_cvo, *source_pcd);
         source_cvo.export_to_pcd<pcl::PointXYZRGB>(*local_semantic_pc);
-        pcs_local_frame.insert(make_pair(curr_frame_id, local_semantic_pc));
+        pcs_local_frame.insert(std::make_pair(curr_frame_id, local_semantic_pc));
       } 
       cv::Mat tocp;
       cv::resize(images[curr_frame_id], tocp, cv::Size(320, 240));
