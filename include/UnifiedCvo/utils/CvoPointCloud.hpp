@@ -139,7 +139,13 @@ namespace cvo {
     int num_features() const {return feature_dimensions_;}
     int feature_dimensions() const {return feature_dimensions_;}
     int num_geometric_types() const {return num_geometric_types_; }
-    const std::vector<Eigen::Vector3f> & positions() const {return positions_;}
+    const std::vector<Eigen::Vector3f> positions() const {
+      std::vector<Eigen::Vector3f> positions;
+      for(int j = 0; j < num_points_; j++){
+        positions.push_back(Eigen::Vector3f(points_[j].x, points_[j].y, points_[j].z));
+      }
+      return positions;
+    }
     Eigen::Vector3f at(unsigned int index) const;
     const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & labels() const { return labels_;}
     Eigen::VectorXf label_at(unsigned int index) const { return labels_.row(index); }
