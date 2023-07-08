@@ -509,7 +509,7 @@ namespace cvo{
     num_classes_ = raw_image.num_classes();
     num_geometric_types_ = 2;    
     if (num_classes_ )
-      labels_.resize(num_points_, num_classes_);
+//      labels_.resize(num_points_, num_classes_);
     feature_dimensions_ = raw_image.channels() + 2;
 //    for (int i = 0; i < num_points_ ; i++) {
 //      int u = output_uv[good_point_ind[i]].first;
@@ -1065,23 +1065,27 @@ namespace cvo{
     
     // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
     feature_dimensions_ = 1;
-    features_.resize(num_points_, feature_dimensions_);
+//    features_.resize(num_points_, feature_dimensions_);
     //normals_.resize(num_points_,3);
     //types_.resize(num_points_, 2);
-    positions_.resize(num_points_);
+//    positions_.resize(num_points_);
 
 
     
     for (int i = 0; i < num_points_ ; i++) {
-      Vec3f xyz;
+//      Vec3f xyz;
       int idx = selected_indexes[i];
-      xyz << pc->points[idx].x, pc->points[idx].y, pc->points[idx].z;
-      positions_[i] = xyz;
-      features_(i, 0) = pc->points[idx].intensity;
-
+      CvoPoint point(pc->points[idx].x, pc->points[idx].y, pc->points[idx].z);
+//      xyz << pc->points[idx].x, pc->points[idx].y, pc->points[idx].z;
+//      positions_[i] = xyz;
+//      features_(i, 0) = pc->points[idx].intensity;
+      point.features[0] = pc->points[idx].intensity;
+      point.geometric_type[0] = 1.0;
+      point.geometric_type[1] = 0.0;
+      points_.push_back(point);
       // TODO: change geometric_types
-      geometric_types_.push_back(1.0);
-      geometric_types_.push_back(0.0);
+//      geometric_types_.push_back(1.0);
+//      geometric_types_.push_back(0.0);
     }
 
     //#if  defined(IS_USING_COVARIANCE)  && defined(__CUDACC__)
@@ -1152,12 +1156,12 @@ namespace cvo{
     
     // features_ = Eigen::MatrixXf::Zero(num_points_, 1);
     feature_dimensions_ = 1;
-    features_.resize(num_points_, feature_dimensions_);
-    labels_.resize(num_points_, num_classes_);
-    positions_.resize(num_points_);
+//    features_.resize(num_points_, feature_dimensions_);
+//    labels_.resize(num_points_, num_classes_);
+//    positions_.resize(num_points_);
     int actual_ids = 0;
     for (int i = 0; i < num_points_ ; i++) {
-      Vec3f xyz;
+//      Vec3f xyz;
       int idx = selected_indexes[i];
 
       if (semantic_out[i] == -1)
@@ -1165,26 +1169,30 @@ namespace cvo{
 
       // std::cout<<"pc_out (x,y,z,i)=("<<pc_out->points[i].x<<","<<pc_out->points[i].y<<","<<pc_out->points[i].z<<","<<pc_out->points[i].intensity<<"; output pointcloud (index,x,y,z,i)=("<<idx<<", "<<pc->points[idx].x<<","<<pc->points[idx].y<<","<<pc->points[idx].z<<","<<pc->points[idx].intensity<<")"<<std::endl;
       
-      xyz << pc->points[idx].x, pc->points[idx].y, pc->points[idx].z;
-      positions_[actual_ids] = (xyz);
-      features_(actual_ids, 0) = pc->points[idx].intensity;
+//      xyz << pc->points[idx].x, pc->points[idx].y, pc->points[idx].z;
+//      positions_[actual_ids] = (xyz);
+//      features_(actual_ids, 0) = pc->points[idx].intensity;
+      CvoPoint point(pc->points[idx].x, pc->points[idx].y, pc->points[idx].z);
+      point.features[0] = pc->points[idx].intensity;
+      point.geometric_type[0] = 1.0;
+      point.geometric_type[1] = 0.0;
+
 
       // add one-hot semantic labels
       VecXf_row one_hot_label;
       one_hot_label = VecXf_row::Zero(1,num_classes_);
       one_hot_label[semantic_out[i]] = 1;
-
-      labels_.row(actual_ids) = one_hot_label;
-      int max_class = 0;
-      labels_.row(actual_ids).maxCoeff(&max_class);
+//      labels_.row(actual_ids) = one_hot_label;
+//      int max_class = 0;
+//      labels_.row(actual_ids).maxCoeff(&max_class);
 
       // TODO: change geometric_types
-      geometric_types_.push_back(1.0);
-      geometric_types_.push_back(0.0);
-      
-
+//      geometric_types_.push_back(1.0);
+//      geometric_types_.push_back(0.0);
+//
+//
       actual_ids ++;
-
+      points_.push_back(point);
 
     }
     std::cout<<"Construct Cvo PointCloud, num of points is "<<num_points_<<" from "<<pc->size()<<" input points "<<std::endl;
@@ -1213,51 +1221,52 @@ namespace cvo{
     
   }
 
-  int CvoPointCloud::read_cvo_pointcloud_from_file(const std::string & filename) {
-    std::ifstream infile(filename);
-    if (infile.is_open()) {
-      infile>> num_points_;
-      infile >> feature_dimensions_;
-      infile>> num_classes_;
-      positions_.clear();
-      positions_.resize(num_points_);
-      features_.resize(num_points_, feature_dimensions_);
-      if (num_classes_)
-        labels_.resize(num_points_, num_classes_ );
-      for (int i = 0; i < num_points_; i++) {
-        float u, v;
-        infile >> u >>v;
-        float idepth;
-        infile >> idepth;
-        for (int j = 0; j < feature_dimensions_ ; j++)
-          infile >> features_(i, j);
-        //features_(i,0) = features_(i,0) / 255.0;
-        //features_(i,1) = features_(i,1) / 255.0;
-        //features_(i,2) = features_(i,2) / 255.0;
-        //features_(i,3) = features_(i,3) / 500.0 + 0.5;
-        //features_(i,4) = features_(i,4) / 500.0 + 0.5;
-        
-        for (int j = 0; j < 3; j++)
-          infile >> positions_[i]( j);
-        for (int j = 0; j < num_classes_; j++)
-          infile >> labels_(i, j);
-      }
-      infile.close();
-      /*
-        std::cout<<"Read pointcloud with "<<num_points_<<" points in "<<num_classes_<<" classes. \n The first point is ";
-        std::cout<<" xyz: "<<positions_[0].transpose()<<", rgb_dxdy is "<<features_.row(0) <<"\n";
-        if (num_classes_)
-        std::cout<<" semantics is "<<labels_.row(0)<<std::endl;
-        std::cout<<"The last point is ";
-        std::cout<<" xyz: "<<positions_[num_points_-1].transpose()<<", rgb_dxdy is "<<features_.row(num_points_-1)<<"\n";
-        if (num_classes_)
-        std::cout<<" semantics is "<<labels_.row(num_points_-1)<<std::endl;
-      */
-      return 0;
-    } else
-      return -1;
-    
-  }
+  //TODO: function not used, so not fitting to CvoPoint structure
+//  int CvoPointCloud::read_cvo_pointcloud_from_file(const std::string & filename) {
+//    std::ifstream infile(filename);
+//    if (infile.is_open()) {
+//      infile>> num_points_;
+//      infile >> feature_dimensions_;
+//      infile>> num_classes_;
+//      positions_.clear();
+//      positions_.resize(num_points_);
+//      features_.resize(num_points_, feature_dimensions_);
+//      if (num_classes_)
+//        labels_.resize(num_points_, num_classes_ );
+//      for (int i = 0; i < num_points_; i++) {
+//        float u, v;
+//        infile >> u >>v;
+//        float idepth;
+//        infile >> idepth;
+//        for (int j = 0; j < feature_dimensions_ ; j++)
+//          infile >> features_(i, j);
+//        //features_(i,0) = features_(i,0) / 255.0;
+//        //features_(i,1) = features_(i,1) / 255.0;
+//        //features_(i,2) = features_(i,2) / 255.0;
+//        //features_(i,3) = features_(i,3) / 500.0 + 0.5;
+//        //features_(i,4) = features_(i,4) / 500.0 + 0.5;
+//
+//        for (int j = 0; j < 3; j++)
+//          infile >> positions_[i]( j);
+////        for (int j = 0; j < num_classes_; j++)
+////          infile >> labels_(i, j);
+//      }
+//      infile.close();
+//      /*
+//        std::cout<<"Read pointcloud with "<<num_points_<<" points in "<<num_classes_<<" classes. \n The first point is ";
+//        std::cout<<" xyz: "<<positions_[0].transpose()<<", rgb_dxdy is "<<features_.row(0) <<"\n";
+//        if (num_classes_)
+//        std::cout<<" semantics is "<<labels_.row(0)<<std::endl;
+//        std::cout<<"The last point is ";
+//        std::cout<<" xyz: "<<positions_[num_points_-1].transpose()<<", rgb_dxdy is "<<features_.row(num_points_-1)<<"\n";
+//        if (num_classes_)
+//        std::cout<<" semantics is "<<labels_.row(num_points_-1)<<std::endl;
+//      */
+//      return 0;
+//    } else
+//      return -1;
+//
+//  }
 
 
   template <>
@@ -1384,8 +1393,8 @@ namespace cvo{
       p.z = points_[i].z;
       int l;
       // TODO: fix labels here
-      labels_.row(i).maxCoeff(&l);
-      p.label = (uint32_t) l;
+//      labels_.row(i).maxCoeff(&l);
+//      p.label = (uint32_t) l;
       pc.push_back(p);
     }
     pcl::io::savePCDFileASCII(name ,pc); 
@@ -1403,10 +1412,10 @@ namespace cvo{
             outfile << points_[i].features[j]<<" ";
         }
         //TODO: fix labels here
-        if (num_classes_)
-          for (int j = 0; j < num_classes_; j++) {
-            outfile << labels_(i, j)<<" ";
-          }
+//        if (num_classes_)
+//          for (int j = 0; j < num_classes_; j++) {
+//            outfile << labels_(i, j)<<" ";
+//          }
         outfile << "\n";
         
       }
@@ -1424,7 +1433,8 @@ namespace cvo{
       p.x = points_[i].x;
       p.y = points_[i].y;
       p.z = points_[i].z;
-      p.intensity = features_(i);
+//      p.intensity = features_(i);
+      p.intensity = points_[i].features[0];
       pc.push_back(p);
     }
     pcl::io::savePCDFileASCII(name ,pc);  
@@ -1496,7 +1506,7 @@ namespace cvo{
     }
 
     if (num_classes_)
-      labels_.row(index) = label;
+//      labels_.row(index) = label;
     if (geometry_type.size()) {
 //      geometric_types_[index*2] = (geometry_type(0));
 //      geometric_types_[index*2+1] = (geometry_type(1));
