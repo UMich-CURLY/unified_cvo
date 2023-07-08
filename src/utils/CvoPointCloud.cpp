@@ -563,9 +563,9 @@ namespace cvo{
     feature_dimensions_ = 3;
     num_geometric_types_ = 2;
 
-    positions_.resize(pc.size());
-    features_.resize(num_points_, feature_dimensions_);
-    geometric_types_.resize(num_points_ * num_geometric_types_);
+//    positions_.resize(pc.size());
+//    features_.resize(num_points_, feature_dimensions_);
+//    geometric_types_.resize(num_points_ * num_geometric_types_);
     for (int i = 0; i < num_points_; i++) {
       auto & p = (pc)[i];
       cvo::CvoPoint point(p.x, p.y, p.z);
@@ -594,9 +594,9 @@ namespace cvo{
     num_geometric_types_ = 2;
     feature_dimensions_ = 5;
 
-    positions_.resize(pc.size());
-    features_.resize(num_points_, feature_dimensions_);
-    geometric_types_.resize(num_points_ * 2);
+//    positions_.resize(pc.size());
+//    features_.resize(num_points_, feature_dimensions_);
+//    geometric_types_.resize(num_points_ * 2);
     for (int i = 0; i < num_points_; i++) {
       auto & p = (pc)[i];
       cvo::CvoPoint point(p.x, p.y, p.z);
@@ -630,9 +630,9 @@ namespace cvo{
     feature_dimensions_ = 0;
     num_geometric_types_ = 2;
 
-    positions_.resize(pc.size());
+//    positions_.resize(pc.size());
     //features_.resize(num_points_, feature_dimensions_);
-    geometric_types_.resize(num_points_ * 2);
+//    geometric_types_.resize(num_points_ * 2);
     for (int i = 0; i < pc.size(); i++) {
       auto & p = (pc)[i];
       cvo::CvoPoint point(p.x, p.y, p.z);
@@ -647,19 +647,8 @@ namespace cvo{
     if (index > this->size())
       return;
 
-    positions_[index] = positions_.back();
-    positions_.pop_back();
-
-    features_.row(index) = features_.row(num_points_-1).eval();
-    features_.conservativeResize(num_points_-1, Eigen::NoChange);
-
-    labels_.row(index) = labels_.row(num_points_-1).eval();
-    labels_.conservativeResize(num_points_-1, Eigen::NoChange);
-
-    geometric_types_[index * num_geometric_types_] = geometric_types_[num_geometric_types_ * num_points_ -2];
-    geometric_types_[index * num_geometric_types_ + 1] = geometric_types_[num_geometric_types_ * num_points_ - 1];
-    geometric_types_.pop_back();
-    geometric_types_.pop_back();
+    points_[index] = points_.back();
+    points_.pop_back();
       
     num_points_--;
   }
@@ -671,9 +660,9 @@ namespace cvo{
     feature_dimensions_ = 0;
     num_geometric_types_ = 2;
 
-    positions_.resize(pc.size());
+//    positions_.resize(pc.size());
     //features_.resize(num_points_, feature_dimensions_);
-    geometric_types_.resize(num_points_ * 2);
+//    geometric_types_.resize(num_points_ * 2);
     for (int i = 0; i < pc.size(); i++) {
       auto & p = (pc)[i];
       cvo::CvoPoint point(p.x, p.y, p.z);
@@ -757,11 +746,42 @@ namespace cvo{
 
         good_point_ind.push_back(i);
         //good_point_xyz.push_back(xyz);
-        positions_.push_back(xyz);
+        CvoPoint point(xyz(0), xyz(1), xyz(2));
+        point.geometric_type[0] = geometry[i*2];
+        point.geometric_type[1] = geometry[i*2+1];
+
+        if (raw_image.channels() == 3) {
+          cv::Vec3b avg_pixel = raw_image.image().at<cv::Vec3b>(v,u);
+          float gradient_0 = raw_image.gradient()[v * w + u];
+          float gradient_1 = raw_image.gradient()[v * w + u + 1];
+          point.features[0] = ((float)(avg_pixel [0]) )/255.0;
+          point.features[1] = ((float)(avg_pixel[1]) )/255.0;
+          point.features[2] = ((float)(avg_pixel[2]) )/255.0;
+          point.features[3] = gradient_0/ 500.0 + 0.5;
+          point.features[4] = gradient_1/ 500.0 + 0.5;
+        } else if (raw_image.channels() == 1) {
+          uint8_t avg_pixel = raw_image.image().at<uint8_t>(v,u);
+          float gradient_0 = raw_image.gradient()[v * w + u];
+          float gradient_1 = raw_image.gradient()[v * w + u + 1];
+          point.features[0] = ((float)(avg_pixel) )/255.0;
+          point.features[1] = gradient_0/ 500.0 + 0.5;
+          point.features[2] = gradient_1/ 500.0 + 0.5;
+        } else {
+          std::cerr<<"CvoPointCloud: channel unknown\n";
+        }
+
+//        if (num_classes_) {
+//          labels_.row(i) = Eigen::Map<const VecXf_row>((raw_image.semantic_image().data()+ (v * w + u)*num_classes_), num_classes_);
+//          int max_class = 0;
+//          labels_.row(i).maxCoeff(&max_class);
+//        }
+
+        points_.push_back(point);
+//        positions_.push_back(xyz);
         //positions_[i] = xyz;
         //std::cout<<"xyz: "<<xyz.transpose()<<std::endl;
-        geometric_types_.push_back(geometry[i*2]);
-        geometric_types_.push_back(geometry[i*2+1]);
+//        geometric_types_.push_back(geometry[i*2]);
+//        geometric_types_.push_back(geometry[i*2+1]);
       }
     }
      
@@ -769,41 +789,38 @@ namespace cvo{
     num_points_ = good_point_ind.size();
     num_classes_ = raw_image.num_classes();
     num_geometric_types_ = 2;
-    if (num_classes_ )
-      labels_.resize(num_points_, num_classes_);
+//    if (num_classes_ )
+//      labels_.resize(num_points_, num_classes_);
     feature_dimensions_ = raw_image.channels() + 2;
-    features_.resize(num_points_, feature_dimensions_);
-    for (int i = 0; i < num_points_ ; i++) {
-      int u = pre_depth_selected_ind[good_point_ind[i]].first;
-      int v = pre_depth_selected_ind[good_point_ind[i]].second;
-      if (raw_image.channels() == 3) {
-        cv::Vec3b avg_pixel = raw_image.image().at<cv::Vec3b>(v,u);
-        float gradient_0 = raw_image.gradient()[v * w + u];
-        float gradient_1 = raw_image.gradient()[v * w + u + 1];
-        features_(i,0) = ((float)(avg_pixel [0]) )/255.0;
-        features_(i,1) = ((float)(avg_pixel[1]) )/255.0;
-        features_(i,2) = ((float)(avg_pixel[2]) )/255.0;
-        features_(i,3) = gradient_0/ 500.0 + 0.5;
-        features_(i,4) = gradient_1/ 500.0 + 0.5;
-      } else if (raw_image.channels() == 1) {
-        uint8_t avg_pixel = raw_image.image().at<uint8_t>(v,u);
-        float gradient_0 = raw_image.gradient()[v * w + u];
-        float gradient_1 = raw_image.gradient()[v * w + u + 1];
-        features_(i,0) = ((float)(avg_pixel) )/255.0;
-        features_(i,1) = gradient_0/ 500.0 + 0.5;
-        features_(i,2) = gradient_1/ 500.0 + 0.5;          
-      } else {
-        std::cerr<<"CvoPointCloud: channel unknown\n";
-      }
-
-      if (num_classes_) {
-        labels_.row(i) = Eigen::Map<const VecXf_row>((raw_image.semantic_image().data()+ (v * w + u)*num_classes_), num_classes_);
-        int max_class = 0;
-        labels_.row(i).maxCoeff(&max_class);
-      }
-
-    }
-
+//    features_.resize(num_points_, feature_dimensions_);
+//    for (int i = 0; i < num_points_ ; i++) {
+//      int u = pre_depth_selected_ind[good_point_ind[i]].first;
+//      int v = pre_depth_selected_ind[good_point_ind[i]].second;
+//      if (raw_image.channels() == 3) {
+//        cv::Vec3b avg_pixel = raw_image.image().at<cv::Vec3b>(v,u);
+//        float gradient_0 = raw_image.gradient()[v * w + u];
+//        float gradient_1 = raw_image.gradient()[v * w + u + 1];
+//        features_(i,0) = ((float)(avg_pixel [0]) )/255.0;
+//        features_(i,1) = ((float)(avg_pixel[1]) )/255.0;
+//        features_(i,2) = ((float)(avg_pixel[2]) )/255.0;
+//        features_(i,3) = gradient_0/ 500.0 + 0.5;
+//        features_(i,4) = gradient_1/ 500.0 + 0.5;
+//      } else if (raw_image.channels() == 1) {
+//        uint8_t avg_pixel = raw_image.image().at<uint8_t>(v,u);
+//        float gradient_0 = raw_image.gradient()[v * w + u];
+//        float gradient_1 = raw_image.gradient()[v * w + u + 1];
+//        features_(i,0) = ((float)(avg_pixel) )/255.0;
+//        features_(i,1) = gradient_0/ 500.0 + 0.5;
+//        features_(i,2) = gradient_1/ 500.0 + 0.5;
+//      } else {
+//        std::cerr<<"CvoPointCloud: channel unknown\n";
+//      }
+//
+//      if (num_classes_) {
+//        labels_.row(i) = Eigen::Map<const VecXf_row>((raw_image.semantic_image().data()+ (v * w + u)*num_classes_), num_classes_);
+//        int max_class = 0;
+//        labels_.row(i).maxCoeff(&max_class);
+//      }
     
   }
   
@@ -1324,13 +1341,14 @@ namespace cvo{
 
   Eigen::Vector3f CvoPointCloud::at(unsigned int index) const {
     assert (index < num_points_ && index >= 0);
-    Eigen::Vector3f p  = positions_[index];
+//    Eigen::Vector3f p  = positions_[index];
+    Eigen::Vector3f p(points_[index].x, points_[index].y, points_[index].z);
     return p;
   }
 
   Eigen::Vector2f CvoPointCloud::geometry_type_at(unsigned int index) const {
-    Eigen::Map<const Eigen::Vector2f> gtype(geometric_types_.data()+ index*2);
-    Eigen::Vector2f ret = gtype;
+//    Eigen::Map<const Eigen::Vector2f> gtype(geometric_types_.data()+ index*2);
+    Eigen::Vector2f gtype(points_[index].geometric_type[0], points_[index].geometric_type[1]);
     return gtype;
   }
   
@@ -1345,9 +1363,9 @@ namespace cvo{
     pcl::PointCloud<pcl::PointXYZ> pc;
     for (int i = 0; i < num_points_; i++) {
       pcl::PointXYZ p;
-      p.x = positions_[i]( 0);
-      p.y = positions_[i]( 1);
-      p.z = positions_[i]( 2);
+      p.x = points_[i].x;
+      p.y = points_[i].y;
+      p.z = points_[i].z;
       pc.push_back(p);
     }
     pcl::io::savePCDFileASCII(name, pc); 
@@ -1361,10 +1379,11 @@ namespace cvo{
     pcl::PointCloud<pcl::PointXYZL> pc;
     for (int i = 0; i < num_points_; i++) {
       pcl::PointXYZL p;
-      p.x = positions_[i](0);
-      p.y = positions_[i](1);
-      p.z = positions_[i](2);
+      p.x = points_[i].x;
+      p.y = points_[i].y;
+      p.z = points_[i].z;
       int l;
+      // TODO: fix labels here
       labels_.row(i).maxCoeff(&l);
       p.label = (uint32_t) l;
       pc.push_back(p);
@@ -1378,10 +1397,12 @@ namespace cvo{
     if (outfile.is_open()) {
       outfile << num_points_<<" "<<num_classes_<<"\n";
       for (int i = 0; i < num_points_; i++) {
-        outfile << positions_[i](0)<<" "<<positions_[i](1) <<" "<<positions_[i](2)<<std::endl;
+        outfile << points_[i].x<<" "<<points_[i].y <<" "<<points_[i].z<<std::endl;
         for (int j = 0; j < feature_dimensions_; j++) {
-          outfile << features_(i, j)<<" ";
+//          outfile << features_(i, j)<<" ";
+            outfile << points_[i].features[j]<<" ";
         }
+        //TODO: fix labels here
         if (num_classes_)
           for (int j = 0; j < num_classes_; j++) {
             outfile << labels_(i, j)<<" ";
@@ -1400,9 +1421,9 @@ namespace cvo{
     pcl::PointCloud<pcl::PointXYZI> pc;
     for (int i = 0; i < num_points_; i++) {
       pcl::PointXYZI p;
-      p.x = positions_[i](0);
-      p.y = positions_[i](1);
-      p.z = positions_[i](2);
+      p.x = points_[i].x;
+      p.y = points_[i].y;
+      p.z = points_[i].z;
       p.intensity = features_(i);
       pc.push_back(p);
     }
@@ -1439,37 +1460,48 @@ namespace cvo{
     num_points_ = num_points;
     num_classes_ = num_classes;
     feature_dimensions_ = feature_dims;
-    num_geometric_types_ = 2;      
-    positions_.resize(num_points_);
-    if (feature_dims)
-      features_.resize(num_points_, feature_dimensions_);
-    if (num_classes_)
-      labels_.resize(num_points_, num_classes_);
-    geometric_types_ .resize(num_points*2);
+    num_geometric_types_ = 2;
+    //TODO: this might be risky to remove existing points
+    points_.resize(num_points_);
+//    if (feature_dims)
+//      features_.resize(num_points_, feature_dimensions_);
+//    if (num_classes_)
+//      labels_.resize(num_points_, num_classes_);
+//    geometric_types_ .resize(num_points*2);
   }
   
   int CvoPointCloud::add_point(int index, const Eigen::Vector3f & xyz, const Eigen::VectorXf & feature, const Eigen::VectorXf & label, const Eigen::VectorXf & geometry_type) {
     
     if (index >= num_points_) return -1;
-    if (positions_.size() < num_points_ ||
-        features_.rows() < num_points_ ||
+    if (//positions_.size() < num_points_ ||
+        //features_.rows() < num_points_ ||
         //labels_.rows() < num_points_ ||
-        features_.cols() != feature_dimensions_ ||
-        geometry_type.size() != 2
+        //features_.cols() != feature_dimensions_ ||
+        //geometry_type.size() != 2 ||
+        points_.size() < num_points_
         //labels_.cols() != num_classes_
         ) {
       std::cerr<<"CvoPointCloud must be reserved before add_point\n";
       return -1;
     }
 
-    positions_[index] = xyz;
-    if (feature_dimensions_)
-      features_.row(index) = feature.transpose();
+    points_[index].x = xyz(0);
+    points_[index].y = xyz(1);
+    points_[index].z = xyz(2);
+    if (feature_dimensions_){
+      //      features_.row(index) = feature.transpose();
+      for (int f_index = 0; f_index < feature_dimensions_; f_index++){
+        points_[index].features[f_index] = feature(f_index);
+      }
+    }
+
     if (num_classes_)
       labels_.row(index) = label;
     if (geometry_type.size()) {
-      geometric_types_[index*2] = (geometry_type(0));
-      geometric_types_[index*2+1] = (geometry_type(1));
+//      geometric_types_[index*2] = (geometry_type(0));
+//      geometric_types_[index*2+1] = (geometry_type(1));
+      points_[index].geometric_type[0] = geometry_type(0);
+      points_[index].geometric_type[1] = geometry_type(1);
     }
     return 0;
   }

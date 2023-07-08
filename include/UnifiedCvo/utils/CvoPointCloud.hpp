@@ -190,6 +190,7 @@ namespace cvo {
     //Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> features_;   // rgb, gradient in [0,1]
     //std::vector<Eigen::Matrix<float, 1, Eigen::Dynamic>> features_;   // rgb, gradient in [0,1]
     //Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> normals_;  // surface normals
+    //TODO: fix labels here
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> labels_; // number of points by number of classes
     //std::vector<Eigen::Matrix<float, 1, Eigen::Dynamic>> labels_;   // rgb, gradient in [0,1]    
     std::vector<float> geometric_types_;
