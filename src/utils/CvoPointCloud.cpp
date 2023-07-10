@@ -438,6 +438,9 @@ namespace cvo{
     //positions_.resize(output_uv.size());
     Mat33f intrinsic = calib.intrinsic();
 
+    num_classes_ = raw_image.num_classes();
+    num_geometric_types_ = 2;
+    feature_dimensions_ = raw_image.channels() + 2;
     for (int i = 0; i < output_uv.size(); i++) {
       CvoPoint point;
       auto uv = output_uv[i];
@@ -501,16 +504,17 @@ namespace cvo{
         } else {
           std::cerr<<"CvoPointCloud: channel unknown\n";
         }
+        if (num_classes_) {
+          std::copy(raw_image.semantic_image().data()+ (v * w + u)*num_classes_,
+                    raw_image.semantic_image().data()+ (v * w + u)*num_classes_ + num_classes_,
+                    point.label_distribution);
+        }
         points_.push_back(point);
       }
     }
 
     num_points_ = good_point_ind.size();
-    num_classes_ = raw_image.num_classes();
-    num_geometric_types_ = 2;    
-    if (num_classes_ )
-//      labels_.resize(num_points_, num_classes_);
-    feature_dimensions_ = raw_image.channels() + 2;
+
 //    for (int i = 0; i < num_points_ ; i++) {
 //      int u = output_uv[good_point_ind[i]].first;
 //      int v = output_uv[good_point_ind[i]].second;
@@ -720,6 +724,9 @@ namespace cvo{
     //bool is_recording_depth_map = true;
     //static unsigned int depth_map_counter = 0;
     //positions_.resize(pre_depth_selected_ind.size());
+    num_classes_ = raw_image.num_classes();
+    num_geometric_types_ = 2;
+    feature_dimensions_ = raw_image.channels() + 2;
     for (int i = 0; i < pre_depth_selected_ind.size(); i++) {
       auto uv = pre_depth_selected_ind[i];
       Vec3f xyz;
@@ -769,12 +776,11 @@ namespace cvo{
         } else {
           std::cerr<<"CvoPointCloud: channel unknown\n";
         }
-
-//        if (num_classes_) {
-//          labels_.row(i) = Eigen::Map<const VecXf_row>((raw_image.semantic_image().data()+ (v * w + u)*num_classes_), num_classes_);
-//          int max_class = 0;
-//          labels_.row(i).maxCoeff(&max_class);
-//        }
+        if (num_classes_) {
+          std::copy(raw_image.semantic_image().data()+ (v * w + u)*num_classes_,
+                    raw_image.semantic_image().data()+ (v * w + u)*num_classes_ + num_classes_,
+                    point.label_distribution);
+        }
 
         points_.push_back(point);
 //        positions_.push_back(xyz);
@@ -787,11 +793,7 @@ namespace cvo{
      
     // start to fill in class members
     num_points_ = good_point_ind.size();
-    num_classes_ = raw_image.num_classes();
-    num_geometric_types_ = 2;
-//    if (num_classes_ )
-//      labels_.resize(num_points_, num_classes_);
-    feature_dimensions_ = raw_image.channels() + 2;
+
 //    features_.resize(num_points_, feature_dimensions_);
 //    for (int i = 0; i < num_points_ ; i++) {
 //      int u = pre_depth_selected_ind[good_point_ind[i]].first;
@@ -1179,9 +1181,12 @@ namespace cvo{
 
 
       // add one-hot semantic labels
-      VecXf_row one_hot_label;
-      one_hot_label = VecXf_row::Zero(1,num_classes_);
-      one_hot_label[semantic_out[i]] = 1;
+      // Note that when num_classes not corrected set, null pointer here
+      std::fill(point.label_distribution, point.label_distribution + num_classes, 0.0);
+      point.label_distribution[semantic_out[i]] = 1;
+//      VecXf_row one_hot_label;
+//      one_hot_label = VecXf_row::Zero(1,num_classes_);
+//      one_hot_label[semantic_out[i]] = 1;
 //      labels_.row(actual_ids) = one_hot_label;
 //      int max_class = 0;
 //      labels_.row(actual_ids).maxCoeff(&max_class);
@@ -1391,10 +1396,11 @@ namespace cvo{
       p.x = points_[i].x;
       p.y = points_[i].y;
       p.z = points_[i].z;
-      int l;
-      // TODO: fix labels here
+      float l;
+      Eigen::VectorXf labels_row = Eigen::Map<const VecXf_row>(points_[i].label_distribution, num_points_);
+      labels_row.maxCoeff(&l);
 //      labels_.row(i).maxCoeff(&l);
-//      p.label = (uint32_t) l;
+      p.label = (uint32_t) l;
       pc.push_back(p);
     }
     pcl::io::savePCDFileASCII(name ,pc); 

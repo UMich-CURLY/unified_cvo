@@ -29,10 +29,10 @@ namespace cvo {
 //        features_(i, j) = pc[i].features[j];
           point.features[j] = pc[i].features[j];
       }
-      //TODO:fix label
-//      for (int j = 0 ; j < NUM_CLASSES; j++) {
-//        point.label_distribution[j] = pc[i].label_distribution[j];
-//      }
+
+      for (int j = 0 ; j < NUM_CLASSES; j++) {
+        point.label_distribution[j] = pc[i].label_distribution[j];
+      }
 
       point.geometric_type[0] = p.geometric_type[0];
       point.geometric_type[1] = p.geometric_type[1];
@@ -72,10 +72,10 @@ namespace cvo {
 //        features_(i, j) = pc[i].features[j];
         point.features[j] = pc[i].features[j];
       }
-      //TODO:fix label
-//      for (int j = 0 ; j < NUM_CLASSES; j++) {
-//        point.label_distribution[j] = pc[i].label_distribution[j];
-//      }
+
+      for (int j = 0 ; j < NUM_CLASSES; j++) {
+        point.label_distribution[j] = pc[i].label_distribution[j];
+      }
 
       point.geometric_type[0] = p.geometric_type[0];
       point.geometric_type[1] = p.geometric_type[1];
@@ -103,12 +103,12 @@ namespace cvo {
 
       if (this->num_classes() > 0) {
         //labels_.row(i).maxCoeff(p.label);
+        Eigen::VectorXf labels_row = Eigen::Map<const VecXf_row>(points_[i].label_distribution, num_points_);
+        p.label = labels_row.maxCoeff();
+        for (int j = 0; j < this->num_classes(); j++) {
+          p.label_distribution[j] = points_[i].label_distribution[j];
 
-        //TODO:fix label
-        p.label = points_[i].label;
-//        for (int j = 0; j < this->num_classes(); j++) {
-//          p.label_distribution[j] = points_[i].label_distribution[j];
-//        }
+        }
       }
       p.r = r;
       p.g = g;

@@ -25,7 +25,8 @@ namespace cvo {
     int num_point_counter = 0;
     std::vector<std::vector<float> > features;
     std::vector<std::vector<float> > labels;
-    positions_.reserve(65536);
+    points_.reserve(65536);
+//    positions_.reserve(65536);
     features.reserve(65536);
     labels.reserve(65536);
     feature_dimensions_ = 5;
@@ -36,7 +37,9 @@ namespace cvo {
         semantic_bki::point3f  p = it.get_loc();
         Vec3f xyz;
         xyz << p.x(), p.y(), p.z();
-        positions_.push_back(xyz);
+        CvoPoint point(xyz(0),xyz(1),xyz(2));
+        points_.push_back(point);
+//        positions_.push_back(xyz);
                
         // features
         if(feature_dimensions_==5){
@@ -59,17 +62,19 @@ namespace cvo {
     }
       
     num_points_ = num_point_counter ;
-    features_.resize(num_points_, feature_dimensions_);
-    labels_.resize(num_points_, num_classes);
+//    features_.resize(num_points_, feature_dimensions_);
+//    labels_.resize(num_points_, num_classes);
 
     for (int i = 0; i < num_points_; i++) {
       //memcpy(labels_.data()+ num_classes * sizeof(float) * i, labels[i].data(), num_classes * sizeof(float));
-      labels_.row(i) = Eigen::Map<VecXf_row>(labels[i].data(), num_classes);
+//      labels_.row(i) = Eigen::Map<VecXf_row>(labels[i].data(), num_classes);
+      std::copy(labels[i].begin(), labels[i].end(), points_[i].label_distribution);
+
       if(feature_dimensions_==5){
-        features_.row(i) = Eigen::Map<Vec5f_row>(features[i].data());
+        std::copy(features[i].begin(), features[i].end(), points_[i].features);
       }
       else if(feature_dimensions_==1){
-        features_(i,0) = *features[i].data();
+        points_[i].features[0] = features[i][0];
       }
 
     }
