@@ -206,10 +206,10 @@ namespace cvo {
   void CvoPointCloud_to_gpu(const CvoPointCloud& cvo_cloud, thrust::device_vector<CvoPoint> & output ) {
     int num_points = cvo_cloud.num_points();
     const ArrayVec3f & positions = cvo_cloud.positions();
-    const Eigen::Matrix<float, Eigen::Dynamic, FEATURE_DIMENSIONS> & features = cvo_cloud.features();
+//    const Eigen::Matrix<float, Eigen::Dynamic, FEATURE_DIMENSIONS> & features = cvo_cloud.features();
     //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals = cvo_cloud.normals();
     // const Eigen::Matrix<float, Eigen::Dynamic, 2> & types = cvo_cloud.types();
-    auto & labels = cvo_cloud.labels();
+//    auto & labels = cvo_cloud.labels();
     // set basic informations for pcl_cloud
     thrust::host_vector<CvoPoint> host_cloud;
     host_cloud.resize(num_points);
@@ -220,9 +220,10 @@ namespace cvo {
       (host_cloud)[i].x = point.x;
       (host_cloud)[i].y = point.y;
       (host_cloud)[i].z = point.z;
-      if (FEATURE_DIMENSIONS == 5 &&
-          features.rows() == num_points &&
-          features.cols() == FEATURE_DIMENSIONS) {
+      if (FEATURE_DIMENSIONS == 5
+//          && features.rows() == num_points &&
+//          features.cols() == FEATURE_DIMENSIONS
+          ) {
         (host_cloud)[i].r = (uint8_t)std::min(255.0, (point.features[0] * 255.0));
         (host_cloud)[i].g = (uint8_t)std::min(255.0, (point.features[1] * 255.0));
         (host_cloud)[i].b = (uint8_t)std::min(255.0, (point.features[2] * 255.0));
@@ -233,16 +234,18 @@ namespace cvo {
 //        host_cloud[i].geometric_type[j] = cvo_cloud.geometric_types()[i*2+j];
         host_cloud[i].geometric_type[j] = point.geometric_type[j];
 
-      if (features.rows() == num_points &&  features.cols() > 0 ) {
+//      if (features.rows() == num_points &&  features.cols() > 0 ) {
+      if (cvo_cloud.num_classes() > 0 && FEATURE_DIMENSIONS > 0 ) {
         for (int j = 0; j < FEATURE_DIMENSIONS; j++)
           host_cloud[i].features[j] = point.features[j];
       }
       
-//      if (cvo_cloud.num_classes() > 0) {
+      if (cvo_cloud.num_classes() > 0) {
+        cvo_cloud.label_at(i).maxCoeff(&host_cloud[i].label);
 //        labels.row(i).maxCoeff(&host_cloud[i].label);
-//        for (int j = 0; j < cvo_cloud.num_classes(); j++)
-//          host_cloud[i].label_distribution[j] = labels(i,j);
-//      }
+        for (int j = 0; j < cvo_cloud.num_classes(); j++)
+          host_cloud[i].label_distribution[j] = point.label_distribution[j];
+      }
       
       //if (normals.rows() > 0 && normals.cols()>0) {
       //  for (int j = 0; j < 3; j++)
