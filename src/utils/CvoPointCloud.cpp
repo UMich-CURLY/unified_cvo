@@ -1454,8 +1454,11 @@ namespace cvo{
         output.points_[j].x = temp.x();
         output.points_[j].y = temp.y();
         output.points_[j].z = temp.z();
+        //TODO: confirm std::copy safe in parallel_for
         std::copy(std::begin(input.feature_at(j)), std::end(input.feature_at(j)), std::begin(output.points_[j].features));
-        //TODO: copy label and geo types
+        std::copy(std::begin(input.label_at(j)), std::end(input.label_at(j)), std::begin(output.points_[j].label_distribution));
+        output.points_[j].geometric_type[0] = input.geometry_type_at(j)(0);
+        output.points_[j].geometric_type[1] = input.geometry_type_at(j)(1);
     });
   }
 
