@@ -1,11 +1,19 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <string>
 #include <unordered_map>
 #include <fstream>
 #include <iostream>
 #include <boost/filesystem.hpp>
 #include "dataset_handler/PoseLoader.hpp"
+#include "dataset_handler/TartanAirHandler.hpp"
+#include "utils/Calibration.hpp"
+#include "utils/RawImage.hpp"
+#include "utils/ImageRGBD.hpp"
+#include "utils/Calibration.hpp"
+#include "utils/CvoPointCloud.hpp"
+
 #include "viewer/viewer.h"
 #include <Eigen/Dense>
 using Mat34d_row = Eigen::Matrix<double, 3, 4, Eigen::RowMajor>;
@@ -228,6 +236,8 @@ int main(int argc, char** argv) {
   std::string pose_file_format;
   std::vector<Eigen::Matrix4d,
               Eigen::aligned_allocator<Eigen::Matrix4d>> all_poses;
+
+  std::unique_ptr<cvo::TartanAirHandler> reader;
   if (argc > 5) {
     pose_file_format = std::string(argv[5]);
     std::string pose_fname = std::string(argv[6]);
@@ -240,6 +250,7 @@ int main(int argc, char** argv) {
                                   0,
                                   10000,
                                   all_poses);
+
     } else if (pose_file_format.compare(std::string("tum")) == 0) {
       cvo::read_pose_file_tum_format(pose_fname,
                                 0,
@@ -250,6 +261,9 @@ int main(int argc, char** argv) {
                                    0,
                                    10000,
                                    all_poses);
+
+        
+      
     } else {
       std::cerr<<"Pose format unknown\n";
     }
@@ -257,6 +271,12 @@ int main(int argc, char** argv) {
     std::cout<<"all poses size is "<<all_poses.size()<<"\n";
 
   }
+      std::string path("/home/rayzhang/media/Samsung_T5/tartanair/hospital/Easy/P001");
+      reader.reset(new cvo::TartanAirHandler(path));
+      std::string calib_file;
+      calib_file = path + "/cvo_calib_deep_depth.txt"; 
+      cvo::Calibration calib(calib_file, cvo::Calibration::RGBD);
+      reader->set_depth_folder_name("deep_depth");
 
   
   int total_graphs = std::stoi(total_graphs_arg);
@@ -277,9 +297,9 @@ int main(int argc, char** argv) {
                            0,
                            "title");
   
-  
   int last_ind = -1;
-  int last_traj_ind = -1;  
+  int last_traj_ind = -1;
+  std::unordered_map<int,cv::Mat> images;  
   for (int f = start_ind; f < total_graphs; f++) {
     if (f > start_ind && f < last_ind) continue;
     
@@ -319,24 +339,61 @@ int main(int argc, char** argv) {
     frame_inds.pop_back();
     BA_poses.pop_back();
 
+
+    cv::Mat canvas(240, 1280, CV_8UC3);
+    
     for (int i = 0; i<frame_inds.size(); i++) {
 
       int curr_frame_id = frame_inds[i];
       std::string frame_fname(pcd_folder + "/" +  std::to_string(curr_frame_id) + ".pcd" );
-      pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
-      pcl::io::loadPCDFile<pcl::PointXYZRGB> (frame_fname, *cloud);
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>),
+        local_semantic_pc(new pcl::PointCloud<pcl::PointXYZRGB>);
+      // pcl::PointCloud<pcl::PointXYZRGB> before_filter;      
+      //pcl::io::loadPCDFile<pcl::PointXYZRGB> (frame_fname, before_filter);
 
-      std::cout<<__func__<<"Before transform: "<<static_cast<int>((*cloud)[0].r)
-               <<", "<<static_cast<int>((*cloud)[0].g)
-               <<", "<<static_cast<int>((*cloud)[0].b)<<"\n";
-      for (auto && p : *cloud) {
+      if ( cloud->size() > 0 )
+        std::cout<<__func__<<"After transform: "<<static_cast<int>((*cloud)[0].r)<<", "<<static_cast<int>((*cloud)[0].g)<<", "<<static_cast<int>((*cloud)[0].b)<<"\n";
+
+      if (images.find(curr_frame_id) == images.end()) {
+        reader->set_start_index(curr_frame_id);
+        cv::Mat source_left;
+        std::vector<float> source_dep, source_semantics;
+        int num_semantic_class = 19;
+        int sky_label = 196;
+        std::cout<< " Read image "<<curr_frame_id<<std::endl;
+        bool read_fails = reader->read_next_rgbd_without_sky(source_left, source_dep, num_semantic_class, source_semantics, sky_label);
+        images.insert(std::make_pair(curr_frame_id, source_left));
+        std::shared_ptr<cvo::ImageRGBD<float>> source_raw(new cvo::ImageRGBD(source_left, source_dep, num_semantic_class, source_semantics));
+
+        cvo::CvoPointCloud source_cvo(*source_raw, calib, cvo::CvoPointCloud::DSO_EDGES);
+        //cvo::CvoPointCloud_to_pcl(source_cvo, *source_pcd);
+        source_cvo.export_to_pcd<pcl::PointXYZRGB>(*local_semantic_pc);
+        pcs_local_frame.insert(std::make_pair(curr_frame_id, local_semantic_pc));
+      } 
+      cv::Mat tocp;
+      cv::resize(images[curr_frame_id], tocp, cv::Size(320, 240));
+      cv::putText(tocp,"frame: "+std::to_string(curr_frame_id),cv::Point(30,30),
+                  cv::FONT_HERSHEY_DUPLEX,1,cv::Scalar(0,255,0),2,false);      
+      tocp.copyTo(canvas(cv::Rect(320 * i, 0, 320, 240 )));
+
+      auto before_filter = * pcs_local_frame[curr_frame_id];
+      
+
+      std::cout<<__func__<<"Before transform: "<<static_cast<int>((before_filter)[0].r)
+               <<", "<<static_cast<int>((before_filter)[0].g)
+               <<", "<<static_cast<int>((before_filter)[0].b)<<"\n";
+      for (auto && p : before_filter) {
         Mat34d_row transform = Eigen::Map<Mat34d_row>(BA_poses[i].data());
         Eigen::Vector4d point;
         point << (double)p.x, (double)p.y, (double) p.z, 1.0;
+        if (p.getVector3fMap().norm() > 10.0) continue;
         Eigen::Vector3f p_t = (transform * point).cast<float>();
-        p.getVector3fMap() = p_t;
+        pcl::PointXYZRGB p_new = p;
+        p_new.getVector3fMap() = p_t;
+        cloud->push_back(p_new);
+
       }
-      std::cout<<__func__<<"After transform: "<<static_cast<int>((*cloud)[0].r)<<", "<<static_cast<int>((*cloud)[0].g)<<", "<<static_cast<int>((*cloud)[0].b)<<"\n";      
+      
 
       if (all_poses.size()) {
         for (int j = last_traj_ind+1; j <= frame_inds[1]; j++) {
@@ -358,14 +415,16 @@ int main(int argc, char** argv) {
       //std::cout<<"Load "<<frame_fname<<", "<<pc->positions().size()<<" number of points\n";
       //pcs.push_back(pc);
       std::string viewer_id = std::to_string(curr_frame_id);
-      if (idx_to_viewerid.find(curr_frame_id) != idx_to_viewerid.end()) {
-        viewer->updateColorPointCloud(*cloud, viewer_id);
-      } else {
-        viewer->updateColorPointCloud(*cloud, viewer_id);
-        std::pair<int, std::string> p;
-        p.first = curr_frame_id;
-        p.second = viewer_id;
-        idx_to_viewerid.insert(p);
+      if (cloud->size() > 0 ) {
+        if ( idx_to_viewerid.find(curr_frame_id) != idx_to_viewerid.end()) {
+          viewer->updateColorPointCloud(*cloud, viewer_id);
+        } else {
+          viewer->updateColorPointCloud(*cloud, viewer_id);
+          std::pair<int, std::string> p;
+          p.first = curr_frame_id;
+          p.second = viewer_id;
+          idx_to_viewerid.insert(p);
+        }
       }
 
       //cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrame(pc.get(), BA_poses[i].data()));
@@ -375,8 +434,10 @@ int main(int argc, char** argv) {
       //id_to_index[curr_frame_id] = i;
     }
     last_ind = frame_inds[1];
-    if (is_auto_preceed)
-      std::this_thread::sleep_for(std::chrono::microseconds(50000));
+    cv::imshow("frames", canvas);
+    cv::waitKey(1);
+    if (f > start_ind && is_auto_preceed)
+      std::this_thread::sleep_for(std::chrono::microseconds(500000));
     else {
       std::cout <<"Just rendered "<<f<<"_graph.txt, Press Enter to Continue";
       std::cin.ignore();

@@ -7,6 +7,8 @@ namespace cvo {
   template <typename PointType>
   VoxelMap<PointType>::VoxelMap(float voxelSize) : voxelSize_(voxelSize) {
     // std::cout << "Assigned voxelSize_" << voxelSize << std::endl;
+    std::srand(3141592);	// want to be deterministic.
+
   }
 
   template <typename PointType>

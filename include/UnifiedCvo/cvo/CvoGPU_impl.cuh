@@ -1,4 +1,5 @@
 #pragma once
+#include "CvoFrameGPU.hpp"
 #include "cvo/Association.hpp"
 #include "cvo/SparseKernelMat.hpp"
 #include "cvo/CvoState.cuh"
@@ -10,7 +11,9 @@
 #include "cupointcloud/point_types.h"
 #include "cupointcloud/cupointcloud.h"
 #include "cukdtree/cukdtree.cuh"
+#include "cvo/CudaTypes.cuh"
 
+#include <memory>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
@@ -58,7 +61,7 @@ void gpu_last_error_check(const char* const file, const int line)
 }
 #endif
 */
-#define GpuErrorCheck(ans) { gpu_assert((ans), __FILE__, __LINE__); }
+#define gpuErrorCheck(ans) { gpu_assert((ans), __FILE__, __LINE__); }
 inline void gpu_assert(cudaError_t code, const char *file, int line, bool abort=true)
 {
   if (code != cudaSuccess)
@@ -66,10 +69,20 @@ inline void gpu_assert(cudaError_t code, const char *file, int line, bool abort=
     fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
     if (abort) exit(code);
   }
-  
 }
 
 namespace cvo {
+
+
+  inline
+  __host__ cudaError_t cudaMemGetInfoPrint (const std::string & prefix )  {
+    size_t free,  total;
+    auto err = cudaMemGetInfo(&free, &total);
+    std::cout<<prefix<<": Free Cuda mem is "<<free<<", total gpu mem is "<<total<<"\n";
+    return err;
+  }
+
+  
   //const int CUDA_BLOCK_SIZE = 1024 ;//128;
   CvoPointCloudGPU::SharedPtr CvoPointCloud_to_gpu(const CvoPointCloud& cvo_cloud );
   CvoPointCloudGPU::SharedPtr pcl_PointCloud_to_gpu(const pcl::PointCloud<CvoPoint> & cvo_cloud );
@@ -90,7 +103,16 @@ namespace cvo {
                          SparseKernelMat * A_mat // the kernel matrix!
                          );
 
-  
+
+  __global__
+  void fill_in_A_mat_cukdtree(const CvoParams * cvo_params,
+                              CvoPoint * points_a, int a_size,
+                              CvoPoint * points_b, int size_y,
+                              int * kdtree_inds_results,
+                              int num_neighbors,                              
+                              float ell,
+                              // output
+                              SparseKernelMat * A_mat);
 
   float compute_ranged_lengthscale(float curr_dist_square, float curr_ell, float min_ell, float max_ell );
 
@@ -120,9 +142,31 @@ namespace cvo {
   void dense_covariance_kernel(const CvoParams * params_gpu,
                                std::shared_ptr<CvoPointCloudGPU> points_fixed,
                                std::shared_ptr<CvoPointCloudGPU> points_moving,
-                               perl_registration::cuKdTree<CvoPoint>::SharedPtr kdtree,
+                               std::shared_ptr<CuKdTree> kdtree,
                                // output
                                SparseKernelMat * A_mat, SparseKernelMat * A_mat_gpu);
+
+  void find_nearby_source_points_cukdtree(//const CvoParams *cvo_params,
+                                          std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu,
+                                          perl_registration::cuKdTree<CvoPoint> & kdtree_cloud_y,
+                                          const Eigen::Matrix4f & transform_cpu_yf2xf,
+                                          int num_neighbors,
+                                          // output
+                                          std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu_transformed_kdtree,
+                                          thrust::device_vector<int> & cukdtree_inds_results
+                                          );
+
+  void find_nearby_source_points_cukdtree(//const CvoParams *cvo_params,
+                                          std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu,
+                                          CuKdTree & kdtree_cloud_y,
+                                          const Eigen::Matrix4f & transform_cpu_yf2xf,
+                                          int num_neighbors,
+                                          // output
+                                          std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu_transformed_kdtree,
+                                          int * cukdtree_inds_results
+                                          );
+  
+  
 
   /**
    * @brief computes the Lie algebra transformation elements
@@ -141,6 +185,12 @@ namespace cvo {
                                    Mat33f * R_gpu, Vec3f * T_gpu,
                                    bool update_normal_and_cov
                                    );
+
+  void  transform_pointcloud_thrust(std::shared_ptr<CvoPointCloudGPU> init_cloud,
+                                    std::shared_ptr<CvoPointCloudGPU> transformed_cloud,
+                                    float * T12_row_gpu_,
+                                    bool update_normal_and_cov
+                                    );
 
   void transform_pointcloud_thrust(thrust::device_vector<CvoPoint> & init_cloud,
                                    thrust::device_vector<CvoPoint> & transformed_cloud,

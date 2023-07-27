@@ -168,7 +168,8 @@ namespace cvo {
                  ) {
 
     ip_mat_gradient_prefix.setZero();
-
+    ip_mat_gradient_prefix.data().squeeze();
+    
     auto & pc1 = pc1_cvo.positions();
     auto & pc2 = pc2_cvo.positions();
 //    auto & labels1 = pc1_cvo.labels();

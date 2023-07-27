@@ -6,7 +6,7 @@
 #include "cvo/CvoParams.hpp"
 #include "cvo/CvoGPU.hpp"
 #include "cvo/CvoFrame.hpp"
-#include "cvo/CvoFrameGPU.hpp"
+//#include "cvo/CvoFrameGPU.hpp"
 #include "cvo/IRLS_State.hpp"
 #include "cvo/IRLS_State_CPU.hpp"
 #include "cvo/IRLS_State_GPU.hpp"

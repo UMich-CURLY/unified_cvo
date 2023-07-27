@@ -254,28 +254,20 @@ int main(int argc, char** argv) {
   int is_auto_preceed = std::stoi(std::string(argv[4]));
 
   std::unique_ptr<perl_registration::Viewer> viewer;
+  std::unique_ptr<cvo::TartanAirHandler> reader;
   if (argc > 5) {
     pose_file_format = std::string(argv[5]);
     std::string pose_fname = std::string(argv[6]);
     assert (pose_file_format.compare(std::string("kitti")) == 0
             || pose_file_format.compare(std::string("tum")) == 0
             || pose_file_format.compare(std::string("tartan")) == 0);
-
-    if (pose_file_format.compare(std::string("kitti")) == 0) {
-      cvo::read_pose_file_kitti_format(pose_fname,
-                                       0,
-                                       10000,
-                                       all_poses);
-    } else if (pose_file_format.compare(std::string("tum")) == 0) {
-      cvo::read_pose_file_tum_format(pose_fname,
-                                     0,
-                                     10000,
-                                     all_poses);
-    } else if (pose_file_format.compare(std::string("tartan")) == 0) {
+    
+    if (pose_file_format.compare(std::string("tartan")) == 0) {
       cvo::read_pose_file_tartan_format(pose_fname,
                                         0,
                                         10000,
                                         all_poses);
+      reader.reset(new cvo::TartanAirHandler())
     } else {
       std::cerr<<"Pose format unknown\n";
     }

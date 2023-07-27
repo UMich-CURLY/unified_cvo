@@ -9,7 +9,14 @@
 //#include <opencv2/opencv.hpp>
 #include "dataset_handler/KittiHandler.hpp"
 //#include "graph_optimizer/Frame.hpp"
-
+#include "dataset_handler/PoseLoader.hpp"
+#include "utils/LidarPointSelector.hpp"
+#include "utils/LidarPointType.hpp"
+#include "utils/ImageRGBD.hpp"
+#include "utils/Calibration.hpp"
+#include "utils/SymbolHash.hpp"
+#include "utils/VoxelMap.hpp"
+#include "utils/data_type.hpp"
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include "utils/CvoPointCloud.hpp"
@@ -18,11 +25,97 @@
 using namespace std;
 using namespace boost::filesystem;
 
+std::shared_ptr<cvo::CvoPointCloud> downsample_lidar_points(bool is_edge_only,
+                                                            pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
+                                                            float leaf_size) {
+
+
+    int expected_points = 5000;
+    double intensity_bound = 0.4;
+    double depth_bound = 4.0;
+    double distance_bound = 40.0;
+    int kitti_beam_num = 64;
+    cvo::LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, kitti_beam_num);
+
+  if (is_edge_only) {
+    cvo::VoxelMap<pcl::PointXYZI> full_voxel(leaf_size);
+    for (int k = 0; k < pc_in->size(); k++) {
+      full_voxel.insert_point(&pc_in->points[k]);
+    }
+    std::vector<pcl::PointXYZI*> downsampled_results = full_voxel.sample_points();
+    pcl::PointCloud<pcl::PointXYZI>::Ptr downsampled(new pcl::PointCloud<pcl::PointXYZI>);
+    for (int k = 0; k < downsampled_results.size(); k++)
+      downsampled->push_back(*downsampled_results[k]);
+     std::shared_ptr<cvo::CvoPointCloud>  ret(new cvo::CvoPointCloud(downsampled, 5000, 64, cvo::CvoPointCloud::PointSelectionMethod::FULL));
+     return ret;
+  } else {
+    
+    /// edge points
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);  
+    std::vector<int> selected_edge_inds;
+    std::vector <double> output_depth_grad;
+    std::vector <double> output_intenstity_grad;
+    lps.edge_detection(pc_in, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_edge_inds);
+    std::unordered_set<int> edge_inds;
+    for (auto && j : selected_edge_inds) edge_inds.insert(j);
+
+    /// surface points
+    std::vector<float> edge_or_surface;
+    std::vector<int> selected_loam_inds;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_loam (new pcl::PointCloud<pcl::PointXYZI>);        
+    lps.loam_point_selector(pc_in, pc_out_loam, edge_or_surface, selected_loam_inds);
+
+    /// declare voxel map
+    cvo::VoxelMap<pcl::PointXYZI> edge_voxel(leaf_size); 
+    cvo::VoxelMap<pcl::PointXYZI> surface_voxel(leaf_size);
+
+    /// edge and surface downsample
+    for (int k = 0; k < pc_out_edge->size(); k++) 
+      edge_voxel.insert_point(&pc_out_edge->points[k]);
+    std::vector<pcl::PointXYZI*> edge_results = edge_voxel.sample_points();
+    for (int k = 0; k < pc_out_loam->size(); k++)  {
+      if (edge_or_surface[k] > 0 &&
+          edge_inds.find(selected_loam_inds[k]) == edge_inds.end())
+        surface_voxel.insert_point(&pc_out_loam->points[k]);
+    }
+    std::vector<pcl::PointXYZI*> surface_results = surface_voxel.sample_points();
+    int total_selected_pts_num = edge_results.size() + surface_results.size();    
+    std::shared_ptr<cvo::CvoPointCloud> ret(new cvo::CvoPointCloud(1, NUM_CLASSES));
+    ret->reserve(total_selected_pts_num, 1, NUM_CLASSES);
+    std::cout<<"edge voxel selected points "<<edge_results.size()<<std::endl;
+    std::cout<<"surface voxel selected points "<<surface_results.size()<<std::endl;    
+
+    /// push
+    for (int k = 0; k < edge_results.size(); k++) {
+      Eigen::VectorXf feat(1);
+      feat(0) = edge_results[k]->intensity;
+      Eigen::VectorXf semantics = Eigen::VectorXf::Zero(NUM_CLASSES);
+      Eigen::VectorXf geo_t(2);
+      geo_t << 1.0, 0;
+      ret->add_point(k, edge_results[k]->getVector3fMap(),  feat, semantics, geo_t);
+    }
+    /// surface downsample
+    for (int k = 0; k < surface_results.size(); k++) {
+      // surface_pcl.push_back(*surface_results[k]);
+      Eigen::VectorXf feat(1);
+      feat(0) = surface_results[k]->intensity;
+      Eigen::VectorXf semantics = Eigen::VectorXf::Zero(NUM_CLASSES);
+      Eigen::VectorXf geo_t(2);
+      geo_t << 0, 1.0;
+      ret->add_point(k+edge_results.size(), surface_results[k]->getVector3fMap(), feat,
+                     semantics, geo_t);
+    }
+    return ret;
+
+  }
+
+}
+
 
 int main(int argc, char *argv[]) {
   // list all files in current directory.
   //You could put any file path in here, e.g. "/home/me/mwah" to list that directory
-  cvo::KittiHandler kitti(argv[1], 1);
+  cvo::KittiHandler kitti(argv[1], cvo::KittiHandler::DataType::LIDAR);
   int total_iters = kitti.get_total_number();
   string cvo_param_file(argv[2]);
   string calib_file;
@@ -58,7 +151,12 @@ int main(int argc, char *argv[]) {
   kitti.read_next_lidar(source_pc);
 
   //kitti.read_next_stereo(source_left, source_right);
-  std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(source_pc, 5000, 64));
+  //std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(source_pc, 5000, 64));
+  float leaf_size = cvo_align.get_params().multiframe_downsample_voxel_size;
+  std::shared_ptr<cvo::CvoPointCloud> source = downsample_lidar_points(0,
+                                                                       source_pc,
+                                                                       leaf_size);
+  
 
 
   double total_time = 0;
@@ -78,7 +176,12 @@ int main(int argc, char *argv[]) {
     }
 
 
-    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(target_pc, 5000, 64));
+    //std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(target_pc, 5000, 64));
+    std::shared_ptr<cvo::CvoPointCloud> target = downsample_lidar_points(0,
+                                                                         target_pc,
+                                                                         leaf_size);
+  
+    
 
     std::cout<<"NUm of source pts is "<<source->num_points()<<"\n";
     std::cout<<"NUm of target pts is "<<target->num_points()<<"\n";
@@ -87,14 +190,14 @@ int main(int argc, char *argv[]) {
     init_guess_inv = init_guess.inverse();
     std::cout<<std::flush;
     double this_time = 0;
-    cvo_align.align(*source, *target, init_guess_inv, result, &this_time);
+    cvo_align.align(*source, *target, init_guess_inv, result,nullptr, &this_time);
     total_time += this_time;
     
     // get tf and inner product from cvo getter
-    double in_product = cvo_align.inner_product(*source, *target, result);
+    //double in_product = cvo_align.inner_product(*source, *target, result);
     //double in_product_normalized = cvo_align.inner_product_normalized();
     //int non_zeros_in_A = cvo_align.number_of_non_zeros_in_A();
-    std::cout<<"The gpu inner product between "<<i-1 <<" and "<< i <<" is "<<in_product<<"\n";
+    //std::cout<<"The gpu inner product between "<<i-1 <<" and "<< i <<" is "<<in_product<<"\n";
     //std::cout<<"The normalized inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_normalized<<"\n";
     std::cout<<"Transform is "<<result <<"\n\n";
 

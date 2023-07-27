@@ -1,4 +1,5 @@
-#include "cvo/SparseKernelMat.hpp"  
+#include "cvo/SparseKernelMat.hpp"
+#include "cvo/CvoGPU_impl.cuh"
 #include <thrust/device_vector.h>
 #include <thrust/transform.h>
 #include <thrust/transform_reduce.h>
@@ -101,7 +102,13 @@ namespace cvo {
   
    SparseKernelMat * init_SparseKernelMat_gpu(int row, int col, SparseKernelMat & A_host) {
     SparseKernelMat *A_out; //= new SparseKernelMat;
-    cudaMalloc((void **)&A_out, sizeof(SparseKernelMat));
+    cudaError_t cuda_err = cudaMalloc((void **)&A_out, sizeof(SparseKernelMat));
+    gpuErrorCheck(cuda_err);
+    //if (cuda_err != cudaSuccess) {
+    //  fprintf(stderr,"cudaErr: %s when allocating %d bytes\n", cudaGetErrorString(cuda_err), );
+    //  exit(cuda_err);
+    //}
+    
 
     A_host.rows = row;
     A_host.cols = col;
@@ -109,14 +116,14 @@ namespace cvo {
     //cudaMemcpy((void*)&A->rows, &row , sizeof(int), cudaMemcpyHostToDevice  );
     //cudaMemcpy((void*)&A->cols, &col , sizeof(int), cudaMemcpyHostToDevice  );
 
-    cudaMalloc((void**)&A_host.mat, sizeof(float) * row *col);
-    cudaMalloc((void**)&A_host.ind_row2col, sizeof(int)*row*col);
-    cudaMalloc((void**)&A_host.nonzeros, sizeof(unsigned int)*row);
+    gpuErrorCheck(cudaMalloc((void**)&A_host.mat, sizeof(float) * row *col));
+    gpuErrorCheck(cudaMalloc((void**)&A_host.ind_row2col, sizeof(int)*row*col));
+    gpuErrorCheck(cudaMalloc((void**)&A_host.nonzeros, sizeof(unsigned int)*row));
     //cudaMalloc((void**)&A_host.max_index, sizeof(int)*row);
     //cudaMemcpy( &A->mat, &mat, sizeof(float*), cudaMemcpyHostToDevice   );
     //cudaMemcpy( &A->ind_row2col , &ind , sizeof(int *), cudaMemcpyHostToDevice   );
 
-    cudaMemcpy((void*)A_out, &A_host, sizeof(SparseKernelMat), cudaMemcpyHostToDevice  );
+    gpuErrorCheck(cudaMemcpy((void*)A_out, &A_host, sizeof(SparseKernelMat), cudaMemcpyHostToDevice  ));
     
     return A_out;
   }

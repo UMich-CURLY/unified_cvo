@@ -9,7 +9,7 @@
 
 namespace perl_registration {
 
-  const int KDTREE_K_SIZE = 32;
+  const int KDTREE_K_SIZE = 1024;
   
 struct TreeNode {
   int point;
@@ -127,6 +127,9 @@ class cuKdTree {
   void SetInputCloud(cuPointCloudSharedPtr &d_cloud);
   int NearestKSearch(const cuPointCloudSharedPtr &d_query_points, int k,
                      thrust::device_vector<int> &indices);
+  int NearestKSearch(const cuPointCloudSharedPtr &d_query_points, int k,
+                     int * indices, int indices_size);
+  
   bool IsInputCloudSet() {return input_cloud_set_;}
 };
 

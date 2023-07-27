@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PointSegmentedDistribution.hpp"
+#include "utils/PointSegmentedDistribution.hpp"
 
 extern template struct pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS, NUM_CLASSES>;
 

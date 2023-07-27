@@ -62,7 +62,8 @@ void read_semantics_pc(pcl::PointCloud<pcl::PointXYZ> & pc,
     Eigen::VectorXf semantic_vector(NUM_CLASSES);
     memcpy(semantic_vector.data(), curr_semantic_ptr, sizeof(float)*NUM_CLASSES);
     if ( pc.size() -1 == i) {
-      std::cout<<"p[-1]: raw semantic is "<<*(curr_semantic_ptr+NUM_CLASSES-1)<<" and copied to"<<  semantic_vector(NUM_CLASSES-1)<<"\n";
+      //std::cout<<"p[-1]: raw semantic is "<<*(curr_semantic_ptr+NUM_CLASSES-1)<<" and copied to"<<  semantic_vector(NUM_CLASSES-1)<<" with number of classes being\n";
+      std::cout<<"p[-1]: raw semantic is "<<*(curr_semantic_ptr+NUM_CLASSES-1)<<" and copied to"<<  semantic_vector.transpose()<<" with number of classes being"<<NUM_CLASSES<<"\n";
     }
     Eigen::VectorXf feature_vec(FEATURE_DIMENSIONS);
     feature_vec.setZero();
@@ -118,7 +119,7 @@ int main(int argc, char *argv[]) {
   init_param.ell_decay_rate = init_param.ell_decay_rate_first_frame;
   init_param.ell_decay_start  = init_param.ell_decay_start_first_frame;
   init_param.is_using_intensity = 0;
-  init_param.is_using_semantics = 1;
+  //init_param.is_using_semantics = 1;
   cvo_align.write_params(&init_param);
 
   std::cout<<"write ell! ell init is "<<cvo_align.get_params().ell_init<<std::endl;

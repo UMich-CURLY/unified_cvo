@@ -38,10 +38,13 @@ namespace cvo {
   class CvoFrameGPU_Impl {
   public:
     CvoFrameGPU_Impl(const CvoPointCloud * pts,
-                     const double poses[12]);
+                     const double poses[12],
+                     bool is_using_kdtree=false);
     ~CvoFrameGPU_Impl();
     
     const CvoPoint * points_transformed_gpu() const;
+    CvoPointCloudGPU::SharedPtr points_init_gpu();
+
     void transform_pointcloud_from_input_pose(const double * pose_vec_cpu);
     
     const float * pose_vec_gpu() const; // 12, row major
@@ -50,8 +53,15 @@ namespace cvo {
 
   private:
     
-    thrust::device_vector<CvoPoint> points_init_gpu_;
-    thrust::device_vector<CvoPoint> points_transformed_gpu_;
+    //thrust::device_vector<CvoPoint> points_init_gpu_;
+    //thrust::device_vector<CvoPoint> points_transformed_gpu_;
+    CvoPointCloudGPU::SharedPtr points_init_gpu_;
+    CvoPointCloudGPU::SharedPtr points_transformed_gpu_;
+
+    //perl_registration::cuKdTree<CvoPoint>::SharedPtr kdtree_points;
+    perl_registration::cuKdTree<CvoPoint> kdtree;
+
+    
     float * pose_vec_gpu_; // 12, row major
     
   };
