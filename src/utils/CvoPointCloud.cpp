@@ -1232,7 +1232,7 @@ namespace cvo{
         //features_(i,3) = features_(i,3) / 500.0 + 0.5;
         //features_(i,4) = features_(i,4) / 500.0 + 0.5;
 
-        infile >> points_[i].x >> points_[i].y >> points[i].z;
+        infile >> points_[i].x >> points_[i].y >> points_[i].z;
 
         for (int j = 0; j < num_classes_; j++){
             infile >> points_[i].label_distribution[j];
@@ -1298,7 +1298,7 @@ namespace cvo{
         //uint8_t b = static_cast<uint8_t>(std::min(255, (int)(features_(i,0) * 255)));
         if (num_classes_ ) {
           int max_class;
-          labels_.row(i).maxCoeff(&max_class);
+          label_at(i).maxCoeff(&max_class);
           auto c = label2color[max_class];
           auto r = std::get<0>(c);
           auto g = std::get<1>(c);
@@ -1405,7 +1405,7 @@ namespace cvo{
         }
         if (num_classes_)
           for (int j = 0; j < num_classes_; j++) {
-            outfile << points[i].label_distribution[j] <<" ";
+            outfile << points_[i].label_distribution[j] <<" ";
           }
         outfile << "\n";
         
@@ -1455,8 +1455,8 @@ namespace cvo{
         output.points_[j].y = temp.y();
         output.points_[j].z = temp.z();
         //TODO: confirm std::copy safe in parallel_for
-        std::copy(std::begin(input.feature_at(j)), std::end(input.feature_at(j)), std::begin(output.points_[j].features));
-        std::copy(std::begin(input.label_at(j)), std::end(input.label_at(j)), std::begin(output.points_[j].label_distribution));
+        std::copy(input.feature_at(j).data(), input.feature_at(j).data() + input.feature_dimensions(), std::begin(output.points_[j].features));
+        std::copy(input.label_at(j).data(), input.label_at(j).data() + input.num_classes(), std::begin(output.points_[j].label_distribution));
         output.points_[j].geometric_type[0] = input.geometry_type_at(j)(0);
         output.points_[j].geometric_type[1] = input.geometry_type_at(j)(1);
     });
