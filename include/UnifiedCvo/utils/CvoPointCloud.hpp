@@ -148,9 +148,9 @@ namespace cvo {
     }
     Eigen::Vector3f at(unsigned int index) const;
 //    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & labels() const { return labels_;}
-    const Eigen::VectorXf & label_at(unsigned int index) const { return Eigen::Map<const Eigen::VectorXf>(points_[index].label_distribution, NUM_CLASSES); }
+    const Eigen::VectorXf label_at(unsigned int index) const { return Eigen::Map<const Eigen::VectorXf>(points_[index].label_distribution, NUM_CLASSES); }
 //    Eigen::VectorXf feature_at(unsigned int index) const { return features_.row(index);
-    const Eigen::VectorXf & feature_at(unsigned int index) const { return Eigen::Map<const Eigen::VectorXf>(points_[index].features, FEATURE_DIMENSIONS); }
+    const Eigen::VectorXf feature_at(unsigned int index) const { return Eigen::Map<const Eigen::VectorXf>(points_[index].features, FEATURE_DIMENSIONS); }
     Eigen::Vector2f geometry_type_at(unsigned int index) const;
 //    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & semantics() const { return labels_;}
 //    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & features() const {return features_;}
