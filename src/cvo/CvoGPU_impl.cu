@@ -219,46 +219,29 @@ namespace cvo {
 
   void CvoPointCloud_to_gpu(const CvoPointCloud& cvo_cloud, thrust::device_vector<CvoPoint> & output ) {
     int num_points = cvo_cloud.num_points();
-    const ArrayVec3f & positions = cvo_cloud.positions();
+    // const ArrayVec3f & positions = cvo_cloud.positions();
 //    const Eigen::Matrix<float, Eigen::Dynamic, FEATURE_DIMENSIONS> & features = cvo_cloud.features();
     //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals = cvo_cloud.normals();
     // const Eigen::Matrix<float, Eigen::Dynamic, 2> & types = cvo_cloud.types();
 //    auto & labels = cvo_cloud.labels();
     // set basic informations for pcl_cloud
-    thrust::host_vector<CvoPoint> host_cloud;
-    host_cloud.resize(num_points);
-
+    thrust::host_vector<CvoPoint> host_cloud(cvo_cloud.get_points());
+    std::cout << "Feature Dimemsions is " << FEATURE_DIMENSIONS << "\n";
     int actual_num = 0;
     for(int i=0; i<num_points; ++i){
-      const cvo::CvoPoint point = cvo_cloud.point_at(i);
-      (host_cloud)[i].x = point.x;
-      (host_cloud)[i].y = point.y;
-      (host_cloud)[i].z = point.z;
+
       if (FEATURE_DIMENSIONS == 5
 //          && features.rows() == num_points &&
 //          features.cols() == FEATURE_DIMENSIONS
           ) {
-        (host_cloud)[i].r = (uint8_t)std::min(255.0, (point.features[0] * 255.0));
-        (host_cloud)[i].g = (uint8_t)std::min(255.0, (point.features[1] * 255.0));
-        (host_cloud)[i].b = (uint8_t)std::min(255.0, (point.features[2] * 255.0));
-      }
-
-      ///memcpy(host_cloud[i].features, features.row(i).data(), FEATURE_DIMENSIONS * sizeof(float));
-      for (int j = 0; j < 2; j++)
-//        host_cloud[i].geometric_type[j] = cvo_cloud.geometric_types()[i*2+j];
-        host_cloud[i].geometric_type[j] = point.geometric_type[j];
-
-//      if (features.rows() == num_points &&  features.cols() > 0 ) {
-      if (cvo_cloud.num_classes() > 0 && FEATURE_DIMENSIONS > 0 ) {
-        for (int j = 0; j < FEATURE_DIMENSIONS; j++)
-          host_cloud[i].features[j] = point.features[j];
+        (host_cloud)[i].r = (uint8_t)std::min(255.0, (cvo_cloud.feature_at(i)[0] * 255.0));
+        (host_cloud)[i].g = (uint8_t)std::min(255.0, (cvo_cloud.feature_at(i)[1] * 255.0));
+        (host_cloud)[i].b = (uint8_t)std::min(255.0, (cvo_cloud.feature_at(i)[2] * 255.0));
       }
       
       if (cvo_cloud.num_classes() > 0) {
         cvo_cloud.label_at(i).maxCoeff(&host_cloud[i].label);
 //        labels.row(i).maxCoeff(&host_cloud[i].label);
-        for (int j = 0; j < cvo_cloud.num_classes(); j++)
-          host_cloud[i].label_distribution[j] = point.label_distribution[j];
       }
       
       //if (normals.rows() > 0 && normals.cols()>0) {
@@ -287,6 +270,8 @@ namespace cvo {
 
     CvoPointCloudGPU::SharedPtr gpu_cloud(new CvoPointCloudGPU);
     CvoPointCloud_to_gpu(cvo_cloud, gpu_cloud->points);
+    // thrust::host_vector<CvoPoint> host_cloud(cvo_cloud.get_points());
+    // gpu_cloud->points = host_cloud;
 
     /*
       #ifdef IS_USING_COVARIANCE    

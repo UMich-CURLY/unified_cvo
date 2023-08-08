@@ -51,6 +51,7 @@ namespace cvo {
     //int actual_num = 0;
     for(int i=0; i<num_points; ++i){
       //memcpy(&host_cloud[i], &cvo_cloud[i], sizeof(CvoPoint));
+      //TODO: Might be problematic, refering to the change in CvoPointCloud_to_GPU in CvoGPU_impl.cu
       CvoPoint point = cvo_cloud.point_at(i);
       (pcl_cloud)[i].x = point.x;
       (pcl_cloud)[i].y = point.y;
