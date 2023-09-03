@@ -172,12 +172,12 @@ namespace cvo {
     
     auto & pc1 = pc1_cvo.positions();
     auto & pc2 = pc2_cvo.positions();
-    auto & labels1 = pc1_cvo.labels();
-    auto & labels2 = pc2_cvo.labels();
-    auto & features1 = pc1_cvo.features();
-    auto & features2 = pc2_cvo.features();
-    auto & geometry1 = pc1_cvo.geometric_types();
-    auto & geometry2 = pc2_cvo.geometric_types();
+//    auto & labels1 = pc1_cvo.labels();
+//    auto & labels2 = pc2_cvo.labels();
+//    auto & features1 = pc1_cvo.features();
+//    auto & features2 = pc2_cvo.features();
+//    auto & geometry1 = pc1_cvo.geometric_types();
+//    auto & geometry2 = pc2_cvo.geometric_types();
 
     const float sigma2 = cvo_params->sigma * cvo_params->sigma;
     const float c_ell2 = cvo_params->c_ell * cvo_params->c_ell;
@@ -218,8 +218,10 @@ namespace cvo {
           //geo_sim = compute_geometric_type_ip(p_a->geometric_type,
           //                                    p_b->geometric_type,
           //                                    2);
-          const Eigen::Vector2f g_a = Eigen::Map<const Eigen::Vector2f>(geometry1.data()+i*2);
-          const Eigen::Vector2f g_b = Eigen::Map<const Eigen::Vector2f>(geometry2.data()+idx*2);
+//          const Eigen::Vector2f g_a = Eigen::Map<const Eigen::Vector2f>(geometry1.data()+i*2);
+          const Eigen::Vector2f g_a = pc1_cvo.geometry_type_at(i);
+//          const Eigen::Vector2f g_b = Eigen::Map<const Eigen::Vector2f>(geometry2.data()+idx*2);
+          const Eigen::Vector2f g_b = pc2_cvo.geometry_type_at(idx);
           geo_sim = g_a.dot(g_b) / g_a.norm() / g_b.norm();
           if(geo_sim < 0.01) {
             //         std::cout<<"i="<<i<<", j="<<idx<<", geo_sim="<<geo_sim<<", skipped\n";
@@ -234,8 +236,8 @@ namespace cvo {
           else continue;
         }
         
-        Eigen::VectorXf feature_b = features2.row(idx);          
-        Eigen::VectorXf feature_a = features1.row(i);
+        Eigen::VectorXf feature_b = pc2_cvo.feature_at(idx);
+        Eigen::VectorXf feature_a = pc1_cvo.feature_at(i);
         if (cvo_params->is_using_intensity) {
           float d2_color = (feature_a-feature_b).squaredNorm();
           if (d2_color < d2_c_thresh)
@@ -244,8 +246,8 @@ namespace cvo {
             continue;
         }
         if (cvo_params->is_using_semantics) {
-          Eigen::VectorXf label_a = labels1.row(i);
-          Eigen::VectorXf label_b = labels2.row(idx);
+          Eigen::VectorXf label_a = pc1_cvo.label_at(i);
+          Eigen::VectorXf label_b = pc2_cvo.label_at(idx);
           float d2_semantic = (label_a - label_b).squaredNorm();  //squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
           if (d2_semantic < d2_s_thresh )
             sk = s_sigma2*exp(-d2_semantic/(2.0*s_ell2));

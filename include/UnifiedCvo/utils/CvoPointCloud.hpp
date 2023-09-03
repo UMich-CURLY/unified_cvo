@@ -8,6 +8,7 @@
 #include "utils/PointSegmentedDistribution.hpp"
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
+#include <utils/CvoPoint.hpp>
 
 
 namespace semantic_bki {
@@ -18,6 +19,7 @@ namespace pcl {
   struct CvoPoint;
 }
 
+extern template struct pcl::PointSegmentedDistribution<FEATURE_DIMENSIONS, NUM_CLASSES>;
 
 namespace cvo {
   
@@ -129,22 +131,31 @@ namespace cvo {
     void erase(size_t index);
 
     // getters
+    std::vector<cvo::CvoPoint> get_points() const {return points_;}
+    cvo::CvoPoint point_at(unsigned int index) const {return points_[index];}
     int num_points() const {return num_points_;}
     int size() const {return num_points_;}
     int num_classes() const {return num_classes_;}
     int num_features() const {return feature_dimensions_;}
     int feature_dimensions() const {return feature_dimensions_;}
     int num_geometric_types() const {return num_geometric_types_; }
-    const std::vector<Eigen::Vector3f> & positions() const {return positions_;}
+    const std::vector<Eigen::Vector3f> positions() const {
+      std::vector<Eigen::Vector3f> positions;
+      for(int j = 0; j < num_points_; j++){
+        positions.push_back(Eigen::Vector3f(points_[j].x, points_[j].y, points_[j].z));
+      }
+      return positions;
+    }
     Eigen::Vector3f at(unsigned int index) const;
-    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & labels() const { return labels_;}
-    Eigen::VectorXf label_at(unsigned int index) const { return labels_.row(index); }
-    Eigen::VectorXf feature_at(unsigned int index) const { return features_.row(index); }
+//    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & labels() const { return labels_;}
+    const Eigen::VectorXf label_at(unsigned int index) const { return Eigen::Map<const Eigen::VectorXf>(points_[index].label_distribution, NUM_CLASSES); }
+//    Eigen::VectorXf feature_at(unsigned int index) const { return features_.row(index);
+    const Eigen::VectorXf feature_at(unsigned int index) const { return Eigen::Map<const Eigen::VectorXf>(points_[index].features, FEATURE_DIMENSIONS); }
     Eigen::Vector2f geometry_type_at(unsigned int index) const;
-    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & semantics() const { return labels_;}
-    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & features() const {return features_;}
+//    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & semantics() const { return labels_;}
+//    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & features() const {return features_;}
     //const Eigen::MatrixXf & features() const {return features_;}
-    const std::vector<float> & geometric_types() const {return geometric_types_;}
+//    const std::vector<float> & geometric_types() const {return geometric_types_;}
     
     //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals() const {return normals_;}
     //const Eigen::Matrix<float, Eigen::Dynamic, 9> & covariance() const {return covariance_;}
@@ -170,17 +181,18 @@ namespace cvo {
     int num_classes_;
     int feature_dimensions_;
     int num_geometric_types_;
-    
+
+    std::vector<cvo::CvoPoint> points_;
     //std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> positions_;  // points position. x,y,z
-    std::vector<Eigen::Vector3f> positions_; 
+//    std::vector<Eigen::Vector3f> positions_;
     //Eigen::Matrix<float, Eigen::Dynamic, 3> positions_;
-    Eigen::MatrixXf features_;
+//    Eigen::MatrixXf features_;
     //Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> features_;   // rgb, gradient in [0,1]
     //std::vector<Eigen::Matrix<float, 1, Eigen::Dynamic>> features_;   // rgb, gradient in [0,1]
     //Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> normals_;  // surface normals
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> labels_; // number of points by number of classes
+//    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> labels_; // number of points by number of classes
     //std::vector<Eigen::Matrix<float, 1, Eigen::Dynamic>> labels_;   // rgb, gradient in [0,1]    
-    std::vector<float> geometric_types_;
+//    std::vector<float> geometric_types_;
     
     pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals_;
     //Eigen::Matrix<float, Eigen::Dynamic, 2> types_; // type of the point using loam point selector, edge=(1,0), surface=(0,1)

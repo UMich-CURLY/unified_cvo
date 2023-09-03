@@ -40,37 +40,41 @@ namespace cvo {
                             pcl::PointCloud<CvoPoint> &pcl_cloud
                             ) {
     int num_points = cvo_cloud.num_points();
-    const ArrayVec3f & positions = cvo_cloud.positions();
-    const Eigen::Matrix<float, Eigen::Dynamic, FEATURE_DIMENSIONS> & features = cvo_cloud.features();
+//    const ArrayVec3f & positions = cvo_cloud.positions();
+//    const Eigen::Matrix<float, Eigen::Dynamic, FEATURE_DIMENSIONS> & features = cvo_cloud.features();
     //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals = cvo_cloud.normals();
     // const Eigen::Matrix<float, Eigen::Dynamic, 2> & types = cvo_cloud.types();
-    auto & labels = cvo_cloud.labels();
+//    auto & labels = cvo_cloud.labels();
     // set basic informations for pcl_cloud
     pcl_cloud.resize(num_points);
 
     //int actual_num = 0;
     for(int i=0; i<num_points; ++i){
       //memcpy(&host_cloud[i], &cvo_cloud[i], sizeof(CvoPoint));
-      (pcl_cloud)[i].x = positions[i](0);
-      (pcl_cloud)[i].y = positions[i](1);
-      (pcl_cloud)[i].z = positions[i](2);
-      if (FEATURE_DIMENSIONS >= 3 && features.cols() > 2 && features.rows() > i-1) {
-        (pcl_cloud)[i].r = (uint8_t)std::min(255.0, (features(i,0) * 255.0));
-        (pcl_cloud)[i].g = (uint8_t)std::min(255.0, (features(i,1) * 255.0));
-        (pcl_cloud)[i].b = (uint8_t)std::min(255.0, (features(i,2) * 255.0));
+      //TODO: Might be problematic, refering to the change in CvoPointCloud_to_GPU in CvoGPU_impl.cu
+      CvoPoint point = cvo_cloud.point_at(i);
+      (pcl_cloud)[i].x = point.x;
+      (pcl_cloud)[i].y = point.y;
+      (pcl_cloud)[i].z = point.z;
+//      if (FEATURE_DIMENSIONS >= 3 && features.cols() > 2 && features.rows() > i-1) {
+      if (FEATURE_DIMENSIONS >= 3) {
+          (pcl_cloud)[i].r = (uint8_t)std::min(255.0, (point.features[0] * 255.0));
+          (pcl_cloud)[i].g = (uint8_t)std::min(255.0, (point.features[1] * 255.0));
+          (pcl_cloud)[i].b = (uint8_t)std::min(255.0, (point.features[2] * 255.0));
       }
 
       for (int j = 0; j < FEATURE_DIMENSIONS; j++)
-        pcl_cloud[i].features[j] = features(i,j);
+        pcl_cloud[i].features[j] = point.features[j];
 
       if (cvo_cloud.num_classes() > 0) {
-        labels.row(i).maxCoeff(&pcl_cloud[i].label);
+//        labels.row(i).maxCoeff(&pcl_cloud[i].label);
+        cvo_cloud.label_at(i).maxCoeff(&pcl_cloud[i].label);
         for (int j = 0; j < cvo_cloud.num_classes(); j++)
-          pcl_cloud[i].label_distribution[j] = labels(i,j);
+          pcl_cloud[i].label_distribution[j] = point.label_distribution[j];
       }
 
-      pcl_cloud[i].geometric_type[0] = cvo_cloud.geometric_types()[i*2];
-      pcl_cloud[i].geometric_type[1] = cvo_cloud.geometric_types()[i*2+1];
+      pcl_cloud[i].geometric_type[0] = point.geometric_type[0];
+      pcl_cloud[i].geometric_type[1] = point.geometric_type[1];
       
       //if (normals.rows() > 0 && normals.cols()>0) {
       //  for (int j = 0; j < 3; j++)
@@ -137,10 +141,10 @@ namespace cvo {
         nanoflann::SearchParams params_flann;
         //params.sorted = false;
         const size_t nMatches = mat_index.index->radiusSearch(&(*cloud_a_pos)[i](0), search_radius, ret_matches, params_flann);
-        Eigen::Matrix<float,Eigen::Dynamic,1> feature_a = cloud_a->features().row(i).transpose();
+        Eigen::Matrix<float,Eigen::Dynamic,1> feature_a = cloud_a->feature_at(i).transpose();
         Eigen::VectorXf label_a;
         if (params.is_using_semantics)
-          label_a = cloud_a->labels().row(i);
+          label_a = cloud_a->label_at(i);
         
         // for(int j=0; j<num_moving; j++){
         for(size_t j=0; j<nMatches; ++j){
@@ -169,7 +173,7 @@ namespace cvo {
           
           
           if (params.is_using_semantics) {
-            label_b = cloud_b->labels().row(idx);
+            label_b = cloud_b->label_at(idx);
             d2_semantic = ((label_a-label_b).squaredNorm());            
             sk = params.s_sigma*params.s_sigma*exp(-d2_semantic/(2.0*params.s_ell*params.s_ell));
           }
@@ -179,7 +183,7 @@ namespace cvo {
           } 
 
           if (params.is_using_intensity) {
-            Eigen::Matrix<float,Eigen::Dynamic,1> feature_b = cloud_b->features().row(idx).transpose();            
+            Eigen::Matrix<float,Eigen::Dynamic,1> feature_b = cloud_b->feature_at(idx).transpose();
             d2_color = ((feature_a-feature_b).squaredNorm());
             ck = params.c_sigma*params.c_sigma*exp(-d2_color/(2.0*params.c_ell*params.c_ell));
           }

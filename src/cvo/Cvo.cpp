@@ -380,7 +380,7 @@ namespace cvo{
 
         const size_t nMatches = mat_index.index->radiusSearch(&(*cloud_a_pos)[i](0), search_radius, ret_matches, params);
 
-        Eigen::Matrix<float,Eigen::Dynamic,1> feature_a = cloud_a->features().row(i).transpose();
+        Eigen::Matrix<float,Eigen::Dynamic,1> feature_a = cloud_a->feature_at(i).transpose();
 #ifdef IS_USING_NORMALS
         Eigen::Matrix<float,Eigen::Dynamic,1> normal_a = cloud_a->normals().row(i).transpose();
 #endif
@@ -402,7 +402,7 @@ namespace cvo{
           float d2_semantic = 0;
           float a = 0;
           if(d2<d2_thres){
-            Eigen::Matrix<float,Eigen::Dynamic,1> feature_b = cloud_b->features().row(idx).transpose();
+            Eigen::Matrix<float,Eigen::Dynamic,1> feature_b = cloud_b->feature_at(idx).transpose();
 #ifdef IS_USING_NORMALS            
             Eigen::Matrix<float,Eigen::Dynamic,1> normal_b = cloud_b->normals().row(idx).transpose();
 #endif            
@@ -491,7 +491,7 @@ namespace cvo{
 
         const size_t nMatches = mat_index.index->radiusSearch(&(*cloud_a_pos)[i](0), search_radius, ret_matches, params);
 
-        Eigen::Matrix<float,Eigen::Dynamic,1> feature_a = cloud_a->features().row(i).transpose();
+        Eigen::Matrix<float,Eigen::Dynamic,1> feature_a = cloud_a->feature_at(i).transpose();
 
 #ifdef IS_USING_SEMANTICS        
         Eigen::VectorXf label_a = cloud_a->labels().row(i);
@@ -508,7 +508,7 @@ namespace cvo{
           float d2_semantic = 0;
           float a = 0;
           if(d2<d2_thres){
-            Eigen::Matrix<float,Eigen::Dynamic,1> feature_b = cloud_b->features().row(idx).transpose();
+            Eigen::Matrix<float,Eigen::Dynamic,1> feature_b = cloud_b->feature_at(idx).transpose();
             d2_color = ((feature_a-feature_b).squaredNorm());
 #ifdef IS_USING_SEMANTICS            
             Eigen::VectorXf label_b = cloud_b->labels().row(idx);
@@ -1204,7 +1204,7 @@ namespace cvo{
     cloud_y = new ArrayVec3f (ptr_moving_pcd->positions());
     // std::cout<<"fixed[0] \n"<<ptr_fixed_pcd->positions()[0]<<"\nmoving[0] "<<ptr_moving_pcd->positions()[0]<<"\n";
     std::cout<<"fixed[0] \n"<<(*cloud_x)[0]<<"\nmoving[0] "<<(*cloud_y)[0]<<"\n";
-    std::cout<<"fixed[0] features \n "<<ptr_fixed_pcd->features().row(0)<<"\n  moving[0] feature "<<ptr_moving_pcd->features().row(0)<<"\n";
+    std::cout<<"fixed[0] features \n "<<ptr_fixed_pcd->feature_at(0)<<"\n  moving[0] feature "<<ptr_moving_pcd->feature_at(0)<<"\n";
 
     // std::cout<<"init cvo: \n"<<transform.matrix()<<std::endl;
     if (is_using_init_guess) {

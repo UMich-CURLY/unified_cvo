@@ -12,36 +12,39 @@ namespace cvo {
     num_classes_ = NUM_CLASSES;
     feature_dimensions_ = FEATURE_DIMENSIONS;
 
-    positions_.resize(pc.size());
-    features_.resize(num_points_, feature_dimensions_);
-    labels_.resize(num_points_, num_classes_);
-    geometric_types_.resize(num_points_*2);
+//    positions_.resize(pc.size());
+//    features_.resize(num_points_, feature_dimensions_);
+//    labels_.resize(num_points_, num_classes_);
+//    geometric_types_.resize(num_points_*2);
     for (int i = 0; i < num_points_; i++) {
-      Eigen::Vector3f xyz;
+//      Eigen::Vector3f xyz;
       auto & p = (pc)[i];
-      xyz << p.x, p.y, p.z;
-      positions_[i] = xyz;
+      CvoPoint point(p.x, p.y, p.z);
+//      xyz << p.x, p.y, p.z;
+//      positions_[i] = xyz;
 
       
 
       for (int j = 0 ; j < FEATURE_DIMENSIONS; j++) {
-        features_(i, j) = pc[i].features[j];
-      }
-      for (int j = 0 ; j < NUM_CLASSES; j++) {
-        labels_(i, j) = pc[i].label_distribution[j];
+//        features_(i, j) = pc[i].features[j];
+          point.features[j] = pc[i].features[j];
       }
 
-      geometric_types_[i*2] = p.geometric_type[0];
-      geometric_types_[i*2+1] = p.geometric_type[1];
+      for (int j = 0 ; j < NUM_CLASSES; j++) {
+        point.label_distribution[j] = pc[i].label_distribution[j];
+      }
+
+      point.geometric_type[0] = p.geometric_type[0];
+      point.geometric_type[1] = p.geometric_type[1];
       if (gtype == GeometryType::SURFACE) {
-        geometric_types_[i*2] = 0;
-        geometric_types_[i*2+1] = 1;
+        point.geometric_type[0] = 0;
+        point.geometric_type[1] = 1;
       } else {
-        geometric_types_[i*2] = 1;
-        geometric_types_[i*2+1] = 0;
+        point.geometric_type[0] = 1;
+        point.geometric_type[1] = 0;
         
       }
-      
+      points_.push_back(point);
       
     }
     
@@ -54,27 +57,28 @@ namespace cvo {
     num_classes_ = NUM_CLASSES;
     feature_dimensions_ = FEATURE_DIMENSIONS;
 
-    positions_.resize(pc.size());
-    features_.resize(num_points_, feature_dimensions_);
-    labels_.resize(num_points_, num_classes_);
-    geometric_types_.resize(num_points_*2);
+//    positions_.resize(pc.size());
+//    features_.resize(num_points_, feature_dimensions_);
+//    labels_.resize(num_points_, num_classes_);
+//    geometric_types_.resize(num_points_*2);
     for (int i = 0; i < num_points_; i++) {
-      Eigen::Vector3f xyz;
+//      Eigen::Vector3f xyz;
       auto & p = (pc)[i];
-      xyz << p.x, p.y, p.z;
-      positions_[i] = xyz;
-
-      
+      CvoPoint point(p.x, p.y, p.z);
+//      xyz << p.x, p.y, p.z;
+//      positions_[i] = xyz;
 
       for (int j = 0 ; j < FEATURE_DIMENSIONS; j++) {
-        features_(i, j) = pc[i].features[j];
-      }
-      for (int j = 0 ; j < NUM_CLASSES; j++) {
-        labels_(i, j) = pc[i].label_distribution[j];
+//        features_(i, j) = pc[i].features[j];
+        point.features[j] = pc[i].features[j];
       }
 
-      geometric_types_[i*2] = p.geometric_type[0];
-      geometric_types_[i*2+1] = p.geometric_type[1];
+      for (int j = 0 ; j < NUM_CLASSES; j++) {
+        point.label_distribution[j] = pc[i].label_distribution[j];
+      }
+
+      point.geometric_type[0] = p.geometric_type[0];
+      point.geometric_type[1] = p.geometric_type[1];
       
     }
     
@@ -86,29 +90,32 @@ namespace cvo {
 
     for (int i = 0; i < num_points_; i++) {
       CvoPoint p;
-      p.x = positions_[i]( 0);
-      p.y = positions_[i]( 1);
-      p.z = positions_[i]( 2);
+      p.x = points_[i].x;
+      p.y = points_[i].y;
+      p.z = points_[i].z;
       
-      uint8_t b = static_cast<uint8_t>(std::min(255, (int)(features_(i,0) * 255) ) );
-      uint8_t g = static_cast<uint8_t>(std::min(255, (int)(features_(i,1) * 255) ) );
-      uint8_t r = static_cast<uint8_t>(std::min(255, (int)(features_(i,2) * 255)));
+      uint8_t b = static_cast<uint8_t>(std::min(255, (int)(points_[i].features[0] * 255) ) );
+      uint8_t g = static_cast<uint8_t>(std::min(255, (int)(points_[i].features[1] * 255) ) );
+      uint8_t r = static_cast<uint8_t>(std::min(255, (int)(points_[i].features[2] * 255)));
 
       for (int j = 0; j < this->feature_dimensions_; j++)
-        p.features[j] = features_(i,j);
+        p.features[j] = points_[i].features[j];
 
       if (this->num_classes() > 0) {
         //labels_.row(i).maxCoeff(p.label);
-        p.label = labels_.row(i).maxCoeff();
-        for (int j = 0; j < this->num_classes(); j++)
-          p.label_distribution[j] = labels_(i,j);
+        Eigen::VectorXf labels_row = Eigen::Map<const VecXf_row>(points_[i].label_distribution, num_points_);
+        p.label = labels_row.maxCoeff();
+        for (int j = 0; j < this->num_classes(); j++) {
+          p.label_distribution[j] = points_[i].label_distribution[j];
+
+        }
       }
       p.r = r;
       p.g = g;
       p.b = b;
 
-      p.geometric_type[0] = geometric_types_[i*2];
-      p.geometric_type[1] = geometric_types_[i*2+1];
+      p.geometric_type[0] = points_[i].geometric_type[0];
+      p.geometric_type[1] = points_[i].geometric_type[1];
       
       pc.push_back(p);
     }

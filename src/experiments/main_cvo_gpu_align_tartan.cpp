@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
   //vector<string> vstrRGBName = tum.get_rgb_name_list();
   string cvo_param_file(argv[2]);
   string calib_file;
-  calib_file = string(argv[1] ) +"/cvo_calib.txt"; 
+  calib_file = "/home/jyzh/cvo_calib.txt";
   cvo::Calibration calib(calib_file, cvo::Calibration::RGBD);
   std::ofstream accum_output(argv[3]);
   int start_frame = std::stoi(argv[4]);
@@ -96,9 +96,12 @@ int main(int argc, char *argv[]) {
     std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, calib
                                                                       ,cvo::CvoPointCloud::DSO_EDGES
                                                                       ));
-    //if (i == 0)
-    std::cout<<"First point is "<<target->at(0).transpose()<<std::endl;    
-    //target->write_to_color_pcd(std::to_string(i+1)+".pcd");  
+    if (i == 0){
+        std::cout<<"Write first pcd\n";
+        target->write_to_color_pcd(std::to_string(i+1)+".pcd");
+    }
+    std::cout<<"First point is "<<target->at(0).transpose()<<std::endl;
+
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
 
     Eigen::Matrix4f result, init_guess_inv;
