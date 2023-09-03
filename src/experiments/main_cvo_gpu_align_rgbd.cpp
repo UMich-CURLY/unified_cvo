@@ -64,8 +64,9 @@ int main(int argc, char *argv[]) {
   //                                                  calib, 1));
   std::shared_ptr<cvo::ImageRGBD<uint16_t>> source_raw(new cvo::ImageRGBD(source_rgb, source_dep_data));
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw,
-                                                                              calib
-                                                                              //,cvo::CvoPointCloud::CANNY_EDGES
+                                                                    calib,
+                                                                    cvo::CvoPointCloud::DSO_EDGES
+                                                                    //,cvo::CvoPointCloud::CANNY_EDGES
                                                                               ));
   //19, semantics_source, 
   //                                                                    cvo::CvoPointCloud::CV_FAST));
@@ -92,7 +93,7 @@ int main(int argc, char *argv[]) {
     //std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, rgb, dep, calib,1));
     std::shared_ptr<cvo::ImageRGBD<uint16_t>> target_raw(new cvo::ImageRGBD(rgb, target_dep_data));
     std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, calib
-                                                                                //,cvo::CvoPointCloud::CANNY_EDGES
+                                                                      ,cvo::CvoPointCloud::DSO_EDGES
                                                                                 ));
     //if (i == 0)
     //  target->write_to_color_pcd("target.pcd");  

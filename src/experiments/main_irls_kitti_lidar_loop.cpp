@@ -24,11 +24,10 @@
 //#include "argparse/argparse.hpp"
 #include "dataset_handler/KittiHandler.hpp"
 #include "dataset_handler/PoseLoader.hpp"
-#include "utils/LidarPointSelector.hpp"
-#include "utils/LidarPointType.hpp"
 #include "utils/ImageRGBD.hpp"
 #include "utils/Calibration.hpp"
 #include "utils/SymbolHash.hpp"
+#include "utils/g2o_parser.hpp"
 
 using namespace std;
 
@@ -59,101 +58,6 @@ void  log_lc_pc_pairs( const cvo::aligned_vector<cvo::Mat34d_row> &BA_poses,
     pc = pc1_T + pc2_T;
     pc.write_to_intensity_pcd(fname_prefix + std::to_string(id1)+"_"+std::to_string(id2)+".pcd");
   }
-}
-
-
-// Reads a single pose from the input and inserts it into the map. Returns false
-// if there is a duplicate entry.
-bool ReadVertex(std::ifstream* infile,
-                cvo::pgo::MapOfPoses* poses) {
-  int id;
-  cvo::pgo::Pose3d pose;
-  *infile >> id >> pose;
-  // Ensure we don't have duplicate poses.
-  if (poses->find(id) != poses->end()) {
-    std::cerr << "Duplicate vertex with ID: " << id;
-    return false;
-  }
-  std::cout<<"Read pose "<<id<<"\n";
-  (*poses)[id] = pose;
-  return true;
-}
-// Reads the contraints between two vertices in the pose graph
-void ReadConstraint(std::ifstream* infile,
-                    cvo::pgo::VectorOfConstraints* constraints) {
-  cvo::pgo::Constraint3d constraint;
-  *infile >> constraint;
-  std::cout<<"Read constrain: "<<constraint<<"\n";
-  constraints->push_back(constraint);
-}
-// Reads a file in the g2o filename format that describes a pose graph
-// problem. The g2o format consists of two entries, vertices and constraints.
-//
-// In 2D, a vertex is defined as follows:
-//
-// VERTEX_SE2 ID x_meters y_meters yaw_radians
-//
-// A constraint is defined as follows:
-//
-// EDGE_SE2 ID_A ID_B A_x_B A_y_B A_yaw_B I_11 I_12 I_13 I_22 I_23 I_33
-//
-// where I_ij is the (i, j)-th entry of the information matrix for the
-// measurement.
-//
-//
-// In 3D, a vertex is defined as follows:
-//
-// VERTEX_SE3:QUAT ID x y z q_x q_y q_z q_w
-//
-// where the quaternion is in Hamilton form.
-// A constraint is defined as follows:
-//
-// EDGE_SE3:QUAT ID_a ID_b x_ab y_ab z_ab q_x_ab q_y_ab q_z_ab q_w_ab I_11 I_12 I_13 ... I_16 I_22 I_23 ... I_26 ... I_66 // NOLINT
-//
-// where I_ij is the (i, j)-th entry of the information matrix for the
-// measurement. Only the upper-triangular part is stored. The measurement order
-// is the delta position followed by the delta orientation.
-bool ReadG2oFile(const std::string& filename,
-                 std::vector<std::pair<int, int>> & loop_closures,
-                 std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>&  lc_poses
-                 ){
-  
-  cvo::pgo::MapOfPoses  poses;
-  cvo::pgo::VectorOfConstraints constraints;
-
-  std::ifstream infile(filename.c_str());
-  if (!infile) {
-    return false;
-  }
-  std::string data_type;
-  while (infile.good()) {
-    // Read whether the type is a node or a constraint.
-    infile >> data_type;
-    if (data_type == cvo::pgo::Pose3d::name()) {
-      if (!ReadVertex(&infile, &poses)) {
-        return false;
-      }
-    } else if (data_type == cvo::pgo::Constraint3d::name()) {
-      ReadConstraint(&infile, &constraints);
-    } else {
-      std::cerr << "Unknown data type: " << data_type;
-      return false;
-    }
-    // Clear any trailing whitespace from the line.
-    infile >> std::ws;
-  }
-
-  
-  std::cout<<__func__<<"Read from file, # of lc constrains is  "<<constraints.size()<<"\n";
-  for (auto && constrain: constraints ) {
-    int id1 = constrain.id_begin;
-    int id2 = constrain.id_end;
-    loop_closures.push_back(std::make_pair(id1, id2));
-    Eigen::Matrix4f pose = cvo::pgo::pose3d_to_eigen<float, Eigen::ColMajor>(constrain.t_be);
-    lc_poses.push_back(pose);
-    std::cout<<__func__<<"Read from file, loop closure constrain between "<<id1<<" and "<<id2<<" is \n"<<pose<<"\n";
-  }  
-  return true;
 }
 
 
@@ -197,7 +101,8 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
                               cvo::aligned_vector<cvo::Mat34d_row> & BA_poses,
                               double cov_scale_t,
 			      double cov_scale_r,
-                              int num_neighbors_per_node){
+                              int num_neighbors_per_node,
+                              std::set<int> & selected_inds){
   Eigen::Matrix<double, 6,6> information = Eigen::Matrix<double, 6,6>::Identity(); 
   information.block(0,0,3,3) = Eigen::Matrix<double, 3,3>::Identity() / cov_scale_t / cov_scale_t;
   information.block(3,3,3,3) = Eigen::Matrix<double, 3,3>::Identity() / cov_scale_r / cov_scale_r;
@@ -209,6 +114,8 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
 
   /// copy from tracking_poses to poses and constrains
   for (int i = 0; i < tracking_poses.size(); i++) {
+    if (selected_inds.size() && selected_inds.find(i) == selected_inds.end() )
+      continue;
     cvo::pgo::Pose3d pose = cvo::pgo::pose3d_from_eigen<double, Eigen::ColMajor>(tracking_poses[i]);
     poses.insert(std::make_pair(i, pose));
     lc_g2o <<cvo::pgo::Pose3d::name()<<" "<<i<<" "<<pose<<"\n";
@@ -390,111 +297,6 @@ void construct_loop_BA_problem(cvo::CvoGPU & cvo_align,
   std::cout<<"GPU Align ends. Total time is "<<double(t_all.count()) / 1000<<" seconds."<<std::endl;
 }
 
-std::shared_ptr<cvo::CvoPointCloud> downsample_lidar_points(bool is_edge_only,
-                                                            pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
-                                                            float leaf_size) {
-
-
-    int expected_points = 5000;
-    double intensity_bound = 0.4;
-    double depth_bound = 4.0;
-    double distance_bound = 40.0;
-    int kitti_beam_num = 64;
-    cvo::LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, kitti_beam_num);
-    /*
-    // running edge detection + lego loam point selection
-    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
-    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
-    std::vector<int> selected_edge_inds, selected_loam_inds;
-    lps.edge_detection(pc, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_edge_inds);
-  
-    lps.legoloam_point_selector(pc, pc_out_surface, edge_or_surface, selected_loam_inds);    
-    // *pc_out += *pc_out_edge;
-    // *pc_out += *pc_out_surface;
-    //
-    num_points_ = selected_indexes.size();
-  */
-
-  if (is_edge_only) {
-    cvo::VoxelMap<pcl::PointXYZI> full_voxel(leaf_size);
-    for (int k = 0; k < pc_in->size(); k++) {
-      full_voxel.insert_point(&pc_in->points[k]);
-    }
-    std::vector<pcl::PointXYZI*> downsampled_results = full_voxel.sample_points();
-    pcl::PointCloud<pcl::PointXYZI>::Ptr downsampled(new pcl::PointCloud<pcl::PointXYZI>);
-    for (int k = 0; k < downsampled_results.size(); k++)
-      downsampled->push_back(*downsampled_results[k]);
-     std::shared_ptr<cvo::CvoPointCloud>  ret(new cvo::CvoPointCloud(downsampled, 5000, 64, cvo::CvoPointCloud::PointSelectionMethod::FULL));
-     return ret;
-  } else {
-    
-    /// edge points
-    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);  
-    std::vector<int> selected_edge_inds;
-    std::vector <double> output_depth_grad;
-    std::vector <double> output_intenstity_grad;
-    lps.edge_detection(pc_in, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_edge_inds);
-    std::unordered_set<int> edge_inds;
-    for (auto && j : selected_edge_inds) edge_inds.insert(j);
-
-    /// surface points
-    std::vector<float> edge_or_surface;
-    std::vector<int> selected_loam_inds;
-    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_loam (new pcl::PointCloud<pcl::PointXYZI>);        
-    lps.loam_point_selector(pc_in, pc_out_loam, edge_or_surface, selected_loam_inds);
-
-    /// declare voxel map
-    cvo::VoxelMap<pcl::PointXYZI> edge_voxel(leaf_size); 
-    cvo::VoxelMap<pcl::PointXYZI> surface_voxel(leaf_size / 2);
-
-    /// edge and surface downsample
-    for (int k = 0; k < pc_out_edge->size(); k++) 
-      edge_voxel.insert_point(&pc_out_edge->points[k]);
-    std::vector<pcl::PointXYZI*> edge_results = edge_voxel.sample_points();
-    //for (int k = 0; k < pc_in->size(); k++)  {
-    //  if (edge_or_surface[k] > 0 &&
-    //      edge_inds.find(k) == edge_inds.end())
-    //    surface_voxel.insert_point(&pc_in->points[k]);
-   // }
-    for (int k = 0; k < pc_out_loam->size(); k++)  {
-      if (edge_or_surface[k] > 0 &&
-          edge_inds.find(selected_loam_inds[k]) == edge_inds.end())
-        surface_voxel.insert_point(&pc_out_loam->points[k]);
-    }
-    std::vector<pcl::PointXYZI*> surface_results = surface_voxel.sample_points();
-    int total_selected_pts_num = edge_results.size() + surface_results.size();    
-    std::shared_ptr<cvo::CvoPointCloud> ret(new cvo::CvoPointCloud(1, NUM_CLASSES));
-    ret->reserve(total_selected_pts_num, 1, NUM_CLASSES);
-    std::cout<<"edge voxel selected points "<<edge_results.size()<<std::endl;
-    std::cout<<"surface voxel selected points "<<surface_results.size()<<std::endl;    
-
-    /// push
-    for (int k = 0; k < edge_results.size(); k++) {
-      Eigen::VectorXf feat(1);
-      feat(0) = edge_results[k]->intensity;
-      Eigen::VectorXf semantics = Eigen::VectorXf::Zero(NUM_CLASSES);
-      Eigen::VectorXf geo_t(2);
-      geo_t << 1.0, 0;
-      ret->add_point(k, edge_results[k]->getVector3fMap(),  feat, semantics, geo_t);
-    }
-    /// surface downsample
-    for (int k = 0; k < surface_results.size(); k++) {
-      // surface_pcl.push_back(*surface_results[k]);
-      Eigen::VectorXf feat(1);
-      feat(0) = surface_results[k]->intensity;
-      Eigen::VectorXf semantics = Eigen::VectorXf::Zero(NUM_CLASSES);
-      Eigen::VectorXf geo_t(2);
-      geo_t << 0, 1.0;
-      ret->add_point(k+edge_results.size(), surface_results[k]->getVector3fMap(), feat,
-                     semantics, geo_t);
-    }
-    return ret;
-
-  }
-
-}
-
-
 void write_traj_file(std::string & fname,
                      std::vector<cvo::CvoFrame::Ptr> & frames ) {
   std::ofstream outfile(fname);
@@ -558,6 +360,23 @@ void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string 
   pcl::io::savePCDFileASCII(fname, pc_xyz_all);
 }
 
+void sample_frame_inds(int start_ind, int end_ind, int num_merged_frames,
+                       const std::vector<std::pair<int, int>> &loop_closures,
+                       std::set<int> & result_selected_frames
+                       ) {
+  result_selected_frames.clear();
+  for (int i = start_ind; i <= end_ind; i+=result_selected_frames) {
+    result_selected_frames.insert(i);
+  }
+
+  for (auto && p : loop_closures) {
+    if(result_selected_frames.find(p.first) == result_selected_frames.end())
+      result_selected_frames.insert(p.first);
+    if(result_selected_frames.find(p.second) == result_selected_frames.end())
+      result_selected_frames.insert(p.second);
+  }
+}
+
 int main(int argc, char** argv) {
 
   //  omp_set_num_threads(24);
@@ -579,7 +398,7 @@ int main(int argc, char** argv) {
   std::cout<<"input last_ind is  "<<max_last_ind<<"\n";
   double cov_scale_t = std::stod(argv[10]);
   double cov_scale_r = std::stod(argv[11]);
-  int skipped_frames = std::stoi(argv[12]);
+  int num_merging_sequential_frames = std::stoi(argv[12]);
   int is_pgo_only = std::stoi(argv[13]);
   int is_read_loop_closure_poses_from_file = std::stoi(argv[14]);
   
@@ -656,7 +475,14 @@ int main(int argc, char** argv) {
                               g_reg_f,
                               lc_poses);
   }
-  
+
+  /// decide if we will skip frames
+  std::set<int> result_selected_frames;
+  if(num_merging_sequential_frames > 1) {
+    sample_frame_inds(start_ind, last_ind, num_merging_sequential_frames, loop_closures, result_selected_frames);
+  } else {
+    std::copy(v.begin(),v.end(),std::inserter(s,s.end()));
+  }
 
   /// pose graph optimization
   std::string lc_g2o("loop_closures.g2o");
@@ -664,19 +490,20 @@ int main(int argc, char** argv) {
   pose_graph_optimization(tracking_poses, loop_closures,
                           lc_poses, lc_g2o,
                           BA_poses, 
-			  cov_scale_t, cov_scale_r, num_neighbors_per_node);
+			  cov_scale_t, cov_scale_r, num_neighbors_per_node,
+                          result_selected_frames);
   std::cout<<"Finish PGO...\n";  
   std::string pgo_fname("pgo.txt");
   cvo::write_traj_file<double, 3, Eigen::RowMajor>(pgo_fname, BA_poses);
   std::string lc_prefix(("loop_closure_"));
   if (pcs.size())
     log_lc_pc_pairs(BA_poses, loop_closures, pcs, lc_prefix);
+  if (is_pgo_only) return 0;
   
   //std::cout<<"global registration result is \n"<<T_last_to_first<<"\n";
   //std::cout<<"groundtruth result is \n"<<gt_poses.back().inverse()*gt_poses[0]<<"\n";
 
-
-  if (is_pgo_only) return 0;
+  
   std::cout<<"Start construct BA CvoFrame\n";
   /// construct BA CvoFrame struct
   for (int i = 0; i<gt_poses.size(); i++) {

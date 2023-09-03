@@ -267,6 +267,7 @@ namespace cvo{
       int thresh, num_want, num_min, break_thresh;
       if (pt_type == RGBD) {
         thresh = 9; num_want = 15000; num_min = 12000; break_thresh = 13;
+        //thresh = 50; num_want = 2000; num_min = 1000; break_thresh = 60;
       } else if (pt_type == STEREO) {
         thresh = 4; num_want = 24000; num_min = 15000; break_thresh = 50;
         if (left_image.num_classes() > 0)

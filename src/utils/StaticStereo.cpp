@@ -1,3 +1,8 @@
+/*********************************
+ * StaticStereo.cpp
+ * Author: Ray Zhang trotwoodray@gmail.com
+ */
+
 #include <bits/stdint-intn.h>
 #include <cassert>
 #include <cmath>

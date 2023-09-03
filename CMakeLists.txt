@@ -767,7 +767,6 @@ target_include_directories(cvo_irls_lidar_loop PUBLIC
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(cvo_irls_lidar_loop cvo_gpu_lidar cvo_utils_lib boost_filesystem boost_system kitti Ceres::ceres )
 
-
 endif()
 
 add_executable(gicp_align_two ${PROJECT_SOURCE_DIR}/src/experiments/gicp_align_two.cpp)

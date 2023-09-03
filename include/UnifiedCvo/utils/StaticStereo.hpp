@@ -1,3 +1,10 @@
+/*****************
+ * StaticStereo.hpp
+ * Author: Ray Zhang  trotwoodray@gmail.com 
+ */
+
+
+
 #pragma once
 
 #include <iostream>
