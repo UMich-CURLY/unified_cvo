@@ -72,6 +72,7 @@ namespace cvo {
     int multiframe_num_neighbors;
     int multiframe_least_squares_num_threads;
     int multiframe_min_nonzeros;
+    int multiframe_is_optimizing_ell;
     CvoParams() :
       ell_init_first_frame(0.5),
       ell_init(0.5),
@@ -122,7 +123,8 @@ namespace cvo {
       multiframe_expected_points(1000),
       multiframe_num_neighbors(128),
       multiframe_min_nonzeros(300),
-      multiframe_least_squares_num_threads(24)      
+      multiframe_least_squares_num_threads(24),
+      multiframe_is_optimizing_ell(false)      
     {}
     
   };
@@ -294,8 +296,8 @@ namespace cvo {
     
     if (fs["multiframe_least_squares_num_threads"])
       params->multiframe_least_squares_num_threads = fs["multiframe_least_squares_num_threads"].as<int>();
-
-    
+    if (fs["multiframe_is_optimizing_ell"])
+      params->multiframe_is_optimizing_ell = fs["multiframe_is_optimizing_ell"].as<int>();
     
     std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<", indicator window size is "<<params->indicator_window_size<<std::endl;
 

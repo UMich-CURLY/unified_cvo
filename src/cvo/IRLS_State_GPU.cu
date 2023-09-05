@@ -31,6 +31,17 @@ namespace cvo {
     init_internal_SparseKernelMat_cpu(pc1->points->size(),  num_neighbor, &A_result_cpu_);
     A_device_ = init_SparseKernelMat_gpu(pc1->points->size(), num_neighbor, A_host_);
     clear_SparseKernelMat(&A_host_, num_neighbors_);
+
+    is_optimizing_ell_ = params_cpu_->multiframe_is_optimizing_ell;
+    if (is_optimizing_ell_) {
+      num_neighbors_f1_ = num_neighbor,      
+      A_f1_device_ = init_SparseKernelMat_gpu(pc1->points->size(), num_neighbor, A_f1_host_);
+      clear_SparseKernelMat(&A_f1_host_, num_neighbors_f1_);
+      
+      num_neighbors_f2_ = num_neighbor,            
+      A_f2_device_ = init_SparseKernelMat_gpu(pc2->points->size(), num_neighbor, A_f2_host_);
+      clear_SparseKernelMat(&A_f2_host_, num_neighbors_f2_);
+    }
     //std::cout<<"Construct BinaryStateGPU: ell is "<<ell_<<", init_num_neighbors_ is "<<init_num_neighbors_<<"\n";
 
     if (params_cpu_->is_using_kdtree) {
@@ -50,6 +61,11 @@ namespace cvo {
     if (params_cpu_->is_using_kdtree) {
       cudaFree(cukdtree_inds_results_gpu_);
     }
+    if (is_optimizing_ell_) {
+      delete_SparseKernelMat_gpu(A_f1_device_, &A_f1_host_);
+      delete_SparseKernelMat_gpu(A_f2_device_, &A_f2_host_);
+      
+    }
   }
 
   int BinaryStateGPU::update_inner_product() {
@@ -57,10 +73,22 @@ namespace cvo {
     unsigned int last_num_neibors = max_neighbors(&A_host_);
     if (last_num_neibors > 0)
       num_neighbors_ = std::min(init_num_neighbors_, (unsigned int)(last_num_neibors*1.1));
+    clear_SparseKernelMat(&A_host_, num_neighbors_);    
     std::cout<< "Current num_neighbors_ is "<<num_neighbors_<<"\n";
     
 
-    clear_SparseKernelMat(&A_host_, num_neighbors_);
+
+    if (is_optimizing_ell_){
+      unsigned int last_num_neibors_f1 = max_neighbors(&A_f1_host_);
+      if (last_num_neibors_f1 > 0)
+        num_neighbors_f1_ = std::min(init_num_neighbors_, (unsigned int)(last_num_neibors_f1*1.1));
+      clear_SparseKernelMat(&A_f1_host_, num_neighbors_f1_);
+      
+      unsigned int last_num_neibors_f2 = max_neighbors(&A_host_);
+      if (last_num_neibors_f2 > 0)
+        num_neighbors_f2_ = std::min(init_num_neighbors_, (unsigned int)(last_num_neibors_f2*1.1));
+      clear_SparseKernelMat(&A_f2_host_, num_neighbors_f2_);
+    }
 
     if (params_cpu_->is_using_kdtree) {
 
@@ -130,6 +158,32 @@ namespace cvo {
                                                                                                (float)ell_,
                                                                                                A_device_
                                                                                                );
+      if (is_optimizing_ell_) {
+        fill_in_A_mat_gpu<<< (frame1_->points->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(
+                                                                                                 params_gpu_,
+                                                                                                 thrust::raw_pointer_cast(frame1_->points_transformed_gpu()->points.data()),
+                                                                                                 //frame1_->points_transformed_gpu(),
+                                                                                                 frame1_->points->size(),
+                                                                                                 thrust::raw_pointer_cast(frame1_->points_transformed_gpu()->points.data()),
+                                                                                                 //frame2_->points_transformed_gpu(),
+                                                                                                 frame1_->points->size(),
+                                                                                                 num_neighbors_f1_,
+                                                                                                 (float)ell_,
+                                                                                                 A_f1_device_
+                                                                                                 );
+        fill_in_A_mat_gpu<<< (frame2_->points->size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(
+                                                                                                 params_gpu_,
+                                                                                                 thrust::raw_pointer_cast(frame2_->points_transformed_gpu()->points.data()),
+                                                                                                 //frame1_->points_transformed_gpu(),
+                                                                                                 frame2_->points->size(),
+                                                                                                 thrust::raw_pointer_cast(frame2_->points_transformed_gpu()->points.data()),
+                                                                                                 //frame2_->points_transformed_gpu(),
+                                                                                                 frame2_->points->size(),
+                                                                                                 num_neighbors_f2_,
+                                                                                                 (float)ell_,
+                                                                                                 A_f2_device_);
+      
+      }
       /*
       thrust::device_ptr<int> inds_ptr_gpu = thrust::device_pointer_cast(A_host_.ind_row2col);
       thrust::device_vector<int> inds_device_vec(inds_ptr_gpu, inds_ptr_gpu + num_neighbors_ * frame1_->size());
@@ -147,6 +201,12 @@ namespace cvo {
     }
     compute_nonzeros(&A_host_);
     std::cout<<"Nonzeros is "<<A_host_.nonzero_sum<<"\n";
+    if (is_optimizing_ell_) {
+      compute_nonzeros(&A_f1_host_);
+      compute_nonzeros(&A_f2_host_);
+    }
+
+    
     if (A_host_.nonzero_sum == 0) {
       cvo::Mat44d_row T1_ = cvo::Mat44d_row::Identity();
       cvo::Mat44d_row T2_ = cvo::Mat44d_row::Identity();
@@ -170,10 +230,10 @@ namespace cvo {
     copy_internal_SparseKernelMat_gpu_to_cpu(&A_host_, &A_result_cpu_,
                                              num_neighbors_);
 
-    iter_++;
     
     cudaMemGetInfoPrint(__func__);    
-    
+
+    iter_++;    
     return A_result_cpu_.nonzero_sum;;
     //if (ip_mat_.nonZeros() < 100) {
     //  std::cout<<"too sparse inner product mat "<<ip_mat_.nonZeros()<<std::endl;

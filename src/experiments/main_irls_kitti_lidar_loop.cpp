@@ -28,6 +28,7 @@
 #include "utils/Calibration.hpp"
 #include "utils/SymbolHash.hpp"
 #include "utils/g2o_parser.hpp"
+#include "utils/LidarPointDownsampler.hpp"
 
 using namespace std;
 
@@ -365,7 +366,7 @@ void sample_frame_inds(int start_ind, int end_ind, int num_merged_frames,
                        std::set<int> & result_selected_frames
                        ) {
   result_selected_frames.clear();
-  for (int i = start_ind; i <= end_ind; i+=result_selected_frames) {
+  for (int i = start_ind; i <= end_ind; i+=num_merged_frames) {
     result_selected_frames.insert(i);
   }
 
@@ -452,9 +453,9 @@ int main(int argc, char** argv) {
         break;
       
       float leaf_size = cvo_align.get_params().multiframe_downsample_voxel_size;
-      std::shared_ptr<cvo::CvoPointCloud> pc = downsample_lidar_points(is_edge_only,
-                                                                       pc_pcl,
-                                                                     leaf_size);
+      std::shared_ptr<cvo::CvoPointCloud> pc = cvo::downsample_lidar_points(is_edge_only,
+                                                                            pc_pcl,
+                                                                            leaf_size);
       pcs.push_back(pc);
     }
   }
@@ -464,7 +465,7 @@ int main(int argc, char** argv) {
   std::vector<std::pair<int, int>> loop_closures;
   std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> lc_poses;
   if (is_read_loop_closure_poses_from_file) {
-    ReadG2oFile(loop_closure_input_file, loop_closures, lc_poses) ;
+    cvo::ReadG2oFile(loop_closure_input_file, loop_closures, lc_poses) ;
   } else {
     std::string g_reg_f("global.txt");    
     parse_lc_file(loop_closures, loop_closure_input_file, start_ind);    
@@ -478,11 +479,11 @@ int main(int argc, char** argv) {
 
   /// decide if we will skip frames
   std::set<int> result_selected_frames;
-  if(num_merging_sequential_frames > 1) {
+  //if(num_merging_sequential_frames > 1) {
     sample_frame_inds(start_ind, last_ind, num_merging_sequential_frames, loop_closures, result_selected_frames);
-  } else {
-    std::copy(v.begin(),v.end(),std::inserter(s,s.end()));
-  }
+    // } else {
+    //std::copy(v.begin(),v.end(),std::inserter(s,s.end()));
+    //}
 
   /// pose graph optimization
   std::string lc_g2o("loop_closures.g2o");

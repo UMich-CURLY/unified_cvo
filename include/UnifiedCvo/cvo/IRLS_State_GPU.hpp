@@ -43,8 +43,9 @@ namespace cvo {
     ~BinaryStateGPU();
 
     // update 
-    virtual int update_inner_product();
+    virtual int update_inner_product(bool is_updating_ell=false);
 
+    // if ell is not upated by the 
     void update_ell();
 
     //const Eigen::SparseMatrix<double, Eigen::RowMajor> & get_inner_product() {return ip_mat_;}
@@ -85,19 +86,27 @@ namespace cvo {
     
     unsigned int num_neighbors_;
     SparseKernelMat  A_host_;
-    //std::shared_ptr<Kdtree> pc1_kdtree_;
-    //Eigen::SparseMatrix<double, Eigen::RowMajor>  ip_mat_;
     SparseKernelMat * A_device_;
-
     SparseKernelMat A_result_cpu_;
-    
-    
-    float ell_;
+    float ell_;    
+
+
     int iter_;
     const unsigned int init_num_neighbors_;
 
     const CvoParams * params_gpu_;
     const CvoParams * params_cpu_;
+
+    // when optimizing ell as well
+    bool is_optimizing_ell_;
+    SparseKernelMat A_f1_host_;    
+    SparseKernelMat * A_f1_device_;
+    unsigned int num_neighbors_f1_;
+    
+    SparseKernelMat A_f2_host_;    
+    SparseKernelMat * A_f2_device_;
+    unsigned int num_neighbors_f2_;
+    
 
     
     

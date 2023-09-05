@@ -50,6 +50,7 @@ namespace cvo {
                                          SparseKernelMat * A_cpu 
                                          );
   void delete_internal_SparseKernelMat_cpu(SparseKernelMat * A_cpu );
+
   
   
   
