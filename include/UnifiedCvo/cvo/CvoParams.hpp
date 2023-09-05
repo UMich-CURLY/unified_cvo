@@ -124,7 +124,7 @@ namespace cvo {
       multiframe_num_neighbors(128),
       multiframe_min_nonzeros(300),
       multiframe_least_squares_num_threads(24),
-      multiframe_is_optimizing_ell(false)      
+      multiframe_is_optimizing_ell(0)      
     {}
     
   };

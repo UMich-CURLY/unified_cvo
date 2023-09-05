@@ -43,7 +43,7 @@ namespace cvo {
     ~BinaryStateGPU();
 
     // update 
-    virtual int update_inner_product(bool is_updating_ell=false);
+    virtual int update_inner_product();
 
     // if ell is not upated by the 
     void update_ell();
@@ -88,7 +88,7 @@ namespace cvo {
     SparseKernelMat  A_host_;
     SparseKernelMat * A_device_;
     SparseKernelMat A_result_cpu_;
-    float ell_;    
+    double ell_;    
 
 
     int iter_;
@@ -99,13 +99,18 @@ namespace cvo {
 
     // when optimizing ell as well
     bool is_optimizing_ell_;
+    
     SparseKernelMat A_f1_host_;    
     SparseKernelMat * A_f1_device_;
     unsigned int num_neighbors_f1_;
+    SparseKernelMat A_f1_cpu_;
+    
     
     SparseKernelMat A_f2_host_;    
     SparseKernelMat * A_f2_device_;
     unsigned int num_neighbors_f2_;
+    SparseKernelMat A_f2_cpu_;
+    
     
 
     

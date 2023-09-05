@@ -25,7 +25,7 @@ namespace cvo {
                                      params_cpu_(params_cpu),
                                      params_gpu_(params_gpu),
                                      num_neighbors_(num_neighbor),
-                                     ell_(init_ell),
+                                     ell_(static_cast<double>(init_ell)),
                                      init_num_neighbors_(num_neighbor){
 
     init_internal_SparseKernelMat_cpu(pc1->points->size(),  num_neighbor, &A_result_cpu_);
@@ -64,7 +64,6 @@ namespace cvo {
     if (is_optimizing_ell_) {
       delete_SparseKernelMat_gpu(A_f1_device_, &A_f1_host_);
       delete_SparseKernelMat_gpu(A_f2_device_, &A_f2_host_);
-      
     }
   }
 
@@ -75,8 +74,6 @@ namespace cvo {
       num_neighbors_ = std::min(init_num_neighbors_, (unsigned int)(last_num_neibors*1.1));
     clear_SparseKernelMat(&A_host_, num_neighbors_);    
     std::cout<< "Current num_neighbors_ is "<<num_neighbors_<<"\n";
-    
-
 
     if (is_optimizing_ell_){
       unsigned int last_num_neibors_f1 = max_neighbors(&A_f1_host_);
@@ -132,7 +129,7 @@ namespace cvo {
          f2_points.size(),
          //thrust::raw_pointer_cast(inds_device_vec.data()),
          cukdtree_inds_results_gpu_,
-         num_neighbors_, ell_,
+         num_neighbors_, (float)ell_,
          A_device_);
 
       thrust::device_ptr<int> inds_ptr_gpu = thrust::device_pointer_cast(A_host_.ind_row2col);
@@ -229,7 +226,13 @@ namespace cvo {
 
     copy_internal_SparseKernelMat_gpu_to_cpu(&A_host_, &A_result_cpu_,
                                              num_neighbors_);
-
+    if (params_cpu_->multiframe_is_optimizing_ell) {
+      copy_internal_SparseKernelMat_gpu_to_cpu(&A_f1_host_, &A_f1_cpu_,
+                                               num_neighbors_f1_);
+      copy_internal_SparseKernelMat_gpu_to_cpu(&A_f2_host_, &A_f2_cpu_,
+                                               num_neighbors_f2_);
+      
+    }
     
     cudaMemGetInfoPrint(__func__);    
 

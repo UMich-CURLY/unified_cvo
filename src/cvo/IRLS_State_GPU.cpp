@@ -28,8 +28,19 @@ namespace cvo {
         //if (r == 0)
         //  std::cout<<"add_residual_to_problem: pc1[0] with pc2["<<idx2<<"] and label_ip is "<<label_ip<<std::endl;
         
-        ceres::CostFunction * cost_per_point =
-          new PairwiseAnalyticalDiffFunctor(pc1[idx1], pc2[idx2], label_ip ,  ell_);
+        ceres::CostFunction * cost_per_point = nullptr;
+
+        if (params_cpu_->multiframe_is_optimizing_ell) {
+          cost_per_point = new ceres::AutoDiffCostFunction<PairwisePoseEllAutoDiffFunctor, 1, 12, 12, 1>(new PairwisePoseEllAutoDiffFunctor(pc1[idx1],
+                                                                                                                                     pc2[idx2],
+                                                                                                                                     label_ip,
+                                                                                                                                     params_cpu_->sigma));
+          problem.AddResidualBlock(cost_per_point, nullptr , frame1()->pose_vec, frame2()->pose_vec, &ell_);                    
+        }
+        else {
+          cost_per_point = new PairwiseAnalyticalDiffFunctor(pc1[idx1], pc2[idx2], label_ip ,  ell_);
+          problem.AddResidualBlock(cost_per_point, nullptr , frame1()->pose_vec, frame2()->pose_vec);          
+        }
         
         //ceres::CostFunction * cost_per_point =
         //  new PairwiseAnalyticalDiffFunctor(pc1[idx1], pc2[idx2], label_ip / ell_ * 1000 / A_result_cpu_.nonzero_sum ,  ell_);
@@ -43,17 +54,61 @@ namespace cvo {
         */
         
         //ceres::LossFunctionWrapper* loss_function(new ceres::HuberLoss(1.0), ceres::TAKE_OWNERSHIP);
-        problem.AddResidualBlock(cost_per_point, nullptr , frame1()->pose_vec, frame2()->pose_vec);
+
       }
     }
 
+    if (params_cpu_->multiframe_is_optimizing_ell) {
+      for (int r=0; r< A_f1_cpu_.rows; ++r)
+      {
+        for (int c=0; c<num_neighbors_; c++){
+
+          int idx1 = r;
+          int idx2 = A_f1_cpu_.ind_row2col[r*num_neighbors_+c];
+          if (idx2 == -1)
+            break;
+        
+          double label_ip = A_f1_cpu_.mat[r*num_neighbors_+c];
+          ceres::CostFunction * cost_per_point = nullptr;
+          cost_per_point = new ceres::AutoDiffCostFunction<SelfPoseEllAutoDiffFunctor, 1, 1>(new SelfPoseEllAutoDiffFunctor(pc1[idx1],
+                                                                                                                                        pc2[idx2],
+                                                                                                                                        label_ip,
+                                                                                                                                        params_cpu_->sigma));
+          problem.AddResidualBlock(cost_per_point, nullptr , &ell_);             
+
+        }
+      }
+      for (int r=0; r< A_f2_cpu_.rows; ++r)
+      {
+        for (int c=0; c<num_neighbors_; c++){
+
+          int idx1 = r;
+          int idx2 = A_f2_cpu_.ind_row2col[r*num_neighbors_+c];
+          if (idx2 == -1)
+            break;
+        
+          double label_ip = A_f2_cpu_.mat[r*num_neighbors_+c];
+          ceres::CostFunction * cost_per_point = nullptr;          
+          cost_per_point = new ceres::AutoDiffCostFunction<SelfPoseEllAutoDiffFunctor, 1, 1>(new SelfPoseEllAutoDiffFunctor(pc1[idx1],
+                                                                                                                                        pc2[idx2],
+                                                                                                                                        label_ip,
+                                                                                                                                        params_cpu_->sigma));
+          problem.AddResidualBlock(cost_per_point, nullptr , &ell_);             
+
+        }
+      }
+      
+      
+    }
 
   }
 
   
   void BinaryStateGPU::update_ell() {
     if (ell_ > params_cpu_->multiframe_ell_min)
-      ell_ = ell_ * params_cpu_->multiframe_ell_decay_rate;     
+      ell_ = ell_ * params_cpu_->multiframe_ell_decay_rate;
+    else
+      ell_ = params_cpu_->multiframe_ell_min;
   }
   
 

@@ -45,4 +45,4 @@ multiframe_ell_decay_rate:  0.95
 multiframe_iterations_per_ell: 5
 multiframe_downsample_voxel_size: 1 #5 #3
 multiframe_iterations_per_solve: 2
-
+multiframe_is_optimizing_ell: 1

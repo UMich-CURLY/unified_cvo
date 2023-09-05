@@ -161,7 +161,7 @@ namespace cvo {
       }
 
       std::vector<int> invalid_factors(states_->size());
-      int counter = 0;
+      int counter_nonzer_factors = 0;
       int total_nonzeros = 0;
       for (auto && state : *states_) {
         auto start = std::chrono::system_clock::now();
@@ -174,10 +174,11 @@ namespace cvo {
         if (nonzeros_ip_mat > params_->multiframe_min_nonzeros) {
           start = std::chrono::system_clock::now();
           state->add_residual_to_problem(problem);
+          
           end = std::chrono::system_clock::now();
           t_all = end - start;
           ceres_add_residual_time += ( (static_cast<double>(t_all.count())) / 1000);
-          counter++;
+          counter_nonzer_factors++;
         } else {
           
         }
@@ -193,90 +194,76 @@ namespace cvo {
 
       std::cout<<"Total nonzeros "<<total_nonzeros<<", last_nonzeros "<<last_nonzeros<<std::endl;
       std::cout<<"iter_ "<<iter_<<", multiframe_iterations_per_ell "<<params_->multiframe_iterations_per_ell<<std::endl;
-      if (counter == 0
-          || iter_ == params_->multiframe_max_iters
-          ) break;
-      if (iter_ > 0 &&  iter_ % params_->multiframe_iterations_per_ell == 0 )
-        ell_should_decay_when_nonzero_max = true;
+
+      /// break condition 1: reaches max iters or all factors are zero
+      if (counter_nonzer_factors == 0)
+        break;
       
-      if (total_nonzeros > last_nonzeros
-          || !ell_should_decay_when_nonzero_max
-          ) {
-        
-        last_nonzeros = total_nonzeros;
-        //   for (auto && frame : *frames_) {
-        for (int k = 0; k < frames_->size(); k++) {
-          problem.SetParameterization(frames_->at(k)->pose_vec, se3_parameterization);
-          if (pivot_flags_.at(k))
-            problem.SetParameterBlockConstant(frames_->at(k)->pose_vec);          
-        }
-
-
-        ceres::Solver::Options options;
-        options.function_tolerance = 1e-5;
-        options.gradient_tolerance = 1e-5;
-        options.parameter_tolerance = 1e-5;
-        //options.check_gradients = true;
-        //options.line_search_direction_type = ceres::BFGS;
-        options.sparse_linear_algebra_library_type = ceres::SUITE_SPARSE;
-        options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY; //ceres::SPARSE_SCHUR;
-        //options.preconditioner_type = ceres::JACOBI;
-        //options.visibility_clustering_type = ceres::CANONICAL_VIEWS;
-
+      //if (iter_ > 0 &&  iter_ % params_->multiframe_iterations_per_ell == 0 )
+      //  ell_should_decay_when_nonzero_max = true;
       
-      
-        options.num_threads = params_->multiframe_least_squares_num_threads;
-        options.max_num_iterations = params_->multiframe_iterations_per_solve;
-
-
-        auto start = std::chrono::system_clock::now();
-        ceres::Solver::Summary summary;
-        ceres::Solve(options, &problem, &summary);
-        auto end = std::chrono::system_clock::now();
-        std::chrono::duration<double, std::milli> t_all = end - start;
-        ceres_time += ( (static_cast<double>(t_all.count())) / 1000);
+      //if (params_->multiframe_iterations_per_ell 
+      //    || total_nonzeros > last_nonzeros
+      //    || !ell_should_decay_when_nonzero_max
+      //    ) {
         
-
-        std::cout << summary.FullReport() << std::endl;
-        //loss_change << ell <<", "<< summary.final_cost - summary.initial_cost <<std::endl;
-
-        std::vector<Sophus::SE3d> poses_new(frames_->size());
-        pose_snapshot(*frames_, poses_new);
-        double param_change = change_of_all_poses(poses_old, poses_new);
-        std::cout<<"Update is "<<param_change<<std::endl;
-
-        
-      } else  {
-        //  if (//param_change < 1e-5 * poses_new.size()
-        //    //||
-        //    iter_ && iter_ % params_->multiframe_iterations_per_ell == 0
-
-        //    ) {
-          //break;
-          num_ells ++;
-          ell_should_decay_when_nonzero_max = false;
-          //if (num_ells == 2)
-          //  break;
-        
-          if (ell >= params_->multiframe_ell_min) {
-            last_nonzeros = 0;
-            ell = ell *  params_->multiframe_ell_decay_rate;
-            std::cout<<"Reduce ell to "<<ell<<std::endl;          
-
-            for (auto && state : *states_) 
-              //std::dynamic_pointer_cast<BinaryStateCPU>(state)->update_ell();
-              state->update_ell();
-          } else {
-            converged = true;
-            //std::cout<<"End: pose change is "<<param_change<<std::endl;          
-          }
-        
-          if ( iter_ > params_->multiframe_max_iters) {
-            converged = true;
-          }
-          //}
+      last_nonzeros = total_nonzeros;
+      for (int k = 0; k < frames_->size(); k++) {
+        problem.SetParameterization(frames_->at(k)->pose_vec, se3_parameterization);
+        if (pivot_flags_.at(k))
+          problem.SetParameterBlockConstant(frames_->at(k)->pose_vec);          
       }
+
+
+      ceres::Solver::Options options;
+      options.function_tolerance = 1e-5;
+      options.gradient_tolerance = 1e-5;
+      options.parameter_tolerance = 1e-5;
+      //options.check_gradients = true;
+      //options.line_search_direction_type = ceres::BFGS;
+      options.sparse_linear_algebra_library_type = ceres::SUITE_SPARSE;
+      options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY; //ceres::SPARSE_SCHUR;
+      //options.preconditioner_type = ceres::JACOBI;
+      //options.visibility_clustering_type = ceres::CANONICAL_VIEWS;
+      options.num_threads = params_->multiframe_least_squares_num_threads;
+      options.max_num_iterations = params_->multiframe_iterations_per_solve;
+
+
+      auto start = std::chrono::system_clock::now();
+      ceres::Solver::Summary summary;
+      ceres::Solve(options, &problem, &summary);
+      auto end = std::chrono::system_clock::now();
+      std::chrono::duration<double, std::milli> t_all = end - start;
+      ceres_time += ( (static_cast<double>(t_all.count())) / 1000);
+        
+
+      std::cout << summary.FullReport() << std::endl;
+      //loss_change << ell <<", "<< summary.final_cost - summary.initial_cost <<std::endl;
+
+      std::vector<Sophus::SE3d> poses_new(frames_->size());
+      pose_snapshot(*frames_, poses_new);
+      double param_change = change_of_all_poses(poses_old, poses_new);
+      std::cout<<"Update is "<<param_change<<std::endl;
+
+        
+      if (params_->multiframe_is_optimizing_ell == false )  {
+        //  if (//param_change < 1e-5 * poses_new.size()
+
+        //num_ells ++;
+        //ell_should_decay_when_nonzero_max = false;
+        //if (num_ells == 2)
+        //  break;
+
+        if (ell <= params_->multiframe_ell_min)
+          converged = true;
+      } 
+      for (auto && state : *states_) 
+        state->update_ell();
+
+      //last_nonzeros = 0;              
       iter_++;
+      if (iter_ >= params_->multiframe_max_iters)
+        converged = true;
         
     }
 

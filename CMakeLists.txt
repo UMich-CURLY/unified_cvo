@@ -761,11 +761,11 @@ target_include_directories(cvo_irls_lidar_ba PUBLIC
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(cvo_irls_lidar_ba cvo_gpu_lidar cvo_utils_lib boost_filesystem boost_system kitti)
 
-add_executable(cvo_irls_lidar_loop ${PROJECT_SOURCE_DIR}/src/experiments/main_irls_kitti_lidar_loop.cpp)
-target_include_directories(cvo_irls_lidar_loop PUBLIC
-        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
-        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_link_libraries(cvo_irls_lidar_loop cvo_gpu_lidar cvo_utils_lib boost_filesystem boost_system kitti Ceres::ceres )
+#add_executable(cvo_irls_lidar_loop ${PROJECT_SOURCE_DIR}/src/experiments/main_irls_kitti_lidar_loop.cpp)
+#target_include_directories(cvo_irls_lidar_loop PUBLIC
+#        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+#        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+#target_link_libraries(cvo_irls_lidar_loop cvo_gpu_lidar cvo_utils_lib boost_filesystem boost_system kitti Ceres::ceres )
 
 endif()
 
