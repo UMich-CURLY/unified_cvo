@@ -9,8 +9,8 @@ namespace cvo {
   
   void BinaryStateGPU::add_residual_to_problem(ceres::Problem & problem) {
 
-    auto & pc1 = frame1()->points->positions();
-    auto & pc2 = frame2()->points->positions();
+    auto & pc1 = frame1_->points->positions();
+    auto & pc2 = frame2_->points->positions();
 
     std::cout<<"Nonzeros is "<<A_result_cpu_.nonzero_sum<<std::endl;
     
@@ -35,11 +35,11 @@ namespace cvo {
                                                                                                                                      pc2[idx2],
                                                                                                                                      label_ip,
                                                                                                                                      params_cpu_->sigma));
-          problem.AddResidualBlock(cost_per_point, nullptr , frame1()->pose_vec, frame2()->pose_vec, &ell_);                    
+          problem.AddResidualBlock(cost_per_point, nullptr , frame1_->pose_vec, frame2_->pose_vec, &ell_);                    
         }
         else {
           cost_per_point = new PairwiseAnalyticalDiffFunctor(pc1[idx1], pc2[idx2], label_ip ,  ell_);
-          problem.AddResidualBlock(cost_per_point, nullptr , frame1()->pose_vec, frame2()->pose_vec);          
+          problem.AddResidualBlock(cost_per_point, nullptr , frame1_->pose_vec, frame2_->pose_vec);          
         }
         
         //ceres::CostFunction * cost_per_point =

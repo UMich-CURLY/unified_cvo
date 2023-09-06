@@ -7,6 +7,7 @@
 //#include <ceres/local_parameterization.h>
 
 namespace cvo {
+  class CvoFrame;
 
   class BinaryState {
   public:
@@ -23,6 +24,11 @@ namespace cvo {
     virtual void update_ell () = 0;
 
     virtual void export_association(Association & output_assocation) = 0;
+
+    virtual double get_ell() const = 0;
+    virtual const CvoFrame * get_frame1() const = 0;
+    virtual const CvoFrame * get_frame2() const = 0;
+    
     
   };
 

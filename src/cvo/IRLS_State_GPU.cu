@@ -246,18 +246,18 @@ namespace cvo {
     
   }
 
-  CvoFrame * BinaryStateGPU::frame1() {
+  const CvoFrame * BinaryStateGPU::get_frame1() const {
     return frame1_.get();
   }
-  CvoFrame * BinaryStateGPU::frame2() {
+  const CvoFrame * BinaryStateGPU::get_frame2() const {
     return frame2_.get();
   }
 
   void BinaryStateGPU::export_association(Association & output) {
     gpu_association_to_cpu(A_host_,
                            output,
-                           frame1()->points->size(),
-                           frame2()->points->size(),
+                           frame1_->points->size(),
+                           frame2_->points->size(),
                            num_neighbors_);
   }
 

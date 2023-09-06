@@ -36,6 +36,10 @@ namespace cvo {
     virtual int update_inner_product();
 
     void update_ell();
+    double get_ell() const { return ell_; }
+    const CvoFrame * get_frame1() const { return frame1.get();}
+    const CvoFrame * get_frame2() const { return frame2.get();}
+    
 
     const Eigen::SparseMatrix<double, Eigen::RowMajor> & get_inner_product() {return ip_mat_;}
 

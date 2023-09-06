@@ -1,5 +1,5 @@
 #include "cvo/IRLS.hpp"
-//#include "cvo/IRLS_State_CPU.hpp"
+#include "cvo/IRLS_State.hpp"
 #include "cvo/local_parameterization_se3.hpp"
 //#include "cvo/IRLS_cuSolver.hpp"
 #include <sophus/se3.hpp>
@@ -103,7 +103,7 @@ namespace cvo {
       Sophus::SE3d poses_in_0_i(i_from_0.block<3,3>(0,0), i_from_0.block<3,1>(0,3));
       std::cout<<__func__<<"\n"<<i_from_0<<"\n"<<poses_in_0_i.matrix()<<"\m"<<poses_in[i]<<"\n";
       poses_out[i] = pose_anchor * poses_in_0_i;
-      std::cout<<"Pose_out: "<<poses_out[i].matrix()<<"\n";
+      //std::cout<<"Pose_out: "<<poses_out[i].matrix()<<"\n";
     }
     if (poses_out.size() > 0) {
       poses_out[0] = pose_anchor;
@@ -142,9 +142,11 @@ namespace cvo {
     while (!converged) {
 
       std::cout<<"\n\n==============================================================\n";
-      std::cout << "Iter "<<iter_<< ": Solved Ceres problem, ell is " <<ell<<"\nPoses are\n"<<std::flush;
+      std::cout<<"Iter "<<iter_<< ": Solved Ceres problem\n";
+
+      std::cout<<"Poses are\n"<<std::flush;
       for (auto && frame: *frames_){
-        std::cout<<Eigen::Map<Mat34d_row>(frame->pose_vec)<<std::endl<<"\n";
+        std::cout<<Eigen::Map<Eigen::Matrix<double,3,4, Eigen::DontAlign>>(frame->pose_vec)<<std::endl<<"\n";
       }
 
       std::vector<Sophus::SE3d> poses_old(frames_->size());
@@ -164,6 +166,7 @@ namespace cvo {
       int counter_nonzer_factors = 0;
       int total_nonzeros = 0;
       for (auto && state : *states_) {
+        std::cout<<"ell of factor between " <<(state)->get_frame1()<<" and "<<(state)->get_frame2()<<" is "<<(state) ->get_ell()<<"\n";
         auto start = std::chrono::system_clock::now();
         int nonzeros_ip_mat = state->update_inner_product();
         auto end = std::chrono::system_clock::now();

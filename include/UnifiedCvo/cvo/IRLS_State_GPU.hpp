@@ -47,13 +47,18 @@ namespace cvo {
 
     // if ell is not upated by the 
     void update_ell();
+    double get_ell() const { return ell_; }
+    const CvoFrame * get_frame1() const;
+    const CvoFrame * get_frame2() const;
+    
 
     //const Eigen::SparseMatrix<double, Eigen::RowMajor> & get_inner_product() {return ip_mat_;}
 
     void add_residual_to_problem(ceres::Problem & problem);
                                  //ceres::LocalParameterization * parameterization);
 
-    void export_association(Association & output_association);    
+    void export_association(Association & output_association);
+    
 
     /*
     virtual void update_residuals(double * residuals) {
@@ -77,8 +82,6 @@ namespace cvo {
     std::shared_ptr<CvoFrameGPU> frame1_;
     std::shared_ptr<CvoFrameGPU> frame2_;
 
-    CvoFrame * frame1();
-    CvoFrame * frame2();
 
     int * cukdtree_inds_results_gpu_;
     std::shared_ptr<CvoPointCloudGPU> points_transformed_buffer_gpu_;
