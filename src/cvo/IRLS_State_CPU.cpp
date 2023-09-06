@@ -45,13 +45,13 @@ namespace cvo {
   }
 
   
-  void BinaryStateCPU::add_residual_to_problem(ceres::Problem & problem) {
+  unsigned int BinaryStateCPU::add_residual_to_problem(ceres::Problem & problem) {
 
     auto & pc1 = frame1->points->positions();
     auto & pc2 = frame2->points->positions();
 
     std::cout<<"Nonzeros is "<<ip_mat_.nonZeros()<<std::endl;
-    
+    unsigned int num_residuals = 0;
     for (int k=0; k<ip_mat_.outerSize(); ++k)
     {
       for (Eigen::SparseMatrix<double, Eigen::RowMajor>::InnerIterator it(ip_mat_,k); it; ++it) {
@@ -80,9 +80,10 @@ namespace cvo {
         
         //ceres::LossFunctionWrapper* loss_function(new ceres::HuberLoss(1.0), ceres::TAKE_OWNERSHIP);
         problem.AddResidualBlock(cost_per_point, nullptr , frame1->pose_vec, frame2->pose_vec);
+        num_residuals++;
       }
     }
-
+    return num_residuals;
 
   }
 

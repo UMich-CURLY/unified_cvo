@@ -264,6 +264,7 @@ int main(int argc, char** argv) {
   std::vector<std::shared_ptr<cvo::CvoFrame>> frames_full;
   std::unordered_map<int, int> id_to_index;
   pcl::VoxelGrid<pcl::PointXYZRGB> sor;
+  std::cout<<"downsample leaf size is "<<cvo_align.get_params().multiframe_downsample_voxel_size<<"\n";
 
   for (int i = 0; i<frame_inds.size(); i++) {
     float leaf_size = cvo_align.get_params().multiframe_downsample_voxel_size;  

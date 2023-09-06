@@ -190,7 +190,13 @@ namespace cvo {
     // cudaFree(A_host->max_index);
     
   }
-  
+
+   __device__
+   void sort_SparseKernelMat_gpu_thread(SparseKernelMat * A_gpu) {
+     int threadID = blockIdx.x * blockDim.x + threadIdx.x;
+     int r = threadID;
+     //    thrust::sort_by_key(thrust::seq, A_gpu->mat+A_gpu->cols * r, A_gpu->mat[], A_gpu->ind_row2col, thrust::greater<float>());
+   }
 
    void delete_internal_SparseKernelMat_cpu(SparseKernelMat * A_cpu ) {
     

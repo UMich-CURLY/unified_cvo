@@ -108,8 +108,9 @@ namespace cvo {
       auto p1_sub_Tp2 = ( pt1_transformed - pt2_transformed);
       T d2 =  p1_sub_Tp2.squaredNorm() * (-0.5 / ell2 );
     
-      // residuals[0] = color_ip_ * sigma2_ * exp(-d2/(2*ell2_));
-      residuals[0] = label_ip_ * d2;
+      //residuals[0] =  -2 * sigma2_ * exp(-d2);
+      residuals[0] = (-2) * label_ip_ * d2;
+      //residuals[0] = (-2.0) *  d2;
 
       //if (residuals) {
       //std::cout<<"\n\nnew iteration, T is \n"<<transformation<<std::endl;      
@@ -160,14 +161,15 @@ namespace cvo {
       T d2 =  pt1_sub_pt2_square_ * (-0.5 / ell2 );
     
       // residuals[0] = color_ip_ * sigma2_ * exp(-d2/(2*ell2_));
-      residuals[0] = label_ip_ * d2;
+       residuals[0] = label_ip_ * exp(d2);
+      //residuals[0] =  d2;
 
       //if (residuals) {
       //std::cout<<"\n\nnew iteration, T is \n"<<transformation<<std::endl;      
       //  residuals[0] =  (pt1_.cast<T>().head(3)-pt2_transformed).norm();
       //std::cout<<"residuals is "<<residuals[0]<<std::endl;
       //}
-      //residuals[0] = (pt1.block<3,1>(0,0) - pt2_transformed).norm();
+      //residuals[0] =es (pt1.block<3,1>(0,0) - pt2_transformed).norm();
 
     
       return true;

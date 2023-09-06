@@ -165,6 +165,7 @@ namespace cvo {
       std::vector<int> invalid_factors(states_->size());
       int counter_nonzer_factors = 0;
       int total_nonzeros = 0;
+      unsigned int num_residuals = 0;
       for (auto && state : *states_) {
         std::cout<<"ell of factor between " <<(state)->get_frame1()<<" and "<<(state)->get_frame2()<<" is "<<(state) ->get_ell()<<"\n";
         auto start = std::chrono::system_clock::now();
@@ -176,7 +177,7 @@ namespace cvo {
         //invalid_factors[counter] = invalid_ip_mat;
         if (nonzeros_ip_mat > params_->multiframe_min_nonzeros) {
           start = std::chrono::system_clock::now();
-          state->add_residual_to_problem(problem);
+          num_residuals += (state->add_residual_to_problem(problem));
           
           end = std::chrono::system_clock::now();
           t_all = end - start;
@@ -195,7 +196,7 @@ namespace cvo {
       
       //nonzeros <<ell<<", "<< total_nonzeros<<"\n"<<std::flush;
 
-      std::cout<<"Total nonzeros "<<total_nonzeros<<", last_nonzeros "<<last_nonzeros<<std::endl;
+      std::cout<<"Total nonzeros "<<total_nonzeros<<", last_nonzeros "<<last_nonzeros<<", num_residuals is "<<num_residuals<<std::endl;
       std::cout<<"iter_ "<<iter_<<", multiframe_iterations_per_ell "<<params_->multiframe_iterations_per_ell<<std::endl;
 
       /// break condition 1: reaches max iters or all factors are zero
@@ -247,7 +248,9 @@ namespace cvo {
       pose_snapshot(*frames_, poses_new);
       double param_change = change_of_all_poses(poses_old, poses_new);
       std::cout<<"Update is "<<param_change<<std::endl;
-
+      if (param_change < 1e-8)
+        converged = true;
+        
         
       if (params_->multiframe_is_optimizing_ell == false )  {
         //  if (//param_change < 1e-5 * poses_new.size()
@@ -259,9 +262,10 @@ namespace cvo {
 
         if (ell <= params_->multiframe_ell_min)
           converged = true;
+        for (auto && state : *states_) 
+          state->update_ell();
+        
       } 
-      for (auto && state : *states_) 
-        state->update_ell();
 
       //last_nonzeros = 0;              
       iter_++;

@@ -54,7 +54,7 @@ namespace cvo {
 
     //const Eigen::SparseMatrix<double, Eigen::RowMajor> & get_inner_product() {return ip_mat_;}
 
-    void add_residual_to_problem(ceres::Problem & problem);
+    unsigned int add_residual_to_problem(ceres::Problem & problem);
                                  //ceres::LocalParameterization * parameterization);
 
     void export_association(Association & output_association);

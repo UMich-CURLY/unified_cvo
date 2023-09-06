@@ -34,12 +34,14 @@ namespace cvo {
 
     is_optimizing_ell_ = params_cpu_->multiframe_is_optimizing_ell;
     if (is_optimizing_ell_) {
-      num_neighbors_f1_ = num_neighbor,      
+      num_neighbors_f1_ = num_neighbor;      
       A_f1_device_ = init_SparseKernelMat_gpu(pc1->points->size(), num_neighbor, A_f1_host_);
+      init_internal_SparseKernelMat_cpu(pc1->points->size(),  num_neighbor, &A_f1_cpu_);
       clear_SparseKernelMat(&A_f1_host_, num_neighbors_f1_);
       
-      num_neighbors_f2_ = num_neighbor,            
+      num_neighbors_f2_ = num_neighbor;            
       A_f2_device_ = init_SparseKernelMat_gpu(pc2->points->size(), num_neighbor, A_f2_host_);
+      init_internal_SparseKernelMat_cpu(pc2->points->size(),  num_neighbor, &A_f2_cpu_);      
       clear_SparseKernelMat(&A_f2_host_, num_neighbors_f2_);
     }
     //std::cout<<"Construct BinaryStateGPU: ell is "<<ell_<<", init_num_neighbors_ is "<<init_num_neighbors_<<"\n";
@@ -80,11 +82,13 @@ namespace cvo {
       if (last_num_neibors_f1 > 0)
         num_neighbors_f1_ = std::min(init_num_neighbors_, (unsigned int)(last_num_neibors_f1*1.1));
       clear_SparseKernelMat(&A_f1_host_, num_neighbors_f1_);
+    std::cout<< "Current num_neighbors_f1_ is "<<num_neighbors_f1_<<"\n";      
       
-      unsigned int last_num_neibors_f2 = max_neighbors(&A_host_);
+      unsigned int last_num_neibors_f2 = max_neighbors(&A_f2_host_);
       if (last_num_neibors_f2 > 0)
         num_neighbors_f2_ = std::min(init_num_neighbors_, (unsigned int)(last_num_neibors_f2*1.1));
       clear_SparseKernelMat(&A_f2_host_, num_neighbors_f2_);
+    std::cout<< "Current num_neighbors_f2_ is "<<num_neighbors_f2_<<"\n";            
     }
 
     if (params_cpu_->is_using_kdtree) {
@@ -191,7 +195,7 @@ namespace cvo {
       cudaDeviceSynchronize();    
       cudaError_t err = cudaGetLastError();
       if (err != cudaSuccess) { 
-        fprintf(stderr, "IRLS_State_GPU.cu: fill_in_A_mat_gpu: Failed to run fill_in_A_mat_cukdtree %s .\n", cudaGetErrorString(err)); 
+        fprintf(stderr, "IRLS_State_GPU.cu: fill_in_A_mat_gpu: Failed to run fill_in_A_mat_gpu %s .\n", cudaGetErrorString(err)); 
         exit(EXIT_FAILURE); 
       }
       
@@ -200,7 +204,10 @@ namespace cvo {
     std::cout<<"Nonzeros is "<<A_host_.nonzero_sum<<"\n";
     if (is_optimizing_ell_) {
       compute_nonzeros(&A_f1_host_);
+      std::cout<<"Nonzeros f1 is "<<A_f1_host_.nonzero_sum<<"\n";
       compute_nonzeros(&A_f2_host_);
+      std::cout<<"Nonzeros f2 is "<<A_f2_host_.nonzero_sum<<"\n";
+      
     }
 
     
