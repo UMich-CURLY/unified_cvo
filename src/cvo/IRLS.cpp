@@ -167,7 +167,7 @@ namespace cvo {
       int total_nonzeros = 0;
       unsigned int num_residuals = 0;
       for (auto && state : *states_) {
-        std::cout<<"ell of factor between " <<(state)->get_frame1()<<" and "<<(state)->get_frame2()<<" is "<<(state) ->get_ell()<<"\n";
+        std::cout<<"ell of factor between " <<(state)->get_frame1()<<" and "<<(state)->get_frame2()<<" is "<<(state) ->get_ell()<<", multiframe_is_optimizing_ell is "<<params_->multiframe_is_optimizing_ell<<"\n";
         auto start = std::chrono::system_clock::now();
         int nonzeros_ip_mat = state->update_inner_product();
         auto end = std::chrono::system_clock::now();

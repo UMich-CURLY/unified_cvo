@@ -39,12 +39,13 @@ is_using_geometric_type: 1
 
 # for irls solver
 multiframe_using_cpu: 0
-multiframe_max_iters: 1999
-multiframe_ell_init: 0.25
+multiframe_max_iters: 50
+multiframe_ell_init: 1.0
 multiframe_ell_min: 0.05
 multiframe_ell_decay_rate:  0.9 
 multiframe_iterations_per_ell: 20
 multiframe_downsample_voxel_size: 1.0
 multiframe_num_neighbors: 128
 multiframe_iterations_per_solve: 20
-multiframe_least_squares_num_threads: 100
+multiframe_least_squares_num_threads: 30
+multiframe_is_optimizing_ell: 1
