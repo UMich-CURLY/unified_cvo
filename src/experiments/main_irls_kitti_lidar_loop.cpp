@@ -438,16 +438,29 @@ int main(int argc, char** argv) {
   cvo::write_traj_file<double, 4, Eigen::ColMajor>(gt_fname,gt_poses);
   std::string track_fname("tracking.txt");
   cvo::write_traj_file<double, 4, Eigen::ColMajor>(track_fname, tracking_poses);
+
+  std::vector<std::pair<int, int>> loop_closures;
+  std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> lc_poses;
+  if (is_read_loop_closure_poses_from_file) {
+    cvo::ReadG2oFile(loop_closure_input_file, loop_closures, lc_poses) ;
+  } else {
+    parse_lc_file(loop_closures, loop_closure_input_file, start_ind);    
+  }
+  
+  /// decide if we will skip frames
+  std::set<int> result_selected_frames;
+  sample_frame_inds(start_ind, last_ind, num_merging_sequential_frames, loop_closures, result_selected_frames);
+  
   
   // read point cloud
   std::vector<cvo::CvoFrame::Ptr> frames;
   std::vector<std::shared_ptr<cvo::CvoPointCloud>> pcs;
   if (!(is_pgo_only && is_read_loop_closure_poses_from_file)) {
-    for (int i = 0; i<gt_poses.size(); i++) {
+    for (auto i : result_selected_frames) {
+    //for (int i = 0; i<gt_poses.size(); i++) {
+      std::cout<<"new frame "<<i<<" out of "<<result_selected_frames.size()<<"\n";
       
-      std::cout<<"new frame "<<i+start_ind<<" out of "<<gt_poses.size() + start_ind<<"\n";
-      
-      kitti.set_start_index(i+start_ind);
+      kitti.set_start_index(i);
       pcl::PointCloud<pcl::PointXYZI>::Ptr pc_pcl(new pcl::PointCloud<pcl::PointXYZI>);
       if (-1 == kitti.read_next_lidar(pc_pcl)) 
         break;
@@ -462,13 +475,11 @@ int main(int argc, char** argv) {
   
 
   /// global registration
-  std::vector<std::pair<int, int>> loop_closures;
-  std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> lc_poses;
-  if (is_read_loop_closure_poses_from_file) {
-    cvo::ReadG2oFile(loop_closure_input_file, loop_closures, lc_poses) ;
-  } else {
+  if (is_read_loop_closure_poses_from_file == false) {
+    //  cvo::ReadG2oFile(loop_closure_input_file, loop_closures, lc_poses) ;
+    //} else {
     std::string g_reg_f("global.txt");    
-    parse_lc_file(loop_closures, loop_closure_input_file, start_ind);    
+    //parse_lc_file(loop_closures, loop_closure_input_file, start_ind);    
     global_registration_batch(cvo_align,
                               loop_closures,
                               pcs,
@@ -477,13 +488,6 @@ int main(int argc, char** argv) {
                               lc_poses);
   }
 
-  /// decide if we will skip frames
-  std::set<int> result_selected_frames;
-  //if(num_merging_sequential_frames > 1) {
-    sample_frame_inds(start_ind, last_ind, num_merging_sequential_frames, loop_closures, result_selected_frames);
-    // } else {
-    //std::copy(v.begin(),v.end(),std::inserter(s,s.end()));
-    //}
 
   /// pose graph optimization
   std::string lc_g2o("loop_closures.g2o");
