@@ -532,7 +532,7 @@ int main(int argc, char** argv) {
                           num_merging_sequential_frames);
   std::cout<<"Finish PGO...\n";  
   std::string pgo_fname("pgo.txt");
-  std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> pgo_poses;
+  std::vector<cvo::Mat34d_row, Eigen::aligned_allocator<cvo::Mat34d_row>> pgo_poses;
   for (auto i : result_selected_frames) pgo_poses.push_back(BA_poses[i]);
   cvo::write_traj_file<double, 3, Eigen::RowMajor>(pgo_fname, pgo_poses);
   std::string lc_prefix(("loop_closure_"));
