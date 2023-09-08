@@ -125,6 +125,9 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
   for (int i = 0; i < tracking_poses.size(); i++) {
     //for (int j = i+1; j < std::min((int)tracking_poses.size(), i+1+num_neighbors_per_node); j++) {
     for (int j = i+1; j < std::min((int)tracking_poses.size(), i+2); j++) {
+	    if (selected_inds.find(i) == selected_inds.end() ||
+			    selected_inds.find(j) == selected_inds.end())
+		    continue;
       Eigen::Matrix4d T_Fi_to_Fj = tracking_poses[i].inverse() * tracking_poses[j];
       cvo::pgo::Pose3d t_be = cvo::pgo::pose3d_from_eigen<double, Eigen::ColMajor>(T_Fi_to_Fj);
       std::cout<<__func__<<": Add constrain from "<<i<<" to "<<j<<"\n";
@@ -384,7 +387,7 @@ int main(int argc, char** argv) {
   //argparse::ArgumentParser parser("irls_kitti_loop_closure_test");
   /// assume start_ind and last_ind has overlap
 
-  
+  std::cout<<"Start \n";  
   cvo::KittiHandler kitti(argv[1], cvo::KittiHandler::DataType::LIDAR);
   string cvo_param_file(argv[2]);    
   int num_neighbors_per_node = std::stoi(argv[3]); // forward neighbors
@@ -479,9 +482,9 @@ int main(int argc, char** argv) {
 
   /// decide if we will skip frames
   std::set<int> result_selected_frames;
-  //if(num_merging_sequential_frames > 1) {
+  if(num_merging_sequential_frames > 1) {
     sample_frame_inds(start_ind, last_ind, num_merging_sequential_frames, loop_closures, result_selected_frames);
-    // } else {
+  } //else {
     //std::copy(v.begin(),v.end(),std::inserter(s,s.end()));
     //}
 
