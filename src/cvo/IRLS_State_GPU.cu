@@ -243,8 +243,12 @@ namespace cvo {
     
     cudaMemGetInfoPrint(__func__);    
 
-    iter_++;    
-    return A_result_cpu_.nonzero_sum;;
+    iter_++;
+if (params_cpu_->multiframe_is_optimizing_ell) {
+	return std::min(std::min(A_result_cpu_.nonzero_sum, A_f1_cpu_.nonzero_sum), A_f2_cpu_.nonzero_sum);
+}
+else 
+    return A_result_cpu_.nonzero_sum;
     //if (ip_mat_.nonZeros() < 100) {
     //  std::cout<<"too sparse inner product mat "<<ip_mat_.nonZeros()<<std::endl;
     //  return -1;

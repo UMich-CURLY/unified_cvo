@@ -39,10 +39,10 @@ is_using_geometric_type: 1
 multiframe_using_cpu: 0
 multiframe_num_neighbors: 256
 multiframe_max_iters: 500 
-multiframe_ell_init: 0.5
+multiframe_ell_init: 0.75
 multiframe_ell_min: 0.15 #1.0
 multiframe_ell_decay_rate:  0.95
 multiframe_iterations_per_ell: 5
-multiframe_downsample_voxel_size: 0.75 #5 #3
+multiframe_downsample_voxel_size: 0.5 #5 #3
 multiframe_iterations_per_solve: 10
 multiframe_is_optimizing_ell: 1
