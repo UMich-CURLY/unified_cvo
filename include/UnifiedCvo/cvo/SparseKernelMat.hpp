@@ -43,7 +43,7 @@ namespace cvo {
                                                int num_neighbors=-1);
 
   void clear_SparseKernelMat_cpu(SparseKernelMat * A_cpu, int num_neighbors);
-  
+
 
   void init_internal_SparseKernelMat_cpu(int rows,
                                          int cols,

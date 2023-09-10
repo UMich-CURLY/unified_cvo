@@ -23,7 +23,7 @@
 #include "dataset_handler/PoseLoader.hpp"
 #include "utils/ImageRGBD.hpp"
 #include "utils/Calibration.hpp"
-
+#include "cvo/gpu_init.hpp"
 using namespace std;
 
 extern template class cvo::VoxelMap<pcl::PointXYZRGB>;
@@ -219,8 +219,10 @@ int main(int argc, char** argv) {
   int total_iters = tartan.get_total_number();
   //vector<string> vstrRGBName = tum.get_rgb_name_list();
 
-
   cvo::CvoGPU cvo_align(cvo_param_file);
+  cvo::gpu_init(cvo_align.get_params().multiframe_is_sorting_inner_product);
+  std::cout<<"Launched gpu_init\n";  
+  
   string calib_file, gt_pose_name;
   calib_file = string(argv[1] ) +"/cvo_calib_deep_depth.txt";
   gt_pose_name = std::string(argv[1]) + "/pose_left.txt";

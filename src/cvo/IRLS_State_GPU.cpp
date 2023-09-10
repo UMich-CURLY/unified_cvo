@@ -16,7 +16,7 @@ namespace cvo {
     unsigned int num_residuals = 0;
     for (int r=0; r< A_result_cpu_.rows; ++r)
     {
-      for (int c=0; c<num_neighbors_; c++){
+      for (int c=0; c<std::min(params_cpu_->nearest_neighbors_max, num_neighbors_); c++){
 
         int idx1 = r;
         int idx2 = A_result_cpu_.ind_row2col[r*num_neighbors_+c];
@@ -61,7 +61,7 @@ namespace cvo {
     if (params_cpu_->multiframe_is_optimizing_ell) {
       for (int r=0; r< A_f1_cpu_.rows; ++r)
       {
-        for (int c=0; c<num_neighbors_f1_; c++){
+        for (int c=0; c<std::min(params_cpu_->nearest_neighbors_max, num_neighbors_f1_); c++){
 
           int idx1 = r;
           int idx2 = A_f1_cpu_.ind_row2col[r*num_neighbors_f1_+c];
@@ -81,7 +81,7 @@ namespace cvo {
       }
       for (int r=0; r< A_f2_cpu_.rows; ++r)
       {
-        for (int c=0; c<num_neighbors_f2_; c++){
+        for (int c=0; c<std::min(params_cpu_->nearest_neighbors_max,num_neighbors_f2_); c++){
 
           int idx1 = r;
           int idx2 = A_f2_cpu_.ind_row2col[r*num_neighbors_f2_+c];
@@ -108,11 +108,13 @@ namespace cvo {
 
   
   void BinaryStateGPU::update_ell() {
-    
-    if (ell_ > params_cpu_->multiframe_ell_min)
-      ell_ = ell_ * params_cpu_->multiframe_ell_decay_rate;
-    else
+    if (ell_ > params_cpu_->multiframe_ell_min) {
+      if (!params_cpu_->multiframe_is_optimizing_ell)  {      
+        ell_ = ell_ * params_cpu_->multiframe_ell_decay_rate;
+      }
+    } else  {
       ell_ = params_cpu_->multiframe_ell_min;
+    }
   }
   
 

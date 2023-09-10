@@ -262,10 +262,11 @@ namespace cvo {
 
         if (ell <= params_->multiframe_ell_min)
           converged = true;
-        for (auto && state : *states_) 
-          state->update_ell();
+      }
+      for (auto && state : *states_) 
+        state->update_ell();
         
-      } 
+      
 
       //last_nonzeros = 0;              
       iter_++;

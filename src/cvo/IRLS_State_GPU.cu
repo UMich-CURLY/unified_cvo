@@ -71,22 +71,22 @@ namespace cvo {
 
   int BinaryStateGPU::update_inner_product() {
 
-    unsigned int last_num_neibors = max_neighbors(&A_host_);
+    int last_num_neibors = max_neighbors(&A_host_);
     if (last_num_neibors > 0)
-      num_neighbors_ = std::min(init_num_neighbors_, (unsigned int)(last_num_neibors*1.1));
+      num_neighbors_ = std::min(init_num_neighbors_, (int)(last_num_neibors*1.1));
     clear_SparseKernelMat(&A_host_, num_neighbors_);    
     std::cout<< "Current num_neighbors_ is "<<num_neighbors_<<"\n";
 
     if (is_optimizing_ell_){
       unsigned int last_num_neibors_f1 = max_neighbors(&A_f1_host_);
       if (last_num_neibors_f1 > 0)
-        num_neighbors_f1_ = std::min(init_num_neighbors_, (unsigned int)(last_num_neibors_f1*1.1));
+        num_neighbors_f1_ = std::min(init_num_neighbors_, (int)(last_num_neibors_f1*1.1));
       clear_SparseKernelMat(&A_f1_host_, num_neighbors_f1_);
     std::cout<< "Current num_neighbors_f1_ is "<<num_neighbors_f1_<<"\n";      
       
       unsigned int last_num_neibors_f2 = max_neighbors(&A_f2_host_);
       if (last_num_neibors_f2 > 0)
-        num_neighbors_f2_ = std::min(init_num_neighbors_, (unsigned int)(last_num_neibors_f2*1.1));
+        num_neighbors_f2_ = std::min(init_num_neighbors_, (int)(last_num_neibors_f2*1.1));
       clear_SparseKernelMat(&A_f2_host_, num_neighbors_f2_);
     std::cout<< "Current num_neighbors_f2_ is "<<num_neighbors_f2_<<"\n";            
     }

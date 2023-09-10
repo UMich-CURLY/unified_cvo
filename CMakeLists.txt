@@ -188,7 +188,8 @@ set (CVO_GPU_SOURCE
   ${PROJECT_SOURCE_DIR}/src/utils/CvoPoint.cpp
   ${PROJECT_SOURCE_DIR}/src/utils/VoxelMap_CvoPoint.cpp
   ${PROJECT_SOURCE_DIR}/src/utils/VoxelMap_pcl.cpp
-  ${PROJECT_SOURCE_DIR}/src/utils/CvoPointCloud.cpp  
+  ${PROJECT_SOURCE_DIR}/src/utils/CvoPointCloud.cpp
+  ${PROJECT_SOURCE_DIR}/src/cvo/gpu_init.cu
   )
 
 set (CVO_CPU_SOURCE

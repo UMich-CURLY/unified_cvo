@@ -602,8 +602,27 @@ namespace cvo{
         num_inds++;
       }
 
+
     }
     A_mat->nonzeros[i] = num_inds;
+
+    if (cvo_params->multiframe_is_sorting_inner_product) {
+      thrust::sort_by_key(thrust::seq, A_mat->mat+num_neighbors * i,
+                          A_mat->mat + num_neighbors * (i+1),
+                          A_mat->ind_row2col + num_neighbors * i,
+                          thrust::greater<float>());
+      /*
+      if (i == 1) {
+
+        for (int k = 0; k < num_neighbors; k++) {
+          printf("A_mat[k]=%f, a_mat[k] ind = %d\n", *(A_mat->mat + num_neighbors * i + k),
+                 *(A_mat->ind_row2col + num_neighbors * i + k));
+        }
+        }*/
+      
+    }
+     
+
 
   }
 
@@ -1666,6 +1685,15 @@ namespace cvo{
       
     auto start = std::chrono::system_clock::now();
 
+    if (params.multiframe_is_sorting_inner_product) {
+      cudaError_t err = cudaDeviceSetLimit ( cudaLimitMallocHeapSize, params.multiframe_is_sorting_inner_product * 1048576 * 8  );
+      if (err != cudaSuccess) { 
+        fprintf(stderr, "Failed to allocate heap memory %s .\n", cudaGetErrorString(err)); 
+        exit(EXIT_FAILURE); 
+      }
+      
+    }
+
     std::list<BinaryState::Ptr> binary_states;
     for (auto && p : edges) {
       auto & f1 = p.first;
@@ -2020,6 +2048,15 @@ namespace cvo{
                     ) const {
 
     std::cout<<"CvoGPU.cpp:align() get called\n";
+    if (params.multiframe_is_sorting_inner_product) {
+      cudaError_t err = cudaDeviceSetLimit ( cudaLimitMallocHeapSize, params.multiframe_is_sorting_inner_product * 1048576 * 8  );
+      if (err != cudaSuccess) { 
+        fprintf(stderr, "Failed to allocate heap memory %s .\n", cudaGetErrorString(err)); 
+        exit(EXIT_FAILURE); 
+      }
+      
+    }
+    
       
     auto start = std::chrono::system_clock::now();
     CvoBatchIRLS batch_irls_problem(frames, frames_to_hold_const,

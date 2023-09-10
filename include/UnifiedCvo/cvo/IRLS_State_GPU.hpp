@@ -87,7 +87,7 @@ namespace cvo {
     std::shared_ptr<CvoPointCloudGPU> points_transformed_buffer_gpu_;
 
     
-    unsigned int num_neighbors_;
+    int num_neighbors_;
     SparseKernelMat  A_host_;
     SparseKernelMat * A_device_;
     SparseKernelMat A_result_cpu_;
@@ -95,7 +95,7 @@ namespace cvo {
 
 
     int iter_;
-    const unsigned int init_num_neighbors_;
+    const int init_num_neighbors_;
 
     const CvoParams * params_gpu_;
     const CvoParams * params_cpu_;
@@ -105,13 +105,13 @@ namespace cvo {
     
     SparseKernelMat A_f1_host_;    
     SparseKernelMat * A_f1_device_;
-    unsigned int num_neighbors_f1_;
+    int num_neighbors_f1_;
     SparseKernelMat A_f1_cpu_;
     
     
     SparseKernelMat A_f2_host_;    
     SparseKernelMat * A_f2_device_;
-    unsigned int num_neighbors_f2_;
+    int num_neighbors_f2_;
     SparseKernelMat A_f2_cpu_;
     
     

@@ -192,10 +192,15 @@ namespace cvo {
   }
 
    __device__
-   void sort_SparseKernelMat_gpu_thread(SparseKernelMat * A_gpu) {
-     int threadID = blockIdx.x * blockDim.x + threadIdx.x;
-     int r = threadID;
-     //    thrust::sort_by_key(thrust::seq, A_gpu->mat+A_gpu->cols * r, A_gpu->mat[], A_gpu->ind_row2col, thrust::greater<float>());
+   void sort_SparseKernelMat_gpu_thread(SparseKernelMat * A_gpu,
+                                        int curr_num_neighbors,
+                                        int r) {
+     
+     thrust::sort_by_key(thrust::seq, A_gpu->mat+curr_num_neighbors * r,
+                         A_gpu->mat + curr_num_neighbors * (r+1),
+                         A_gpu->ind_row2col + curr_num_neighbors * r,
+                         thrust::greater<float>());
+     
    }
 
    void delete_internal_SparseKernelMat_cpu(SparseKernelMat * A_cpu ) {
