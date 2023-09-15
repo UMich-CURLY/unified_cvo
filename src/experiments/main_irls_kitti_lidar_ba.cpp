@@ -20,7 +20,7 @@
 #include "utils/VoxelMap.hpp"
 #include "utils/data_type.hpp"
 #include "dataset_handler/KittiHandler.hpp"
-#include "dataset_handler/PoseLoader.hpp"
+#include "utils/PoseLoader.hpp"
 #include "utils/LidarPointSelector.hpp"
 #include "utils/LidarPointType.hpp"
 #include "utils/ImageRGBD.hpp"

@@ -10,8 +10,9 @@
 #include "cvo/CvoFrame.hpp"
 #include "cvo/CvoParams.hpp"
 #include <ceres/ceres.h>
+#include <string>
 #include "utils/CvoPointCloud.hpp"
-#include 
+#include "utils/PoseLoader.hpp"
 namespace cvo {
 
   CvoBatchIRLS::CvoBatchIRLS(//const std::vector<Mat34d_row, Eigen::aligned_allocator<Mat34d_row>> & init_poses,
@@ -148,6 +149,7 @@ namespace cvo {
     int last_nonzeros = 0;
     bool ell_should_decay_when_nonzero_max = false;
     std::cout<<"Solve: total number of states is "<<states_->size()<<std::endl;
+    std::string pose_log_fname = "";    
     while (!converged) {
 
       std::cout<<"\n\n==============================================================\n";
@@ -159,7 +161,8 @@ namespace cvo {
       }
 
       std::vector<Sophus::SE3d> poses_old(frames_->size());
-      pose_snapshot(*frames_, poses_old);
+      pose_log_fname = "";
+      pose_snapshot(*frames_, poses_old, pose_log_fname);
       std::vector<float> ell_old;
       ell_old.reserve(states_->size());
       for (auto & state : *states_) 
@@ -308,7 +311,8 @@ namespace cvo {
       }
       
       std::vector<Sophus::SE3d> poses_new(frames_->size());
-      pose_snapshot(*frames_, poses_new);
+      pose_log_fname = "pose_iter_"+std::to_string(iter)+".txt";
+      pose_snapshot(*frames_, poses_new, pose_log_fname);
       double param_err = change_of_all_poses( gt_aligned, poses_new);
       err_history.push_back(param_err);
       std::cout<<"Finish registration at iter " <<iter_<<", error w.r.t gt changes from "<<err_history[0]<<" to " <<param_err<<std::endl;

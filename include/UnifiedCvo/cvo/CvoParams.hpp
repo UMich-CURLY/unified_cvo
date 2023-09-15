@@ -196,7 +196,7 @@ namespace cvo {
 
   inline void read_CvoParams_yaml(const char *filename, CvoParams * params) {
     YAML::Node fs = YAML::LoadFile(filename);
-    std::cout<<"open "<<filename<<std::endl;
+    //std::cout<<"open "<<filename<<std::endl;
 
     if (fs["ell_init_first_frame"]) 
       params->ell_init_first_frame = fs["ell_init_first_frame"].as<float>();
@@ -303,7 +303,7 @@ namespace cvo {
     if (fs["multiframe_is_sorting_inner_product"])
       params->multiframe_is_sorting_inner_product = fs["multiframe_is_sorting_inner_product"].as<int>();
     
-    std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<", indicator window size is "<<params->indicator_window_size<<std::endl;
+    //std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<", indicator window size is "<<params->indicator_window_size<<std::endl;
 
     return;
     }
