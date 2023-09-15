@@ -19,6 +19,7 @@
 #include "cvo/CvoGPU_impl.hpp"
 #include "cvo/CudaTypes.cuh"
 #include "cvo/CudaTypes.hpp"
+#include "cvo/gpu_init.hpp"
 //#include "cukdtree/cukdtree.h"
 
 #include <pcl/point_types.h>
@@ -69,6 +70,8 @@ namespace cvo{
     printf("Some Cvo Params are: ell_init: %f, eps_2: %f\n", params.ell_init, params.eps_2);
     cudaMalloc((void**)&params_gpu, sizeof(CvoParams) );
     cudaMemcpy( (void*)params_gpu, &params, sizeof(CvoParams), cudaMemcpyHostToDevice  );
+
+    gpu_init(params.multiframe_is_sorting_inner_product);
 
   }
   
@@ -606,7 +609,8 @@ namespace cvo{
     }
     A_mat->nonzeros[i] = num_inds;
 
-    if (cvo_params->multiframe_is_sorting_inner_product) {
+    if (cvo_params->multiframe_is_sorting_inner_product &&
+        num_inds > cvo_params->multiframe_is_sorting_inner_product ) {
       thrust::sort_by_key(thrust::seq, A_mat->mat+num_neighbors * i,
                           A_mat->mat + num_neighbors * (i+1),
                           A_mat->ind_row2col + num_neighbors * i,
@@ -1684,7 +1688,7 @@ namespace cvo{
 
       
     auto start = std::chrono::system_clock::now();
-
+    /*
     if (params.multiframe_is_sorting_inner_product) {
       cudaError_t err = cudaDeviceSetLimit ( cudaLimitMallocHeapSize, params.multiframe_is_sorting_inner_product * 1048576 * 8  );
       if (err != cudaSuccess) { 
@@ -1692,7 +1696,7 @@ namespace cvo{
         exit(EXIT_FAILURE); 
       }
       
-    }
+      }*/
 
     std::list<BinaryState::Ptr> binary_states;
     for (auto && p : edges) {
@@ -2046,8 +2050,9 @@ namespace cvo{
                     double *registration_seconds,
                     std::list<std::shared_ptr<Association>> * inliers
                     ) const {
-
+    /*
     std::cout<<"CvoGPU.cpp:align() get called\n";
+
     if (params.multiframe_is_sorting_inner_product) {
       cudaError_t err = cudaDeviceSetLimit ( cudaLimitMallocHeapSize, params.multiframe_is_sorting_inner_product * 1048576 * 8  );
       if (err != cudaSuccess) { 
@@ -2055,7 +2060,7 @@ namespace cvo{
         exit(EXIT_FAILURE); 
       }
       
-    }
+      }*/
     
       
     auto start = std::chrono::system_clock::now();

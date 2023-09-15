@@ -26,6 +26,7 @@
 #include "utils/ImageStereo.hpp"
 #include "utils/ImageRGBD.hpp"
 #include "utils/CvoPoint.hpp"
+#include "utils/def_assert.hpp"
 //#include "mapping/bkioctomap.h"
 namespace cvo{
 
@@ -98,7 +99,7 @@ namespace cvo{
     std::cout << "Finished write to label pcd" << std::endl; 
   }
 
-
+  /*
   CvoPointCloud::CvoPointCloud(const std::string & filename) {
 
     std::ifstream infile;
@@ -132,7 +133,7 @@ namespace cvo{
 
 
   }
-
+  */
 
   static void stereo_surface_sampling(const cv::Mat & left_gray,
                                       const std::vector<std::pair<int, int>> & dso_selected_uv,
@@ -1294,28 +1295,22 @@ namespace cvo{
       p.z = points_[i].z;
 
       if (feature_dimensions_) {
-        //uint8_t r = static_cast<uint8_t>(std::min(255, (int)(features_(i,2) * 255) ) );
-        //uint8_t g = static_cast<uint8_t>(std::min(255, (int)(features_(i,1) * 255) ) );
-        //uint8_t b = static_cast<uint8_t>(std::min(255, (int)(features_(i,0) * 255)));
+        uint8_t r = static_cast<uint8_t>(std::min(255, (int)(points_[i].r * 255)));
+        uint8_t g = static_cast<uint8_t>(std::min(255, (int)(points_[i].g * 255)));
+        uint8_t b = static_cast<uint8_t>(std::min(255, (int)(points_[i].b * 255)));
         if (num_classes_ ) {
           int max_class;
           label_at(i).maxCoeff(&max_class);
           auto c = label2color[max_class];
-          auto r = std::get<0>(c);
-          auto g = std::get<1>(c);
-          auto b = std::get<2>(c);
-          if (i == 0)
-            std::cout<<"export to pcd: color r is "<< (int )r <<std::endl;
-          p.r = r;
-          p.g = g;
-          p.b = b;
-
+          r = std::get<0>(c);
+          g = std::get<1>(c);
+          b = std::get<2>(c);
         }
-        //uint32_t rgb = ((uint32_t) r << 16 |(uint32_t) g << 8  | (uint32_t) b ) ;
-        //p.rgb = *reinterpret_cast<float*>(&rgb);
-        //p.r = r;
-        //p.g = g;
-        //p.b = b;
+        if (i == 0)
+          std::cout<<"export to pcd: color r is "<< (int )r <<std::endl;
+        p.r = r;
+        p.g = g;
+        p.b = b;
       }
       pc[i] = p;
     }
@@ -1338,7 +1333,11 @@ namespace cvo{
     }
     
   }
-  
+
+  Eigen::Vector3f CvoPointCloud::xyz_at(unsigned int index) const {
+    Eigen::Vector3f p(points_[index].x, points_[index].y, points_[index].z);
+    return p;
+  }  
 
   Eigen::Vector3f CvoPointCloud::at(unsigned int index) const {
     assert (index < num_points_ && index >= 0);
@@ -1438,24 +1437,30 @@ namespace cvo{
   void CvoPointCloud::transform(const Eigen::Matrix4f& pose,
                                 const CvoPointCloud & input,
                                 CvoPointCloud & output) {
-    output.num_points_ = input.num_points();
-    output.num_classes_ = input.num_classes();
-    output.feature_dimensions_ = input.feature_dimensions();
-    output.points_ = input.get_points();
+    if (&output != &input) {
+      output.num_points_ = input.num_points();
+      output.num_classes_ = input.num_classes();
+      output.feature_dimensions_ = input.feature_dimensions();
+      output.points_.resize(input.size());
+    }
 //    output.features_ = input.features();
 //    copy_eigen_dynamic_matrix(&input.features_,
 //                              &output.features_);
     
 //    output.labels_ = input.labels();
 //    output.positions_.resize(output.num_points_);
-    tbb::parallel_for(int(0), input.num_points(), [&](int j) {
-        Eigen::Vector3f jth_position = Eigen::Vector3f(input.point_at(j).x, input.point_at(j).y, input.point_at(j).z);
-        Eigen::Vector3f temp = (pose.block(0, 0, 3, 3) * jth_position +
-                pose.block(0, 3, 3, 1)).eval();
-        output.points_[j].x = temp.x();
-        output.points_[j].y = temp.y();
-        output.points_[j].z = temp.z();
-    });
+
+    //tbb::parallel_for(int(0), input.num_points(), [&](int j) {
+    for (int j = 0; j < input.num_points(); j++) {
+      Eigen::Vector3f jth_position;
+      jth_position<< input.point_at(j).x, input.point_at(j).y, input.point_at(j).z;
+      Eigen::Vector3f temp = (pose.block(0, 0, 3, 3) * jth_position +
+                              pose.block(0, 3, 3, 1)).eval();
+      output.points_[j].x = temp.x();
+      output.points_[j].y = temp.y();
+      output.points_[j].z = temp.z();
+    }
+  //);
   }
 
   void CvoPointCloud::reserve(int num_points, int feature_dims, int num_classes) {
@@ -1470,6 +1475,11 @@ namespace cvo{
 //    if (num_classes_)
 //      labels_.resize(num_points_, num_classes_);
 //    geometric_types_ .resize(num_points*2);
+  }
+
+  void CvoPointCloud::push_back(const cvo::CvoPoint & new_pt) {
+    points_.push_back(new_pt);
+    num_points_ = points_.size();
   }
   
   int CvoPointCloud::add_point(int index, const Eigen::Vector3f & xyz, const Eigen::VectorXf & feature, const Eigen::VectorXf & label, const Eigen::VectorXf & geometry_type) {

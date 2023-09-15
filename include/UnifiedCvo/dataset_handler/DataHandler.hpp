@@ -24,7 +24,7 @@ namespace cvo {
     virtual void set_start_index(int start) = 0;
     virtual int get_current_index() = 0;
     virtual int get_total_number() = 0;
-    
+    virtual void next_frame_index() = 0;
   };
 
   inline DatasetHandler::~DatasetHandler() {}

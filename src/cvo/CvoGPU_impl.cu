@@ -226,7 +226,7 @@ namespace cvo {
 //    auto & labels = cvo_cloud.labels();
     // set basic informations for pcl_cloud
     thrust::host_vector<CvoPoint> host_cloud(cvo_cloud.get_points());
-    std::cout << "Feature Dimemsions is " << FEATURE_DIMENSIONS << "\n";
+    //std::cout << "Feature Dimemsions is " << FEATURE_DIMENSIONS << "\n";
     int actual_num = 0;
     for(int i=0; i<num_points; ++i){
 

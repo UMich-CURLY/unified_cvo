@@ -83,7 +83,7 @@ namespace cvo {
 
   template <typename PointType>
   VoxelMap<PointType>::~VoxelMap() {
-    std::cout<<"Voxel map destructed\n";
+    //std::cout<<"Voxel map destructed\n";
   }
 
   template <typename PointType>

@@ -151,6 +151,12 @@ namespace cvo {
 
       std::vector<Sophus::SE3d> poses_old(frames_->size());
       pose_snapshot(*frames_, poses_old);
+      std::vector<float> ell_old;
+      ell_old.reserve(states_->size());
+      for (auto & state : *states_) 
+        ell_old.emplace_back((state->get_ell()));
+      
+
 
       ceres::Problem problem;
       LocalParameterizationSE3 * se3_parameterization = new LocalParameterizationSE3();
@@ -244,13 +250,6 @@ namespace cvo {
       std::cout << summary.FullReport() << std::endl;
       //loss_change << ell <<", "<< summary.final_cost - summary.initial_cost <<std::endl;
 
-      std::vector<Sophus::SE3d> poses_new(frames_->size());
-      pose_snapshot(*frames_, poses_new);
-      double param_change = change_of_all_poses(poses_old, poses_new);
-      std::cout<<"Update is "<<param_change<<std::endl;
-      if (param_change < 1e-8)
-        converged = true;
-        
         
       if (params_->multiframe_is_optimizing_ell == false )  {
         //  if (//param_change < 1e-5 * poses_new.size()
@@ -266,6 +265,21 @@ namespace cvo {
       for (auto && state : *states_) 
         state->update_ell();
         
+      std::vector<Sophus::SE3d> poses_new(frames_->size());
+      pose_snapshot(*frames_, poses_new);
+      double param_change = change_of_all_poses(poses_old, poses_new);
+      std::cout<<"Pose Update is "<<param_change<<std::endl;
+
+      std::vector<float> ell_new;
+      ell_new.reserve(states_->size());
+      for (auto & state : *states_) 
+        ell_new.emplace_back((state->get_ell()));
+      double ell_change = 0;
+      for (int l = 0; l < ell_new.size(); l++) 
+        ell_change += std::fabs(ell_new[l] - ell_old[l]);
+      std::cout<<"Ell Update is "<<param_change<<std::endl;      
+      if (param_change < 1e-8 && ell_change < 1e-3)
+        converged = true;
       
 
       //last_nonzeros = 0;              

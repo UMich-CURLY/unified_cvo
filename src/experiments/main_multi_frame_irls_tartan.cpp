@@ -219,6 +219,8 @@ int main(int argc, char** argv) {
   int total_iters = tartan.get_total_number();
   //vector<string> vstrRGBName = tum.get_rgb_name_list();
 
+  cvo::gpu_init(20);
+  std::cout<<"Launched gpu_init\n";    
   cvo::CvoGPU cvo_align(cvo_param_file);
   cvo::gpu_init(cvo_align.get_params().multiframe_is_sorting_inner_product);
   std::cout<<"Launched gpu_init\n";  
