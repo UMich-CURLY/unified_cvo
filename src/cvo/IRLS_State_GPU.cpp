@@ -14,6 +14,10 @@ namespace cvo {
 
     std::cout<<"Nonzeros is "<<A_result_cpu_.nonzero_sum<<std::endl;
     unsigned int num_residuals = 0;
+    if (A_result_cpu_.nonzero_sum == 0 || A_f1_cpu_.nonzero_sum  == 0 ||
+        A_f2_cpu_.nonzero_sum == 0)
+      return num_residuals;
+    
     for (int r=0; r< A_result_cpu_.rows; ++r)
     {
       for (int c=0; c<std::min(params_cpu_->nearest_neighbors_max, num_neighbors_); c++){

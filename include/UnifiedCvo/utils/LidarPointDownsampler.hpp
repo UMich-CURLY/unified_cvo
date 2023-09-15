@@ -7,6 +7,7 @@
 #include <unordered_set>
 
 namespace cvo {
+
   
   std::shared_ptr<cvo::CvoPointCloud> downsample_lidar_points(bool is_edge_only,
                                                               pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,

@@ -8,7 +8,7 @@ make -j
 cd ..
 #./build/bin/cvo_irls_tum /home/rayzhang/media/Samsung_T5/tum/freiburg3_structure_notexture_near cvo_params/cvo_intensity_params_irls_tum.yaml graph_defs/fr3/tum_fr3_structure_notexture_near/10_graph.txt /home/rayzhang/media/Samsung_T5/tum/freiburg3_structure_notexture_near/CVO.txt  
 #gdb -ex run --args \
-./build/bin/cvo_irls_tum /home/rayzhang/media/Samsung_T5/tum/freiburg1_${seq} cvo_params/cvo_intensity_params_irls_tum.yaml /home/rayzhang/dsm/${frame}_graph.txt 1 /home/rayzhang/dsm/  #covisMap${frame}.pcd 
+./build/bin/cvo_irls_tum /home/rayzhang/media/Samsung_T5/tum/freiburg1_${seq} cvo_params/cvo_intensity_params_irls_tum.yaml /home/rayzhang/dsm/tum_fr1_desk.backup/${frame}_graph.txt 1 /home/rayzhang/dsm/tum_fr1_desk.backup/  #covisMap${frame}.pcd 
 #./build/bin/cvo_irls_tum /home/rayzhang/media/Samsung_T5/tum/freiburg1_${seq} cvo_params/cvo_intensity_params_irls_tum.yaml /home/rayzhang/dsm/sunny_results/tum_freiburg1_${seq}${date}/${frame}_graph.txt 1 /home/rayzhang/dsm/sunny_results/tum_freiburg1_${seq}${date}/  #covisMap${frame}.pcd 
 echo "Evaluation: "
 echo "before BA ate:"

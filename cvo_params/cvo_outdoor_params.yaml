@@ -39,12 +39,12 @@ is_using_geometric_type: 1
 # for irls solver
 multiframe_using_cpu: 0
 multiframe_num_neighbors: 256
-multiframe_max_iters: 50 
-multiframe_ell_init: 0.75
-multiframe_ell_min: 0.02 #1.0
+multiframe_max_iters: 100 
+multiframe_ell_init: 0.5
+multiframe_ell_min: 0.05 #1.0
 multiframe_ell_decay_rate:  0.95
-multiframe_iterations_per_ell: 20
-multiframe_downsample_voxel_size: 1.0 #5 #3
-multiframe_iterations_per_solve: 20
+multiframe_iterations_per_ell: 10
+multiframe_downsample_voxel_size: 3.0 #5 #3
+multiframe_iterations_per_solve: 10
 multiframe_is_optimizing_ell: 1
-multiframe_is_sorting_inner_product: 0
+multiframe_is_sorting_inner_product: 10

@@ -84,6 +84,13 @@ namespace cvo {
                   int beam_num,
                   PointSelectionMethod pt_selection_method=LOAM);
 
+    CvoPointCloud(int feature_dimensions, int num_classes);
+
+    //CvoPointCloud(const std::string & filename);
+
+    CvoPointCloud();
+    ~CvoPointCloud();    
+
 
     // overloaded operators and copy constructors
     CvoPointCloud(const CvoPointCloud & to_copy);
@@ -114,12 +121,6 @@ namespace cvo {
     CvoPointCloud(const semantic_bki::SemanticBKIOctoMap * map,
                   int num_semantic_class);
 
-    CvoPointCloud(int feature_dimensions, int num_classes);
-
-    CvoPointCloud(const std::string & filename);
-    
-    ~CvoPointCloud();
-    CvoPointCloud();
 
     int read_cvo_pointcloud_from_file(const std::string & filename);
 
@@ -132,7 +133,7 @@ namespace cvo {
 
     // getters
     std::vector<cvo::CvoPoint> get_points() const {return points_;}
-    cvo::CvoPoint point_at(unsigned int index) const {return points_[index];}
+    const cvo::CvoPoint & point_at(unsigned int index) const {return points_.at(index);}
     int num_points() const {return num_points_;}
     int size() const {return num_points_;}
     int num_classes() const {return num_classes_;}
@@ -147,15 +148,10 @@ namespace cvo {
       return positions;
     }
     Eigen::Vector3f at(unsigned int index) const;
-//    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & labels() const { return labels_;}
+    Eigen::Vector3f xyz_at(unsigned int index) const;
     const Eigen::VectorXf label_at(unsigned int index) const { return Eigen::Map<const Eigen::VectorXf>(points_[index].label_distribution, NUM_CLASSES); }
-//    Eigen::VectorXf feature_at(unsigned int index) const { return features_.row(index);
     const Eigen::VectorXf feature_at(unsigned int index) const { return Eigen::Map<const Eigen::VectorXf>(points_[index].features, FEATURE_DIMENSIONS); }
     Eigen::Vector2f geometry_type_at(unsigned int index) const;
-//    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & semantics() const { return labels_;}
-//    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & features() const {return features_;}
-    //const Eigen::MatrixXf & features() const {return features_;}
-//    const std::vector<float> & geometric_types() const {return geometric_types_;}
     
     //const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> & normals() const {return normals_;}
     //const Eigen::Matrix<float, Eigen::Dynamic, 9> & covariance() const {return covariance_;}
@@ -171,10 +167,10 @@ namespace cvo {
     void write_to_pcd(const std::string & name) const;
     void write_to_txt(const std::string & name) const;
     void write_to_intensity_pcd(const std::string & name) const;
-
     
     void reserve(int num_points, int feature_dims, int num_classes);
     int add_point(int index, const Eigen::Vector3f & xyz, const Eigen::VectorXf & feature, const Eigen::VectorXf & label, const Eigen::VectorXf & geometric_type);
+    void push_back(const cvo::CvoPoint & new_point);
    
   private:
     int num_points_;

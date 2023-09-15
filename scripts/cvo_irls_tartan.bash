@@ -1,6 +1,7 @@
 #/bin/bash
 
-cd build 
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j 
 cd ..
 #./build/bin/cvo_irls_tum /home/rayzhang/media/Samsung_T5/tum/freiburg3_structure_notexture_near cvo_params/cvo_intensity_params_irls_tum.yaml graph_defs/fr3/tum_fr3_structure_notexture_near/10_graph.txt /home/rayzhang/media/Samsung_T5/tum/freiburg3_structure_notexture_near/CVO.txt  
@@ -13,7 +14,7 @@ do
 
 #gdb -ex run --args \
 #gdb -ex run --args \
-    #cuda-gdb -ex run --args \
+#    cuda-gdb -ex run --args \
 ./build/bin/cvo_irls_tartan /home/rayzhang/media/Samsung_T5/tartanair/$seq/Easy/P001/  cvo_params/cvo_outdoor_params.yaml /home/rayzhang/slam_eval/tartan_semantic_Easy_${seq}_jan31/${1}_graph.txt 1 /home/rayzhang/slam_eval/tartan_semantic_Easy_${seq}_jan31/ 1 #covisMap${1}.pcd    
 #./build/bin/cvo_irls_tartan /home/rayzhang/media/Samsung_T5/tartanair/$seq/Easy/P001/  cvo_params/cvo_outdoor_params.yaml /home/rayzhang/dsm/tartan_Easy_${seq}/${1}_graph.txt 1 /home/rayzhang/dsm/tartan_Easy_${seq}/ covisMap${1}.pcd 
 

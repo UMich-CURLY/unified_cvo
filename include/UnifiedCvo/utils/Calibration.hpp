@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <cassert>
 #include <Eigen/Dense>
-
+#include "def_assert.hpp"
 namespace cvo {
   class Calibration {
   public:
@@ -43,7 +43,7 @@ namespace cvo {
           infile.close();
 
         } else {
-          std::cerr<<" calibration file "<<file<<" not found!\n";
+          ASSERT(false, " calibration file "<<file<<" not found!\n");          
           //assert(0);
         }
       }
@@ -63,7 +63,7 @@ namespace cvo {
           infile.close();
 
         } else {
-          std::cerr<<" calibration file "<<file<<" not found!\n";
+          ASSERT(false, " calibration file "<<file<<" not found!\n");
           //assert(0);
         }
       }
