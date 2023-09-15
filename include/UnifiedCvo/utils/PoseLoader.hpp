@@ -279,6 +279,23 @@ namespace cvo {
     outfile.close();
   }
 
+  template <typename T>
+  void write_traj_file(std::string & fname,
+                       std::vector<Sophus::SE3<T>
+                       Eigen::aligned_allocator<Sophus::SE3<T>>> &  poses) {
+
+    std::ofstream outfile(fname);
+    for (int i = 0; i< poses.size(); i++) {
+      auto q_eigen = poses[i].coeffs();
+      Eigen::Matrix<T, 3, 1> t = poses[i].translation();
+      outfile << t(0) <<" "<< t(1)<<" "<<t(2)<<" "
+              <<q_eigen[0]<<" "<<q_eigen[1]<<" "<<q_eigen[2]<<" "<<q_eigen[3]<<std::endl;
+    
+    }
+    outfile.close();
+  }
+  
+
   
   
 }

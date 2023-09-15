@@ -6,7 +6,7 @@
 #include <fstream>
 #include <iostream>
 #include <boost/filesystem.hpp>
-#include "dataset_handler/PoseLoader.hpp"
+#include "utils/PoseLoader.hpp"
 #include "dataset_handler/TartanAirHandler.hpp"
 #include "utils/Calibration.hpp"
 #include "utils/RawImage.hpp"

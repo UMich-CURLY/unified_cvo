@@ -432,7 +432,7 @@ int main(int argc, char** argv) {
   std::cout<<"Finish reading all arguments\n";
   int total_iters = last_ind - start_ind + 1;
 
-  cvo::gpu_init(10);
+  <cvo::gpu_init(10);
   std::cout<<"Launched gpu_init\n";  
   cvo::CvoGPU cvo_align(cvo_param_file);
   string gt_pose_name;

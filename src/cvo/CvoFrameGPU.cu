@@ -174,5 +174,9 @@ namespace cvo {
   //const thrust::device_vector<CvoPoint>& CvoFrameGPU::points_init_gpu() {
   //  return points_init_gpu_;
   //}
+
+  template class CvoIndexFrameGPU<int>;
+  template class CvoIndexFrameGPU<unsigned int>;
+  template class CvoIndexFrameGPU<size_t>;
   
 }
