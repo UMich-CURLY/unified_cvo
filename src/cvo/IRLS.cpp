@@ -117,9 +117,6 @@ namespace cvo {
     
   }
 
-  void CvoBatchIRLS::log_stacked_pcd() {
-    
-  }
 
   void CvoBatchIRLS::solve(const std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> & gt,
                            const std::string & err_file_name) {
@@ -131,7 +128,10 @@ namespace cvo {
 
     //std::ofstream nonzeros("nonzeros.txt");
     //std::ofstream loss_change("loss_change.txt");
-    bool is_comparing_with_gt = (gt.size() == frames_->size() && err_file_name.size() > 0); 
+    std::cout<<"gt.size()   is "<< (gt.size()) <<"\n"
+             <<"frame szie is "<<frames_->size()<<"\n"
+             <<" err_file_name.size() = "<< err_file_name.size()<<"\n";
+    bool is_comparing_with_gt = (gt.size() == frames_->size() && err_file_name.size() > 0);
     std::vector<Sophus::SE3d> gt_aligned(gt.size());
     std::vector<double> err_history;
     std::ofstream err_f;
@@ -279,7 +279,9 @@ namespace cvo {
         state->update_ell();
         
       std::vector<Sophus::SE3d> poses_new(frames_->size());
-      pose_snapshot(*frames_, poses_new);
+      if (is_comparing_with_gt)      
+        pose_log_fname = "pose_iter_"+std::to_string(iter_)+".txt";      
+      pose_snapshot(*frames_, poses_new, pose_log_fname);
       double param_change = change_of_all_poses(poses_old, poses_new);
       std::cout<<"Pose Update is "<<param_change<<std::endl;
 
@@ -311,7 +313,7 @@ namespace cvo {
       }
       
       std::vector<Sophus::SE3d> poses_new(frames_->size());
-      pose_log_fname = "pose_iter_"+std::to_string(iter)+".txt";
+      pose_log_fname = ""; //"pose_iter_"+std::to_string(iter_)+".txt";
       pose_snapshot(*frames_, poses_new, pose_log_fname);
       double param_err = change_of_all_poses( gt_aligned, poses_new);
       err_history.push_back(param_err);

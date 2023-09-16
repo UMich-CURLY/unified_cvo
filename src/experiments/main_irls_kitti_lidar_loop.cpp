@@ -23,7 +23,7 @@
 #include "graph_optimizer/PoseGraphOptimization.hpp"
 //#include "argparse/argparse.hpp"
 #include "dataset_handler/KittiHandler.hpp"
-#include "dataset_handler/PoseLoader.hpp"
+#include "utils/PoseLoader.hpp"
 #include "cvo/gpu_init.hpp"
 #include "utils/ImageRGBD.hpp"
 #include "utils/Calibration.hpp"
@@ -76,6 +76,7 @@ void parse_lc_file(std::vector<std::pair<int, int>> & loop_closures,
       std::istringstream ss(line);
       int id1, id2;
       ss>>id1>>id2;
+      std::cout<<"parse line "<<line<<"\n";
       std::cout<<"read lc between "<<id1<<" and "<<id2<<"\n";
       id1 -= start_ind;
       id2 -= start_ind;
@@ -432,8 +433,8 @@ int main(int argc, char** argv) {
   std::cout<<"Finish reading all arguments\n";
   int total_iters = last_ind - start_ind + 1;
 
-  <cvo::gpu_init(10);
-  std::cout<<"Launched gpu_init\n";  
+  //cvo::gpu_init(10);
+  //std::cout<<"Launched gpu_init\n";  
   cvo::CvoGPU cvo_align(cvo_param_file);
   string gt_pose_name;
   gt_pose_name = std::string(argv[1]) + "/poses.txt";

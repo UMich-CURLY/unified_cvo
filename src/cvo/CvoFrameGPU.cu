@@ -175,8 +175,8 @@ namespace cvo {
   //  return points_init_gpu_;
   //}
 
-  template class CvoIndexFrameGPU<int>;
-  template class CvoIndexFrameGPU<unsigned int>;
-  template class CvoIndexFrameGPU<size_t>;
+  //template class CvoIndexFrameGPU<int>;
+  //template class CvoIndexFrameGPU<unsigned int>;
+  //template class CvoIndexFrameGPU<size_t>;
   
 }

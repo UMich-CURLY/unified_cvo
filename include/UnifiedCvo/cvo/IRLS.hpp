@@ -45,6 +45,7 @@ namespace cvo {
     std::vector<bool> pivot_flags_; 
     const CvoParams * params_;
 
+
   };
 
   

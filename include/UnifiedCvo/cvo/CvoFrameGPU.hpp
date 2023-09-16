@@ -61,22 +61,22 @@ namespace cvo {
 
   };
 
-  template <typename IndexT>
+
   struct CvoIndexFrameGPU : public CvoFrameGPU  {
   public:
     CvoIndexFrameGPU(const CvoPointCloud * pts, // points in the sensor frame
                      const double poses[12],   // global poses
                      bool is_using_kdtree,
-                     IndexT index):
+                     unsigned int index):
       CvoFrameGPU(pts, poses, is_using_kdtree),
       id_(index) {
       
     }
     ~CvoIndexFrameGPU();
 
-    const IndexT get_id() const  { return id_; }
+    const unsigned int get_id() const  { return id_; }
 
   private:
-    IndexT id_;
-  
+    unsigned int id_;
+  };
 }
