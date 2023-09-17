@@ -20,7 +20,7 @@
 #include "utils/VoxelMap.hpp"
 #include "utils/data_type.hpp"
 #include "dataset_handler/TartanAirHandler.hpp"
-#include "dataset_handler/PoseLoader.hpp"
+#include "utils/PoseLoader.hpp"
 #include "utils/ImageRGBD.hpp"
 #include "utils/Calibration.hpp"
 

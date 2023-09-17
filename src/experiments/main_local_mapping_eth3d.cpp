@@ -14,7 +14,7 @@
 #include "utils/Calibration.hpp"
 #include "utils/ImageRGBD.hpp"
 #include "dataset_handler/TumHandler.hpp"
-#include "dataset_handler/PoseLoader.hpp"
+#include "utils/PoseLoader.hpp"
 
 using namespace std;
 using namespace boost::filesystem;

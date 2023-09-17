@@ -23,7 +23,7 @@
 #include "graph_optimizer/PoseGraphOptimization.hpp"
 //#include "argparse/argparse.hpp"
 #include "dataset_handler/KittiHandler.hpp"
-#include "dataset_handler/PoseLoader.hpp"
+#include "utils/PoseLoader.hpp"
 #include "cvo/gpu_init.hpp"
 #include "utils/ImageRGBD.hpp"
 #include "utils/Calibration.hpp"
@@ -76,6 +76,7 @@ void parse_lc_file(std::vector<std::pair<int, int>> & loop_closures,
       std::istringstream ss(line);
       int id1, id2;
       ss>>id1>>id2;
+      std::cout<<"parse line "<<line<<"\n";
       std::cout<<"read lc between "<<id1<<" and "<<id2<<"\n";
       id1 -= start_ind;
       id2 -= start_ind;
@@ -431,8 +432,8 @@ int main(int argc, char** argv) {
   std::cout<<"Finish reading all arguments\n";
   int total_iters = last_ind - start_ind + 1;
 
-  cvo::gpu_init(10);
-  std::cout<<"Launched gpu_init\n";  
+  //cvo::gpu_init(10);
+  //std::cout<<"Launched gpu_init\n";  
   cvo::CvoGPU cvo_align(cvo_param_file);
   string gt_pose_name;
   gt_pose_name = std::string(argv[1]) + "/poses.txt";
@@ -493,15 +494,18 @@ int main(int argc, char** argv) {
         if (-1 == kitti.read_next_lidar(pc_pcl)) 
           break;
         if (j > 0) {
-          Eigen::Matrix4f pose_fi_to_fj = (tracking_poses[i].inverse() * tracking_poses[j]).cast<float>();
+          Eigen::Matrix4f pose_fi_to_fj = (tracking_poses[i].inverse() * tracking_poses[j+i]).cast<float>();
           #pragma omp parallel for 
           for (int k = 0; k < pc_pcl->size(); k++) {
-            auto p = pc_pcl->at(k);
+            auto & p = pc_pcl->at(k);
             p.getVector3fMap() = pose_fi_to_fj.block(0,0,3,3) * p.getVector3fMap() + pose_fi_to_fj.block(0,3,3,1);
           }
         }
         *pc_local += *pc_pcl;
       }
+      if (i == 0)
+	      pcl::io::savePCDFileASCII("0.pcd", *pc_local);
+	      //pc_local->write_to_pcd("0.pcd");
       float leaf_size = cvo_align.get_params().multiframe_downsample_voxel_size;
       std::shared_ptr<cvo::CvoPointCloud> pc = cvo::downsample_lidar_points(is_edge_only,
                                                                             pc_local,

@@ -515,7 +515,7 @@ target_include_directories(cvo_gpu_lidar PUBLIC
   "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 add_dependencies(cvo_gpu_lidar cvo_utils lie_group_utils)
-target_compile_definitions(cvo_gpu_lidar PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=128)
+target_compile_definitions(cvo_gpu_lidar PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=1 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=512)
 target_link_libraries(cvo_gpu_lidar PRIVATE lie_group_utils cvo_utils yaml-cpp Ceres::ceres)
 set_target_properties(cvo_gpu_lidar PROPERTIES
   POSITION_INDEPENDENT_CODE ON

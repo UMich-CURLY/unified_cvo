@@ -129,7 +129,7 @@ void read_pose_file(std::string & gt_fname,
                     std::vector<Eigen::Matrix4d,
                     Eigen::aligned_allocator<Eigen::Matrix4d>> & poses_all) {
 
-  poses_all.resize(frame_inds.size());
+  poses_all.clear();//reserve(frame_inds.size());
   
   std::ifstream gt_file(gt_fname);
 
@@ -142,34 +142,35 @@ void read_pose_file(std::string & gt_fname,
     
     if (line_ind < frame_inds[curr_frame_ind]) {
       line_ind ++;
-      //std::cout<<"line ind "<<line_ind<<" less than frame_inds "<<frame_inds[curr_frame_ind]<<std::endl;
+      
       continue;
     }
-    std::cout<<" read "<<line<<std::endl;    
+
     std::stringstream line_stream(line);
     std::string substr;
     double pose_v[12];
     int pose_counter = 0;
-
     while (std::getline(line_stream,substr, ' ')) {
-      std::cout<<"substr: "<<substr<<"\n";
       pose_v[pose_counter] = std::stod(substr);
-      //poses_all[curr_frame_ind](pose_counter / 4, pose_counter % 4) = pose_v[pose_counter];
       pose_counter++;
     }
-    poses_all[curr_frame_ind]  << pose_v[0] , pose_v[1], pose_v[2], pose_v[3],
-      pose_v[4], pose_v[5], pose_v[6], pose_v[7],
-      pose_v[8], pose_v[9], pose_v[10], pose_v[11],
-      0,0,0,1;
-    
+    Eigen::Map<Eigen::Matrix<double, 3, 4, Eigen::RowMajor>> Tr(pose_v);
+    Eigen::Matrix<double, 3, 4, Eigen::ColMajor> T34 = Tr;
+    Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
+    T.block<3,4>(0,0) = T34;
+    //poses.push_back(T);
+
+    poses_all.push_back(T);        
 
     //std::cout<<"Read pose "<<pose<<std::endl;
-    if (curr_frame_ind == 2) {
+    //if (curr_frame_ind == 2) {
       std::cout<<"read: line "<<frame_inds[curr_frame_ind]<<" pose is "<<poses_all[curr_frame_ind]<<std::endl;
-    }
+      //}
+
     
     line_ind ++;
     curr_frame_ind++;
+    if (curr_frame_ind == frame_inds.size()) break;
   }
 
 
@@ -355,6 +356,7 @@ int main(int argc, char** argv) {
   cvo::CvoBatchIRLS batch_irls_problem(frames, const_flags,
                                        edge_states, &cvo_align.get_params());
   std::string err_file("err_wrt_iters.txt");
+  ASSERT(gt_poses.size() == frames.size(), "gt pose size is "+std::to_string(gt_poses.size()));
   batch_irls_problem.solve(gt_poses, err_file);
   auto end = std::chrono::system_clock::now();
   std::chrono::duration<double, std::milli> t_all = end - start;  

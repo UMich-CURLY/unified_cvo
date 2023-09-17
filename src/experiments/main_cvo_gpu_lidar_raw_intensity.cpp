@@ -9,7 +9,7 @@
 //#include <opencv2/opencv.hpp>
 #include "dataset_handler/KittiHandler.hpp"
 //#include "graph_optimizer/Frame.hpp"
-#include "dataset_handler/PoseLoader.hpp"
+#include "utils/PoseLoader.hpp"
 #include "utils/LidarPointSelector.hpp"
 #include "utils/LidarPointType.hpp"
 #include "utils/ImageRGBD.hpp"

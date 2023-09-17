@@ -28,6 +28,8 @@ namespace cvo {
     
     const std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f> > & points_transformed();
     virtual void transform_pointcloud();
+
+    //virtual unsigned int get_id() const { return this; }
     
   private:
 
