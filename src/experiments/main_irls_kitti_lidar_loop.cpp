@@ -479,6 +479,12 @@ int main(int argc, char** argv) {
   /// decide if we will skip frames
   std::set<int> result_selected_frames;
   sample_frame_inds(start_ind, last_ind, num_merging_sequential_frames, loop_closures, result_selected_frames);
+
+  /// select gt poses
+  std::map<int, Eigen::Matrix4d> gt_pose_selected;
+  for (auto ind : result_selected_frames)
+    gt_pose_selected.insert(std::make_pair(ind, gt_poses[ind]));
+  
   
   // read point cloud
   std::map<int, cvo::CvoFrame::Ptr> frames;
@@ -565,6 +571,7 @@ int main(int argc, char** argv) {
   
   /// Multiframe alignment
   std::cout<<"Construct loop BA problem\n";
+  ASSERT(frames.size() == gt_poses.size(), "frame size must be equal to gt_poses size");
   construct_loop_BA_problem(cvo_align,
                             loop_closures,
                             frames, gt_poses, num_neighbors_per_node,
