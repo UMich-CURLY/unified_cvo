@@ -453,7 +453,7 @@ int main(int argc, char** argv) {
                                    gt_poses_raw);
   std::cout<<"gt poses size is "<<gt_poses_raw.size()<<"\n";
   Eigen::Matrix4d identity = Eigen::Matrix4d::Identity();
-  cvo::transform_vector_of_poses(gt_poses_raw, identity, gt_poses );
+  cvo::transform_vector_of_poses(gt_poses_raw, identity, gt_poses_raw );
 
   /// read tracking files
   cvo::read_pose_file_kitti_format(tracking_traj_file,
@@ -481,9 +481,9 @@ int main(int argc, char** argv) {
   sample_frame_inds(start_ind, last_ind, num_merging_sequential_frames, loop_closures, result_selected_frames);
 
   /// select gt poses
-  std::map<int, Eigen::Matrix4d> gt_pose_selected;
+  //std::map<int, Eigen::Matrix4d> gt_pose_selected;
   for (auto ind : result_selected_frames)
-    gt_pose_selected.insert(std::make_pair(ind, gt_poses[ind]));
+    gt_poses.push_back(gt_poses_raw[ind]);//std::make_pair(ind, gt_poses[ind]));
   
   
   // read point cloud
