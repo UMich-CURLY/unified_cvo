@@ -512,6 +512,8 @@ int main(int argc, char** argv) {
                                                                             leaf_size);
       std::cout<<"new frame "<<i<<" downsampled from  "<<pc_local->size()<<" to "<<pc->size()<<"\n";
       pcs.insert(std::make_pair(i, pc));
+      if (i == 0)
+        pc->write_to_pcd("0.pcd");
     }
   }
   

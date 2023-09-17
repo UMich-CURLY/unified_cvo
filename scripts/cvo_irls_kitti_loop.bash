@@ -9,7 +9,7 @@ clear
     #skylabel=(196 112 -- 130  196 146 130)
     #seqs=( 05 00 08 02 06 09 )
     #seqs=( 05 00 02 06 09 07  )
-    seqs=(  07 06  )
+    seqs=(  03 06  )
     for ind in ${!seqs[@]}
     do
         i=${seqs[ind]}
