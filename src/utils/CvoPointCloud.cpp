@@ -1306,8 +1306,8 @@ namespace cvo{
           g = std::get<1>(c);
           b = std::get<2>(c);
         }
-        if (i == 0)
-          std::cout<<"export to pcd: color r is "<< (int )r <<std::endl;
+        //if (i == 0)
+        //  std::cout<<"export to pcd: color r is "<< (int )r <<std::endl;
         p.r = r;
         p.g = g;
         p.b = b;

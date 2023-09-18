@@ -63,6 +63,7 @@ namespace cvo {
     int multiframe_max_iters;
     float multiframe_ell_init;
     float multiframe_ell_min;
+    float multiframe_ell_max;
     int  multiframe_iter_per_ell;
     float multiframe_ell_decay_rate;
     int multiframe_iterations_per_ell;
@@ -116,6 +117,7 @@ namespace cvo {
       nearest_neighbors_max(512),
       multiframe_ell_init(0.15),
       multiframe_ell_min(0.05),
+      multiframe_ell_max(5.0),
       multiframe_iter_per_ell(10),
       multiframe_ell_decay_rate(0.7),
       multiframe_iterations_per_ell(50),
@@ -262,6 +264,7 @@ namespace cvo {
       params->is_using_intensity = fs["is_using_intensity"].as<int>();
     if (fs["is_using_semantics"])
       params->is_using_semantics = fs["is_using_semantics"].as<int>();
+
     if (fs["is_using_range_ell"])
       params->is_using_range_ell = fs["is_using_range_ell"].as<int>();
     if (fs["is_using_kdtree"])
@@ -280,6 +283,9 @@ namespace cvo {
       params->multiframe_max_iters = fs["multiframe_max_iters"].as<int>();
     if (fs["multiframe_ell_min"])
       params->multiframe_ell_min = fs["multiframe_ell_min"].as<float>();
+    if (fs["multiframe_ell_max"])
+      params->multiframe_ell_max = fs["multiframe_ell_max"].as<float>();
+    
     if (fs["multiframe_ell_decay_rate"])
       params->multiframe_ell_decay_rate = fs["multiframe_ell_decay_rate"].as<float>();
     if (fs["multiframe_iterations_per_ell"])

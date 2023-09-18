@@ -81,6 +81,7 @@ int main(int argc, char *argv[]) {
     //cv::Mat depth_img_32FC1(left.rows, left.cols, CV_32FC1);
     std::vector<float> depth_img(left.rows * left.cols, 0.0);
     cvo::CvoPointCloud pc(*target_raw, calib, cvo::CvoPointCloud::PointSelectionMethod::FULL);
+    std::cout<<"pc size "<<pc.size()<<"\n";
 
     for (int r = 0; r < left.rows; r++) {
       for (int c = 0; c < left.cols; c++) {

@@ -835,10 +835,10 @@ target_include_directories(cvo_align_two_nn_feature PUBLIC
       "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>")
 target_link_libraries(cvo_align_two_nn_feature cvo_gpu_img_deep_feature_lib cvo_utils kitti  boost_filesystem boost_system)
 
-add_executable(gen_kitti_depth_npy ${PROJECT_SOURCE_DIR}/src/experiments/main_depth_gen.cpp )
-target_compile_definitions(gen_kitti_depth_npy PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
-target_include_directories(gen_kitti_depth_npy PUBLIC  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>")
-target_link_libraries(gen_kitti_depth_npy cvo_utils kitti boost_filesystem boost_system cnpy tartan finnforest cvo_gpu_img)
+add_executable(depth_gen ${PROJECT_SOURCE_DIR}/src/experiments/main_depth_gen.cpp )
+target_compile_definitions(depth_gen PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5)
+target_include_directories(depth_gen PUBLIC  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>")
+target_link_libraries(depth_gen cvo_utils kitti boost_filesystem boost_system cnpy tartan finnforest cvo_gpu_img)
 
 add_executable(main_cvo_gpu_align_stereo_tartan ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_stereo_tartan.cpp)
 target_include_directories(main_cvo_gpu_align_stereo_tartan PUBLIC

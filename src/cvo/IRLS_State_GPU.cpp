@@ -115,6 +115,8 @@ namespace cvo {
     if (ell_ > params_cpu_->multiframe_ell_min) {
       if (!params_cpu_->multiframe_is_optimizing_ell)  {      
         ell_ = ell_ * params_cpu_->multiframe_ell_decay_rate;
+      } else if (ell_ > params_cpu_->multiframe_ell_max ){
+        ell_ =  params_cpu_->multiframe_ell_max;
       }
     } else  {
       ell_ = params_cpu_->multiframe_ell_min;
