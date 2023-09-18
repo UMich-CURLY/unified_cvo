@@ -441,6 +441,7 @@ int main(int argc, char** argv) {
   /// read poses
   std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> gt_poses_raw(total_iters),
     gt_poses(total_iters),
+    gt_pose_selected_vec,
     tracking_poses(total_iters);
   std::vector<cvo::Mat34d_row,
               Eigen::aligned_allocator<cvo::Mat34d_row>> BA_poses(total_iters, cvo::Mat34d_row::Zero());
@@ -453,7 +454,7 @@ int main(int argc, char** argv) {
                                    gt_poses_raw);
   std::cout<<"gt poses size is "<<gt_poses_raw.size()<<"\n";
   Eigen::Matrix4d identity = Eigen::Matrix4d::Identity();
-  cvo::transform_vector_of_poses(gt_poses_raw, identity, gt_poses_raw );
+  cvo::transform_vector_of_poses(gt_poses_raw, identity, gt_poses );
 
   /// read tracking files
   cvo::read_pose_file_kitti_format(tracking_traj_file,
@@ -481,9 +482,9 @@ int main(int argc, char** argv) {
   sample_frame_inds(start_ind, last_ind, num_merging_sequential_frames, loop_closures, result_selected_frames);
 
   /// select gt poses
-  //std::map<int, Eigen::Matrix4d> gt_pose_selected;
+  std::map<int, Eigen::Matrix4d> gt_pose_selected;
   for (auto ind : result_selected_frames)
-    gt_poses.push_back(gt_poses_raw[ind]);//std::make_pair(ind, gt_poses[ind]));
+    gt_pose_selected_vec.push_back(gt_poses[ind]);//insert(std::make_pair(ind, gt_poses[ind]));
   
   
   // read point cloud
@@ -574,7 +575,7 @@ int main(int argc, char** argv) {
   ASSERT(frames.size() == gt_poses.size(), "frame size must be equal to gt_poses size");
   construct_loop_BA_problem(cvo_align,
                             loop_closures,
-                            frames, gt_poses, num_neighbors_per_node,
+                            frames, gt_pose_selected_vec, num_neighbors_per_node,
                             num_merging_sequential_frames);
 
   std::cout<<"Write stacked point cloud\n";
