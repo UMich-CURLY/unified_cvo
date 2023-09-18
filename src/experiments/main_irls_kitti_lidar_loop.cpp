@@ -117,7 +117,7 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
   cvo::pgo::VectorOfConstraints constrains;
   std::ofstream lc_g2o(lc_constrains_file_before_BA);
 
-  /// copy from tracking_poses to poses and constrains
+  std::cout<<"copy from tracking_poses to poses and constrains\n";
   //for (int i = 0; i < tracking_poses.size(); i++) {
   for (auto i : selected_inds) {
   //  if (selected_inds.size() && selected_inds.find(i) == selected_inds.end() )
@@ -127,12 +127,19 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
     lc_g2o <<cvo::pgo::Pose3d::name()<<" "<<i<<" "<<pose<<"\n";
   }
 
-  for (auto i : selected_inds) {
+  std::cout<<"add between factors for odom\n";
+  for (auto iter_i = selected_inds.begin(); iter_i != selected_inds.end(); iter_i++) {
+	  int i = *iter_i;
+	  std::cout<<"i="<<i<<"\n";
   //for  (int i = 0; i < tracking_poses.size(); i++) {
-    //for (int j = i+1; j < std::min((int)tracking_poses.size(), i+1+num_neighbors_per_node); j++) {
-    for (int j = i+num_merging_sequential_frames; j < std::min((int)tracking_poses.size(), i+num_merging_sequential_frames * 2); j+=num_merging_sequential_frames) {
-      if (selected_inds.find(j) == selected_inds.end())
-        continue;
+    auto iter_j = iter_i;
+    iter_j++;
+    for (; std::distance(iter_i, iter_j) <= num_merging_sequential_frames && iter_j != selected_inds.end() ; iter_j++) {
+	    int j = *iter_j;
+	    std::cout<<"j="<<j<<"\n";
+    //for (int j = i+num_merging_sequential_frames; j < std::min((int)tracking_poses.size(), i+num_merging_sequential_frames * 2); j+=num_merging_sequential_frames) {
+      //if (selected_inds.find(j) == selected_inds.end())
+      //  continue;
       Eigen::Matrix4d T_Fi_to_Fj = tracking_poses[i].inverse() * tracking_poses[j];
       cvo::pgo::Pose3d t_be = cvo::pgo::pose3d_from_eigen<double, Eigen::ColMajor>(T_Fi_to_Fj);
       std::cout<<__func__<<": Add constrain from "<<i<<" to "<<j<<"\n";
