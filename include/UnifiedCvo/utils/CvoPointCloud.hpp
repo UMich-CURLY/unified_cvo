@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 #include <Eigen/Dense>
+#include <unordered_set>
 #include <opencv2/opencv.hpp>
 #include "utils/data_type.hpp"
 #include "utils/PointSegmentedDistribution.hpp"
@@ -60,7 +61,8 @@ namespace cvo {
     /// Constructor for stereo image
     CvoPointCloud(const ImageStereo & left_raw_image,
                   const Calibration &calib,
-                  PointSelectionMethod pt_selection_method=CV_FAST);
+                  PointSelectionMethod pt_selection_method=CV_FAST,
+                  const std::unordered_set<int> * exclude_labels=nullptr);
     
 
     /// Constructor for rgbd image

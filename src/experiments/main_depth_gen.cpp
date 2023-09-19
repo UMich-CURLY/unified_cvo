@@ -74,7 +74,9 @@ int main(int argc, char *argv[]) {
       std::cout<<"finish all files\n";
       break;
     }
+
     std::cout<<"image shape: "<<left.rows <<"x"<<left.cols<<std::endl;
+    std::cout<<"image shape: "<<right.rows <<"x"<<right.cols<<std::endl;
 
     std::shared_ptr<cvo::ImageStereo> target_raw(new cvo::ImageStereo(left, right));
     

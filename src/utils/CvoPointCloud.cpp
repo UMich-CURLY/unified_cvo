@@ -719,7 +719,8 @@ namespace cvo{
   //template CvoPointCloud::CvoPointCloud<pcl::PointXYZRGB>(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc);
   CvoPointCloud::CvoPointCloud(const ImageStereo & raw_image,
                                const Calibration &calib,
-                               PointSelectionMethod pt_selection_method) {
+                               PointSelectionMethod pt_selection_method,
+                               const std::unordered_set<int> * exclude_labels) {
 
     const cv::Mat & left_image = raw_image.image();
     const std::vector<float> & left_disparity = raw_image.disparity();
@@ -749,6 +750,7 @@ namespace cvo{
                                                                                      calib,
                                                                                      uv,
                                                                                      xyz );
+      //std::cout<<"TraceStatus is "<<trace_status<<"\n";
       if (trace_status == StaticStereo::TraceStatus::GOOD && 
           is_good_point (xyz, uv, h, w) 
           //is_good_point(xyz)
@@ -759,7 +761,9 @@ namespace cvo{
           auto labels = Eigen::Map<const VecXf_row>((raw_image.semantic_image().data()+ (v * w + u)*raw_image.num_classes()), raw_image.num_classes() );
           int max_class = 0;
           labels.maxCoeff(&max_class);
-          if( max_class == 10)
+          //if( max_class == 10)
+          if (exclude_labels != nullptr &&
+              exclude_labels->find(max_class) != exclude_labels->end())
             // exclude unlabeled points
             continue;
         }
