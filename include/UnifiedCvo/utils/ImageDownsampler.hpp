@@ -1,10 +1,14 @@
 #pragma once
 #include <opencv2/opencv.hpp>
-#include "CvoPointCloud.hpp"
+#include <memory>
+#include <map>
+#include <set>
+#include <utility>
+#include <iostream>
+
 #include "utils/ImageStereo.hpp"
 #include "utils/CvoPointCloud.hpp"
-#include <memory>
-#include <iostream>
+#include "dataset_handler/DataHandler.hpp"
 #include "utils/Calibration.hpp"
 #include "utils/VoxelMap.hpp"
 
@@ -74,7 +78,8 @@ namespace cvo {
 
   std::shared_ptr<cvo::CvoPointCloud> voxel_downsample(std::shared_ptr<cvo::CvoPointCloud> pc_in,
                                                        float leaf_size,
-                                                       std::unordered_set<const cvo::CvoPoint *> & selected_pts) {
+                                                       std::unordered_set<const cvo::CvoPoint *> & selected_pts,
+                                                       cvo::CvoPointCloud::GeometryType dtype) {
     cvo::VoxelMap<const cvo::CvoPoint> voxel(leaf_size); // /10    
     for (int k = 0; k < pc_in->size(); k++)  {
       //if (k == 0)
@@ -85,7 +90,8 @@ namespace cvo {
     std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud);//(, cvo::CvoPointCloud::GeometryType::EDGE));
     //pc.reserve(results.size(), FEATURE_DIMENSIONS, NUM_CLASSES);
     for (int k = 0; k < results.size(); k++) {
-      if (selected_pts.find(results[k]) == selected_pts.end()) {
+      if (selected_pts.find(results[k]) == selected_pts.end() &&
+          results[k]->geometric_type[dtype] > 0.5) {
         pc->push_back(*results[k]);
         selected_pts.insert(results[k]);
       }
@@ -94,9 +100,9 @@ namespace cvo {
     return pc;
   }
   
-  std::shared_ptr<cvo::CvoPointCloud> stereo_downsampling(const cv::Mat & left, const cv::Mat & right,
-                                                          const cvo::Calibration & calib,
-                                                          float multiframe_downsample_voxel_size){
+  std::shared_ptr<cvo::CvoPointCloud> stereo_downsampling_single_frame(const cv::Mat & left, const cv::Mat & right,
+                                                                       const cvo::Calibration & calib,
+                                                                       float multiframe_downsample_voxel_size){
     
     std::shared_ptr<cvo::ImageStereo> raw(new cvo::ImageStereo(left, right));
     std::shared_ptr<cvo::CvoPointCloud> pc_full(new cvo::CvoPointCloud(*raw,  calib, cvo::CvoPointCloud::FULL));
@@ -109,16 +115,74 @@ namespace cvo {
 
     /// edges
     std::unordered_set<const cvo::CvoPoint *> selected_pts;
-    std::shared_ptr<cvo::CvoPointCloud> pc_edge = voxel_downsample(pc_edge_raw, leaf_size / 5, selected_pts);
+    std::shared_ptr<cvo::CvoPointCloud> pc_edge = voxel_downsample(pc_edge_raw, leaf_size / 5, selected_pts,
+                                                                   cvo::CvoPointCloud::GeometryType::EDGE);
     
     /// surface
-    std::shared_ptr<cvo::CvoPointCloud> pc_surface = voxel_downsample(pc_full, leaf_size, selected_pts);
+    std::shared_ptr<cvo::CvoPointCloud> pc_surface = voxel_downsample(pc_full, leaf_size, selected_pts,
+                                                                      cvo::CvoPointCloud::GeometryType::SURFACE);                                                                      
 
     *pc_edge += *pc_surface;
     std::cout<<"Voxel number points is "<<pc_edge->num_points()<<std::endl;
 
     return pc_edge;
-  }  
+  }
   
+  void read_and_downsample_sequentail_stereo_frames(const std::set<int> & result_selected_frames,
+                                                    DatasetHandler & dataset,
+                                                    const Calibration & calib,
+                                                    const std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> & tracking_poses,
+                                                    
+                                                    int num_merging_sequential_frames,
+                                                    float voxel_size,
+                                                    int is_edge_only,
+                                                    // results
+                                                    std::map<int, std::shared_ptr<cvo::CvoPointCloud>> & pcs) {
+                                                    //                                                    std::vector<cvo::CvoFrame::Ptr> & frames) {
+    for (auto i : result_selected_frames) {
+      //for (int i = 0; i<gt_poses.size(); i++) {
+
+      std::cout<<"Read pc "<<i<<"\n";
+      //pcl::PointCloud<pcl::PointXYZI>::Ptr pc_local(new pcl::PointCloud<pcl::PointXYZI>);
+      std::shared_ptr<cvo::CvoPointCloud> pc_edge(new cvo::CvoPointCloud(FEATURE_DIMENSIONS, NUM_CLASSES));
+      std::shared_ptr<cvo::CvoPointCloud> pc_full(new cvo::CvoPointCloud(FEATURE_DIMENSIONS, NUM_CLASSES));
+      for (int j = 0; j < 1+num_merging_sequential_frames; j++){
+        dataset.set_start_index(i+j);
+        //pcl::PointCloud<pcl::PointXYZI>::Ptr pc_pcl(new pcl::PointCloud<pcl::PointXYZI>);
+        cv::Mat  left, right;
+        if (-1 == dataset.read_next_stereo(left, right)) 
+          break;
+        std::shared_ptr<cvo::ImageStereo> raw(new cvo::ImageStereo(left, right));
+        std::shared_ptr<cvo::CvoPointCloud> pc_full_raw(new cvo::CvoPointCloud(*raw,  calib, cvo::CvoPointCloud::FULL));
+        std::shared_ptr<cvo::CvoPointCloud> pc_edge_raw(new cvo::CvoPointCloud(*raw, calib, cvo::CvoPointCloud::DSO_EDGES));
+
+        
+        if (j > 0) {
+          Eigen::Matrix4f pose_fi_to_fj = (tracking_poses[i].inverse() * tracking_poses[j+i]).cast<float>();
+          cvo::CvoPointCloud::transform(pose_fi_to_fj, *pc_full_raw, *pc_full_raw);
+          cvo::CvoPointCloud::transform(pose_fi_to_fj, *pc_edge_raw, *pc_edge_raw);
+        }
+        *pc_edge += *pc_edge_raw;
+        *pc_full += *pc_full_raw;
+      }
+
+
+      float leaf_size = voxel_size;
+      
+      /// edges
+      std::unordered_set<const cvo::CvoPoint *> selected_pts;
+      std::shared_ptr<cvo::CvoPointCloud> pc = voxel_downsample(pc_edge, leaf_size / 5, selected_pts,
+                                                                cvo::CvoPointCloud::GeometryType::EDGE);
+      /// surface
+      std::shared_ptr<cvo::CvoPointCloud> pc_surface = voxel_downsample(pc_full, leaf_size, selected_pts,
+                                                                        cvo::CvoPointCloud::GeometryType::SURFACE);
+      *pc += *pc_surface;
+      pcs.insert(std::make_pair(i, pc));
+
+      if (i == 0) {
+        pc->write_to_pcd(std::to_string(i)+".pcd");
+      }
+    }
+  }
   
 }

@@ -1455,6 +1455,7 @@ namespace cvo{
 //    output.positions_.resize(output.num_points_);
 
     //tbb::parallel_for(int(0), input.num_points(), [&](int j) {
+    #pragma omp parallel for
     for (int j = 0; j < input.num_points(); j++) {
       Eigen::Vector3f jth_position;
       jth_position<< input.point_at(j).x, input.point_at(j).y, input.point_at(j).z;

@@ -114,4 +114,51 @@ namespace cvo {
   }
 
 
+
+  void read_and_downsample_lidar_pc(const std::set<int> & result_selected_frames,
+                                    DatasetHandler & dataset,
+ 
+                                    const std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> & tracking_poses,                                    
+                                    int num_merging_sequential_frames,
+                                    float voxel_size,
+                                    int is_edge_only,
+                                    std::map<int, std::shared_ptr<cvo::CvoPointCloud>> & pcs) {
+    for (auto i : result_selected_frames) {
+      //for (int i = 0; i<gt_poses.size(); i++) {
+      
+      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_local(new pcl::PointCloud<pcl::PointXYZI>);
+      for (int j = 0; j < 1+num_merging_sequential_frames; j++){
+        dataset.set_start_index(i+j);
+        pcl::PointCloud<pcl::PointXYZI>::Ptr pc_pcl(new pcl::PointCloud<pcl::PointXYZI>);
+        if (-1 == dataset.read_next_lidar(pc_pcl)) 
+          break;
+        if (j > 0) {
+          Eigen::Matrix4f pose_fi_to_fj = (tracking_poses[i].inverse() * tracking_poses[j+i]).cast<float>();
+          #pragma omp parallel for 
+          for (int k = 0; k < pc_pcl->size(); k++) {
+            auto & p = pc_pcl->at(k);
+            p.getVector3fMap() = pose_fi_to_fj.block(0,0,3,3) * p.getVector3fMap() + pose_fi_to_fj.block(0,3,3,1);
+          }
+        }
+        *pc_local += *pc_pcl;
+      }
+      if (i == 0)
+        pcl::io::savePCDFileASCII(std::to_string(i) + ".pcd", *pc_local);
+      //pc_local->write_to_pcd("0.pcd");
+      float leaf_size = voxel_size;
+
+      if (pc_local->size()) {
+        std::shared_ptr<cvo::CvoPointCloud> pc = cvo::downsample_lidar_points(is_edge_only,
+                                                                              pc_local,
+                                                                              leaf_size);
+        std::cout<<"new frame "<<i<<" downsampled from  "<<pc_local->size()<<" to "<<pc->size()<<"\n";
+        pcs.insert(std::make_pair(i, pc));
+        if (i == 0)
+          pc->write_to_pcd("0.pcd");
+      }
+    }
+    
+  }
+  
+
 }

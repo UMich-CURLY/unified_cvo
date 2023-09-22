@@ -16,6 +16,9 @@ namespace cvo {
 
     virtual int read_next_stereo(cv::Mat & left,
                                  cv::Mat & right) { return 0; }
+
+    virtual int read_next_lidar(pcl::PointCloud<pcl::PointXYZI>::Ptr pc) { return 0; }
+
     
     virtual int read_next_lidar_mono(cv::Mat & image,
                                      pcl::PointCloud<pcl::PointXYZ>::Ptr pc  ) { return 0; }

@@ -25,9 +25,22 @@ from scipy.spatial.transform import Rotation
 import numpy as np
 import argparse
 
-def xyzquat_to_kitti(original_f, output_f, start_ind, end_ind):
+
+
+def T_change_of_basis():
+    ry = Rotation.from_euler('y',-90, degrees=True )
+    rz = Rotation.from_euler('z', 90, degrees=True)
+    rot =  (rz * ry).as_matrix()
+    T = np.eye(4)
+    T[:3,:3] = rot
+    return T
+
+def xyzquat_to_kitti(original_f, output_f, start_ind, end_ind, is_wxyz, is_transforming_lidar_to_gt):
     original = np.loadtxt(original_f, dtype=float)
     print("read file {} with shape {}".format(original_f, original.shape))
+
+    T_b = T_change_of_basis()
+    
     with open(output_f, 'w') as f:
         if len(original.shape) == 1:
             max_r = 1
@@ -47,9 +60,14 @@ def xyzquat_to_kitti(original_f, output_f, start_ind, end_ind):
             T[0,3] = xyzq[0]
             T[1,3] = xyzq[1]
             T[2,3] = xyzq[2]
-            quat = Rotation.from_quat([xyzq[-1], xyzq[-4], xyzq[-3], xyzq[-2]])
+            if is_wxyz:
+                quat = Rotation.from_quat([xyzq[-4], xyzq[-3], xyzq[-2], xyzq[-1]])                
+            else:
+                quat = Rotation.from_quat([xyzq[-1], xyzq[-4], xyzq[-3], xyzq[-2]])
             r_mat = quat.as_matrix()
             T[:3,:3] = r_mat
+            if is_transforming_lidar_to_gt:
+                T = T_b @ T @ np.linalg.inv(T_b)
             counter += 1
             for r in range(3):
                 for c in range(4):
@@ -66,7 +84,11 @@ if __name__ == "__main__":
     parser.add_argument("poses_file", help="input pose path file in xyzq format")
     parser.add_argument(
         "trajectory_out", help="output file path for trajectory in kitti format")
+    parser.add_argument("--is-wxyz", action='store_true', help="whether quat format is wxyz")
+    parser.add_argument("--is-change-of-basis", action="store_true", help="whether change basis of lidar frame to gt frame")
     parser.add_argument("start_ind", nargs='?', type=int, default=0, help="starting index")
     parser.add_argument("end_ind", nargs='?', type=int, default=-1, help="last index")
+
     args = parser.parse_args()
-    trajectory = xyzquat_to_kitti(args.poses_file, args.trajectory_out, args.start_ind, args.end_ind)
+    trajectory = xyzquat_to_kitti(args.poses_file, args.trajectory_out, args.start_ind, args.end_ind,
+                                  args.is_wxyz, args.is_change_of_basis)

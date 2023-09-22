@@ -24,6 +24,7 @@
 //#include "argparse/argparse.hpp"
 #include "dataset_handler/KittiHandler.hpp"
 #include "utils/PoseLoader.hpp"
+#include "utils/ImageDownsampler.hpp"
 #include "cvo/gpu_init.hpp"
 #include "utils/ImageRGBD.hpp"
 #include "utils/Calibration.hpp"
@@ -430,36 +431,56 @@ int main(int argc, char** argv) {
   //argparse::ArgumentParser parser("irls_kitti_loop_closure_test");
   /// assume start_ind and last_ind has overlap
 
-  std::cout<<"Start \n";  
-  cvo::KittiHandler kitti(argv[1], cvo::KittiHandler::DataType::LIDAR);
-  string cvo_param_file(argv[2]);    
-  int num_neighbors_per_node = std::stoi(argv[3]); // forward neighbors
-  std::string tracking_traj_file(argv[4]);
-  std::string loop_closure_input_file(argv[5]);
-  std::string BA_traj_file(argv[6]);
-  int is_edge_only = std::stoi(argv[7]);
-  std::cout<<"is edge only is "<<is_edge_only<<"\n";
-  int start_ind = std::stoi(argv[8]);
-  std::cout<<"input start_ind is  "<<start_ind<<"\n";
-  int max_last_ind = std::stoi(argv[9]);
-  std::cout<<"input last_ind is  "<<max_last_ind<<"\n";
-  double cov_scale_t = std::stod(argv[10]);
-  double cov_scale_r = std::stod(argv[11]);
-  int num_merging_sequential_frames = std::stoi(argv[12]);
-  int is_pgo_only = std::stoi(argv[13]);
-  int is_read_loop_closure_poses_from_file = std::stoi(argv[14]);
+  std::cout<<"Start \n";
+  std::string kitti_type(argv[1]);
+  std::string kitti_path(argv[2]);
   
-  int last_ind = std::min(max_last_ind+1, kitti.get_total_number()-1);
+  std::unique_ptr<cvo::KittiHandler> kitti;
+  cvo::KittiHandler::DataType dtype;
+  if (std::strcmp(kitti_type.c_str(), "stereo") == 0) {
+    dtype = cvo::KittiHandler::DataType::STEREO;
+  } else if (std::strcmp(kitti_type.c_str(), "lidar") == 0) {
+    dtype = cvo::KittiHandler::DataType::LIDAR;
+  } else {
+    ASSERT(false, "unknown dtype");
+  }
+  std::cout<<"dtype is "<<dtype<<"\n";
+     
+  kitti.reset(new cvo::KittiHandler(kitti_path, dtype));
+  
+  //cvo::KittiHandler kitti(argv[1], cvo::KittiHandler::DataType::LIDAR);
+  string cvo_param_file(argv[3]);    
+  int num_neighbors_per_node = std::stoi(argv[4]); // forward neighbors
+  std::string tracking_traj_file(argv[5]);
+  std::string loop_closure_input_file(argv[6]);
+  std::string BA_traj_file(argv[7]);
+  int is_edge_only = std::stoi(argv[8]);
+  std::cout<<"is edge only is "<<is_edge_only<<"\n";
+  int start_ind = std::stoi(argv[9]);
+  std::cout<<"input start_ind is  "<<start_ind<<"\n";
+  int max_last_ind = std::stoi(argv[10]);
+  std::cout<<"input last_ind is  "<<max_last_ind<<"\n";
+  double cov_scale_t = std::stod(argv[11]);
+  double cov_scale_r = std::stod(argv[12]);
+  int num_merging_sequential_frames = std::stoi(argv[13]);
+  int is_pgo_only = std::stoi(argv[14]);
+  int is_read_loop_closure_poses_from_file = std::stoi(argv[15]);
+  
+  int last_ind = std::min(max_last_ind+1, kitti->get_total_number()-1);
   std::cout<<"actual last ind is "<<last_ind<<"\n";
 
   std::cout<<"Finish reading all arguments\n";
   int total_iters = last_ind - start_ind + 1;
 
   //cvo::gpu_init(10);
-  //std::cout<<"Launched gpu_init\n";  
+  //std::cout<<"Launched gpu_init\n";
+  std::string calib_file;
+  calib_file =  kitti_path +"/cvo_calib.txt"; 
+  cvo::Calibration calib(calib_file, cvo::Calibration::STEREO);
+  
   cvo::CvoGPU cvo_align(cvo_param_file);
   string gt_pose_name;
-  gt_pose_name = std::string(argv[1]) + "/poses.txt";
+  gt_pose_name = std::string(kitti_path) + "/poses.txt";
 
   /// read poses
   std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> gt_poses_raw(total_iters),
@@ -487,10 +508,6 @@ int main(int argc, char** argv) {
                                    tracking_poses);
   std::cout<<"init tracking pose size is "<<tracking_poses.size()<<"\n";
   assert(gt_poses.size() == tracking_poses.size());
-  std::string gt_fname("groundtruth.txt");
-  cvo::write_traj_file<double, 4, Eigen::ColMajor>(gt_fname,gt_poses);
-  std::string track_fname("tracking.txt");
-  cvo::write_traj_file<double, 4, Eigen::ColMajor>(track_fname, tracking_poses);
 
   // read loop closure files
   std::vector<std::pair<int, int>> loop_closures;
@@ -503,52 +520,42 @@ int main(int argc, char** argv) {
   
   /// decide if we will skip frames
   std::set<int> result_selected_frames;
-  sample_frame_inds(start_ind, last_ind, num_merging_sequential_frames, loop_closures, result_selected_frames);
+  sample_frame_inds(start_ind, last_ind, num_merging_sequential_frames, loop_closures, result_selected_frames);  
 
   /// select gt poses
   std::map<int, Eigen::Matrix4d> gt_pose_selected;
   for (auto ind : result_selected_frames)
     gt_pose_selected_vec.push_back(gt_poses[ind]);//insert(std::make_pair(ind, gt_poses[ind]));
+  std::string gt_fname("groundtruth.txt");
+  cvo::write_traj_file<double, 4, Eigen::ColMajor>(gt_fname,gt_poses, result_selected_frames);
+  std::string track_fname("tracking.txt");
+  cvo::write_traj_file<double, 4, Eigen::ColMajor>(track_fname, tracking_poses, result_selected_frames);
+  
   
   
   // read point cloud
   std::map<int, cvo::CvoFrame::Ptr> frames;
   std::map<int, std::shared_ptr<cvo::CvoPointCloud>> pcs;
   if (!(is_pgo_only && is_read_loop_closure_poses_from_file)) {
-    for (auto i : result_selected_frames) {
-    //for (int i = 0; i<gt_poses.size(); i++) {
-      
-      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_local(new pcl::PointCloud<pcl::PointXYZI>);
-      for (int j = 0; j < 1+num_merging_sequential_frames; j++){
-        kitti.set_start_index(i+j);
-        pcl::PointCloud<pcl::PointXYZI>::Ptr pc_pcl(new pcl::PointCloud<pcl::PointXYZI>);
-        if (-1 == kitti.read_next_lidar(pc_pcl)) 
-          break;
-        if (j > 0) {
-          Eigen::Matrix4f pose_fi_to_fj = (tracking_poses[i].inverse() * tracking_poses[j+i]).cast<float>();
-          #pragma omp parallel for 
-          for (int k = 0; k < pc_pcl->size(); k++) {
-            auto & p = pc_pcl->at(k);
-            p.getVector3fMap() = pose_fi_to_fj.block(0,0,3,3) * p.getVector3fMap() + pose_fi_to_fj.block(0,3,3,1);
-          }
-        }
-        *pc_local += *pc_pcl;
-      }
-      if (i == 0)
-        pcl::io::savePCDFileASCII(std::to_string(i) + ".pcd", *pc_local);
-      //pc_local->write_to_pcd("0.pcd");
-      float leaf_size = cvo_align.get_params().multiframe_downsample_voxel_size;
+    if (dtype == cvo::KittiHandler::DataType::LIDAR) {
+      cvo::read_and_downsample_lidar_pc(result_selected_frames,
+                                        *kitti,
+                                        tracking_poses,                                        
+                                        num_merging_sequential_frames,
+                                        cvo_align.get_params().multiframe_downsample_voxel_size,
+                                        is_edge_only,
+                                        pcs);
+    } else {
+      cvo::read_and_downsample_sequentail_stereo_frames(result_selected_frames, *kitti, calib,
+                                                        tracking_poses,
+                                                        num_merging_sequential_frames,
+                                                        cvo_align.get_params().multiframe_downsample_voxel_size,
+                                                        is_edge_only,
+                                                        // results
+                                                        pcs);
 
-      if (pc_local->size()) {
-        std::shared_ptr<cvo::CvoPointCloud> pc = cvo::downsample_lidar_points(is_edge_only,
-                                                                              pc_local,
-                                                                              leaf_size);
-        std::cout<<"new frame "<<i<<" downsampled from  "<<pc_local->size()<<" to "<<pc->size()<<"\n";
-        pcs.insert(std::make_pair(i, pc));
-        if (i == 0)
-          pc->write_to_pcd("0.pcd");
-      }
     }
+
   }
   
 

@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <set>
 #include <vector>
 #include <sstream>
 #include <fstream>
@@ -280,9 +281,52 @@ namespace cvo {
     outfile.close();
   }
 
+  template <typename T, unsigned int ROWS, unsigned int major>
+  void write_traj_file(const std::string & fname,
+                       std::vector<Eigen::Matrix<T, ROWS, 4, major>,
+                       Eigen::aligned_allocator<Eigen::Matrix<T, ROWS, 4, major>>> &  poses,
+                       const std::set<int> & selected_inds) {                       
+
+    std::ofstream outfile(fname);
+    for (int i = 0; i< poses.size(); i++) {
+      Eigen::Matrix<T, 4, 4, major> pose = Eigen::Matrix<T, 4, 4, major>::Identity();
+      pose.block(0,0, ROWS, 4) = poses[i];
+      Sophus::SO3<T> q(pose.block(0,0,3,3));
+      auto q_eigen = q.unit_quaternion().coeffs();
+      Eigen::Matrix<T, 3, 1> t = pose.block(0,3,3,1);
+      if (selected_inds.size() == 0 ||
+          selected_inds.find(i) != selected_inds.end())
+      
+        outfile << t(0) <<" "<< t(1)<<" "<<t(2)<<" "
+                <<q_eigen[0]<<" "<<q_eigen[1]<<" "<<q_eigen[2]<<" "<<q_eigen[3]<<std::endl;
+    
+    }
+    outfile.close();
+  }
+  
+
   template <typename T>
   void write_traj_file(const std::string & fname,
-                       std::vector<Sophus::SE3<T>> & poses) {
+                       std::vector<Sophus::SE3<T>> & poses,
+                       const std::set<int> & selected_inds) {
+                       //Eigen::aligned_allocator<Sophus::SE3<T>>> &  poses) {
+
+    std::ofstream outfile(fname);
+    for (int i = 0; i< poses.size(); i++) {
+      auto q_eigen = poses[i].unit_quaternion().coeffs();
+      Eigen::Matrix<T, 3, 1> t = poses[i].translation();
+      if (selected_inds.size() == 0 ||
+          selected_inds.find(i) != selected_inds.end())
+        outfile << t(0) <<" "<< t(1)<<" "<<t(2)<<" "
+                <<q_eigen[0]<<" "<<q_eigen[1]<<" "<<q_eigen[2]<<" "<<q_eigen[3]<<std::endl;
+    
+    }
+    outfile.close();
+  }
+  template <typename T>
+  void write_traj_file(const std::string & fname,
+                       std::vector<Sophus::SE3<T>> & poses
+                       ) {
                        //Eigen::aligned_allocator<Sophus::SE3<T>>> &  poses) {
 
     std::ofstream outfile(fname);

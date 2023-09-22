@@ -262,7 +262,7 @@ int main(int argc, char** argv) {
       if (kitti->read_next_stereo(left, right) != 0) {
         break;
       }
-      pc = cvo::stereo_downsampling(left, right, calib, cvo_align.get_params().multiframe_downsample_voxel_size);
+      pc = cvo::stereo_downsampling_single_frame(left, right, calib, cvo_align.get_params().multiframe_downsample_voxel_size);
     } else {
       pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in(new pcl::PointCloud<pcl::PointXYZI>);
       if (kitti->read_next_lidar(pc_in) != 0) {
