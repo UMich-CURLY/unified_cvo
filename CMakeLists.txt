@@ -142,9 +142,13 @@ set(TUM_HANDLER_SOURCE
   ${PROJECT_SOURCE_DIR}/src/dataset_handler/TumHandler.cpp  
   )
 
-set(KITTI_HANDLER_SOURCE
-  ${PROJECT_SOURCE_DIR}/src/dataset_handler/KittiHandler.cpp  
-  )
+  set(KITTI_HANDLER_SOURCE
+    ${PROJECT_SOURCE_DIR}/src/dataset_handler/KittiHandler.cpp  
+    )
+
+  set(ETHZ_HANDLER_SOURCE
+    ${PROJECT_SOURCE_DIR}/src/dataset_handler/EthzHandler.cpp  
+    )
 
 set(FINNFOREST_HANDLER_SOURCE
   ${PROJECT_SOURCE_DIR}/src/dataset_handler/FinnForestHandler.cpp  
@@ -251,6 +255,13 @@ target_include_directories(kitti PUBLIC
   "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(kitti PUBLIC opencv_core opencv_photo opencv_highgui opencv_features2d opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search pcl_common boost_filesystem
+  )
+
+add_library(ethz SHARED ${ETHZ_HANDLER_SOURCE})
+target_include_directories(ethz PUBLIC
+  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(ethz PUBLIC opencv_core opencv_photo opencv_highgui opencv_features2d opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search pcl_common boost_filesystem
   )
 
 add_library(finnforest SHARED ${FINNFOREST_HANDLER_SOURCE})
@@ -759,6 +770,15 @@ if (${PROJECT_NAME}_ENABLE_QT_VIEWER)
 #  target_link_libraries(traj_playback cvo_utils boost_filesystem boost_system boost_filesystem pcl_common pcl_io pcl_visualization  pcd_qt_viewer_lib )
 
 endif()
+
+
+add_executable(cvo_align_gpu_lidar_ethz ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_ethz_lidar.cpp)
+  target_include_directories(cvo_align_gpu_lidar_ethz PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_align_gpu_lidar_ethz cvo_gpu_lidar ethz cvo_utils boost_filesystem boost_system pcl_visualization)
 
 
 if (${PROJECT_NAME}_ENABLE_LIDAR)
