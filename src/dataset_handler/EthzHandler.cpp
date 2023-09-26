@@ -46,7 +46,6 @@ namespace cvo
                 names.push_back(raw_name);
             }
         }
-        sort(names.begin(), names.end());
         cout << "Ethz contains " << names.size() << " files\n";
     }
 

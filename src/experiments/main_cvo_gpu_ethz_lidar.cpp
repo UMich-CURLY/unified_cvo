@@ -60,17 +60,20 @@ int main(int argc, char *argv[])
     std::vector<double> timestamp;
     std::vector<Eigen::Matrix4d> gt_poses;
     dataset_local.read_ground_truth_poses(timestamp, gt_poses);
-    // print dataset_global.get_total_number();
-    std::cout << "dataset size = " << dataset_global.get_total_number() << std::endl;
-    std::cout << "gt poses size = " << gt_poses.size() << std::endl;
-    n = 5; // dataset_global.get_total_number();
+    // std::cout << "dataset size = " << dataset_local.get_total_number() << std::endl;
+    // std::cout << "gt poses size = " << gt_poses.size() << std::endl;
+    n = dataset_local.get_total_number();
     for (int i = 0; i < n; i++)
     {
         pcl::PointCloud<pcl::PointXYZI>::Ptr pc(new pcl::PointCloud<pcl::PointXYZI>);
         dataset_local.read_next_lidar(pc);
         // transform the pc according to gt poses
+        // std::cout << "first point local = " << pc->points[1].x << ", " << pc->points[1].y << ", " << pc->points[1].z << std::endl;
         Eigen::Matrix4d T = gt_poses[i];
         pcl::transformPointCloud(*pc, *pc, T);
+        // std::cout << "T = " << std::endl;
+        // std::cout << T << std::endl;
+        // std::cout << "first point global= " << pc->points[1].x << ", " << pc->points[1].y << ", " << pc->points[1].z << std::endl;
         // viz
         pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZI> rgb(pc, rand() % 255, rand() % 255, rand() % 255);
         viewer.addPointCloud<pcl::PointXYZI>(pc, rgb, "frame" + to_string(i) + "_global");
