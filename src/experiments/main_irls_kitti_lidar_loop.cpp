@@ -544,7 +544,7 @@ int main(int argc, char** argv) {
   std::map<int, cvo::CvoFrame::Ptr> frames;
   std::map<int, std::shared_ptr<cvo::CvoPointCloud>> pcs;
   if (!(is_pgo_only && is_read_loop_closure_poses_from_file)) {
-    if (std::strcmp(data_type.c_str(), "kitti_lidar")) {
+    if (std::strcmp(data_type.c_str(), "kitti_lidar") == 0) {
       cvo::read_and_downsample_lidar_pc(result_selected_frames,
                                         *dataset,
                                         tracking_poses,                                        
@@ -552,7 +552,7 @@ int main(int argc, char** argv) {
                                         cvo_align.get_params().multiframe_downsample_voxel_size,
                                         is_edge_only,
                                         pcs);
-    } else if (std::strcmp(data_type.c_str(), "kitti_stereo")) {
+    } else if (std::strcmp(data_type.c_str(), "kitti_stereo") == 0) {
       cvo::read_and_downsample_sequentail_stereo_frames(result_selected_frames, *dataset, calib,
                                                         tracking_poses,
                                                         num_merging_sequential_frames,
@@ -561,7 +561,7 @@ int main(int argc, char** argv) {
                                                         // results
                                                         pcs);
 
-    } else if (std::strcmp(data_type.c_str(), "ethz")) {
+    } else if (std::strcmp(data_type.c_str(), "ethz") == 0) {
       cvo::read_and_downsample_sequentail_stereo_frames(result_selected_frames, *dataset, calib,
                                                         tracking_poses,
                                                         num_merging_sequential_frames,
