@@ -1013,10 +1013,11 @@ namespace cvo{
     std::vector <int> selected_indexes;
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out (new pcl::PointCloud<pcl::PointXYZI>);    
 
-    std::vector <double> output_depth_grad;
-    std::vector <double> output_intenstity_grad;
-
     if (pt_selection_method == LOAM) {
+
+      std::vector <double> output_depth_grad;
+      std::vector <double> output_intenstity_grad;
+      
       std::vector <float> edge_or_surface;
       LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, beam_num);
 
@@ -1039,6 +1040,8 @@ namespace cvo{
 
     } else if (pt_selection_method == RANDOM) {
 
+      std::vector <double> output_depth_grad;
+      std::vector <double> output_intenstity_grad;
       random_surface_with_edges(pc, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
                                 output_depth_grad, output_intenstity_grad, selected_indexes);
       num_points_ = selected_indexes.size();
@@ -1138,6 +1141,8 @@ namespace cvo{
     else if (pt_selection_method == LIDAR_EDGES) {
       edge_detection(pc, semantic, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
                      pc_out, output_depth_grad, output_intenstity_grad, selected_indexes, semantic_out);
+    } else if (pt_selection_method == FULL)  {
+      //selected_indices 
     } else {
       std::cerr<<"The point selection method is not implemented\n";
       return;

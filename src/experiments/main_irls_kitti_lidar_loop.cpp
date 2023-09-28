@@ -23,6 +23,7 @@
 #include "graph_optimizer/PoseGraphOptimization.hpp"
 //#include "argparse/argparse.hpp"
 #include "dataset_handler/KittiHandler.hpp"
+#include "dataset_handler/EthzHandler.hpp"
 #include "utils/PoseLoader.hpp"
 #include "utils/ImageDownsampler.hpp"
 #include "cvo/gpu_init.hpp"
@@ -71,6 +72,7 @@ void parse_lc_file(std::vector<std::pair<int, int>> & loop_closures,
                    int start_ind) {
   std::ifstream f(loop_closure_pairs_file);
   std::cout<<"Read loop closure file "<<loop_closure_pairs_file<<"\n";
+  cvo::BinaryCommutativeMap<int> added_edges;
   if (f.is_open()) {
     std::string line;
     std::getline(f, line);
@@ -78,11 +80,14 @@ void parse_lc_file(std::vector<std::pair<int, int>> & loop_closures,
       std::istringstream ss(line);
       int id1, id2;
       ss>>id1>>id2;
-      std::cout<<"parse line "<<line<<"\n";
-      std::cout<<"read lc between "<<id1<<" and "<<id2<<"\n";
       id1 -= start_ind;
       id2 -= start_ind;
+      if (added_edges.exists(std::min(id1, id2), std::max(id1, id2)) == false ) {
+      std::cout<<"parse line "<<line<<"\n";
+      std::cout<<"read lc between "<<std::min(id1, id2)<<" and "<<std::max(id1, id2)<<"\n";
       loop_closures.push_back(std::make_pair(std::min(id1, id2), std::max(id1, id2)));
+      added_edges.insert(std::min(id1, id2), std::max(id1, id2), 1);
+      }
     }
 
 
@@ -432,21 +437,23 @@ int main(int argc, char** argv) {
   /// assume start_ind and last_ind has overlap
 
   std::cout<<"Start \n";
-  std::string kitti_type(argv[1]);
-  std::string kitti_path(argv[2]);
+  std::string data_type(argv[1]);
+  std::string data_path(argv[2]);
   
-  std::unique_ptr<cvo::KittiHandler> kitti;
+  std::unique_ptr<cvo::DatasetHandler> dataset;
   cvo::KittiHandler::DataType dtype;
-  if (std::strcmp(kitti_type.c_str(), "stereo") == 0) {
+  if (std::strcmp(data_type.c_str(), "kitti_stereo") == 0) {
     dtype = cvo::KittiHandler::DataType::STEREO;
-  } else if (std::strcmp(kitti_type.c_str(), "lidar") == 0) {
+    dataset.reset(new cvo::KittiHandler(data_path, dtype));    
+  } else if (std::strcmp(data_type.c_str(), "kitti_lidar") == 0) {
     dtype = cvo::KittiHandler::DataType::LIDAR;
+    dataset.reset(new cvo::KittiHandler(data_path, dtype));    
+  } else if (std::strcmp(data_type.c_str(), "ethz" ) == 0) {
+    dataset.reset(new cvo::EthzHandler(data_path, cvo::EthzHandler::FrameType::LOCAL));
   } else {
     ASSERT(false, "unknown dtype");
   }
-  std::cout<<"dtype is "<<dtype<<"\n";
-     
-  kitti.reset(new cvo::KittiHandler(kitti_path, dtype));
+
   
   //cvo::KittiHandler kitti(argv[1], cvo::KittiHandler::DataType::LIDAR);
   string cvo_param_file(argv[3]);    
@@ -466,7 +473,7 @@ int main(int argc, char** argv) {
   int is_pgo_only = std::stoi(argv[14]);
   int is_read_loop_closure_poses_from_file = std::stoi(argv[15]);
   
-  int last_ind = std::min(max_last_ind+1, kitti->get_total_number()-1);
+  int last_ind = std::min(max_last_ind+1, dataset->get_total_number()-1);
   std::cout<<"actual last ind is "<<last_ind<<"\n";
 
   std::cout<<"Finish reading all arguments\n";
@@ -475,12 +482,12 @@ int main(int argc, char** argv) {
   //cvo::gpu_init(10);
   //std::cout<<"Launched gpu_init\n";
   std::string calib_file;
-  calib_file =  kitti_path +"/cvo_calib.txt"; 
+  calib_file =  data_path +"/cvo_calib.txt"; 
   cvo::Calibration calib(calib_file, cvo::Calibration::STEREO);
   
   cvo::CvoGPU cvo_align(cvo_param_file);
   string gt_pose_name;
-  gt_pose_name = std::string(kitti_path) + "/poses.txt";
+  gt_pose_name = std::string(data_path) + "/poses.txt";
 
   /// read poses
   std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> gt_poses_raw(total_iters),
@@ -537,16 +544,16 @@ int main(int argc, char** argv) {
   std::map<int, cvo::CvoFrame::Ptr> frames;
   std::map<int, std::shared_ptr<cvo::CvoPointCloud>> pcs;
   if (!(is_pgo_only && is_read_loop_closure_poses_from_file)) {
-    if (dtype == cvo::KittiHandler::DataType::LIDAR) {
+    if (std::strcmp(data_type.c_str(), "kitti_lidar")) {
       cvo::read_and_downsample_lidar_pc(result_selected_frames,
-                                        *kitti,
+                                        *dataset,
                                         tracking_poses,                                        
                                         num_merging_sequential_frames,
                                         cvo_align.get_params().multiframe_downsample_voxel_size,
                                         is_edge_only,
                                         pcs);
-    } else {
-      cvo::read_and_downsample_sequentail_stereo_frames(result_selected_frames, *kitti, calib,
+    } else if (std::strcmp(data_type.c_str(), "kitti_stereo")) {
+      cvo::read_and_downsample_sequentail_stereo_frames(result_selected_frames, *dataset, calib,
                                                         tracking_poses,
                                                         num_merging_sequential_frames,
                                                         cvo_align.get_params().multiframe_downsample_voxel_size,
@@ -554,6 +561,15 @@ int main(int argc, char** argv) {
                                                         // results
                                                         pcs);
 
+    } else if (std::strcmp(data_type.c_str(), "ethz")) {
+      cvo::read_and_downsample_sequentail_stereo_frames(result_selected_frames, *dataset, calib,
+                                                        tracking_poses,
+                                                        num_merging_sequential_frames,
+                                                        cvo_align.get_params().multiframe_downsample_voxel_size,
+                                                        true,
+                                                        // results
+                                                        pcs);
+      
     }
 
   }

@@ -815,7 +815,7 @@ add_executable(cvo_irls_lidar_loop ${PROJECT_SOURCE_DIR}/src/experiments/main_ir
 target_include_directories(cvo_irls_lidar_loop PUBLIC
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_link_libraries(cvo_irls_lidar_loop cvo_gpu_lidar cvo_utils boost_filesystem boost_system kitti Ceres::ceres )
+target_link_libraries(cvo_irls_lidar_loop cvo_gpu_lidar cvo_utils boost_filesystem boost_system kitti Ceres::ceres ethz)
 
 endif()
 
