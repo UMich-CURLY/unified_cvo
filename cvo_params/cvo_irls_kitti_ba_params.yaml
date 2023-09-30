@@ -1,6 +1,6 @@
 %YAML:1.0
 ---
-ell_init_first_frame: 10.0
+ell_init_first_frame: 5.0
 ell_init: 0.2 #0.15 
 ell_min: 0.05
 ell_max: 0.9

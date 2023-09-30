@@ -8,9 +8,9 @@ date=$2
 clear
 
     #skylabel=(196 112 -- 130  196 146 130)
-    #seqs=( 05 00 08 02 06 09 )
-    #seqs=( 05 00 02 06 09 07  )
-    seqs=(  05 07  )
+    #seqs=( 05 00 08 02 06 07 09 )
+    seqs=( 00 02 06 09   )
+    #seqs=(  07 05  )
     for ind in ${!seqs[@]}
     do
         i=${seqs[ind]}
@@ -27,9 +27,9 @@ clear
 	rm -rf $folder
 	mkdir -p $folder
 	#cp results/cvo_geometric_img_gpu0_mar21/${i}.txt $folder/tracking_full.txt        
-	cp results/mulls_no_loop/${i}/${i}.txt $folder/tracking_full.txt        
+	#cp results/mulls_no_loop/${i}/${i}.txt $folder/tracking_full.txt        
 	#cp results/cvo_intensity_lidar_jun09/${i}.txt $folder/tracking_full.txt        
-	#cp results/mulls/${i}.txt $folder/tracking_full.txt        
+	cp results/mulls_with_loop/${i}/${i}.txt $folder/tracking_full.txt        
 	#cp cvo_align_lidar_jun05/${i}.txt $folder/tracking_full.txt        
 	#cp ${track_folder}/odom${i}kittiAlign.txt $folder/tracking_full.txt        
 	last_index=`cat $folder/tracking_full.txt | wc -l`
@@ -40,10 +40,10 @@ clear
         #gdb -ex run --args \
         #./build/bin/cvo_irls_lidar_loop $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 2 $folder/tracking_full.txt $lc_file  ba.txt 0 0 1000000 2.0 0 0 0 # > log_tartan_rgbd_${difficulty}_${i}.txt
         #gdb  -ex    run --args \
-        ./build/bin/cvo_irls_lidar_loop ${dtype} $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 2 $folder/tracking_full.txt $lc_file  ba.txt 0 0 $last_index 2.0 0.2  5 0 1  #> log_kitti_loop_${i}.txt
+        ./build/bin/cvo_irls_lidar_loop ${dtype} $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 2 $folder/tracking_full.txt $lc_file  ba.txt 0 0 $last_index 2.0 0.2  4 0 0 0 0 #> log_kitti_loop_${i}.txt
 	
         mv *.pcd $folder/
-        mv pgo.txt global.txt loop_closures.g2o tracking.txt ba.txt err_wrt_*.txt log_kitti*.txt groundtruth.txt $folder/
+        mv pgo.txt pgo.g2o global.txt loop_closures.g2o tracking.txt ba.txt err_wrt_*.txt log_kitti*.txt groundtruth.txt $folder/
         cp ${dataset_folder}/poses.txt $folder/
 
         # convert traj to kitti format
@@ -55,7 +55,7 @@ clear
 
         #mv log_tartan_rgbd_${difficulty}_${i}.txt $folder
         sleep 3
-	break
+	#break
 
     done
 

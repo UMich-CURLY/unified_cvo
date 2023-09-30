@@ -113,7 +113,8 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
 			      double cov_scale_r,
                               int num_neighbors_per_node,
                               std::set<int> & selected_inds,
-                              int num_merging_sequential_frames){
+                              int num_merging_sequential_frames,
+                              const std::string & pgo_result_file){
   
   Eigen::Matrix<double, 6,6> information = Eigen::Matrix<double, 6,6>::Identity(); 
   information.block(0,0,3,3) = Eigen::Matrix<double, 3,3>::Identity() / cov_scale_t / cov_scale_t;
@@ -123,6 +124,7 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
   cvo::pgo::MapOfPoses poses;
   cvo::pgo::VectorOfConstraints constrains;
   std::ofstream lc_g2o(lc_constrains_file_before_BA);
+  std::ofstream pgo_g2o(pgo_result_file);
 
   std::cout<<"copy from tracking_poses to poses and constrains\n";
   //for (int i = 0; i < tracking_poses.size(); i++) {
@@ -132,18 +134,18 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
     cvo::pgo::Pose3d pose = cvo::pgo::pose3d_from_eigen<double, Eigen::ColMajor>(tracking_poses[i]);
     poses.insert(std::make_pair(i, pose));
     lc_g2o <<cvo::pgo::Pose3d::name()<<" "<<i<<" "<<pose<<"\n";
+    pgo_g2o <<cvo::pgo::Pose3d::name()<<" "<<i<<" "<<pose<<"\n";    
   }
 
   std::cout<<"add between factors for odom\n";
   for (auto iter_i = selected_inds.begin(); iter_i != selected_inds.end(); iter_i++) {
 	  int i = *iter_i;
 	  std::cout<<"i="<<i<<"\n";
-  //for  (int i = 0; i < tracking_poses.size(); i++) {
     auto iter_j = iter_i;
     iter_j++;
     if (iter_j == selected_inds.end())
       continue;
-    //for (; std::distance(iter_i, iter_j) <= num_neighbors_per_node && iter_j != selected_inds.end() ; iter_j++) {
+
     int j = *iter_j;
     std::cout<<"j="<<j<<"\n";
 
@@ -152,23 +154,30 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
     std::cout<<__func__<<": Add constrain from "<<i<<" to "<<j<<"\n";
     cvo::pgo::Constraint3d constrain{i, j, t_be, information};
     constrains.push_back(constrain);
-    // }
+    pgo_g2o<<cvo::pgo::Constraint3d::name()<<" "<<constrain<<"\n";        
   }
   
   
   /// the loop closing pose factors
-  std::cout<<__func__<<"Loop closure number is "<<loop_closures.size()<<"\n"; 
+  std::cout<<__func__<<"Loop closure number is "<<loop_closures.size()<<"\n";
   for (int i =0 ; i < loop_closures.size(); i++) {
-    Eigen::Matrix4d T_f1_to_f2 = lc_poses[i].cast<double>();
+    auto pair = loop_closures[i];    
+    Eigen::Matrix4d T_f1_to_f2;
+    if (lc_poses.size() > i)
+      T_f1_to_f2 = lc_poses[i].cast<double>();
+    else
+      T_f1_to_f2 = tracking_poses[pair.first].inverse() * tracking_poses[pair.second];
     cvo::pgo::Pose3d t_be = cvo::pgo::pose3d_from_eigen<double, Eigen::ColMajor>(T_f1_to_f2);
-    auto pair = loop_closures[i];
+
     cvo::pgo::Constraint3d constrain{static_cast<int>(pair.first), static_cast<int>(pair.second),
                                      t_be, information};
     constrains.push_back(constrain);
     lc_g2o<<cvo::pgo::Constraint3d::name()<<" "<<constrain<<"\n";
+    pgo_g2o<<cvo::pgo::Constraint3d::name()<<" "<<constrain<<"\n";    
     std::cout<<__func__<<": Add constrain from "<<pair.first<<" to "<<pair.second<<"\n";
   }
   lc_g2o.close();
+  pgo_g2o.close();
 
   /// optimization
   cvo::pgo::BuildOptimizationProblem(constrains, &poses, &problem);
@@ -430,6 +439,10 @@ void sample_frame_inds(int start_ind, int end_ind, int num_merged_frames,
   }
 }
 
+namespace cvo {}
+
+
+
 int main(int argc, char** argv) {
 
   //  omp_set_num_threads(24);
@@ -472,6 +485,8 @@ int main(int argc, char** argv) {
   int num_merging_sequential_frames = std::stoi(argv[13]);
   int is_pgo_only = std::stoi(argv[14]);
   int is_read_loop_closure_poses_from_file = std::stoi(argv[15]);
+  int is_store_pcd_each_frame = std::stoi(argv[16]);
+  int is_global_registration = std::stoi(argv[17]);
   
   int last_ind = std::min(max_last_ind+1, dataset->get_total_number()-1);
   std::cout<<"actual last ind is "<<last_ind<<"\n";
@@ -543,7 +558,7 @@ int main(int argc, char** argv) {
   // read point cloud
   std::map<int, cvo::CvoFrame::Ptr> frames;
   std::map<int, std::shared_ptr<cvo::CvoPointCloud>> pcs;
-  if (!(is_pgo_only && is_read_loop_closure_poses_from_file)) {
+  if (!is_pgo_only ||  (is_global_registration && !is_read_loop_closure_poses_from_file)) {
     if (std::strcmp(data_type.c_str(), "kitti_lidar") == 0) {
       cvo::read_and_downsample_lidar_pc(result_selected_frames,
                                         *dataset,
@@ -573,10 +588,17 @@ int main(int argc, char** argv) {
     }
 
   }
+
+  if (is_store_pcd_each_frame) {
+    for (auto && [ind, pc]: pcs) {
+      pc->write_to_pcd(std::to_string(ind)+".pcd");
+    }
+  }
   
 
   /// global registration
-  if (is_read_loop_closure_poses_from_file == false) {
+  if (is_read_loop_closure_poses_from_file == 0
+      && is_global_registration) {
     std::string g_reg_f("global.txt");    
     global_registration_batch(cvo_align,
                               loop_closures,
@@ -585,16 +607,21 @@ int main(int argc, char** argv) {
                               g_reg_f,
                               lc_poses);
   }
+  
 
   /// pose graph optimization
   std::string lc_g2o("loop_closures.g2o");
+  std::string pgo_g2o("pgo.g2o");    
   std::cout<<"Start PGO...\n";
   pose_graph_optimization(tracking_poses, loop_closures,
                           lc_poses, lc_g2o,
                           BA_poses, 
 			  cov_scale_t, cov_scale_r, num_neighbors_per_node,
                           result_selected_frames,
-                          num_merging_sequential_frames);
+                          num_merging_sequential_frames,
+                          pgo_g2o);
+      
+  
   std::cout<<"Finish PGO...\n";  
   std::string pgo_fname("pgo.txt");
   std::vector<cvo::Mat34d_row, Eigen::aligned_allocator<cvo::Mat34d_row>> pgo_poses;
@@ -609,7 +636,6 @@ int main(int argc, char** argv) {
   std::cout<<"Start construct BA CvoFrame\n";
   /// construct BA CvoFrame struct
   for (auto i : result_selected_frames) {
-  //for (int i = 0; i<result_selected_frames.size(); i++) {
     std::cout<<"Copy "<<i<<"th point cloud to gpu \n";
     double * poses_data = BA_poses[i].data();
     cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pcs[i].get(), poses_data, cvo_align.get_params().is_using_kdtree));
