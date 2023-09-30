@@ -15,8 +15,10 @@ namespace cvo {
     std::cout<<"Nonzeros is "<<A_result_cpu_.nonzero_sum<<std::endl;
     unsigned int num_residuals = 0;
     if (A_result_cpu_.nonzero_sum == 0 || A_f1_cpu_.nonzero_sum  == 0 ||
-        A_f2_cpu_.nonzero_sum == 0)
+        A_f2_cpu_.nonzero_sum == 0 ||
+        A_result_cpu_.nonzero_sum < params_cpu_->multiframe_min_nonzeros) {
       return num_residuals;
+    }
     
     for (int r=0; r< A_result_cpu_.rows; ++r)
     {
@@ -106,6 +108,7 @@ namespace cvo {
       
       
     }
+    
     return num_residuals;
 
   }

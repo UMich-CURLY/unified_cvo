@@ -28,8 +28,9 @@ namespace cvo {
     virtual double get_ell() const = 0;
     virtual const CvoFrame * get_frame1() const = 0;
     virtual const CvoFrame * get_frame2() const = 0;
-    
-    
+
+    virtual void malloc_state_memory() = 0;
+    virtual void free_state_memory() = 0;
   };
 
 

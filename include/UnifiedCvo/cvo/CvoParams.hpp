@@ -75,6 +75,7 @@ namespace cvo {
     int multiframe_min_nonzeros;
     int multiframe_is_optimizing_ell;
     int multiframe_is_sorting_inner_product;
+    int multiframe_is_free_memory_each_iter;
     CvoParams() :
       ell_init_first_frame(0.5),
       ell_init(0.5),
@@ -128,7 +129,8 @@ namespace cvo {
       multiframe_min_nonzeros(300),
       multiframe_least_squares_num_threads(24),
       multiframe_is_optimizing_ell(0),
-      multiframe_is_sorting_inner_product(0)
+      multiframe_is_sorting_inner_product(0),
+      multiframe_is_free_memory_each_iter(0)
     {}
     
   };
@@ -308,7 +310,8 @@ namespace cvo {
       params->multiframe_is_optimizing_ell = fs["multiframe_is_optimizing_ell"].as<int>();
     if (fs["multiframe_is_sorting_inner_product"])
       params->multiframe_is_sorting_inner_product = fs["multiframe_is_sorting_inner_product"].as<int>();
-    
+    if (fs["multiframe_is_free_memory_each_iter"])
+      params->multiframe_is_free_memory_each_iter = fs["multiframe_is_free_memory_each_iter"].as<int>();
     //std::cout<<"read: ell_init is "<<params->ell_init<<", MAX_ITER is "<<params->MAX_ITER<<", c is "<<params->c<<", d is "<<params->d<<", indicator window size is "<<params->indicator_window_size<<std::endl;
 
     return;

@@ -185,25 +185,27 @@ namespace cvo {
       int total_nonzeros = 0;
       unsigned int num_residuals = 0;
       for (auto && state : *states_) {
+        
         std::cout<<"ell of factor between " <<(state)->get_frame1()<<" and "<<(state)->get_frame2()<<" is "<<(state) ->get_ell()<<", multiframe_is_optimizing_ell is "<<params_->multiframe_is_optimizing_ell<<"\n";
+        
         auto start = std::chrono::system_clock::now();
+        if (params_->multiframe_is_free_memory_each_iter)
+          state->malloc_state_memory();        
         int nonzeros_ip_mat = state->update_inner_product();
         auto end = std::chrono::system_clock::now();
         std::chrono::duration<double, std::milli> t_all = end - start;
         kernel_eval_time += ( (static_cast<double>(t_all.count())) / 1000);
         total_nonzeros += nonzeros_ip_mat;
-        //invalid_factors[counter] = invalid_ip_mat;
-        if (nonzeros_ip_mat > params_->multiframe_min_nonzeros) {
-          start = std::chrono::system_clock::now();
-          num_residuals += (state->add_residual_to_problem(problem));
-          
-          end = std::chrono::system_clock::now();
-          t_all = end - start;
-          ceres_add_residual_time += ( (static_cast<double>(t_all.count())) / 1000);
+
+        start = std::chrono::system_clock::now();
+        num_residuals += (state->add_residual_to_problem(problem));
+        if (params_->multiframe_is_free_memory_each_iter)
+          state->free_state_memory();
+        end = std::chrono::system_clock::now();
+        t_all = end - start;
+        ceres_add_residual_time += ( (static_cast<double>(t_all.count())) / 1000);
+        if (nonzeros_ip_mat  > params_->multiframe_min_nonzeros)
           counter_nonzer_factors++;
-        } else {
-          
-        }
       }
       if (is_comparing_with_gt) {
         double param_err = change_of_all_poses(gt_aligned, poses_old);

@@ -52,3 +52,4 @@ multiframe_iterations_per_solve: 10
 multiframe_least_squares_num_threads: 100
 multiframe_is_optimizing_ell: 1
 multiframe_is_sorting_inner_product: 32
+multiframe_is_free_memory_each_iter: 1

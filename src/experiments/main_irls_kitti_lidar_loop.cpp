@@ -577,13 +577,13 @@ int main(int argc, char** argv) {
                                                         pcs);
 
     } else if (std::strcmp(data_type.c_str(), "ethz") == 0) {
-      cvo::read_and_downsample_sequentail_stereo_frames(result_selected_frames, *dataset, calib,
-                                                        tracking_poses,
-                                                        num_merging_sequential_frames,
-                                                        cvo_align.get_params().multiframe_downsample_voxel_size,
-                                                        true,
-                                                        // results
-                                                        pcs);
+      cvo::read_and_downsample_lidar_pc(result_selected_frames,
+                                        *dataset,
+                                        tracking_poses,                                        
+                                        num_merging_sequential_frames,
+                                        cvo_align.get_params().multiframe_downsample_voxel_size,
+                                        true,
+                                        pcs);
       
     }
 

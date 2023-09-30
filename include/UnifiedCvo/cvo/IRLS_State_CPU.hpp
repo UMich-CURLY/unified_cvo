@@ -48,6 +48,8 @@ namespace cvo {
 
     void export_association(Association & output_association);
 
+    void malloc_state_memory() {}
+    void free_state_memory() {}
     /*
     virtual void update_residuals(double * residuals) {
       if (residuals) {

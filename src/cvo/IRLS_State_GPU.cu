@@ -26,13 +26,16 @@ namespace cvo {
                                      params_gpu_(params_gpu),
                                      num_neighbors_(num_neighbor),
                                      ell_(static_cast<double>(init_ell)),
-                                     init_num_neighbors_(num_neighbor){
+                                     init_num_neighbors_(num_neighbor),
+                                     state_(FREE){
+    is_optimizing_ell_ = params_cpu_->multiframe_is_optimizing_ell;
 
+    /*
     init_internal_SparseKernelMat_cpu(pc1->points->size(),  num_neighbor, &A_result_cpu_);
     A_device_ = init_SparseKernelMat_gpu(pc1->points->size(), num_neighbor, A_host_);
     clear_SparseKernelMat(&A_host_, num_neighbors_);
 
-    is_optimizing_ell_ = params_cpu_->multiframe_is_optimizing_ell;
+
     if (is_optimizing_ell_) {
       num_neighbors_f1_ = num_neighbor;      
       A_f1_device_ = init_SparseKernelMat_gpu(pc1->points->size(), num_neighbor, A_f1_host_);
@@ -49,15 +52,68 @@ namespace cvo {
     if (params_cpu_->is_using_kdtree) {
       points_transformed_buffer_gpu_ = std::make_shared<CvoPointCloudGPU>(pc1->size());
       cudaMalloc((int**)&cukdtree_inds_results_gpu_, sizeof(int)*init_num_neighbors_*pc1->size());
-    }
+      }*/
+    if (params_cpu_->multiframe_is_free_memory_each_iter == false)
+      this->malloc_state_memory();
 
     iter_ = 0;
     
-    cudaMemGetInfoPrint(__func__);
+
 
   }
 
+  void BinaryStateGPU::malloc_state_memory() {
+
+    if (state_ == FREE) {
+      init_internal_SparseKernelMat_cpu(frame1_->size(),  num_neighbors_, &A_result_cpu_);
+      A_device_ = init_SparseKernelMat_gpu(frame1_->size(), num_neighbors_, A_host_);
+      clear_SparseKernelMat(&A_host_, num_neighbors_);
+
+      if (is_optimizing_ell_) {
+        num_neighbors_f1_ = num_neighbors_;      
+        A_f1_device_ = init_SparseKernelMat_gpu(frame1_->size(), num_neighbors_, A_f1_host_);
+        init_internal_SparseKernelMat_cpu(frame1_->size(),  num_neighbors_, &A_f1_cpu_);
+        clear_SparseKernelMat(&A_f1_host_, num_neighbors_f1_);
+      
+        num_neighbors_f2_ = num_neighbors_;            
+        A_f2_device_ = init_SparseKernelMat_gpu(frame2_->size(), num_neighbors_, A_f2_host_);
+        init_internal_SparseKernelMat_cpu(frame2_->size(),  num_neighbors_, &A_f2_cpu_);      
+        clear_SparseKernelMat(&A_f2_host_, num_neighbors_f2_);
+      }
+      //std::cout<<"Construct BinaryStateGPU: ell is "<<ell_<<", init_num_neighbors_ is "<<init_num_neighbors_<<"\n";
+
+      if (params_cpu_->is_using_kdtree) {
+        points_transformed_buffer_gpu_ = std::make_shared<CvoPointCloudGPU>(frame1_->size());
+        cudaMalloc((int**)&cukdtree_inds_results_gpu_, sizeof(int)*init_num_neighbors_*frame1_->size());
+      }
+      state_ = ALLOCATED;
+
+      cudaMemGetInfoPrint(__func__);      
+    }
+    
+  }
+
+  void BinaryStateGPU::free_state_memory() {
+    if (state_ == ALLOCATED) {
+      delete_internal_SparseKernelMat_cpu(&A_result_cpu_);
+      delete_SparseKernelMat_gpu(A_device_, &A_host_);
+      if (params_cpu_->is_using_kdtree) {
+        cudaFree(cukdtree_inds_results_gpu_);
+      }
+      if (is_optimizing_ell_) {
+        delete_SparseKernelMat_gpu(A_f1_device_, &A_f1_host_);
+        delete_internal_SparseKernelMat_cpu(&A_f1_cpu_);        
+        delete_SparseKernelMat_gpu(A_f2_device_, &A_f2_host_);
+        delete_internal_SparseKernelMat_cpu(&A_f2_cpu_);        
+      }
+      state_ = FREE;
+    }
+  }
+
+  
+
   BinaryStateGPU::~BinaryStateGPU() {
+    /*
     delete_internal_SparseKernelMat_cpu(&A_result_cpu_);
     delete_SparseKernelMat_gpu(A_device_, &A_host_);
     if (params_cpu_->is_using_kdtree) {
@@ -66,7 +122,8 @@ namespace cvo {
     if (is_optimizing_ell_) {
       delete_SparseKernelMat_gpu(A_f1_device_, &A_f1_host_);
       delete_SparseKernelMat_gpu(A_f2_device_, &A_f2_host_);
-    }
+      }*/
+    this->free_state_memory();
   }
 
   int BinaryStateGPU::update_inner_product() {

@@ -27,7 +27,9 @@ namespace cvo {
   public:
 
     //typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f> >, float>  Kdtree;
-    typedef std::shared_ptr<BinaryStateGPU> Ptr;
+    using Ptr =  std::shared_ptr<BinaryStateGPU>;
+
+    enum State {FREE, ALLOCATED};
     
     //BinaryStateGPU(CvoFrame::Ptr pc1,
     //               CvoFrame::Ptr pc2,
@@ -58,6 +60,8 @@ namespace cvo {
                                  //ceres::LocalParameterization * parameterization);
 
     void export_association(Association & output_association);
+
+    
     
 
     /*
@@ -69,6 +73,9 @@ namespace cvo {
 
     virtual void update_jacobians(double ** jacobians);
     */
+    void malloc_state_memory();
+    void free_state_memory();
+    
 
   private:
     //pcl::PointCloud<pcl::PointSegmentedDistribution<>>::Ptr pc1_;
@@ -116,7 +123,9 @@ namespace cvo {
     
     
 
+    /// privatre methods
     
+    State state_;
     
   };
 
