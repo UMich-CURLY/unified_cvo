@@ -2,7 +2,7 @@ cd build
 cmake .. 
 make -j
 cd ..
-export CUDA_VISIBLE_DEVICES=1
+export CUDA_VISIBLE_DEVICES=0
 dtype=$1
 date=$2
 clear
@@ -40,7 +40,7 @@ clear
         #gdb -ex run --args \
         #./build/bin/cvo_irls_lidar_loop $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 2 $folder/tracking_full.txt $lc_file  ba.txt 0 0 1000000 2.0 0 0 0 # > log_tartan_rgbd_${difficulty}_${i}.txt
         #gdb  -ex    run --args \
-        ./build/bin/cvo_irls_lidar_loop ${dtype} $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 2 $folder/tracking_full.txt $lc_file  ba.txt 0 0 $last_index 2.0 0.2  0 0 0 0 0 #> log_kitti_loop_${i}.txt
+        ./build/bin/cvo_irls_lidar_loop ${dtype} $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 2 $folder/tracking_full.txt $lc_file  ba.txt 0 0 $last_index 1.0 0.1  0 1 0 1 0 #> log_kitti_loop_${i}.txt
 	
         mv *.pcd $folder/
         mv pgo.txt pgo.g2o global.txt loop_closures.g2o tracking.txt ba.txt err_wrt_*.txt log_kitti*.txt groundtruth.txt $folder/

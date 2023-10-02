@@ -427,19 +427,22 @@ void sample_frame_inds(int start_ind, int end_ind, int num_merged_frames,
                        std::set<int> & result_selected_frames
                        ) {
   result_selected_frames.clear();
-  for (int i = start_ind; i <= end_ind; i+=(1+num_merged_frames)){
+  for (int i = start_ind; i < end_ind; i+=(1+num_merged_frames)){
     result_selected_frames.insert(i);
   }
-
+  ASSERT(loop_closures.size() > 0, "lc edges must be non-empty");
   for (auto && p : loop_closures) {
-    if(result_selected_frames.find(p.first) == result_selected_frames.end())
+    if(result_selected_frames.find(p.first) == result_selected_frames.end()) {
       result_selected_frames.insert(p.first);
-    if(result_selected_frames.find(p.second) == result_selected_frames.end())
+	std::cout<<"Insert lc frame "<<p.first<<"\n";
+    }
+    if(result_selected_frames.find(p.second) == result_selected_frames.end()) {
       result_selected_frames.insert(p.second);
+	std::cout<<"Insert lc frame "<<p.second<<"\n";
+    }
   }
 }
 
-namespace cvo {}
 
 
 
@@ -488,7 +491,7 @@ int main(int argc, char** argv) {
   int is_store_pcd_each_frame = std::stoi(argv[16]);
   int is_global_registration = std::stoi(argv[17]);
   
-  int last_ind = std::min(max_last_ind+1, dataset->get_total_number()-1);
+  int last_ind = std::min(max_last_ind, dataset->get_total_number()-1);
   std::cout<<"actual last ind is "<<last_ind<<"\n";
 
   std::cout<<"Finish reading all arguments\n";
@@ -505,10 +508,10 @@ int main(int argc, char** argv) {
   gt_pose_name = std::string(data_path) + "/poses.txt";
 
   /// read poses
-  std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> gt_poses_raw(total_iters),
-    gt_poses(total_iters),
+  std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> gt_poses_raw, //(total_iters),
+    gt_poses,//(total_iters),
     gt_pose_selected_vec,
-    tracking_poses(total_iters);
+    tracking_poses;//(total_iters);
   // std::vector<cvo::Mat34d_row,
   //            Eigen::aligned_allocator<cvo::Mat34d_row>> BA_poses(total_iters, cvo::Mat34d_row::Zero());
   std::map<int, cvo::Mat34d_row> BA_poses;
@@ -529,7 +532,11 @@ int main(int argc, char** argv) {
                                    last_ind,
                                    tracking_poses);
   std::cout<<"init tracking pose size is "<<tracking_poses.size()<<"\n";
-  assert(gt_poses.size() == tracking_poses.size());
+  ASSERT(gt_poses.size() == tracking_poses.size(), "gt pose size should be equal to tracking");
+  last_ind = gt_poses.size() - start_ind - 1;
+  //int min_len = std::min(tracking_poses.size(), gt_poses.size());
+  //gt_poses.resize(total_iters);
+  //tracking_poses.resize(total_iters);
 
   // read loop closure files
   std::vector<std::pair<int, int>> loop_closures;
@@ -542,7 +549,8 @@ int main(int argc, char** argv) {
   
   /// decide if we will skip frames
   std::set<int> result_selected_frames;
-  sample_frame_inds(start_ind, last_ind, num_merging_sequential_frames, loop_closures, result_selected_frames);  
+  sample_frame_inds(start_ind, last_ind, num_merging_sequential_frames, loop_closures, result_selected_frames);
+  std::cout<<"loop closures size is "<<loop_closures.size()<<"\n";
 
   /// select gt poses
   std::map<int, Eigen::Matrix4d> gt_pose_selected;
@@ -558,7 +566,7 @@ int main(int argc, char** argv) {
   // read point cloud
   std::map<int, cvo::CvoFrame::Ptr> frames;
   std::map<int, std::shared_ptr<cvo::CvoPointCloud>> pcs;
-  if (!is_pgo_only ||  (is_global_registration && !is_read_loop_closure_poses_from_file)) {
+  if (is_store_pcd_each_frame || !is_pgo_only ||  (is_global_registration && !is_read_loop_closure_poses_from_file)) {
     if (std::strcmp(data_type.c_str(), "kitti_lidar") == 0) {
       cvo::read_and_downsample_lidar_pc(result_selected_frames,
                                         *dataset,
@@ -591,7 +599,8 @@ int main(int argc, char** argv) {
 
   if (is_store_pcd_each_frame) {
     for (auto && [ind, pc]: pcs) {
-      pc->write_to_pcd(std::to_string(ind)+".pcd");
+	    std::cout<<"Write pc id "<<ind<<" to disk, out of "<<pcs.size()<<" pcds ";  
+      pc->write_to_intensity_pcd(std::to_string(ind)+".pcd");
     }
   }
   

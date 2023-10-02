@@ -21,5 +21,7 @@ do
 	 ./devkit/cpp/evaluate_odometry $i ${result_dir} groundtruth_kitti.txt $result_dir  ba_kitti.txt
 	echo "pgo for ${result_dir}: "
 	 ./devkit/cpp/evaluate_odometry $i ${result_dir} groundtruth_kitti.txt $result_dir  pgo_kitti.txt
+	echo "tracking for ${result_dir}: "
+	 ./devkit/cpp/evaluate_odometry $i ${result_dir} groundtruth_kitti.txt $result_dir  tracking_kitti.txt
 
 done
