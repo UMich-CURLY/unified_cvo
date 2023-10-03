@@ -486,10 +486,11 @@ int main(int argc, char** argv) {
   double cov_scale_t = std::stod(argv[11]);
   double cov_scale_r = std::stod(argv[12]);
   int num_merging_sequential_frames = std::stoi(argv[13]);
-  int is_pgo_only = std::stoi(argv[14]);
+  int is_doing_pgo = std::stoi(argv[14]);
   int is_read_loop_closure_poses_from_file = std::stoi(argv[15]);
   int is_store_pcd_each_frame = std::stoi(argv[16]);
   int is_global_registration = std::stoi(argv[17]);
+  int is_doing_ba = std::stoi(argv[18]);  
   
   int last_ind = std::min(max_last_ind, dataset->get_total_number()-1);
   std::cout<<"actual last ind is "<<last_ind<<"\n";
@@ -566,7 +567,7 @@ int main(int argc, char** argv) {
   // read point cloud
   std::map<int, cvo::CvoFrame::Ptr> frames;
   std::map<int, std::shared_ptr<cvo::CvoPointCloud>> pcs;
-  if (is_store_pcd_each_frame || !is_pgo_only ||  (is_global_registration && !is_read_loop_closure_poses_from_file)) {
+  if (is_store_pcd_each_frame || is_doing_ba ||  (is_global_registration && !is_read_loop_closure_poses_from_file)) {
     if (std::strcmp(data_type.c_str(), "kitti_lidar") == 0) {
       cvo::read_and_downsample_lidar_pc(result_selected_frames,
                                         *dataset,
@@ -622,13 +623,21 @@ int main(int argc, char** argv) {
   std::string lc_g2o("loop_closures.g2o");
   std::string pgo_g2o("pgo.g2o");    
   std::cout<<"Start PGO...\n";
-  pose_graph_optimization(tracking_poses, loop_closures,
-                          lc_poses, lc_g2o,
-                          BA_poses, 
-			  cov_scale_t, cov_scale_r, num_neighbors_per_node,
-                          result_selected_frames,
-                          num_merging_sequential_frames,
-                          pgo_g2o);
+  if (is_doing_pgo)
+    pose_graph_optimization(tracking_poses, loop_closures,
+                            lc_poses, lc_g2o,
+                            BA_poses, 
+                            cov_scale_t, cov_scale_r, num_neighbors_per_node,
+                            result_selected_frames,
+                            num_merging_sequential_frames,
+                            pgo_g2o);
+  else {
+    for (auto ind : result_selected_frames) {
+      Eigen::Matrix<double, 3, 4> pose = tracking_poses[ind].block(0,0,3,4);
+      Eigen::Matrix<double, 3, 4, Eigen::RowMajor> pose_row = pose;
+      BA_poses.insert(std::make_pair(ind, pose_row));
+    }
+  }
       
   
   std::cout<<"Finish PGO...\n";  
@@ -639,7 +648,7 @@ int main(int argc, char** argv) {
   std::string lc_prefix(("loop_closure_"));
   if (pcs.size())
     log_lc_pc_pairs(BA_poses, loop_closures, pcs, lc_prefix);
-  if (is_pgo_only) return 0;
+  if (!is_doing_ba) return 0;
   
   
   std::cout<<"Start construct BA CvoFrame\n";
