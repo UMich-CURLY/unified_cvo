@@ -422,6 +422,9 @@ void write_transformed_pc(std::map<int, cvo::CvoFrame::Ptr> & frames,
   pcl::io::savePCDFileASCII(fname, pc_xyz_all);
 }
 
+
+
+
 void sample_frame_inds(int start_ind, int end_ind, int num_merged_frames,
                        const std::vector<std::pair<int, int>> &loop_closures,
                        std::set<int> & result_selected_frames
@@ -535,6 +538,8 @@ int main(int argc, char** argv) {
   std::cout<<"init tracking pose size is "<<tracking_poses.size()<<"\n";
   ASSERT(gt_poses.size() == tracking_poses.size(), "gt pose size should be equal to tracking");
   last_ind = gt_poses.size() - start_ind - 1;
+  std::cout<<"first gt: "<<gt_poses[0]<<", first tracking: "<<tracking_poses[0]<<"\n";
+  //int a; cin>>a;
   //int min_len = std::min(tracking_poses.size(), gt_poses.size());
   //gt_poses.resize(total_iters);
   //tracking_poses.resize(total_iters);
@@ -600,10 +605,24 @@ int main(int argc, char** argv) {
 
   if (is_store_pcd_each_frame) {
     for (auto && [ind, pc]: pcs) {
-	    std::cout<<"Write pc id "<<ind<<" to disk, out of "<<pcs.size()<<" pcds ";  
+      std::cout<<"Write pc id "<<ind<<" to disk, out of "<<pcs.size()<<" pcds ";  
       pc->write_to_intensity_pcd(std::to_string(ind)+".pcd");
     }
   }
+
+  pcl::PointCloud<pcl::PointXYZI>::Ptr pc_all_ptr(new pcl::PointCloud<pcl::PointXYZI>);
+  for (auto && [ind, pc]: pcs) {
+    Eigen::Matrix4f tracking_pose = tracking_poses[ind].cast<float>();
+    pcl::PointCloud<pcl::PointXYZI> pc_curr;
+    pc_curr.resize(pc->size());
+    #pragma omp parallel for
+    for (int j = 0; j < pc->size(); j++)
+      pc_curr[j].getVector3fMap() = tracking_pose.block(0,0,3,3) * pc->at(j) + tracking_pose.block(0,3,3,1);
+    (*pc_all_ptr) += pc_curr;
+  }
+  pcl::io::savePCDFileASCII ("tracking.pcd", *pc_all_ptr);
+
+  
   
 
   /// global registration
@@ -638,7 +657,6 @@ int main(int argc, char** argv) {
       BA_poses.insert(std::make_pair(ind, pose_row));
     }
   }
-      
   
   std::cout<<"Finish PGO...\n";  
   std::string pgo_fname("pgo.txt");
@@ -648,8 +666,6 @@ int main(int argc, char** argv) {
   std::string lc_prefix(("loop_closure_"));
   if (pcs.size())
     log_lc_pc_pairs(BA_poses, loop_closures, pcs, lc_prefix);
-  if (!is_doing_ba) return 0;
-  
   
   std::cout<<"Start construct BA CvoFrame\n";
   /// construct BA CvoFrame struct
@@ -659,10 +675,10 @@ int main(int argc, char** argv) {
     cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pcs[i].get(), poses_data, cvo_align.get_params().is_using_kdtree));
     frames.insert(std::make_pair(i, new_frame));
   }
-  
 
   std::string f_name = std::string("before_BA_loop.pcd");
   write_transformed_pc(frames, f_name, 0, frames.size()-1);
+  if (!is_doing_ba) return 0;  
   
   /// Multiframe alignment
   std::cout<<"Construct loop BA problem\n";

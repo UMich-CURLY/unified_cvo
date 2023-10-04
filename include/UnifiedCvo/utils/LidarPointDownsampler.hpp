@@ -142,8 +142,8 @@ namespace cvo {
         }
         *pc_local += *pc_pcl;
       }
-      if (i == 0)
-        pcl::io::savePCDFileASCII(std::to_string(i) + ".pcd", *pc_local);
+      //if (i == 0)
+      //  pcl::io::savePCDFileASCII(std::to_string(i) + ".pcd", *pc_local);
       //pc_local->write_to_pcd("0.pcd");
       float leaf_size = voxel_size;
 

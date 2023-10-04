@@ -28,8 +28,11 @@ clear
 	mkdir -p $folder
 	#cp results/cvo_geometric_img_gpu0_mar21/${i}.txt $folder/tracking_full.txt        
 	#cp results/mulls_no_loop/${i}/${i}.txt $folder/tracking_full.txt        
-	cp results/cvo_intensity_lidar_jun09/${i}.txt $folder/tracking_full.txt        
-	#cp results/mulls_with_loop/${i}/${i}.txt $folder/tracking_full.txt        
+	#cp results/mulls_no_loop/${i}/gt.txt $folder/tracking_full.txt        
+	#cp ground_truth/${i}.txt $folder/tracking_full.txt        
+	#cp results/cvo_intensity_lidar_jun09/${i}.txt $folder/tracking_full.txt        
+	cp results/mulls_with_loop/${i}/${i}.txt $folder/tracking_full.txt        
+	#cp results/mulls/${i}.txt $folder/tracking_full.txt        
 	#cp cvo_align_lidar_jun05/${i}.txt $folder/tracking_full.txt        
 	#cp ${track_folder}/odom${i}kittiAlign.txt $folder/tracking_full.txt        
 	last_index=`cat $folder/tracking_full.txt | wc -l`
@@ -40,7 +43,7 @@ clear
         #gdb -ex run --args \
         #./build/bin/cvo_irls_lidar_loop $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 2 $folder/tracking_full.txt $lc_file  ba.txt 0 0 1000000 2.0 0 0 0 # > log_tartan_rgbd_${difficulty}_${i}.txt
         #gdb  -ex    run --args \
-        ./build/bin/cvo_irls_lidar_loop ${dtype} $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 2 $folder/tracking_full.txt $lc_file  ba.txt 0 0 $last_index 2.0 0.2  0 1 0 0 1 1 #> log_kitti_loop_${i}.txt
+        ./build/bin/cvo_irls_lidar_loop ${dtype} $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 2 $folder/tracking_full.txt $lc_file  ba.txt 0 0 $last_index 2.0 0.2  0 1 0 0 0 1 #> log_kitti_loop_${i}.txt
 	
 	
         mv *.pcd $folder/
@@ -56,7 +59,7 @@ clear
 
         #mv log_tartan_rgbd_${difficulty}_${i}.txt $folder
         sleep 3
-	#break
+	break
 
     done
 

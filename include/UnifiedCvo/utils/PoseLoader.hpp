@@ -150,7 +150,7 @@ namespace cvo {
       Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
       T.block<3,4>(0,0) = T34;
       poses.push_back(T);
-      std::cout<<"Read pose from file\n"<<T<<std::endl;
+      //std::cout<<"Read pose from file\n"<<T<<std::endl;
       line_ind++;
 
     }
