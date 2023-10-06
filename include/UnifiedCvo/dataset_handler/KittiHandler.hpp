@@ -31,6 +31,8 @@ namespace cvo{
     void set_start_index(int start);
     int get_current_index();
     int get_total_number();
+    void set_lidar_calib(const Eigen::Matrix<float, 3, 4> & lidar_to_cam);
+    void read_lidar_calib(const std::string & calib_file);
   private:
 
     int curr_index;
@@ -39,6 +41,8 @@ namespace cvo{
     std::ifstream infile;
 
     bool debug_plot;
+    
+    Eigen::Matrix<float, 3, 4> T_velo_to_cam;
   };
   
 }

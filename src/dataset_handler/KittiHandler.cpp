@@ -3,6 +3,7 @@
 #include <string>
 #include <algorithm>
 #include <cassert>
+#include <sstream>
 #include <boost/filesystem.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include "dataset_handler/KittiHandler.hpp"
@@ -29,6 +30,17 @@ namespace cvo
     else if (data_type == DataType::LIDAR)
     {
       data_folder = folder_name + "/velodyne/";
+      if (boost::filesystem::exists( folder_name + "/calib_velo_to_cam.txt" )) {
+        this->read_lidar_calib(folder_name + "/calib_velo_to_cam.txt");
+      } else {
+        Eigen::Affine3f rx = Eigen::Affine3f::Identity();
+        Eigen::Affine3f ry = Eigen::Affine3f(Eigen::AngleAxisf(-M_PI / 2.0, Eigen::Vector3f::UnitY()));
+        Eigen::Affine3f rz = Eigen::Affine3f(Eigen::AngleAxisf(M_PI / 2.0, Eigen::Vector3f::UnitZ()));
+        Eigen::Affine3f tf_change_basis = rz * ry * rx;
+        Eigen::Matrix<float, 3,4> lidar_to_cam = Eigen::Matrix<float, 3,4>::Zero();
+        lidar_to_cam.block<3,3>(0,0) = tf_change_basis.matrix().block<3,3>(0,0);
+        this->set_lidar_calib(lidar_to_cam);
+      }
     }
 
     path kitti(data_folder.c_str());
@@ -44,6 +56,7 @@ namespace cvo
     }
     sort(names.begin(), names.end());
     cout << "Kitti contains " << names.size() << " files\n";
+
   }
 
   KittiHandler::~KittiHandler() {}
@@ -133,10 +146,6 @@ namespace cvo
       infile.close();
 
       // Eigen::Affine3f tf_change_basis = Eigen::Affine3f::Identity();
-      Eigen::Affine3f rx = Eigen::Affine3f::Identity();
-      Eigen::Affine3f ry = Eigen::Affine3f(Eigen::AngleAxisf(-M_PI / 2.0, Eigen::Vector3f::UnitY()));
-      Eigen::Affine3f rz = Eigen::Affine3f(Eigen::AngleAxisf(M_PI / 2.0, Eigen::Vector3f::UnitZ()));
-      Eigen::Affine3f tf_change_basis = rz * ry * rx;
       for (int r = 0; r < num_lidar_points; ++r)
       {
         pcl::PointCloud<pcl::PointXYZI>::PointType temp_pcl;
@@ -145,14 +154,12 @@ namespace cvo
         temp_pcl.y = lidar_points[r * 4 + 1];
         temp_pcl.z = lidar_points[r * 4 + 2];
 
-        Eigen::Vector4f temp_pt(temp_pcl.x, temp_pcl.y, temp_pcl.z, 1);
-        Eigen::Vector4f after_tf_pt = tf_change_basis.matrix() * temp_pt;
+        Eigen::Vector3f temp_pt(temp_pcl.x, temp_pcl.y, temp_pcl.z);
+        Eigen::Vector3f after_tf_pt = this->T_velo_to_cam.block<3,3>(0,0) * temp_pt
+          + this->T_velo_to_cam.block<3,1>(0,3);
         pcl_after_tf.x = after_tf_pt(0);
         pcl_after_tf.y = after_tf_pt(1);
         pcl_after_tf.z = after_tf_pt(2);
-        // pcl_after_tf.x = -temp_pcl.y;
-        // pcl_after_tf.y = -temp_pcl.z;
-        // pcl_after_tf.z = temp_pcl.x;
 
         pcl_after_tf.intensity = lidar_points[r * 4 + 3];
         pc->push_back(pcl_after_tf);
@@ -271,6 +278,42 @@ namespace cvo
   int KittiHandler::get_total_number()
   {
     return names.size();
+  }
+
+  void KittiHandler::set_lidar_calib(const Eigen::Matrix<float, 3, 4> & lidar_to_cam) {
+    this->T_velo_to_cam = lidar_to_cam;
+  }
+
+  void KittiHandler::read_lidar_calib(const std::string & calib_file) {
+    std::ifstream infile(calib_file);
+
+    int line_counter = 0;
+    std::string line;
+    std::getline(infile, line);
+
+    /// R
+    std::getline(infile, line);
+    std::stringstream ss(line);
+    std::string first_str;
+    ss >> first_str;
+    //float r[9];
+    Eigen::Matrix3f R_col;
+    for (int i = 0; i < 9; i++)
+      ss >> R_col(i/3, i%3);
+    //Eigen::Matrix<float, 3, 3, Eigen::RowMajor> R_row = Eigen::Map<Eigen::Matrix<float, 3, 3, Eigen::RowMajor>>(r);
+    //Eigen::Matrix3f R_col = R_row;
+
+    /// t
+    std::getline(infile, line);
+    std::stringstream sl(line);
+    sl >> first_str;
+    Eigen::Vector3f t;
+    for (int i = 0; i < 3; i++)
+      sl >> t(i);
+
+    T_velo_to_cam.block<3,3>(0,0) = R_col;
+    T_velo_to_cam.block<3,1>(0,3) = t;
+    std::cout<<"Read T_velo_to_cam to be\n"<<T_velo_to_cam<<"\n";
   }
 
 }

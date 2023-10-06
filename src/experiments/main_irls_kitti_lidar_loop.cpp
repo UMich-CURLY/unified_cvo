@@ -430,7 +430,7 @@ void sample_frame_inds(int start_ind, int end_ind, int num_merged_frames,
                        std::set<int> & result_selected_frames
                        ) {
   result_selected_frames.clear();
-  for (int i = start_ind; i < end_ind; i+=(1+num_merged_frames)){
+  for (int i = start_ind; i <= end_ind; i+=(1+num_merged_frames)){
     result_selected_frames.insert(i);
   }
   ASSERT(loop_closures.size() > 0, "lc edges must be non-empty");
