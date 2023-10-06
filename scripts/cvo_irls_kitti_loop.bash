@@ -1,5 +1,6 @@
+mkdir -p build
 cd build
-cmake .. -DCMAKE_BUILD_TYPE=Debug
+cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j
 cd ..
 export CUDA_VISIBLE_DEVICES=0
@@ -9,8 +10,8 @@ clear
 
     #skylabel=(196 112 -- 130  196 146 130)
     #seqs=( 05 00 08 02 06 09 )
-    seqs=( 07 05 00 02 06 09  )
-    #seqs=(   07 05 )
+    #seqs=( 07 05 00 02 06 09  )
+    seqs=(   07 05 )
     for ind in ${!seqs[@]}
     do
         i=${seqs[ind]}
@@ -31,7 +32,9 @@ clear
 	#cp results/mulls_no_loop/${i}/gt.txt $folder/tracking_full.txt        
 	#cp ground_truth/${i}.txt $folder/tracking_full.txt        
 	#cp results/cvo_intensity_lidar_jun09/${i}.txt $folder/tracking_full.txt        
-	cp results/mulls_with_loop/${i}/${i}.txt $folder/tracking_full.txt        
+	cp results/mulls_with_loop/${i}/${i}.txt $folder/tracking_full.txt       
+       mkdir -p $folder/${i}	
+	cp results/mulls_with_loop/${i}/gt.txt $folder/${i}/gt.txt        
 	#cp results/mulls/${i}.txt $folder/tracking_full.txt        
 	#cp cvo_align_lidar_jun05/${i}.txt $folder/tracking_full.txt        
 	#cp ${track_folder}/odom${i}kittiAlign.txt $folder/tracking_full.txt        
@@ -42,8 +45,8 @@ clear
         ### run global BA
         #gdb -ex run --args \
         #./build/bin/cvo_irls_lidar_loop $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 2 $folder/tracking_full.txt $lc_file  ba.txt 0 0 1000000 2.0 0 0 0 # > log_tartan_rgbd_${difficulty}_${i}.txt
-        gdb  -ex    run --args \
-        ./build/bin/cvo_irls_lidar_loop ${dtype} $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 2 $folder/tracking_full.txt $lc_file  ba.txt 0 0 $last_index 2.0 0.2  0 1 0 0 0 0 #> log_kitti_loop_${i}.txt
+        #gdb  -ex    run --args \
+        ./build/bin/cvo_irls_lidar_loop ${dtype} $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 2 $folder/tracking_full.txt $lc_file  ba.txt 0 0 $last_index 2.0 0.2  0 0 0 0 0 1 #> log_kitti_loop_${i}.txt
 	
 	
         mv *.pcd $folder/
@@ -51,10 +54,10 @@ clear
         cp ${dataset_folder}/poses.txt $folder/
 
         # convert traj to kitti format
-        python3 scripts/xyzq2kitti.py ${folder}/groundtruth.txt  ${folder}/groundtruth_kitti.txt
-        python3 scripts/xyzq2kitti.py ${folder}/tracking.txt  ${folder}/tracking_kitti.txt
-        python3 scripts/xyzq2kitti.py ${folder}/ba.txt  ${folder}/ba_kitti.txt
-        python3 scripts/xyzq2kitti.py ${folder}/pgo.txt  ${folder}/pgo_kitti.txt
+        #python3 scripts/xyzq2kitti.py ${folder}/groundtruth.txt  ${folder}/groundtruth_kitti.txt #--is-change-of-basis
+        #python3 scripts/xyzq2kitti.py ${folder}/tracking.txt  ${folder}/tracking_kitti.txt #--is-change-of-basis
+        #python3 scripts/xyzq2kitti.py ${folder}/ba.txt  ${folder}/ba_kitti.txt #--is-change-of-basis
+        #python3 scripts/xyzq2kitti.py ${folder}/pgo.txt  ${folder}/pgo_kitti.txt# --is-change-of-basis
         #python3 /home/rayzhang/.local/lib/python3.6/site-packages/evo/main_traj.py kitti --ref ${folder}/groundtruth_kitti.txt ${folder}/tracking_kitti.txt   ${folder}/ba_kitti.txt  -p --plot_mode xyz
 
         #mv log_tartan_rgbd_${difficulty}_${i}.txt $folder

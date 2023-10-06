@@ -282,6 +282,30 @@ namespace cvo {
   }
 
   template <typename T, unsigned int ROWS, unsigned int major>
+  void write_traj_file_kitti_format(const std::string & fname,
+                                    std::vector<Eigen::Matrix<T, ROWS, 4, major>,
+                                    Eigen::aligned_allocator<Eigen::Matrix<T, ROWS, 4, major>>> &  poses) {
+
+    std::ofstream outfile(fname);
+    for (int i = 0; i< poses.size(); i++) {
+      Eigen::Matrix<T, 4, 4, major> pose = Eigen::Matrix<T, 4, 4, major>::Identity();
+      pose.block(0,0, ROWS, 4) = poses[i];
+ 
+      for (int j = 0; j < 12; j++) {
+        outfile <<pose(j / 4, j % 4);
+        if (j == 11)
+          outfile<<"\n";
+        else
+          outfile<<" ";
+      }
+
+    
+    }
+    outfile.close();
+  }
+  
+
+  template <typename T, unsigned int ROWS, unsigned int major>
   void write_traj_file(const std::string & fname,
                        std::vector<Eigen::Matrix<T, ROWS, 4, major>,
                        Eigen::aligned_allocator<Eigen::Matrix<T, ROWS, 4, major>>> &  poses,
@@ -303,6 +327,35 @@ namespace cvo {
     }
     outfile.close();
   }
+
+  template <typename T, unsigned int ROWS, unsigned int major>
+  void write_traj_file_kitti_format(const std::string & fname,
+                                    std::vector<Eigen::Matrix<T, ROWS, 4, major>,
+                                    Eigen::aligned_allocator<Eigen::Matrix<T, ROWS, 4, major>>> &  poses,
+                                    const std::set<int> & selected_inds) {                       
+
+    std::ofstream outfile(fname);
+    for (int i = 0; i< poses.size(); i++) {
+      Eigen::Matrix<T, 4, 4, major> pose = Eigen::Matrix<T, 4, 4, major>::Identity();
+      pose.block(0,0, ROWS, 4) = poses[i];
+      Sophus::SO3<T> q(pose.block(0,0,3,3));
+      auto q_eigen = q.unit_quaternion().coeffs();
+      Eigen::Matrix<T, 3, 1> t = pose.block(0,3,3,1);
+      if (selected_inds.size() == 0 ||
+          selected_inds.find(i) != selected_inds.end())
+ 
+        for (int j = 0; j < 12; j++) {
+          outfile <<pose(j / 4, j % 4);
+          if (j == 11)
+            outfile<<"\n";
+          else
+            outfile<<" ";
+        }
+    }
+    outfile.close();
+  }
+  
+  
   
 
   template <typename T>

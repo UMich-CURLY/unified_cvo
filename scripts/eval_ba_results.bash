@@ -18,17 +18,17 @@ do
 	#cp $result_dir/gt.txt $result_dir/$i/
 	echo "seq $i "
 	echo "ba for ${result_dir}:"
-	 echo "	./devkit/cpp/evaluate_odometry $i ${result_dir} groundtruth_kitti.txt $result_dir  ba_kitti.txt"
-	 ./devkit/cpp/evaluate_odometry $i ${result_dir} groundtruth_kitti.txt $result_dir  ba_kitti.txt
+	 echo "	./devkit/cpp/evaluate_odometry $i ${result_dir} groundtruth_kitti.txt $result_dir  ba.txt"
+	 ./devkit/cpp/evaluate_odometry $i ${result_dir} gt.txt $result_dir  ba.txt
 	 #./devkit/cpp/evaluate_odometry $i ${result_dir} gt.txt $result_dir  ba_kitti.txt
 	echo "pgo for ${result_dir}: "
-	 ./devkit/cpp/evaluate_odometry $i ${result_dir} groundtruth_kitti.txt $result_dir  pgo_kitti.txt
+	 ./devkit/cpp/evaluate_odometry $i ${result_dir} gt.txt $result_dir  pgo.txt
 	 #./devkit/cpp/evaluate_odometry $i ${result_dir} gt.txt $result_dir  pgo_kitti.txt
 	echo "tracking for ${result_dir}: "
-	 ./devkit/cpp/evaluate_odometry $i ${result_dir} groundtruth_kitti.txt $result_dir  tracking_full.txt
-	 #./devkit/cpp/evaluate_odometry $i ${result_dir} gt.txt $result_dir  tracking_full.txt
-	echo "tracking for ${result_dir}: "
-	 ./devkit/cpp/evaluate_odometry $i ${result_dir} groundtruth_kitti.txt $result_dir   odom${i}original_kitti.txt
+	 #./devkit/cpp/evaluate_odometry $i ${result_dir} groundtruth_kitti.txt $result_dir  tracking_full.txt
+	 ./devkit/cpp/evaluate_odometry $i ${result_dir} gt.txt $result_dir  tracking.txt
+	#echo "tracking for ${result_dir}: "
+	# ./devkit/cpp/evaluate_odometry $i ${result_dir} groundtruth_kitti.txt $result_dir   odom${i}original_kitti.txt
 	 #./devkit/cpp/evaluate_odometry $i ${result_dir} gt.txt $result_dir  odom${i}original_kitti.txt
 
 done

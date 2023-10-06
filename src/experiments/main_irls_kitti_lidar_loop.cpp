@@ -361,8 +361,6 @@ void write_traj_file(std::string & fname,
                      std::map<int, cvo::CvoFrame::Ptr> & frames ) {
   std::ofstream outfile(fname);
   for (auto & [i, ptr] : frames) {
-  //for (int i = 0; i< frames.size(); i++) {
-    //cvo::CvoFrame::Ptr ptr = frames[i];
     Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
     pose.block<3,4>(0,0) = Eigen::Map<cvo::Mat34d_row>(ptr->pose_vec);
     Sophus::SO3d q(pose.block<3,3>(0,0));
@@ -374,7 +372,26 @@ void write_traj_file(std::string & fname,
   }
   outfile.close();
 }
+void write_traj_file_kitti_format(std::string & fname,
+                                  std::map<int, cvo::CvoFrame::Ptr> & frames ) {
+  std::ofstream outfile(fname);
+  for (auto & [i, ptr] : frames) {
+    Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
+    pose.block<3,4>(0,0) = Eigen::Map<cvo::Mat34d_row>(ptr->pose_vec);
+    for (int j = 0; j < 12; j++) {
+      outfile <<pose(j / 4, j % 4);
+      if (j == 11)
+        outfile<<"\n";
+      else
+        outfile<<" ";
+    }
 
+    
+  }
+  outfile.close();
+}
+
+/*
 void write_traj_file(std::string & fname,
                      std::vector<std::string> & timestamps,
                      std::vector<cvo::CvoFrame::Ptr> & frames ) {
@@ -392,7 +409,7 @@ void write_traj_file(std::string & fname,
   }
   outfile.close();
 }
-
+*/
 void write_transformed_pc(std::map<int, cvo::CvoFrame::Ptr> & frames,
                           std::string & fname,
                           int start_frame_ind=0, int end_frame_ind=1000000){
@@ -563,9 +580,9 @@ int main(int argc, char** argv) {
   for (auto ind : result_selected_frames)
     gt_pose_selected_vec.push_back(gt_poses[ind]);//insert(std::make_pair(ind, gt_poses[ind]));
   std::string gt_fname("groundtruth.txt");
-  cvo::write_traj_file<double, 4, Eigen::ColMajor>(gt_fname,gt_poses, result_selected_frames);
+  cvo::write_traj_file_kitti_format<double, 4, Eigen::ColMajor>(gt_fname,gt_poses, result_selected_frames);
   std::string track_fname("tracking.txt");
-  cvo::write_traj_file<double, 4, Eigen::ColMajor>(track_fname, tracking_poses, result_selected_frames);
+  cvo::write_traj_file_kitti_format<double, 4, Eigen::ColMajor>(track_fname, tracking_poses, result_selected_frames);
   
   
   
@@ -662,7 +679,7 @@ int main(int argc, char** argv) {
   std::string pgo_fname("pgo.txt");
   std::vector<cvo::Mat34d_row, Eigen::aligned_allocator<cvo::Mat34d_row>> pgo_poses;
   for (auto i : result_selected_frames) pgo_poses.push_back(BA_poses[i]);
-  cvo::write_traj_file<double, 3, Eigen::RowMajor>(pgo_fname, pgo_poses);
+  cvo::write_traj_file_kitti_format<double, 3, Eigen::RowMajor>(pgo_fname, pgo_poses);
   std::string lc_prefix(("loop_closure_"));
   if (pcs.size())
     log_lc_pc_pairs(BA_poses, loop_closures, pcs, lc_prefix);
@@ -692,6 +709,6 @@ int main(int argc, char** argv) {
   f_name = std::string("after_BA_loop.pcd") ;
   write_transformed_pc(frames, f_name,0, frames.size()-1);
   std::cout<<"Write traj to file\n";
-  write_traj_file(BA_traj_file,frames);
+  write_traj_file_kitti_format(BA_traj_file,frames);
   return 0;
 }
