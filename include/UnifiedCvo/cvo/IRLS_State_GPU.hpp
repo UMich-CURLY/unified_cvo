@@ -98,7 +98,7 @@ namespace cvo {
     SparseKernelMat  A_host_;
     SparseKernelMat * A_device_;
     SparseKernelMat A_result_cpu_;
-    double ell_;    
+    double ell_, ell_min_, ell_max_;    
 
 
     int iter_;

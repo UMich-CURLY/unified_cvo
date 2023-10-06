@@ -29,7 +29,8 @@ namespace cvo {
                                      init_num_neighbors_(num_neighbor),
                                      state_(FREE){
     is_optimizing_ell_ = params_cpu_->multiframe_is_optimizing_ell;
-
+    ell_min_ = params_cpu_->multiframe_ell_min;
+    ell_max_ = ell_ * 1.25;
     /*
     init_internal_SparseKernelMat_cpu(pc1->points->size(),  num_neighbor, &A_result_cpu_);
     A_device_ = init_SparseKernelMat_gpu(pc1->points->size(), num_neighbor, A_host_);

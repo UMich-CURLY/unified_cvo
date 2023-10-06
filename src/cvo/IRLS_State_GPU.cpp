@@ -115,14 +115,14 @@ namespace cvo {
 
   
   void BinaryStateGPU::update_ell() {
-    if (ell_ > params_cpu_->multiframe_ell_min) {
+    if (ell_ > this->ell_min_) {
       if (!params_cpu_->multiframe_is_optimizing_ell)  {      
         ell_ = ell_ * params_cpu_->multiframe_ell_decay_rate;
-      } else if (ell_ > params_cpu_->multiframe_ell_max ){
-        ell_ =  params_cpu_->multiframe_ell_max;
+      } else if (ell_ > this->ell_max_ ){
+        ell_ =  this->ell_max_;
       }
     } else  {
-      ell_ = params_cpu_->multiframe_ell_min;
+      ell_ = this->ell_min_;
     }
   }
   
