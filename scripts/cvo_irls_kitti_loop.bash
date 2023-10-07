@@ -3,7 +3,7 @@ cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j
 cd ..
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=1
 dtype=$1
 date=$2
 clear
@@ -11,7 +11,7 @@ clear
     #skylabel=(196 112 -- 130  196 146 130)
     #seqs=( 05 00 08 02 06 09 )
     #seqs=( 07 05 00 02 06 09  )
-    seqs=(   07 05 )
+    seqs=(  05 07 )
     for ind in ${!seqs[@]}
     do
         i=${seqs[ind]}
@@ -20,8 +20,8 @@ clear
 	folder=${dtype}_${i}_${date}
 	#track_folder=/home/rzh/slam_eval/result_floam/${i}/
 	#track_folder=/home/rzh/slam_eval/result_floam/${i}/
-        dataset_folder=/home/`whoami`/media/Samsung_T5/${dtype}/dataset/sequences/${i}/
-	#$dataset_folder=/home/rzh//media/sdg1/rzh/${dtype}/dataset/sequences/${i}/
+        #dataset_folder=/home/`whoami`/media/Samsung_T5/${dtype}/dataset/sequences/${i}/
+	dataset_folder=/home/rzh//media/sdg1/rzh/${dtype}/dataset/sequences/${i}/
         lc_file=/home/`whoami`/unified_cvo/demo_data/kitti_loop_closure/kitti_${i}.txt
         #lc_file=/home/rayzhang/unified_cvo/demo_data/kitti_loop_closure/kitti_${i}_loop_closure.g2o
 
