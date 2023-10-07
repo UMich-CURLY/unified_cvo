@@ -24,17 +24,8 @@ from evo.tools import file_interface
 from scipy.spatial.transform import Rotation 
 import numpy as np
 import argparse
+from .trajectory_change_basis import T_change_of_basis
 
-
-
-def T_change_of_basis():
-    ry = Rotation.from_euler('y',-90, degrees=True )
-    rz = Rotation.from_euler('z', 90, degrees=True)
-    rot =  (rz * ry).as_matrix()
-    T = np.eye(4)
-    T[:3,:3] = np.array([7.027555e-03, -9.999753e-01, 2.599616e-05, -2.254837e-03, -4.184312e-05, -9.999975e-01, 9.999728e-01, 7.027479e-03, -2.255075e-03]).reshape((3,3))
-    T[:3, 3] = np.array([-7.137748e-03, -7.482656e-02, -3.336324e-01])
-    return T
 
 def xyzquat_to_kitti(original_f, output_f, start_ind, end_ind, is_wxyz, is_transforming_lidar_to_gt):
     original = np.loadtxt(original_f, dtype=float)

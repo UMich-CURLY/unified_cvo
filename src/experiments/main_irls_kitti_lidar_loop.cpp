@@ -327,7 +327,7 @@ void construct_loop_BA_problem(cvo::CvoGPU & cvo_align,
                                                                   &params,
                                                                   cvo_align.get_params_gpu(),
                                                                   params.multiframe_num_neighbors,
-                                                                  params.multiframe_ell_init * 5 
+                                                                  params.multiframe_ell_init * 10 
                                                                   ));
       edge_states.push_back(edge_state);
       added_edges.insert(id1, id2, 1);
