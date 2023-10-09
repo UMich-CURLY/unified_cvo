@@ -265,10 +265,11 @@ int main(int argc, char** argv) {
       pc = cvo::stereo_downsampling_single_frame(left, right, calib, cvo_align.get_params().multiframe_downsample_voxel_size);
     } else {
       pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in(new pcl::PointCloud<pcl::PointXYZI>);
+      std::vector<int> semantics;      
       if (kitti->read_next_lidar(pc_in) != 0) {
         break;
       }
-      pc = cvo::downsample_lidar_points(false, pc_in, cvo_align.get_params().multiframe_downsample_voxel_size);
+      pc = cvo::downsample_lidar_points(false, pc_in, cvo_align.get_params().multiframe_downsample_voxel_size, semantics);
     }
     pcs.push_back(pc);
     // pcs_full.push_back(pc_full);

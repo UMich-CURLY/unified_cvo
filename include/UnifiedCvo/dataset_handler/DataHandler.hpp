@@ -18,6 +18,8 @@ namespace cvo {
                                  cv::Mat & right) { return 0; }
 
     virtual int read_next_lidar(pcl::PointCloud<pcl::PointXYZI>::Ptr pc) { return 0; }
+    virtual int read_next_lidar(pcl::PointCloud<pcl::PointXYZI>::Ptr pc,
+                                std::vector<int> & semantics) { return 0; }
 
     
     virtual int read_next_lidar_mono(cv::Mat & image,

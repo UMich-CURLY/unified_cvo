@@ -1142,7 +1142,12 @@ namespace cvo{
       edge_detection(pc, semantic, expected_points, intensity_bound, depth_bound, distance_bound, beam_num,
                      pc_out, output_depth_grad, output_intenstity_grad, selected_indexes, semantic_out);
     } else if (pt_selection_method == FULL)  {
-      //selected_indices 
+      semantic_out.resize(semantic.size());
+      for (int j = 0; j < pc->size(); j++) {
+        selected_indexes.push_back(j);
+        
+        semantic_out[j] = semantic[j];
+      }
     } else {
       std::cerr<<"The point selection method is not implemented\n";
       return;
@@ -1392,7 +1397,7 @@ namespace cvo{
       p.y = points_[i].y;
       p.z = points_[i].z;
       float l;
-      Eigen::VectorXf labels_row = Eigen::Map<const VecXf_row>(points_[i].label_distribution, num_points_);
+      Eigen::VectorXf labels_row = Eigen::Map<const VecXf_row>(points_[i].label_distribution, num_classes_);
       labels_row.maxCoeff(&l);
 //      labels_.row(i).maxCoeff(&l);
       p.label = (uint32_t) l;

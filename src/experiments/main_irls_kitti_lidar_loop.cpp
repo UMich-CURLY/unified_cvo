@@ -510,7 +510,8 @@ int main(int argc, char** argv) {
   int is_read_loop_closure_poses_from_file = std::stoi(argv[15]);
   int is_store_pcd_each_frame = std::stoi(argv[16]);
   int is_global_registration = std::stoi(argv[17]);
-  int is_doing_ba = std::stoi(argv[18]);  
+  int is_doing_ba = std::stoi(argv[18]);
+  //int is_semantic = std::stoi(argv[19]);
   
   int last_ind = std::min(max_last_ind, dataset->get_total_number()-1);
   std::cout<<"actual last ind is "<<last_ind<<"\n";
@@ -523,7 +524,8 @@ int main(int argc, char** argv) {
   std::string calib_file;
   calib_file =  data_path +"/cvo_calib.txt"; 
   cvo::Calibration calib(calib_file, cvo::Calibration::STEREO);
-  
+ 
+  std::cout<<"Init CvoGPU\n";
   cvo::CvoGPU cvo_align(cvo_param_file);
   string gt_pose_name;
   gt_pose_name = std::string(data_path) + "/poses.txt";
@@ -597,7 +599,9 @@ int main(int argc, char** argv) {
                                         num_merging_sequential_frames,
                                         cvo_align.get_params().multiframe_downsample_voxel_size,
                                         is_edge_only,
-                                        pcs);
+                                        cvo_align.get_params().is_using_semantics,
+                                        pcs
+                                        );
     } else if (std::strcmp(data_type.c_str(), "kitti_stereo") == 0) {
       cvo::read_and_downsample_sequentail_stereo_frames(result_selected_frames, *dataset, calib,
                                                         tracking_poses,
@@ -605,7 +609,9 @@ int main(int argc, char** argv) {
                                                         cvo_align.get_params().multiframe_downsample_voxel_size,
                                                         is_edge_only,
                                                         // results
-                                                        pcs);
+                                                        pcs
+                                                        //,is_semantic
+                                                        );
 
     } else if (std::strcmp(data_type.c_str(), "ethz") == 0) {
       cvo::read_and_downsample_lidar_pc(result_selected_frames,
@@ -614,7 +620,9 @@ int main(int argc, char** argv) {
                                         num_merging_sequential_frames,
                                         cvo_align.get_params().multiframe_downsample_voxel_size,
                                         true,
-                                        pcs);
+                                        cvo_align.get_params().is_using_semantics,                                        
+                                        pcs
+                                        );
       
     }
 

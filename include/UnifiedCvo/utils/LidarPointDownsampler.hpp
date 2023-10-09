@@ -5,23 +5,21 @@
 #include "utils/VoxelMap.hpp"
 #include "utils/data_type.hpp"
 #include <unordered_set>
+//#include "utils/PointXYZIL.hpp"
 
 namespace cvo {
 
   
   std::shared_ptr<cvo::CvoPointCloud> downsample_lidar_points(bool is_edge_only,
                                                               pcl::PointCloud<pcl::PointXYZI>::Ptr pc_in,
-                                                              float leaf_size) {
+                                                              float leaf_size,
+                                                              const std::vector<int> & semantics_vec ){
 
 
-    int expected_points = 5000;
-    double intensity_bound = 0.4;
-    double depth_bound = 4.0;
-    double distance_bound = 40.0;
-    int kitti_beam_num = 64;
-    cvo::LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, kitti_beam_num);
+
+
     /*
-    // running edge detection + lego loam point selection
+    // Running edge detection + lego loam point selection
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_surface (new pcl::PointCloud<pcl::PointXYZI>);
     std::vector<int> selected_edge_inds, selected_loam_inds;
@@ -46,21 +44,45 @@ namespace cvo {
       std::shared_ptr<cvo::CvoPointCloud>  ret(new cvo::CvoPointCloud(downsampled, 5000, 64, cvo::CvoPointCloud::PointSelectionMethod::FULL));
       return ret;
     } else {
+      int expected_points = 5000;
+      double intensity_bound = 0.4;
+      double depth_bound = 4.0;
+      double distance_bound = 40.0;
+      int kitti_beam_num = 64;
+      cvo::LidarPointSelector lps(expected_points, intensity_bound, depth_bound, distance_bound, kitti_beam_num);
     
       /// edge points
-      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);  
+      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_edge (new pcl::PointCloud<pcl::PointXYZI>);
       std::vector<int> selected_edge_inds;
+      std::unordered_map<pcl::PointXYZI*, int> edge_pt_to_ind, surface_pt_to_ind;
       std::vector <double> output_depth_grad;
       std::vector <double> output_intenstity_grad;
+      //std::vector<int> edge_semantics;
+      //if (semantics_vec.size())
+      //  lps.edge_detection(pc_in, semantics_vec, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_edge_inds, edge_semantics);  
+      //else
       lps.edge_detection(pc_in, pc_out_edge, output_depth_grad, output_intenstity_grad, selected_edge_inds);
       std::unordered_set<int> edge_inds;
-      for (auto && j : selected_edge_inds) edge_inds.insert(j);
+      for (int l = 0; l < selected_edge_inds.size(); l++){//(auto && j : selected_edge_inds) {
+        int j = selected_edge_inds[l];
+        edge_inds.insert(j);
+        edge_pt_to_ind.insert(std::make_pair(&(pc_out_edge->points[l]), j));
+      }
 
       /// surface points
       std::vector<float> edge_or_surface;
-      std::vector<int> selected_loam_inds;
-      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_loam (new pcl::PointCloud<pcl::PointXYZI>);        
-      lps.loam_point_selector(pc_in, pc_out_loam, edge_or_surface, selected_loam_inds);
+      std::vector<int> selected_loam_inds, loam_semantics;
+      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out_loam (new pcl::PointCloud<pcl::PointXYZI>);
+      //if (semantics_vec.size())
+      //  lps.legoloam_point_selector(pc_in, semantics_vec, pc_out_loam, edge_or_surface, selected_loam_inds, loam_semantics);
+      //else         
+        lps.loam_point_selector(pc_in, pc_out_loam, edge_or_surface, selected_loam_inds);
+      std::unordered_set<int> loam_inds;
+      for (int l = 0; l < selected_loam_inds.size(); l++) { //auto && j : selected_loam_inds) {
+        //loam_inds.insert(j);
+        int j = selected_loam_inds[l];
+        surface_pt_to_ind.insert(std::make_pair(&(pc_out_loam->points[l]), j));
+      }      
 
       /// declare voxel map
       cvo::VoxelMap<pcl::PointXYZI> edge_voxel(leaf_size); 
@@ -70,42 +92,49 @@ namespace cvo {
       for (int k = 0; k < pc_out_edge->size(); k++) 
         edge_voxel.insert_point(&pc_out_edge->points[k]);
       std::vector<pcl::PointXYZI*> edge_results = edge_voxel.sample_points();
-      //for (int k = 0; k < pc_in->size(); k++)  {
-      //  if (edge_or_surface[k] > 0 &&
-      //      edge_inds.find(k) == edge_inds.end())
-      //    surface_voxel.insert_point(&pc_in->points[k]);
-      // }
       for (int k = 0; k < pc_out_loam->size(); k++)  {
         if (edge_or_surface[k] > 0 &&
-            edge_inds.find(selected_loam_inds[k]) == edge_inds.end())
+            edge_inds.find(selected_loam_inds[k]) == edge_inds.end()) {
           surface_voxel.insert_point(&pc_out_loam->points[k]);
+        }
       }
       std::vector<pcl::PointXYZI*> surface_results = surface_voxel.sample_points();
       int total_selected_pts_num = edge_results.size() + surface_results.size();    
       std::shared_ptr<cvo::CvoPointCloud> ret(new cvo::CvoPointCloud(1, NUM_CLASSES));
-      ret->reserve(total_selected_pts_num, 1, NUM_CLASSES);
+      //ret->reserve(total_selected_pts_num, 1, NUM_CLASSES);
       std::cout<<"edge voxel selected points "<<edge_results.size()<<std::endl;
       std::cout<<"surface voxel selected points "<<surface_results.size()<<std::endl;    
 
       /// push
       for (int k = 0; k < edge_results.size(); k++) {
-        Eigen::VectorXf feat(1);
-        feat(0) = edge_results[k]->intensity;
-        Eigen::VectorXf semantics = Eigen::VectorXf::Zero(NUM_CLASSES);
-        Eigen::VectorXf geo_t(2);
-        geo_t << 1.0, 0;
-        ret->add_point(k, edge_results[k]->getVector3fMap(),  feat, semantics, geo_t);
+        cvo::CvoPoint pt;
+        pt.getVector3fMap() = edge_results[k]->getVector3fMap();
+        pt.features[0] = edge_results[k]->intensity;
+        if (semantics_vec.size()){
+          int index = semantics_vec[edge_pt_to_ind[edge_results[k]]];
+          if (index == -1)
+            continue;
+          pt.label_distribution[ index] = 1; 
+        }
+        pt.geometric_type[0] = 1.0;
+        pt.geometric_type[1] = 0.0;
+        ret->push_back(pt);
       }
       /// surface downsample
       for (int k = 0; k < surface_results.size(); k++) {
-        // surface_pcl.push_back(*surface_results[k]);
-        Eigen::VectorXf feat(1);
-        feat(0) = surface_results[k]->intensity;
-        Eigen::VectorXf semantics = Eigen::VectorXf::Zero(NUM_CLASSES);
-        Eigen::VectorXf geo_t(2);
-        geo_t << 0, 1.0;
-        ret->add_point(k+edge_results.size(), surface_results[k]->getVector3fMap(), feat,
-                       semantics, geo_t);
+        cvo::CvoPoint pt;
+        pt.getVector3fMap() = surface_results[k]->getVector3fMap();
+        pt.features[0] = surface_results[k]->intensity;
+        if (semantics_vec.size()){
+          int index = semantics_vec[surface_pt_to_ind[surface_results[k]]];
+          if (index == -1)
+            continue;
+          pt.label_distribution[index] = 1; 
+        }
+        pt.geometric_type[0] = 0.0;
+        pt.geometric_type[1] = 1.0;
+        ret->push_back(pt);
+        
       }
       return ret;
 
@@ -122,16 +151,24 @@ namespace cvo {
                                     int num_merging_sequential_frames,
                                     float voxel_size,
                                     int is_edge_only,
+                                    int is_semantic,
                                     std::map<int, std::shared_ptr<cvo::CvoPointCloud>> & pcs) {
     for (auto i : result_selected_frames) {
       //for (int i = 0; i<gt_poses.size(); i++) {
       
       pcl::PointCloud<pcl::PointXYZI>::Ptr pc_local(new pcl::PointCloud<pcl::PointXYZI>);
+      std::vector<int> semantics_local;      
       for (int j = 0; j < 1+num_merging_sequential_frames; j++){
         dataset.set_start_index(i+j);
         pcl::PointCloud<pcl::PointXYZI>::Ptr pc_pcl(new pcl::PointCloud<pcl::PointXYZI>);
-        if (-1 == dataset.read_next_lidar(pc_pcl)) 
-          break;
+        std::vector<int> semantics_single;
+        if (is_semantic) {
+          if (-1 == dataset.read_next_lidar(pc_pcl, semantics_single))
+            break;
+        } else {
+          if (-1 == dataset.read_next_lidar(pc_pcl)) 
+            break;
+        }
         if (j > 0) {
           Eigen::Matrix4f pose_fi_to_fj = (tracking_poses[i].inverse() * tracking_poses[j+i]).cast<float>();
           #pragma omp parallel for 
@@ -141,6 +178,7 @@ namespace cvo {
           }
         }
         *pc_local += *pc_pcl;
+        semantics_local.insert(semantics_local.end(), semantics_single.begin(), semantics_single.end());
       }
       //if (i == 0)
       //  pcl::io::savePCDFileASCII(std::to_string(i) + ".pcd", *pc_local);
@@ -150,11 +188,19 @@ namespace cvo {
       if (pc_local->size()) {
         std::shared_ptr<cvo::CvoPointCloud> pc = cvo::downsample_lidar_points(is_edge_only,
                                                                               pc_local,
-                                                                              leaf_size);
+                                                                              leaf_size,
+                                                                              semantics_local);
         std::cout<<"new frame "<<i<<" downsampled from  "<<pc_local->size()<<" to "<<pc->size()<<"\n";
         pcs.insert(std::make_pair(i, pc));
-        if (i == 0)
-          pc->write_to_pcd("0.pcd");
+        if (i == 0) {
+          std::cout<<"is_semantic="<<is_semantic<<"\n";
+          if (is_semantic) {
+            cvo::CvoPointCloud pc_full(pc_local, semantics_local, NUM_CLASSES, 5000, 64, cvo::CvoPointCloud::PointSelectionMethod::FULL);
+            pc_full.write_to_label_pcd("0_full.pcd");
+            pc->write_to_label_pcd("0.pcd");
+          } else
+            pc->write_to_pcd("0.pcd");
+        }
       }
     }
     
