@@ -44,7 +44,7 @@ namespace cvo {
       std::shared_ptr<cvo::CvoPointCloud>  ret(new cvo::CvoPointCloud(downsampled, 5000, 64, cvo::CvoPointCloud::PointSelectionMethod::FULL));
       return ret;
     } else {
-      int expected_points = 5000;
+      int expected_points = 10000;
       double intensity_bound = 0.4;
       double depth_bound = 4.0;
       double distance_bound = 40.0;
@@ -85,8 +85,8 @@ namespace cvo {
       }      
 
       /// declare voxel map
-      cvo::VoxelMap<pcl::PointXYZI> edge_voxel(leaf_size); 
-      cvo::VoxelMap<pcl::PointXYZI> surface_voxel(leaf_size / 2);
+      cvo::VoxelMap<pcl::PointXYZI> edge_voxel(leaf_size / 4); 
+      cvo::VoxelMap<pcl::PointXYZI> surface_voxel(leaf_size );
 
       /// edge and surface downsample
       for (int k = 0; k < pc_out_edge->size(); k++) 
