@@ -63,8 +63,8 @@ namespace cvo {
       lps.loam_point_selector(pc_in, pc_out_loam, edge_or_surface, selected_loam_inds);
 
       /// declare voxel map
-      cvo::VoxelMap<pcl::PointXYZI> edge_voxel(leaf_size); 
-      cvo::VoxelMap<pcl::PointXYZI> surface_voxel(leaf_size / 2);
+      cvo::VoxelMap<pcl::PointXYZI> edge_voxel(leaf_size / 4); 
+      cvo::VoxelMap<pcl::PointXYZI> surface_voxel(leaf_size);
 
       /// edge and surface downsample
       for (int k = 0; k < pc_out_edge->size(); k++) 

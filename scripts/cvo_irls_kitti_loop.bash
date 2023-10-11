@@ -10,8 +10,8 @@ clear
 
     #skylabel=(196 112 -- 130  196 146 130)
     #seqs=( 05 00 08 02 06 09 )
-    #seqs=( 07 05 00 02 06 09  )
-    seqs=(  05 07 )
+    seqs=( 07 05 00 02 06 08 09  )
+    #seqs=(  05 07 )
     for ind in ${!seqs[@]}
     do
         i=${seqs[ind]}
@@ -32,26 +32,29 @@ clear
 	#cp results/mulls_no_loop/${i}/gt.txt $folder/tracking_full.txt        
 	#cp ground_truth/${i}.txt $folder/tracking_full.txt        
 	#cp results/cvo_intensity_lidar_jun09/${i}.txt $folder/tracking_full.txt        
-	cp results/mulls_with_loop/${i}/${i}.txt $folder/tracking_full.txt       
+	cp results/mulls_with_loop/${i}/odom${i}_kitti.txt $folder/tracking_full.txt       
        mkdir -p $folder/${i}	
-	cp results/mulls_with_loop/${i}/gt.txt $folder/${i}/gt.txt        
+	cp results/mulls_with_loop/${i}/gt.txt $folder/${i}/gt.txt       
+
 	#cp results/mulls/${i}.txt $folder/tracking_full.txt        
 	#cp cvo_align_lidar_jun05/${i}.txt $folder/tracking_full.txt        
 	#cp ${track_folder}/odom${i}kittiAlign.txt $folder/tracking_full.txt        
 	last_index=`cat $folder/tracking_full.txt | wc -l`
 	echo "last index is $last_index"
 	rm *.pcd
-
+	mkdir -p ${folder}/pcds
         ### run global BA
         #gdb -ex run --args \
         #./build/bin/cvo_irls_lidar_loop $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 2 $folder/tracking_full.txt $lc_file  ba.txt 0 0 1000000 2.0 0 0 0 # > log_tartan_rgbd_${difficulty}_${i}.txt
         #gdb  -ex    run --args \
-        ./build/bin/cvo_irls_lidar_loop ${dtype} $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 2 $folder/tracking_full.txt $lc_file  ba.txt 0 0 $last_index 2.0 0.2  0 0 0 0 0 1 #> log_kitti_loop_${i}.txt
+        ./build/bin/cvo_irls_lidar_loop ${dtype} $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 2 $folder/tracking_full.txt $lc_file  ba.txt 0 0 $last_index 1.0 0.05  0 0 0 0 0 1 #> log_kitti_loop_${i}.txt
 	
-	
+	mv [0-9]*.pcd ${folder}/pcds/
         mv *.pcd $folder/
         mv pgo.txt pgo.g2o global.txt loop_closures.g2o tracking.txt ba.txt err_wrt_*.txt log_kitti*.txt groundtruth.txt $folder/
         cp ${dataset_folder}/poses.txt $folder/
+	
+	
 
         # convert traj to kitti format
         #python3 scripts/xyzq2kitti.py ${folder}/groundtruth.txt  ${folder}/groundtruth_kitti.txt #--is-change-of-basis
@@ -62,7 +65,6 @@ clear
 
         #mv log_tartan_rgbd_${difficulty}_${i}.txt $folder
         sleep 3
-	break
 
     done
 
