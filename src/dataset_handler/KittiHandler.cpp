@@ -17,7 +17,8 @@ using namespace boost::filesystem;
 
 namespace cvo
 {
-  KittiHandler::KittiHandler(std::string kitti_folder, DataType data_type)
+  KittiHandler::KittiHandler(std::string kitti_folder, DataType data_type,
+                             LidarCamCalibType calib_type)
   {
     curr_index = 0;
     folder_name = kitti_folder;
@@ -30,8 +31,12 @@ namespace cvo
     else if (data_type == DataType::LIDAR)
     {
       data_folder = folder_name + "/velodyne/";
-      if (boost::filesystem::exists( folder_name + "/calib_velo_to_cam.txt" )) {
-        this->read_lidar_calib(folder_name + "/calib_velo_to_cam.txt");
+      if (calib_type == LidarCamCalibType::CAM2 &&
+          boost::filesystem::exists( folder_name + "/calib_velo_to_cam.txt" )) {
+        this->read_lidar_calib(folder_name + "/calib_velo_to_cam.txt", calib_type);
+      } else if (calib_type == LidarCamCalibType::CAM0 &&
+                 boost::filesystem::exists( folder_name + "/calib.txt" )) {
+        this->read_lidar_calib(folder_name + "/calib_velo_to_cam.txt", calib_type);
       } else {
         Eigen::Affine3f rx = Eigen::Affine3f::Identity();
         Eigen::Affine3f ry = Eigen::Affine3f(Eigen::AngleAxisf(-M_PI / 2.0, Eigen::Vector3f::UnitY()));
@@ -284,36 +289,64 @@ namespace cvo
     this->T_velo_to_cam = lidar_to_cam;
   }
 
-  void KittiHandler::read_lidar_calib(const std::string & calib_file) {
+  void KittiHandler::read_lidar_calib(const std::string & calib_file,
+                                      LidarCamCalibType calib_type) {
+
     std::ifstream infile(calib_file);
 
     int line_counter = 0;
-    std::string line;
-    std::getline(infile, line);
 
-    /// R
-    std::getline(infile, line);
-    std::stringstream ss(line);
-    std::string first_str;
-    ss >> first_str;
-    //float r[9];
-    Eigen::Matrix3f R_col;
-    for (int i = 0; i < 9; i++)
-      ss >> R_col(i/3, i%3);
-    //Eigen::Matrix<float, 3, 3, Eigen::RowMajor> R_row = Eigen::Map<Eigen::Matrix<float, 3, 3, Eigen::RowMajor>>(r);
-    //Eigen::Matrix3f R_col = R_row;
+    if (calib_type == LidarCamCalibType::CAM2) {
+      std::string line;
+      std::getline(infile, line);
 
-    /// t
-    std::getline(infile, line);
-    std::stringstream sl(line);
-    sl >> first_str;
-    Eigen::Vector3f t;
-    for (int i = 0; i < 3; i++)
-      sl >> t(i);
+      /// R
+      std::getline(infile, line);
+      std::stringstream ss(line);
+      std::string first_str;
+      ss >> first_str;
+      //float r[9];
+      Eigen::Matrix3f R_col;
+      for (int i = 0; i < 9; i++)
+        ss >> R_col(i/3, i%3);
+      //Eigen::Matrix<float, 3, 3, Eigen::RowMajor> R_row = Eigen::Map<Eigen::Matrix<float, 3, 3, Eigen::RowMajor>>(r);
+      //Eigen::Matrix3f R_col = R_row;
 
-    T_velo_to_cam.block<3,3>(0,0) = R_col;
-    T_velo_to_cam.block<3,1>(0,3) = t;
-    std::cout<<"Read T_velo_to_cam to be\n"<<T_velo_to_cam<<"\n";
+      /// t
+      std::getline(infile, line);
+      std::stringstream sl(line);
+      sl >> first_str;
+      Eigen::Vector3f t;
+      for (int i = 0; i < 3; i++)
+        sl >> t(i);
+
+      T_velo_to_cam.block<3,3>(0,0) = R_col;
+      T_velo_to_cam.block<3,1>(0,3) = t;
+      std::cout<<"Read T_velo_to_cam to be\n"<<T_velo_to_cam<<"\n";
+    } else if (calib_type == LidarCamCalibType::CAM0){
+      std::string line;
+
+      // P0, P1, P2, P3
+      for (int i = 0; i <4; i++)
+        std::getline(infile, line);
+
+      /// Tr:
+      std::getline(infile, line);
+      std::stringstream ss(line);
+      std::string first_str;
+      ss >> first_str;
+      
+      //float r[9];
+      for (int i = 0; i < 12; i++) {
+        ss >> this->T_velo_to_cam(i/4, i%4);
+      }
+      //Eigen::Matrix<float, 3, 3, Eigen::RowMajor> R_row = Eigen::Map<Eigen::Matrix<float, 3, 3, Eigen::RowMajor>>(r);
+      //Eigen::Matrix3f R_col = R_row;
+
+      /// t
+      std::cout<<"Read T_velo_to_cam to be\n"<<T_velo_to_cam<<"\n";
+      
+    }
   }
 
 }

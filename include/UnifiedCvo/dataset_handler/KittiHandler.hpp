@@ -13,7 +13,13 @@ namespace cvo{
       STEREO = 0,
       LIDAR
     };
-    KittiHandler(std::string kitti_folder, DataType data_type);
+
+    enum LidarCamCalibType {
+      CAM0,
+      CAM2
+    };
+    
+    KittiHandler(std::string kitti_folder, DataType data_type, LidarCamCalibType calib_type=CAM0);
     ~KittiHandler();
     int read_next_stereo(cv::Mat & left,
                          cv::Mat & right);
@@ -32,7 +38,7 @@ namespace cvo{
     int get_current_index();
     int get_total_number();
     void set_lidar_calib(const Eigen::Matrix<float, 3, 4> & lidar_to_cam);
-    void read_lidar_calib(const std::string & calib_file);
+    void read_lidar_calib(const std::string & calib_file, LidarCamCalibType calib_type=CAM0);
   private:
 
     int curr_index;
