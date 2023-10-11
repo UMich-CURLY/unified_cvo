@@ -50,11 +50,12 @@ def pose_kitti_format_change_of_basis(original_fname, output_fname, seq_ind,
                 break
             pose = np.eye(4)
             if len(original.shape) > 1:
-                p = original[r, :].reshape((3,4))
-                pose[:3, :] = p                
+                rows = original[r, :].size // 4
+                p = original[r, :].reshape((-1,4))
+                pose[:rows, :] = p                
             else:
-                p = original[:].reshape((3,4))
-                pose[:3, :] = p
+                p = original[:].reshape((-1,4))
+                pose[:rows, :] = p
             T = T_b @ pose @ np.linalg.inv(T_b)
             counter += 1
             for r in range(3):
