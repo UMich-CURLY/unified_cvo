@@ -8,7 +8,7 @@ namespace cvo {
     if (multiframe_is_sorting_inner_product) {
       cudaError_t err = cudaDeviceSetLimit ( cudaLimitMallocHeapSize, multiframe_is_sorting_inner_product * 1048576 * 8  );
       if (err != cudaSuccess) { 
-        fprintf(stderr, "Failed to allocate heap memory %s .\n", cudaGetErrorString(err)); 
+        fprintf(stderr, "Failed to allocate heap memory %s, multiframe_is_sorting_inner_product=%d .\n", cudaGetErrorString(err), multiframe_is_sorting_inner_product); 
         exit(EXIT_FAILURE); 
       } else {
         std::cout<<("gpu init heap size to be ")<<multiframe_is_sorting_inner_product * 1048576 * 8 <<"\n";

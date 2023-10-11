@@ -114,7 +114,8 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
                               int num_neighbors_per_node,
                               std::set<int> & selected_inds,
                               int num_merging_sequential_frames,
-                              const std::string & pgo_result_file){
+                              const std::string & pgo_result_file,
+			      bool is_running_pgo){
   
   Eigen::Matrix<double, 6,6> information = Eigen::Matrix<double, 6,6>::Identity(); 
   information.block(0,0,3,3) = Eigen::Matrix<double, 3,3>::Identity() / cov_scale_t / cov_scale_t;
@@ -180,19 +181,28 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
   pgo_g2o.close();
 
   /// optimization
-  cvo::pgo::BuildOptimizationProblem(constrains, &poses, &problem);
-  cvo::pgo::SolveOptimizationProblem(&problem);
+  if (is_running_pgo) {
+    cvo::pgo::BuildOptimizationProblem(constrains, &poses, &problem);
+    cvo::pgo::SolveOptimizationProblem(&problem);
 
   /// copy PGO results to BA_poses
-  std::cout<<"Global PGO results:\n";
+    std::cout<<"Global PGO results:\n";
   //BA_poses.resize(tracking_poses.size());
   //BA_poses.resize(selected_inds.size());
-  BA_poses.clear();
-  for (auto pose_pair : poses) {
-    int i = pose_pair.first;
-    cvo::pgo::Pose3d pose = pose_pair.second;
-    BA_poses.insert(std::make_pair(i, cvo::pgo::pose3d_to_eigen<double, Eigen::RowMajor>(pose).block(0,0,3,4)));
-    std::cout<<BA_poses[i]<<"\n";
+    BA_poses.clear();
+    for (auto pose_pair : poses) {
+      int i = pose_pair.first;
+      cvo::pgo::Pose3d pose = pose_pair.second;
+      BA_poses.insert(std::make_pair(i, cvo::pgo::pose3d_to_eigen<double, Eigen::RowMajor>(pose).block(0,0,3,4)));
+      std::cout<<BA_poses[i]<<"\n";
+    }
+  } else {
+
+    for (auto ind : selected_inds) {
+      Eigen::Matrix<double, 3, 4> pose = tracking_poses[ind].block(0,0,3,4);
+      Eigen::Matrix<double, 3, 4, Eigen::RowMajor> pose_row = pose;
+      BA_poses.insert(std::make_pair(ind, pose_row));
+
   }
 }
 
@@ -510,7 +520,8 @@ int main(int argc, char** argv) {
   int is_read_loop_closure_poses_from_file = std::stoi(argv[15]);
   int is_store_pcd_each_frame = std::stoi(argv[16]);
   int is_global_registration = std::stoi(argv[17]);
-  int is_doing_ba = std::stoi(argv[18]);  
+  int is_doing_ba = std::stoi(argv[18]);
+  //int is_semantic = std::stoi(argv[19]);
   
   int last_ind = std::min(max_last_ind, dataset->get_total_number()-1);
   std::cout<<"actual last ind is "<<last_ind<<"\n";
@@ -523,7 +534,8 @@ int main(int argc, char** argv) {
   std::string calib_file;
   calib_file =  data_path +"/cvo_calib.txt"; 
   cvo::Calibration calib(calib_file, cvo::Calibration::STEREO);
-  
+ 
+  std::cout<<"Init CvoGPU\n";
   cvo::CvoGPU cvo_align(cvo_param_file);
   string gt_pose_name;
   gt_pose_name = std::string(data_path) + "/poses.txt";
@@ -597,7 +609,9 @@ int main(int argc, char** argv) {
                                         num_merging_sequential_frames,
                                         cvo_align.get_params().multiframe_downsample_voxel_size,
                                         is_edge_only,
-                                        pcs);
+                                        cvo_align.get_params().is_using_semantics,
+                                        pcs
+                                        );
     } else if (std::strcmp(data_type.c_str(), "kitti_stereo") == 0) {
       cvo::read_and_downsample_sequentail_stereo_frames(result_selected_frames, *dataset, calib,
                                                         tracking_poses,
@@ -605,7 +619,9 @@ int main(int argc, char** argv) {
                                                         cvo_align.get_params().multiframe_downsample_voxel_size,
                                                         is_edge_only,
                                                         // results
-                                                        pcs);
+                                                        pcs
+                                                        //,is_semantic
+                                                        );
 
     } else if (std::strcmp(data_type.c_str(), "ethz") == 0) {
       cvo::read_and_downsample_lidar_pc(result_selected_frames,
@@ -614,7 +630,9 @@ int main(int argc, char** argv) {
                                         num_merging_sequential_frames,
                                         cvo_align.get_params().multiframe_downsample_voxel_size,
                                         true,
-                                        pcs);
+                                        cvo_align.get_params().is_using_semantics,                                        
+                                        pcs
+                                        );
       
     }
 
@@ -659,21 +677,14 @@ int main(int argc, char** argv) {
   std::string lc_g2o("loop_closures.g2o");
   std::string pgo_g2o("pgo.g2o");    
   std::cout<<"Start PGO...\n";
-  if (is_doing_pgo)
-    pose_graph_optimization(tracking_poses, loop_closures,
+  pose_graph_optimization(tracking_poses, loop_closures,
                             lc_poses, lc_g2o,
                             BA_poses, 
                             cov_scale_t, cov_scale_r, num_neighbors_per_node,
                             result_selected_frames,
                             num_merging_sequential_frames,
-                            pgo_g2o);
-  else {
-    for (auto ind : result_selected_frames) {
-      Eigen::Matrix<double, 3, 4> pose = tracking_poses[ind].block(0,0,3,4);
-      Eigen::Matrix<double, 3, 4, Eigen::RowMajor> pose_row = pose;
-      BA_poses.insert(std::make_pair(ind, pose_row));
-    }
-  }
+                            pgo_g2o,
+			    is_doing_pgo);
   
   std::cout<<"Finish PGO...\n";  
   std::string pgo_fname("pgo.txt");
