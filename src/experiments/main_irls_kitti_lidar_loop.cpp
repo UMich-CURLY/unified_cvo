@@ -202,7 +202,7 @@ void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & track
       Eigen::Matrix<double, 3, 4> pose = tracking_poses[ind].block(0,0,3,4);
       Eigen::Matrix<double, 3, 4, Eigen::RowMajor> pose_row = pose;
       BA_poses.insert(std::make_pair(ind, pose_row));
-
+    }
   }
 }
 

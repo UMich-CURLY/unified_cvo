@@ -36,7 +36,7 @@ namespace cvo
         this->read_lidar_calib(folder_name + "/calib_velo_to_cam.txt", calib_type);
       } else if (calib_type == LidarCamCalibType::CAM0 &&
                  boost::filesystem::exists( folder_name + "/calib.txt" )) {
-        this->read_lidar_calib(folder_name + "/calib_velo_to_cam.txt", calib_type);
+        this->read_lidar_calib(folder_name + "/calib.txt", calib_type);
       } else {
         Eigen::Affine3f rx = Eigen::Affine3f::Identity();
         Eigen::Affine3f ry = Eigen::Affine3f(Eigen::AngleAxisf(-M_PI / 2.0, Eigen::Vector3f::UnitY()));
