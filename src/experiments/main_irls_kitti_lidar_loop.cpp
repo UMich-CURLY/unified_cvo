@@ -365,7 +365,7 @@ void construct_loop_BA_problem(cvo::CvoGPU & cvo_align,
                                                                   &params,
                                                                   cvo_align.get_params_gpu(),
                                                                   params.multiframe_num_neighbors,
-                                                                  params.multiframe_ell_init * 5
+                                                                  params.multiframe_ell_init * 4
                                                                   ));
       edge_states.push_back(edge_state);
       added_edges.insert(id1, id2, 1);
@@ -604,17 +604,26 @@ int main(int argc, char** argv) {
   // read loop closure files
   std::vector<std::pair<int, int>> loop_closures;
   std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> lc_poses;
-  if (is_read_loop_closure_poses_from_file) {
+  if (is_read_loop_closure_poses_from_file == 1) {
     cvo::ReadG2oFile(loop_closure_input_file, loop_closures, lc_poses) ;
-  } else {
+  } else if (is_read_loop_closure_poses_from_file == 0){
     parse_lc_file(loop_closures, loop_closure_input_file, start_ind);    
+  } else if (is_read_loop_closure_poses_from_file == 2) {
+    for (int i = 0; i < tracking_poses.size(); i++) {
+      for (int j = i+250; j < tracking_poses.size(); j++) {
+        double dist = (tracking_poses[i].block<3,1>(0,3) - tracking_poses[j].block<3,1>(0,3)).norm();
+        if (dist < 1 ){
+		std::cout<<"loop: dist betwee "<<i<<" and "<<j<<" is "<<dist<<"\n";
+          loop_closures.push_back(std::make_pair(i,j));
+	}
+      }
+    }
   }
   
   /// decide if we will skip frames
   std::set<int> result_selected_frames;
   sample_frame_inds(start_ind, last_ind, num_merging_sequential_frames, loop_closures, result_selected_frames);
   std::cout<<"loop closures size is "<<loop_closures.size()<<"\n";
-
   /// select gt poses
   std::map<int, Eigen::Matrix4d> gt_pose_selected;
   for (auto ind : result_selected_frames)

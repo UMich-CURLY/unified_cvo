@@ -11,8 +11,8 @@ clear
     #skylabel=(196 112 -- 130  196 146 130)
     #seqs=( 05 00 08 02 06 09 )
     #seqs=( 07 05 00 02 06 08 09  )
-    seqs=( 05 00 02 08 )
-    #seqs=(  09 07 )
+    #seqs=( 07 09 05 06 00 02 08 )
+    seqs=(  09 07 )
     for ind in ${!seqs[@]}
     do
         i=${seqs[ind]}
@@ -48,7 +48,7 @@ clear
 	mkdir -p ${folder}/pcds
         ### run global BA
         #gdb -ex run --args \
-        ./build/bin/cvo_irls_lidar_loop ${dtype} $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 3 $folder/tracking_full.txt $lc_file  ba.txt 0 0 $last_index 1.0 0.05  4 0 0 0 0 1 #> log_kitti_loop_${i}.txt
+        ./build/bin/cvo_irls_lidar_loop ${dtype} $dataset_folder cvo_params/cvo_irls_kitti_ba_params.yaml 3 $folder/tracking_full.txt $lc_file  ba.txt 0 0 $last_index 1.0 0.05  0 0 2 0 0 1 #> log_kitti_loop_${i}.txt
 	
 	
 	mv [0-9]*.pcd ${folder}/pcds/
@@ -67,6 +67,5 @@ clear
 
         #mv log_tartan_rgbd_${difficulty}_${i}.txt $folder
         sleep 3
-	break
     done
 
