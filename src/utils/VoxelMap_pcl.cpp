@@ -4,7 +4,7 @@
 #include <pcl/io/pcd_io.h>
 #include "utils/VoxelMap.hpp"
 #include "utils/VoxelMap_impl.hpp"
-
+#include "utils/PointXYZIL.hpp"
 namespace cvo {
 
 
@@ -16,4 +16,7 @@ namespace cvo {
   template class VoxelMap<pcl::PointXYZRGB>;
   template class Voxel<pcl::PointXYZI>;
   template class VoxelMap<pcl::PointXYZI>;
+  template class Voxel<pcl::PointXYZIL>;
+  template class VoxelMap<pcl::PointXYZIL>;
+  
 }

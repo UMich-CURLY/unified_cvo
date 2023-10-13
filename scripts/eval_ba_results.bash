@@ -16,7 +16,10 @@ do
 	mkdir -p $result_dir/$i/
 	#cp $result_dir/groundtruth_kitti.txt $result_dir/$i/
 	cp $result_dir/poses.txt $result_dir/$i/
-	#cp $result_dir/gt.txt $result_dir/$i/
+	cp $result_dir/ba.txt $result_dir/$i/
+	cp $result_dir/pgo.txt $result_dir/$i/
+	cp $result_dir/tracking.txt $result_dir/$i/
+
 	echo "seq $i "
 	echo "ba for ${result_dir}:"
 	 echo "	./devkit/cpp/evaluate_odometry $i ${result_dir} gt.txt $result_dir  ba.txt"

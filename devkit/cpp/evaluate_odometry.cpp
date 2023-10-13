@@ -442,9 +442,9 @@ bool eval (int seq, string gt_dir, string gt_file_name, string result_dir, strin
     
 
     std::cout<<"gt_dir: "<<gt_dir + seq_str +"/" + gt_file_name<<std::endl;
-    std::cout<<"result_dir: "<<result_dir + result_file_name<<std::endl;
-    vector<Matrix> poses_gt     = loadPoses(gt_dir + seq_str +"/" + gt_file_name);
-    vector<Matrix> poses_result = loadPoses(result_dir + result_file_name);
+    std::cout<<"result_dir: "<<result_dir + "/" + seq_str + "/"+ result_file_name<<std::endl;
+    vector<Matrix> poses_gt     = loadPoses(gt_dir + "/" + seq_str +"/" + gt_file_name);
+    vector<Matrix> poses_result = loadPoses(result_dir + "/" + seq_str + "/" + result_file_name);
    
     // plot status
     //mail->msg("Processing: %s, poses: %d/%d",file_name,poses_result.size(),poses_gt.size());

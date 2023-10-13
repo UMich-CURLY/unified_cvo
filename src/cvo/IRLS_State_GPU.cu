@@ -25,12 +25,14 @@ namespace cvo {
                                      params_cpu_(params_cpu),
                                      params_gpu_(params_gpu),
                                      num_neighbors_(num_neighbor),
+                                     num_neighbors_f1_(num_neighbor),
+                                     num_neighbors_f2_(num_neighbor),
                                      ell_(static_cast<double>(init_ell)),
                                      init_num_neighbors_(num_neighbor),
                                      state_(FREE){
     is_optimizing_ell_ = params_cpu_->multiframe_is_optimizing_ell;
     ell_min_ = params_cpu_->multiframe_ell_min;
-    ell_max_ = ell_ * 1.25;
+    ell_max_ = ell_ * 1.2;
     /*
     init_internal_SparseKernelMat_cpu(pc1->points->size(),  num_neighbor, &A_result_cpu_);
     A_device_ = init_SparseKernelMat_gpu(pc1->points->size(), num_neighbor, A_host_);
@@ -54,7 +56,7 @@ namespace cvo {
       points_transformed_buffer_gpu_ = std::make_shared<CvoPointCloudGPU>(pc1->size());
       cudaMalloc((int**)&cukdtree_inds_results_gpu_, sizeof(int)*init_num_neighbors_*pc1->size());
       }*/
-    if (params_cpu_->multiframe_is_free_memory_each_iter == false)
+    if (params_cpu_->multiframe_is_free_memory_each_iter == 0)
       this->malloc_state_memory();
 
     iter_ = 0;
@@ -71,14 +73,14 @@ namespace cvo {
       clear_SparseKernelMat(&A_host_, num_neighbors_);
 
       if (is_optimizing_ell_) {
-        num_neighbors_f1_ = num_neighbors_;      
-        A_f1_device_ = init_SparseKernelMat_gpu(frame1_->size(), num_neighbors_, A_f1_host_);
-        init_internal_SparseKernelMat_cpu(frame1_->size(),  num_neighbors_, &A_f1_cpu_);
+        //num_neighbors_f1_ = num_neighbors_;      
+        A_f1_device_ = init_SparseKernelMat_gpu(frame1_->size(), num_neighbors_f1_, A_f1_host_);
+        init_internal_SparseKernelMat_cpu(frame1_->size(),  num_neighbors_f1_, &A_f1_cpu_);
         clear_SparseKernelMat(&A_f1_host_, num_neighbors_f1_);
       
-        num_neighbors_f2_ = num_neighbors_;            
-        A_f2_device_ = init_SparseKernelMat_gpu(frame2_->size(), num_neighbors_, A_f2_host_);
-        init_internal_SparseKernelMat_cpu(frame2_->size(),  num_neighbors_, &A_f2_cpu_);      
+        //num_neighbors_f2_ = num_neighbors_;            
+        A_f2_device_ = init_SparseKernelMat_gpu(frame2_->size(), num_neighbors_f2_, A_f2_host_);
+        init_internal_SparseKernelMat_cpu(frame2_->size(),  num_neighbors_f2_, &A_f2_cpu_);      
         clear_SparseKernelMat(&A_f2_host_, num_neighbors_f2_);
       }
       //std::cout<<"Construct BinaryStateGPU: ell is "<<ell_<<", init_num_neighbors_ is "<<init_num_neighbors_<<"\n";
@@ -96,6 +98,14 @@ namespace cvo {
 
   void BinaryStateGPU::free_state_memory() {
     if (state_ == ALLOCATED) {
+      if (params_cpu_->multiframe_is_free_memory_each_iter) {
+        num_neighbors_ =  max_neighbors(&A_host_);
+        if (is_optimizing_ell_) {
+          num_neighbors_f1_ =  max_neighbors(&A_f1_host_);
+          num_neighbors_f2_ =  max_neighbors(&A_f2_host_);
+        }
+      }
+      
       delete_internal_SparseKernelMat_cpu(&A_result_cpu_);
       delete_SparseKernelMat_gpu(A_device_, &A_host_);
       if (params_cpu_->is_using_kdtree) {
@@ -129,24 +139,26 @@ namespace cvo {
 
   int BinaryStateGPU::update_inner_product() {
 
-    int last_num_neibors = max_neighbors(&A_host_);
-    if (last_num_neibors > 0)
-      num_neighbors_ = std::min(init_num_neighbors_, (int)(last_num_neibors*1.1));
-    clear_SparseKernelMat(&A_host_, num_neighbors_);    
-    std::cout<< "Current num_neighbors_ is "<<num_neighbors_<<"\n";
+    if (!params_cpu_->multiframe_is_free_memory_each_iter) {
+      int last_num_neibors = max_neighbors(&A_host_);
+      if (last_num_neibors > 0)
+        num_neighbors_ = std::min(init_num_neighbors_, (int)(last_num_neibors*1.1));
+      clear_SparseKernelMat(&A_host_, num_neighbors_);    
+      std::cout<< "Current num_neighbors_ is "<<num_neighbors_<<"\n";
 
-    if (is_optimizing_ell_){
-      unsigned int last_num_neibors_f1 = max_neighbors(&A_f1_host_);
-      if (last_num_neibors_f1 > 0)
-        num_neighbors_f1_ = std::min(init_num_neighbors_, (int)(last_num_neibors_f1*1.1));
-      clear_SparseKernelMat(&A_f1_host_, num_neighbors_f1_);
-    std::cout<< "Current num_neighbors_f1_ is "<<num_neighbors_f1_<<"\n";      
+      if (is_optimizing_ell_){
+        unsigned int last_num_neibors_f1 = max_neighbors(&A_f1_host_);
+        if (last_num_neibors_f1 > 0)
+          num_neighbors_f1_ = std::min(init_num_neighbors_, (int)(last_num_neibors_f1*1.1));
+        clear_SparseKernelMat(&A_f1_host_, num_neighbors_f1_);
+        std::cout<< "Current num_neighbors_f1_ is "<<num_neighbors_f1_<<"\n";      
       
-      unsigned int last_num_neibors_f2 = max_neighbors(&A_f2_host_);
-      if (last_num_neibors_f2 > 0)
-        num_neighbors_f2_ = std::min(init_num_neighbors_, (int)(last_num_neibors_f2*1.1));
-      clear_SparseKernelMat(&A_f2_host_, num_neighbors_f2_);
-    std::cout<< "Current num_neighbors_f2_ is "<<num_neighbors_f2_<<"\n";            
+        unsigned int last_num_neibors_f2 = max_neighbors(&A_f2_host_);
+        if (last_num_neibors_f2 > 0)
+          num_neighbors_f2_ = std::min(init_num_neighbors_, (int)(last_num_neibors_f2*1.1));
+        clear_SparseKernelMat(&A_f2_host_, num_neighbors_f2_);
+        std::cout<< "Current num_neighbors_f2_ is "<<num_neighbors_f2_<<"\n";            
+      }
     }
 
     if (params_cpu_->is_using_kdtree) {
@@ -302,10 +314,9 @@ namespace cvo {
     cudaMemGetInfoPrint(__func__);    
 
     iter_++;
-if (params_cpu_->multiframe_is_optimizing_ell) {
-	return std::min(std::min(A_result_cpu_.nonzero_sum, A_f1_cpu_.nonzero_sum), A_f2_cpu_.nonzero_sum);
-}
-else 
+    if (params_cpu_->multiframe_is_optimizing_ell) {
+      return std::min(std::min(A_result_cpu_.nonzero_sum, A_f1_cpu_.nonzero_sum), A_f2_cpu_.nonzero_sum);
+    } else 
     return A_result_cpu_.nonzero_sum;
     //if (ip_mat_.nonZeros() < 100) {
     //  std::cout<<"too sparse inner product mat "<<ip_mat_.nonZeros()<<std::endl;

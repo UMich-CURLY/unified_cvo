@@ -19,7 +19,7 @@ min_step: 0.000001
 max_step: 0.01
 eps: 0.00005
 eps_2: 0.000012
-nearest_neighbors_max: 256
+nearest_neighbors_max: 128
 ell_decay_rate: 0.8 #0.95 #0.98
 ell_decay_rate_first_frame: 0.99
 ell_decay_start: 60 #300 #60
@@ -39,14 +39,14 @@ is_using_geometric_type: 1
 
 # for irls solver
 multiframe_using_cpu: 0
-multiframe_max_iters: 10
-multiframe_ell_init: 0.1
-multiframe_ell_max: 0.1
+multiframe_max_iters: 50
+multiframe_ell_init: 0.2
+multiframe_ell_max: 0.2
 multiframe_ell_min: 0.025
 multiframe_ell_decay_rate:  0.9 
-multiframe_iterations_per_ell: 20
-multiframe_downsample_voxel_size: 0.2
-multiframe_num_neighbors: 256
+multiframe_iterations_per_ell: 10
+multiframe_downsample_voxel_size: 0.4
+multiframe_num_neighbors: 128
 multiframe_min_nonzeros: 100
 multiframe_iterations_per_solve: 20
 multiframe_least_squares_num_threads: 100

@@ -100,7 +100,34 @@ void parse_lc_file(std::vector<std::pair<int, int>> & loop_closures,
   }
 }
 
+void write_loop_closure_pcds(std::map<int, cvo::CvoFrame::Ptr> & frames,
+                             std::vector<std::pair<int, int>> & loop_closures,
+                             bool is_recording_frames,
+                             const std::string & name_prefix) {
+  if (is_recording_frames) {
+    for (auto && [ind, frame ]:frames) {
+      frame->points->write_to_pcd(name_prefix + "_"+std::to_string(ind)+".pcd");
+    }
+  }
+  for (auto & p : loop_closures) {
 
+    int f1 = p.first;
+    int f2 = p.second;
+    
+    cvo::CvoPointCloud new_pc;
+    Eigen::Matrix4d pose1 = Eigen::Matrix4d::Identity();
+    pose1.block<3,4>(0,0) = Eigen::Map<cvo::Mat34d_row>(frames[f1]->pose_vec);
+    Eigen::Matrix4d pose2 = Eigen::Matrix4d::Identity();
+    pose2.block<3,4>(0,0) = Eigen::Map<cvo::Mat34d_row>(frames[f2]->pose_vec);
+    
+    Eigen::Matrix4f pose_f = (pose1.inverse() * pose2).cast<float>();
+    cvo::CvoPointCloud::transform(pose_f, *frames[f2]->points, new_pc);
+    new_pc += *frames[1]->points;
+
+    new_pc.write_to_pcd(name_prefix + "_loop_"+std::to_string(f1)+"_"+std::to_string(f2)+".pcd");
+    
+  }
+}
 
 
 void pose_graph_optimization( const cvo::aligned_vector<Eigen::Matrix4d> & tracking_poses,
@@ -325,11 +352,12 @@ void construct_loop_BA_problem(cvo::CvoGPU & cvo_align,
   const cvo::CvoParams & params = cvo_align.get_params();
   for (int i = 0; i < loop_closures.size(); i++) {
     std::pair<int, int> p = loop_closures[i];
-    //for (int j = -1; j < 2; j++) {
-    int id1 = p.first;//p.first + j;
-    int id2 = p.second; //p.second + j;
-    // if (id1 < 0 || id1 > frames.size()-1 || id2 < 0 || id2 > frames.size() -1 )
-    //continue;
+    for (int j = -1; j < 2; j++) {
+      int id1 = p.first + j;
+      int id2 = p.second + j;
+      if (//id1 < 0 || id1 > frames.size()-1 || id2 < 0 || id2 > frames.size() -1
+          frames.find(id1) == frames.end() || frames.find(id2) == frames.end())
+        continue;
       if (added_edges.exists(id1, id2))
         continue;
       cvo::BinaryStateGPU::Ptr edge_state(new cvo::BinaryStateGPU(std::dynamic_pointer_cast<cvo::CvoFrameGPU>(frames[id1]),
@@ -337,12 +365,12 @@ void construct_loop_BA_problem(cvo::CvoGPU & cvo_align,
                                                                   &params,
                                                                   cvo_align.get_params_gpu(),
                                                                   params.multiframe_num_neighbors,
-                                                                  params.multiframe_ell_init * 8 
+                                                                  params.multiframe_ell_init * 5
                                                                   ));
       edge_states.push_back(edge_state);
       added_edges.insert(id1, id2, 1);
       std::cout<<"Added edge between ind "<<id1<<" and  ind "<<id2<<" with edge ptr "<<edge_state.get()<<std::endl;      
-      //}
+    }
   }
 
 
@@ -607,6 +635,7 @@ int main(int argc, char** argv) {
                                         *dataset,
                                         tracking_poses,                                        
                                         num_merging_sequential_frames,
+                                        cvo_align.get_params().multiframe_downsample_voxel_size / 4,
                                         cvo_align.get_params().multiframe_downsample_voxel_size,
                                         is_edge_only,
                                         cvo_align.get_params().is_using_semantics,
@@ -711,11 +740,12 @@ int main(int argc, char** argv) {
   /// Multiframe alignment
   std::cout<<"Construct loop BA problem\n";
   ASSERT(frames.size() == gt_poses.size(), "frame size must be equal to gt_poses size");
+  write_loop_closure_pcds( frames, loop_closures, true, "before_ba_");
   construct_loop_BA_problem(cvo_align,
                             loop_closures,
                             frames, gt_pose_selected_vec, num_neighbors_per_node,
                             num_merging_sequential_frames);
-
+  write_loop_closure_pcds( frames, loop_closures, false, "after_ba_");
   std::cout<<"Write stacked point cloud\n";
   f_name = std::string("after_BA_loop.pcd") ;
   write_transformed_pc(frames, f_name,0, frames.size()-1);
