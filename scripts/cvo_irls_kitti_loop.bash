@@ -11,8 +11,8 @@ clear
     #skylabel=(196 112 -- 130  196 146 130)
     #seqs=( 05 00 08 02 06 09 )
     #seqs=( 07 05 00 02 06 08 09  )
-    #seqs=( 07 09 05 06 00 02 08 )
-    seqs=(  09 07 )
+    seqs=( 07 09 05 06 00 02 08 )
+    #seqs=(  05 07 )
     for ind in ${!seqs[@]}
     do
         i=${seqs[ind]}
@@ -30,12 +30,12 @@ clear
 	mkdir -p $folder
 	#cp results/dso/${i}.txt $folder/tracking_full.txt 
 	#cp results/cvo_geometric_img_gpu0_mar21/${i}.txt $folder/tracking_full.txt        
-	#cp results/mulls_no_loop/${i}/${i}.txt $folder/tracking_full.txt        
+	cp results/mulls_no_loop/${i}/${i}.txt $folder/tracking_full.txt        
 	#cp results/mulls_no_loop/${i}/gt.txt $folder/tracking_full.txt        
 	#cp ground_truth/${i}.txt $folder/tracking_full.txt        
 	#cp results/cvo_intensity_lidar_jun09/${i}.txt $folder/tracking_full.txt        
 
-	cp results/mulls_with_loop/${i}/${i}.txt $folder/tracking_full.txt       
+	#cp results/mulls_with_loop/${i}/${i}.txt $folder/tracking_full.txt       
         mkdir -p $folder/${i}	
 	cp results/mulls_with_loop/${i}/gt.txt $folder/${i}/gt.txt        
 	

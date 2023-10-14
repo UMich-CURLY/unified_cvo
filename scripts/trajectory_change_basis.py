@@ -57,6 +57,7 @@ def pose_kitti_format_change_of_basis(original_fname, output_fname, seq_ind,
                 p = original[:].reshape((-1,4))
                 pose[:rows, :] = p
             T = T_b @ pose @ np.linalg.inv(T_b)
+            #T = np.linalg.inv(T_b) @ pose @ (T_b)
             counter += 1
             for r in range(3):
                 for c in range(4):

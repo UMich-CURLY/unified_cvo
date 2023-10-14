@@ -139,7 +139,9 @@ namespace cvo
     int num_lidar_points = fLidar_length / (4 * sizeof(float));
 
     std::vector<float> lidar_points;
-
+    bool is_lidar_intrinsic_calib = true; // ILMS-SLAM, 0.205 degree
+    const double KITTI_MIN_Z = -5.0; //Bad returns under the ground
+    const double KITTI_GLOBAL_VERTICAL_ANGLE_OFFSET = 0.205;
     if (fLidar.is_open())
     {
       int num_bytes = sizeof(float) * 4 * num_lidar_points;
@@ -149,7 +151,7 @@ namespace cvo
 
       infile.read(reinterpret_cast<char *>(lidar_points.data()), num_bytes);
       infile.close();
-
+      const Eigen::Vector3f uz(0., 0., 1.);
       // Eigen::Affine3f tf_change_basis = Eigen::Affine3f::Identity();
       for (int r = 0; r < num_lidar_points; ++r)
       {
@@ -158,8 +160,15 @@ namespace cvo
         temp_pcl.x = lidar_points[r * 4 + 0];
         temp_pcl.y = lidar_points[r * 4 + 1];
         temp_pcl.z = lidar_points[r * 4 + 2];
-
+        if (temp_pcl.z < KITTI_MIN_Z) continue;
         Eigen::Vector3f temp_pt(temp_pcl.x, temp_pcl.y, temp_pcl.z);
+	if (is_lidar_intrinsic_calib) {
+          Eigen::Vector3f rotationVector = temp_pt.cross(uz);
+          rotationVector.normalize();
+          Eigen::Matrix3f rotationScan;
+          rotationScan = Eigen::AngleAxisf(KITTI_GLOBAL_VERTICAL_ANGLE_OFFSET * M_PI / 180.0, rotationVector);
+	  temp_pt = (rotationScan * temp_pt).eval();
+	}
         Eigen::Vector3f after_tf_pt = this->T_velo_to_cam.block<3,3>(0,0) * temp_pt
           + this->T_velo_to_cam.block<3,1>(0,3);
         pcl_after_tf.x = after_tf_pt(0);
