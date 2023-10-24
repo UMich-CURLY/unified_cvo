@@ -10,6 +10,7 @@
 #include <Eigen/Geometry> 
 #include "cvo/CvoGPU.hpp"
 #include "utils/CvoPointCloud.hpp"
+#include "utils/ImageDownsampler.hpp"
 #include "cvo/CvoFrame.hpp"
 #include "dataset_handler/TumHandler.hpp"
 #include "utils/ImageRGBD.hpp"
@@ -164,7 +165,7 @@ void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string 
   int counter = 0;
   for (auto ptr : frames) {
     if (counter == max_frames) break;
-    cvo::CvoPointCloud new_pc;
+    cvo::CvoPointCloud new_pc(FEATURE_DIMENSIONS, NUM_CLASSES);
     Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
     pose.block<3,4>(0,0) = Eigen::Map<cvo::Mat34d_row>(ptr->pose_vec);
     
@@ -280,75 +281,14 @@ int main(int argc, char** argv) {
     vector<uint16_t> depth_data(depth.begin<uint16_t>(), depth.end<uint16_t>());
     std::cout<<"Just read image "<<curr_frame_id<<" with size "<<rgb.total()<<"\n";
     std::shared_ptr<cvo::ImageRGBD<uint16_t>> raw(new cvo::ImageRGBD<uint16_t>(rgb, depth_data));
-
-    
     std::shared_ptr<cvo::CvoPointCloud> pc_full(new cvo::CvoPointCloud(*raw,  calib, cvo::CvoPointCloud::FULL));
     std::shared_ptr<cvo::CvoPointCloud> pc_edge_raw(new cvo::CvoPointCloud(*raw, calib, cvo::CvoPointCloud::DSO_EDGES));
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr raw_pcd_edge(new pcl::PointCloud<pcl::PointXYZRGB>);
-    pc_edge_raw->export_to_pcd<pcl::PointXYZRGB>(*raw_pcd_edge);
-    
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr raw_pcd_surface(new pcl::PointCloud<pcl::PointXYZRGB>);    
-    pc_full->export_to_pcd<pcl::PointXYZRGB>(*raw_pcd_surface);
-    
-    pcl::PointCloud<pcl::PointXYZRGB> edge_pcl;
-    pcl::PointCloud<pcl::PointXYZRGB> surface_pcl;
-
-    float leaf_size = cvo_align.get_params().multiframe_downsample_voxel_size;
-    while (true) {
-      std::cout<<"Current leaf size is "<<leaf_size<<std::endl;
-      edge_pcl.clear();
-      surface_pcl.clear();
-      cvo::VoxelMap<pcl::PointXYZRGB> edge_voxel(leaf_size / 4); // /10
-      cvo::VoxelMap<pcl::PointXYZRGB> surface_voxel(leaf_size);
-
-      
-    
-      for (int k = 0; k < raw_pcd_edge->size(); k++) {
-        edge_voxel.insert_point(&raw_pcd_edge->points[k]);
-      }
-      std::vector<pcl::PointXYZRGB*> edge_results = edge_voxel.sample_points();
-
-      for (int k = 0; k < edge_results.size(); k++)
-        edge_pcl.push_back(*edge_results[k]);
-      std::cout<<"edge voxel selected points "<<edge_pcl.size()<<std::endl;
-      for (int k = 0; k < raw_pcd_surface->size(); k++) {
-        surface_voxel.insert_point(&raw_pcd_surface->points[k]);
-      }
-      std::vector<pcl::PointXYZRGB*> surface_results = surface_voxel.sample_points();
-      for (int k = 0; k < surface_results.size(); k++)
-        surface_pcl.push_back(*surface_results[k]);
-      std::cout<<"surface voxel selected points "<<surface_pcl.size()<<std::endl;
-
-      int total_selected_pts_num = edge_results.size() + surface_results.size();
-      /*if (total_selected_pts_num > 1500)
-        leaf_size = leaf_size * 1.2;
-      else if (total_selected_pts_num < 500)
-        leaf_size = leaf_size * 0.8;
-      else
-      */
-      break;
-    
-    }
-    // std::cout<<"start voxel filtering...\n"<<std::flush;
-    //sor.setInputCloud (raw_pcd);
-
-    //sor.setLeafSize (leaf_size, leaf_size, leaf_size);
-    //sor.filter (*raw_pcd);
-    //std::cout<<"construct filtered cvo points with voxel size "<<leaf_size<<"\n"<<std::flush;
-    std::shared_ptr<cvo::CvoPointCloud> pc_edge(new cvo::CvoPointCloud(edge_pcl, cvo::CvoPointCloud::GeometryType::EDGE));
-    std::shared_ptr<cvo::CvoPointCloud> pc_surface(new cvo::CvoPointCloud(surface_pcl, cvo::CvoPointCloud::GeometryType::SURFACE));
-    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud);
-    *pc = *pc_edge + *pc_surface;
-    
+    std::shared_ptr<cvo::CvoPointCloud> pc = cvo::rgbd_downsampling_single_frame(pc_full, pc_edge_raw, cvo_align.get_params().multiframe_downsample_voxel_size);
     std::cout<<"Voxel number points is "<<pc->num_points()<<std::endl;
-
-    pcl::PointCloud<pcl::PointXYZRGB> pcd_to_save;
     pc->write_to_color_pcd(std::to_string(curr_frame_id)+".pcd");
-
-
+    pc_full->write_to_color_pcd(std::to_string(curr_frame_id)+"_full.pcd");
     
-    
-    std::cout<<"Load "<<curr_frame_id<<", "<<pc->positions().size()<<" number of points\n"<<std::flush;
+    std::cout<<"Load "<<curr_frame_id<<", "<<pc->size()<<" number of points\n"<<std::flush;
     pcs.push_back(pc);
     pcs_full.push_back(pc_full);
 

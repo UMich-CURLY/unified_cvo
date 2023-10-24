@@ -365,7 +365,7 @@ void construct_loop_BA_problem(cvo::CvoGPU & cvo_align,
                                                                   &params,
                                                                   cvo_align.get_params_gpu(),
                                                                   params.multiframe_num_neighbors,
-                                                                  params.multiframe_ell_init * 2
+                                                                  params.multiframe_ell_init * 4
                                                                   ));
       edge_states.push_back(edge_state);
       added_edges.insert(id1, id2, 1);
@@ -638,7 +638,7 @@ int main(int argc, char** argv) {
   // read point cloud
   std::map<int, cvo::CvoFrame::Ptr> frames;
   std::map<int, std::shared_ptr<cvo::CvoPointCloud>> pcs;
-  if (is_store_pcd_each_frame || is_doing_ba ||  (is_global_registration && !is_read_loop_closure_poses_from_file)) {
+  if (is_store_pcd_each_frame || is_doing_pgo ||  (is_global_registration && !is_read_loop_closure_poses_from_file)) {
     if (std::strcmp(data_type.c_str(), "kitti_lidar") == 0) {
       cvo::read_and_downsample_lidar_pc(result_selected_frames,
                                         *dataset,

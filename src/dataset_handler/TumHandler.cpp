@@ -15,14 +15,17 @@
 #include <map>
 using namespace std;
 using namespace boost::filesystem;
-
+namespace fs = boost::filesystem;
 namespace cvo {
+
   TumHandler::TumHandler(std::string tum_folder){
     curr_index = 0;
     folder_name = tum_folder;
     debug_plot = true;
 		
     // load associate file
+    if (!fs::exists(fs::status(tum_folder)))
+      exit(-1);
     string assoc_pth = tum_folder + "/assoc.txt";
     std::cout<<"assoc path: "<<assoc_pth<<std::endl;
     load_file_name(assoc_pth, vstrRGBName, vstrRGBPth, vstrDepPth);

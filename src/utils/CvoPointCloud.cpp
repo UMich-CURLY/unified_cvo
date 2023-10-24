@@ -1309,17 +1309,18 @@ namespace cvo{
       p.z = points_[i].z;
 
       if (feature_dimensions_) {
-        uint8_t r = static_cast<uint8_t>(std::min(255, (int)(points_[i].r * 255)));
-        uint8_t g = static_cast<uint8_t>(std::min(255, (int)(points_[i].g * 255)));
-        uint8_t b = static_cast<uint8_t>(std::min(255, (int)(points_[i].b * 255)));
-        if (num_classes_ ) {
+        uint8_t b = static_cast<uint8_t>(std::min(255, (int)((float)(points_[i].features[0]) * 255)));
+        uint8_t g = static_cast<uint8_t>(std::min(255, (int)((float)(points_[i].features[1]) * 255)));
+        uint8_t r = static_cast<uint8_t>(std::min(255, (int)((float)(points_[i].features[2]) * 255)));
+        /*
+        if (num_classes_) {
           int max_class;
           label_at(i).maxCoeff(&max_class);
           auto c = label2color[max_class];
           r = std::get<0>(c);
           g = std::get<1>(c);
           b = std::get<2>(c);
-        }
+          }*/
         //if (i == 0)
         //  std::cout<<"export to pcd: color r is "<< (int )r <<std::endl;
         p.r = r;
@@ -1467,6 +1468,7 @@ namespace cvo{
     //tbb::parallel_for(int(0), input.num_points(), [&](int j) {
     #pragma omp parallel for
     for (int j = 0; j < input.num_points(); j++) {
+      output.points_[j] = input.points_[j];
       Eigen::Vector3f jth_position;
       jth_position<< input.point_at(j).x, input.point_at(j).y, input.point_at(j).z;
       Eigen::Vector3f temp = (pose.block(0, 0, 3, 3) * jth_position +

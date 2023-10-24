@@ -87,7 +87,7 @@ namespace cvo {
       voxel.insert_point(&pc_in->point_at(k));
     }
     std::vector<const cvo::CvoPoint*> results = voxel.sample_points();
-    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud);//(, cvo::CvoPointCloud::GeometryType::EDGE));
+    std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(FEATURE_DIMENSIONS, NUM_CLASSES));//(, cvo::CvoPointCloud::GeometryType::EDGE));
     //pc.reserve(results.size(), FEATURE_DIMENSIONS, NUM_CLASSES);
     for (int k = 0; k < results.size(); k++) {
       if (selected_pts.find(results[k]) == selected_pts.end() &&
@@ -99,6 +99,31 @@ namespace cvo {
     std::cout<<"Voxel selected points "<<results.size()<<std::endl;
     return pc;
   }
+
+  
+  std::shared_ptr<cvo::CvoPointCloud> rgbd_downsampling_single_frame(std::shared_ptr<cvo::CvoPointCloud> pc_full,
+                                                                     std::shared_ptr<cvo::CvoPointCloud> pc_edge_raw,
+                                                                     float multiframe_downsample_voxel_size){
+    
+    float leaf_size = multiframe_downsample_voxel_size;
+    std::cout<<"Current leaf size is "<<leaf_size<<std::endl;
+
+    /// edges
+    std::unordered_set<const cvo::CvoPoint *> selected_pts;
+    std::shared_ptr<cvo::CvoPointCloud> pc_edge = voxel_downsample(pc_edge_raw, leaf_size / 5, selected_pts,
+                                                                   cvo::CvoPointCloud::GeometryType::EDGE);
+    
+    /// surface
+    std::shared_ptr<cvo::CvoPointCloud> pc_surface = voxel_downsample(pc_full, leaf_size, selected_pts,
+                                                                      cvo::CvoPointCloud::GeometryType::SURFACE);                                                                      
+
+    std::shared_ptr<cvo::CvoPointCloud> pc_all (new cvo::CvoPointCloud(FEATURE_DIMENSIONS, NUM_CLASSES));
+    *pc_all = *pc_edge + *pc_surface;
+    std::cout<<"Voxel number points is "<<pc_all->num_points()<<std::endl;
+
+    return pc_all;
+  }
+  
   
   std::shared_ptr<cvo::CvoPointCloud> stereo_downsampling_single_frame(const cv::Mat & left, const cv::Mat & right,
                                                                        const cvo::Calibration & calib,
