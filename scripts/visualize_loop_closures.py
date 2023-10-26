@@ -161,8 +161,8 @@ def print_ba_err(g2o_file, gt_file, ba_file, tracking_file):
                 
                 
 if __name__ == "__main__":
-    #load_lc(sys.argv[1], sys.argv[2], sys.argv[3])
-    #print_registration_err(sys.argv[1], sys.argv[2])
+    load_lc(sys.argv[1], sys.argv[2], sys.argv[3])
+    print_registration_err(sys.argv[1], sys.argv[2])
 
     #########################################################
     # ba_error on loop closure
@@ -174,6 +174,6 @@ if __name__ == "__main__":
     #print_ba_err(g2o_file, gt_file, ba_file, tracking_file)
     #########################################################
     # plot loop closures
-    traj_file = sys.argv[1]
-    g2o_file = sys.argv[2]
-    plot_loop_edges_on_kitti_traj(traj_file, g2o_file)
+    #traj_file = sys.argv[1]
+    #g2o_file = sys.argv[2]
+    #plot_loop_edges_on_kitti_traj(traj_file, g2o_file)

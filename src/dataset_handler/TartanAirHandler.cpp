@@ -1,9 +1,11 @@
+#include <cstdint>
 #include <iostream>
 #include <iomanip>
 #include <string>
 #include <sstream>
 #include <fstream>
 #include <string>
+#include <cstdlib>
 #include <algorithm>
 #include <cassert>
 #include <boost/filesystem.hpp>
@@ -240,7 +242,8 @@ namespace cvo {
                                                    std::vector<float> & dep_vec,
                                                    int num_semantic_class,
                                                    std::vector<float> & semantics,
-                                                   int sky_label) {
+                                                   int sky_label,
+                                                   float rand_semantic_noise_ratio){
     
     if (read_next_rgbd(rgb_img, dep_vec))
       return -1;
@@ -278,16 +281,31 @@ namespace cvo {
     int num_pixels = dep_vec.size();
     semantics.resize(num_pixels * num_semantic_class);
     fill(semantics.begin(), semantics.end(), 0);
+    
     for (int i = 0; i < num_pixels; i++) {
       // find the begin index for current pixel semantic classes
       int begin_idx = i * num_semantic_class;
       // find the class attribute for the pixel, 0 ~ num_semantics_class
-      uint8_t* orig_label = sem_data + i;
-      if (*orig_label == sky_label)
+
+      uint8_t label = *(sem_data + i);
+      if (label == sky_label)
         dep_vec[i] = std::nanf("1");
 
-      uint8_t remapped_label = semantic_class[*orig_label];
-      semantics[begin_idx + remapped_label] = 1.0; // mark groundtruth with prob 1.0
+      uint8_t remapped_label = semantic_class[label];
+      semantics[begin_idx + remapped_label] = 1.0; // mark groundtruth with prob 1.p0
+      if (rand_semantic_noise_ratio > 1e-4) {
+	Eigen::Map<Eigen::Matrix<float, 1, Eigen::Dynamic>> semantic_dist (&semantics[begin_idx], num_semantic_class); 
+        semantic_dist = (semantic_dist + Eigen::Matrix<float,1,Eigen::Dynamic>::Random(1,num_semantic_class) * rand_semantic_noise_ratio).eval(); // 3x3 Matrix filled with random numbers between (-1,1)
+        semantic_dist.normalize();
+	if (i == 1) {
+	  std::cout<<"normalized semantic dist with noise is: ";
+	  for (int j = 0; j < num_semantic_class; j++) {
+            std::cout<<semantics[begin_idx+j]<<" ";
+	  }
+	  std::cout<<"\n";
+        }
+
+      }   
     }
     
     return 0;

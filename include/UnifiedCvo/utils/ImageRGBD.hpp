@@ -20,6 +20,18 @@ namespace cvo {
               int num_classes,
               const std::vector<float> & semantics) : depth_image_(depth_image),
                                                       RawImage(image, num_classes, semantics) {}
+
+    ImageRGBD(const cv::Mat & image,
+              const std::vector<DepthType> & depth_image,
+              int num_classes,
+              const std::vector<float> & semantics,
+              bool is_adding_semantic_noise) : depth_image_(depth_image),
+                                                      RawImage(image, num_classes, semantics) {}
+    
+
+    void create_depth_noise(float depth_std);
+
+    void create_motion_blur(float scale);
     
     const std::vector<DepthType> & depth_image() const  { return depth_image_; }
     

@@ -231,7 +231,7 @@ set (CVO_PUBLIC_HEADERS
   ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/
   ${PROJECT_SOURCE_DIR}/thirdparty/libelas/
   ${PROJECT_SOURCE_DIR}/thirdparty/cugicp/
-  ${PROJECT_SOURCE_DIR}/thirdparty/argparse/
+  #${PROJECT_SOURCE_DIR}/thirdparty/argparse/
   )
 
 message("CXX_FLAGS are ${CMAKE_CXX_FLAGS}")

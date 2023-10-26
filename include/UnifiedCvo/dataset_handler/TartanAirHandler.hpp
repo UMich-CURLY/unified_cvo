@@ -26,8 +26,9 @@ namespace cvo{
                                    std::vector<float> & dep_vec,
                                    int num_semantic_class,
                                    std::vector<float> & semantics,
-                                   int sky_label);
-    
+                                   int sky_label,
+                                   float rand_semantic_noise_ratio=0.0);
+
     int read_next_rgbd_with_flow(cv::Mat & rgb_img,
                                  std::vector<float> & depth,
                                  std::vector<float> & flow_curr_to_next);
