@@ -23,18 +23,20 @@ int main(int argc, char *argv[]) {
   // list all files in current directory.
   //You could put any file path in here, e.g. "/home/me/mwah" to list that directory
   cvo::TartanAirHandler tartan(argv[1]);
+  tartan.set_depth_folder_name("deep_depth");
   int total_iters = tartan.get_total_number();
   std::cout<<"total num : "<<total_iters<<"\n";
   //vector<string> vstrRGBName = tum.get_rgb_name_list();
   string cvo_param_file(argv[2]);
   string calib_file;
-  calib_file = "/home/jyzh/cvo_calib.txt";
+  calib_file = std::string(argv[1]) + "/cvo_calib_deep_depth.txt";
   cvo::Calibration calib(calib_file, cvo::Calibration::RGBD);
   std::ofstream accum_output(argv[3]);
   int start_frame = std::stoi(argv[4]);
   tartan.set_start_index(start_frame);
   std::cout<<"start int "<<start_frame<<"\n";
   int max_num = std::stoi(argv[5]);
+  int sky_label = std::stoi(argv[6]);
 
 
   
@@ -63,18 +65,20 @@ int main(int argc, char *argv[]) {
   // start the iteration
 
   cv::Mat source_rgb;
-  vector<float> source_depth;
-  tartan.read_next_rgbd(source_rgb, source_depth);
+  vector<float> source_depth, source_semantics;
+  tartan.read_next_rgbd_without_sky(source_rgb, source_depth,
+                                    NUM_CLASSES, source_semantics, sky_label);
   std::shared_ptr<cvo::ImageRGBD<float>> source_raw(new cvo::ImageRGBD<float>(source_rgb, source_depth));
   std::cout<<"read source_raw\n";
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw,
                                                                     calib
-								    ,cvo::CvoPointCloud::DSO_EDGES
+								    //,cvo::CvoPointCloud::DSO_EDGES
                                                                     ));
-  std::cout<<"read source cvo point cloud\n";  
-  std::cout<<"First point is "<<source->at(0).transpose()<<std::endl;
   //19, semantics_source, 
   //                                                                    cvo::CvoPointCloud::CV_FAST));
+  std::cout<<"read source cvo point cloud\n";  
+  std::cout<<"First point is "<<source->at(0).transpose()<<std::endl;
+  
   
   for (int i = start_frame; i<min(total_iters, max_num)-1 ; i++) {
     
@@ -84,9 +88,9 @@ int main(int argc, char *argv[]) {
 
     tartan.next_frame_index();
     cv::Mat rgb;
-    std::vector<float> dep;    
+    std::vector<float> dep, target_semantics;    
     //sdt::vector<float> semantics_target;
-    if (tartan.read_next_rgbd(rgb, dep) != 0) {
+    if (tartan.read_next_rgbd_without_sky(rgb, dep,NUM_CLASSES, target_semantics, sky_label) != 0) {
       std::cout<<"finish all files\n";
       break;
     }
@@ -94,7 +98,7 @@ int main(int argc, char *argv[]) {
     //std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, rgb, dep, calib,1));
     std::shared_ptr<cvo::ImageRGBD<float>> target_raw(new cvo::ImageRGBD(rgb, dep));
     std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, calib
-                                                                      ,cvo::CvoPointCloud::DSO_EDGES
+                                                                      //,cvo::CvoPointCloud::DSO_EDGES
                                                                       ));
     if (i == 0){
         std::cout<<"Write first pcd\n";
@@ -111,10 +115,10 @@ int main(int argc, char *argv[]) {
     cvo_align.align(*source, *target, init_guess_inv, result);
     
     // get tf and inner product from cvo getter
-    double in_product = cvo_align.inner_product_cpu(*source, *target, result, ell_init);
+    //double in_product = cvo_align.inner_product_cpu(*source, *target, result, ell_init);
     //double in_product_normalized = cvo_align.inner_product_normalized();
     //int non_zeros_in_A = cvo_align.number_of_non_zeros_in_A();
-    std::cout<<"The gpu inner product between "<<i-1 <<" and "<< i <<" is "<<in_product<<"\n";
+    //std::cout<<"The gpu inner product between "<<i-1 <<" and "<< i <<" is "<<in_product<<"\n";
     //std::cout<<"The normalized inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_normalized<<"\n";
     std::cout<<"Transform is "<<result <<"\n\n";
 
