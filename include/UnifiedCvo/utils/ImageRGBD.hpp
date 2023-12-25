@@ -28,10 +28,6 @@ namespace cvo {
               bool is_adding_semantic_noise) : depth_image_(depth_image),
                                                       RawImage(image, num_classes, semantics) {}
     
-
-    void create_depth_noise(float depth_std);
-
-    void create_motion_blur(float scale);
     
     const std::vector<DepthType> & depth_image() const  { return depth_image_; }
     

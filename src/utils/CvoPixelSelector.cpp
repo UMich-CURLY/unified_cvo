@@ -195,7 +195,7 @@ namespace cvo
         makeHists(raw_image);
 
       // select!
-      std::cout<<"makeHeatMaps: currentPotential is "<<currentPotential<<", thFactor is "<<thFactor<<std::endl;
+      //std::cout<<"makeHeatMaps: currentPotential is "<<currentPotential<<", thFactor is "<<thFactor<<std::endl;
       Eigen::Vector3i n = this->select(raw_image,  currentPotential, thFactor, map_out, output_uv);
 
       // sub-select!

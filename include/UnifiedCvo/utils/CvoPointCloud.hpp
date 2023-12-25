@@ -149,6 +149,7 @@ namespace cvo {
       }
       return positions;
     }
+    cvo::CvoPoint & operator[](int index) { return points_[index]; }
     Eigen::Vector3f at(unsigned int index) const;
     Eigen::Vector3f xyz_at(unsigned int index) const;
     const Eigen::VectorXf label_at(unsigned int index) const { return Eigen::Map<const Eigen::VectorXf>(points_[index].label_distribution, NUM_CLASSES); }

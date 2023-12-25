@@ -73,7 +73,7 @@ namespace cvo {
     int multiframe_num_neighbors;
     int multiframe_least_squares_num_threads;
     int multiframe_min_nonzeros;
-    int multiframe_is_optimizing_ell;
+    int multiframe_is_optimizing_ell; // 0: manual.    1: auto update ell.   2: auto update ell dir. manual set decay rate
     int multiframe_is_sorting_inner_product;
     int multiframe_is_free_memory_each_iter;
     CvoParams() :

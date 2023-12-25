@@ -115,15 +115,34 @@ namespace cvo {
 
   
   void BinaryStateGPU::update_ell() {
-    if (ell_ > this->ell_min_) {
-      if (!params_cpu_->multiframe_is_optimizing_ell)  {      
+
+    num_iters_per_ell_ ++; 
+
+    if (params_cpu_->multiframe_is_optimizing_ell == 0)  {
+      std::cout<<"curr nonzero_sum is "<<A_result_cpu_.nonzero_sum<<", nonzeros_last_ is "<<nonzeros_last_<<"\n";      
+      if (nonzeros_last_ > 0 && A_result_cpu_.nonzero_sum == nonzeros_last_
+          && num_iters_per_ell_ / params_cpu_->multiframe_iter_per_ell > 0) {
         ell_ = ell_ * params_cpu_->multiframe_ell_decay_rate;
-      } else if (ell_ > this->ell_max_ ){
-        ell_ =  this->ell_max_;
+        nonzeros_last_ = 0;
+        num_iters_per_ell_ = 0;
       }
-    } else  {
-      ell_ = this->ell_min_;
+    } else if (params_cpu_->multiframe_is_optimizing_ell == 2) {
+      std::cout<<"ell_last_ is "<<ell_last_<<", ell_ is "<<ell_;
+      if (ell_ > ell_last_ / params_cpu_->multiframe_ell_decay_rate) {
+        ell_ = ell_last_ / params_cpu_->multiframe_ell_decay_rate;
+      } else if (ell_ <  ell_last_ * params_cpu_->multiframe_ell_decay_rate ){
+        ell_ = ell_last_ * params_cpu_->multiframe_ell_decay_rate;          
+      } 
+      std::cout<<", ell changes to "<<ell_<<"\n";
+      
     }
+
+    if (ell_ < this->ell_min_) {
+      ell_ = this->ell_min_;      
+    } else  if (ell_ > this->ell_max_ ) {
+      ell_ =  this->ell_max_;
+    }
+    ell_last_ = ell_;
   }
   
 

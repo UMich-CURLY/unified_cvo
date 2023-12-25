@@ -22,6 +22,8 @@ namespace cvo {
     int cols() const {return cols_;}
     int channels() const {return channels_;}
     int num_classes() const {return num_class_;}
+
+    //virtual void add_blur_noise(float sigma);
     
   private: 
     // assume all data to be float32

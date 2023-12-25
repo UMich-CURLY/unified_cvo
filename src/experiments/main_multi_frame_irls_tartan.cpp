@@ -374,9 +374,9 @@ int main(int argc, char** argv) {
     //if (BA_poses.size())
 
     Eigen::Matrix4d id_mat = Eigen::Matrix4d::Identity();
-    if (BA_poses.size() == frame_inds.size())
-      poses_data = BA_poses[i].data();
-    else 
+    //if (BA_poses.size() == frame_inds.size())
+    //  poses_data = BA_poses[i].data();
+    //else 
       poses_data = id_mat.data();
     
     cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pcs.back().get(), poses_data, cvo_align.get_params().is_using_kdtree));

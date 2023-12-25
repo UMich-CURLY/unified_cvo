@@ -50,6 +50,7 @@ namespace cvo {
     // if ell is not upated by the 
     void update_ell();
     double get_ell() const { return ell_; }
+    //double get_ell_last() const { return ell_last_; }
     const CvoFrame * get_frame1() const;
     const CvoFrame * get_frame2() const;
     
@@ -94,11 +95,12 @@ namespace cvo {
     std::shared_ptr<CvoPointCloudGPU> points_transformed_buffer_gpu_;
 
     
-    int num_neighbors_;
+    int num_neighbors_, nonzeros_last_;
+    int num_iters_per_ell_;
     SparseKernelMat  A_host_;
     SparseKernelMat * A_device_;
     SparseKernelMat A_result_cpu_;
-    double ell_, ell_min_, ell_max_;    
+    double ell_, ell_min_, ell_max_, ell_last_;    
 
 
     int iter_;

@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
   //0.2));
   //source->write_to_color_pcd("source.pcd");
   
-  for (int i = start_frame; i<min(total_iters, start_frame+max_num)-1 ; i++) {
+  for (int i = start_frame+1; i<min(total_iters, start_frame+max_num); i++) {
     
     // calculate initial guess
     std::cout<<"\n\n\n\n============================================="<<std::endl;

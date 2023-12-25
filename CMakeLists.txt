@@ -629,6 +629,15 @@ target_include_directories(cvo_align_gpu_two_pcd PUBLIC
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
       target_link_libraries(cvo_align_gpu_two_pcd cvo_gpu_rgb cvo_utils boost_filesystem boost_system pcl_io pcl_common)
 
+add_executable(cvo_align_gpu_two_color_pcd_global ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_two_color_pcd_global.cpp)
+target_include_directories(cvo_align_gpu_two_color_pcd_global PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+      target_link_libraries(cvo_align_gpu_two_color_pcd_global cvo_gpu_rgb cvo_utils boost_filesystem boost_system pcl_io pcl_common)
+      
+
 add_executable(kitti_depth_filtering ${PROJECT_SOURCE_DIR}/src/experiments/main_depth_filtering.cpp)
 target_include_directories(kitti_depth_filtering PUBLIC
 	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
@@ -672,12 +681,18 @@ target_include_directories(cvo_irls_finnforest PUBLIC
       target_link_libraries(cvo_irls_finnforest cvo_gpu_img cvo_utils finnforest boost_filesystem boost_system pcl_filters)
       
 
-add_executable(cvo_irls_tartan_odom ${PROJECT_SOURCE_DIR}/src/experiments/main_irls_tartan_rgbd_odom.cpp)
-target_include_directories(cvo_irls_tartan_odom PUBLIC
+#add_executable(cvo_irls_tartan_odom ${PROJECT_SOURCE_DIR}/src/experiments/main_irls_tartan_rgbd_odom.cpp)
+#target_include_directories(cvo_irls_tartan_odom PUBLIC
+#        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+#        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+#target_link_libraries(cvo_irls_tartan_odom cvo_gpu_img cvo_utils tartan boost_filesystem boost_system)
+#target_compile_definitions(cvo_irls_tartan PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=256)
+
+add_executable(cvo_irls_tartan_ablation ${PROJECT_SOURCE_DIR}/src/experiments/main_irls_tartan_rgbd_ablation_reg.cpp)
+target_include_directories(cvo_irls_tartan_ablation PUBLIC
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_link_libraries(cvo_irls_tartan_odom cvo_gpu_img cvo_utils tartan boost_filesystem boost_system)
-#target_compile_definitions(cvo_irls_tartan PUBLIC -DNUM_CLASSES=19 -DFEATURE_DIMENSIONS=5 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=256)
+target_link_libraries(cvo_irls_tartan_ablation cvo_gpu_img cvo_utils tartan boost_filesystem boost_system)
 
 
 add_executable(cvo_covis_tartan ${PROJECT_SOURCE_DIR}/src/experiments/main_covisMap_test.cpp)

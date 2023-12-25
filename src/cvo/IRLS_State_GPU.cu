@@ -33,6 +33,9 @@ namespace cvo {
     is_optimizing_ell_ = params_cpu_->multiframe_is_optimizing_ell;
     ell_min_ = params_cpu_->multiframe_ell_min;
     ell_max_ = ell_ * 1.2;
+    ell_last_ = ell_;
+    nonzeros_last_ = 0;
+    num_iters_per_ell_ = 0; //#params_cpu->multiframe_iter_per_ell;
     /*
     init_internal_SparseKernelMat_cpu(pc1->points->size(),  num_neighbor, &A_result_cpu_);
     A_device_ = init_SparseKernelMat_gpu(pc1->points->size(), num_neighbor, A_host_);
@@ -138,7 +141,7 @@ namespace cvo {
   }
 
   int BinaryStateGPU::update_inner_product() {
-
+    nonzeros_last_ = A_host_.nonzero_sum;
     if (!params_cpu_->multiframe_is_free_memory_each_iter) {
       int last_num_neibors = max_neighbors(&A_host_);
       if (last_num_neibors > 0)
@@ -270,6 +273,8 @@ namespace cvo {
       }
       
     }
+
+
     compute_nonzeros(&A_host_);
     std::cout<<"Nonzeros is "<<A_host_.nonzero_sum<<"\n";
     if (is_optimizing_ell_) {

@@ -68,14 +68,16 @@ int main(int argc, char *argv[]) {
   vector<float> source_depth, source_semantics;
   tartan.read_next_rgbd_without_sky(source_rgb, source_depth,
                                     NUM_CLASSES, source_semantics, sky_label);
-  std::shared_ptr<cvo::ImageRGBD<float>> source_raw(new cvo::ImageRGBD<float>(source_rgb, source_depth));
+  std::shared_ptr<cvo::ImageRGBD<float>> source_raw(new cvo::ImageRGBD<float>(source_rgb, source_depth,
+			  NUM_CLASSES, source_semantics));
   std::cout<<"read source_raw\n";
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_raw,
                                                                     calib
+                                                                    , cvo::CvoPointCloud::CV_FAST
+								    ));
 								    //,cvo::CvoPointCloud::DSO_EDGES
-                                                                    ));
+ //                                                                   ));
   //19, semantics_source, 
-  //                                                                    cvo::CvoPointCloud::CV_FAST));
   std::cout<<"read source cvo point cloud\n";  
   std::cout<<"First point is "<<source->at(0).transpose()<<std::endl;
   
@@ -96,10 +98,10 @@ int main(int argc, char *argv[]) {
     }
 
     //std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, rgb, dep, calib,1));
-    std::shared_ptr<cvo::ImageRGBD<float>> target_raw(new cvo::ImageRGBD(rgb, dep));
-    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, calib
+    std::shared_ptr<cvo::ImageRGBD<float>> target_raw(new cvo::ImageRGBD(rgb, dep, NUM_CLASSES, target_semantics));
+    std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*target_raw, calib,
+                                                                    cvo::CvoPointCloud::CV_FAST));
                                                                       //,cvo::CvoPointCloud::DSO_EDGES
-                                                                      ));
     if (i == 0){
         std::cout<<"Write first pcd\n";
         target->write_to_color_pcd(std::to_string(i+1)+".pcd");

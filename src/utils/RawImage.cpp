@@ -1,4 +1,5 @@
 #include <cmath>
+#include <random>
 #include <opencv2/photo.hpp>
 #include "utils/RawImage.hpp"
 
@@ -80,4 +81,5 @@ namespace cvo {
     }
     
   }
+
 }

@@ -139,9 +139,10 @@ namespace cvo {
       Mat34d_row pose_anchor_eigen = Eigen::Map<Mat34d_row>((*frames_)[0]->pose_vec);
       transform_vector_of_poses(gt, pose_anchor_eigen, gt_aligned);
       err_f.open(err_file_name);
-      err_f<<"#ell, nonzeros, err\n";
+      err_f<<"#iters, ell, nonzeros, err\n";
     }
-    
+
+    int total_iters = 0, new_ell_iters = 0;
     double ceres_time = 0;
     double kernel_eval_time = 0;
     double ceres_add_residual_time = 0;
@@ -157,7 +158,7 @@ namespace cvo {
 
       std::cout<<"Poses are\n"<<std::flush;
       for (auto && frame: *frames_){
-        std::cout<<Eigen::Map<Eigen::Matrix<double,3,4, Eigen::DontAlign>>(frame->pose_vec)<<std::endl<<"\n";
+        std::cout<<Eigen::Map<Eigen::Matrix<double,3,4, Eigen::RowMajor>>(frame->pose_vec)<<std::endl<<"\n";
       }
 
       std::vector<Sophus::SE3d> poses_old(frames_->size());
@@ -209,8 +210,8 @@ namespace cvo {
       }
       if (is_comparing_with_gt) {
         double param_err = change_of_all_poses(gt_aligned, poses_old);
-        std::cout<<"Before iter" <<iter_<<"'s optimization, error w.r.t gt is "<<param_err<<std::endl;
-        err_f << ell<<","<<total_nonzeros<<","<<param_err<<"\n";
+        std::cout<<"Before iter"<<iter_<<"'s optimization, error w.r.t gt is "<<param_err<<std::endl;
+        err_f <<total_iters<<","<<ell<<","<<total_nonzeros<<","<<param_err<<"\n";
         err_history.push_back(param_err);
       }
       
@@ -260,25 +261,11 @@ namespace cvo {
       auto end = std::chrono::system_clock::now();
       std::chrono::duration<double, std::milli> t_all = end - start;
       ceres_time += ( (static_cast<double>(t_all.count())) / 1000);
+      total_iters += summary.num_successful_steps;
         
 
       std::cout << summary.FullReport() << std::endl;
       //loss_change << ell <<", "<< summary.final_cost - summary.initial_cost <<std::endl;
-
-        
-      if (params_->multiframe_is_optimizing_ell == false )  {
-        //  if (//param_change < 1e-5 * poses_new.size()
-
-        //num_ells ++;
-        //ell_should_decay_when_nonzero_max = false;
-        //if (num_ells == 2)
-        //  break;
-
-        if (ell <= params_->multiframe_ell_min)
-          converged = true;
-      }
-      for (auto && state : *states_) 
-        state->update_ell();
         
       std::vector<Sophus::SE3d> poses_new(frames_->size());
       if (is_comparing_with_gt)      
@@ -287,17 +274,34 @@ namespace cvo {
       double param_change = change_of_all_poses(poses_old, poses_new);
       std::cout<<"Pose Update is "<<param_change<<std::endl;
 
+
+      for (auto && state : *states_) 
+        state->update_ell();
+
       std::vector<float> ell_new;
       ell_new.reserve(states_->size());
       for (auto & state : *states_) 
         ell_new.emplace_back((state->get_ell()));
       double ell_change = 0;
-      for (int l = 0; l < ell_new.size(); l++) 
+      bool is_all_min = true;
+      for (int l = 0; l < ell_new.size(); l++)  {
+        is_all_min = is_all_min && (std::abs(ell_new[l] - params_->multiframe_ell_min) < 1e-4  );
         ell_change += std::fabs(ell_new[l] - ell_old[l]);
-      std::cout<<"Ell Update is "<<ell_change<<std::endl;      
-      if (param_change < 1e-8 && ell_change < 1e-3)
-        converged = true;
+      }
+      std::cout<<"Ell Update is "<<ell_change<<std::endl;
       
+      
+      /// update ell and check the break condition
+      if (params_->multiframe_is_optimizing_ell == false )  {
+
+        if (is_all_min && param_change < 1e-5)
+          converged = true;
+        
+      } else {
+        
+        if (is_all_min && param_change < 0.0005 && ell_change < 1e-3)
+          converged = true;
+      }
 
       //last_nonzeros = 0;              
       iter_++;
@@ -319,7 +323,7 @@ namespace cvo {
       pose_snapshot(*frames_, poses_new, pose_log_fname);
       double param_err = change_of_all_poses( gt_aligned, poses_new);
       err_history.push_back(param_err);
-      std::cout<<"Finish registration at iter " <<iter_<<", error w.r.t gt changes from "<<err_history[0]<<" to " <<param_err<<std::endl;
+      std::cout<<"Finish registration at iter " <<iter_<<", total sucessful iters "<<total_iters<<", error w.r.t gt changes from "<<err_history[0]<<" to " <<param_err<<std::endl;
       
       //err_f << param_err<<"\n";
       err_f.close();
