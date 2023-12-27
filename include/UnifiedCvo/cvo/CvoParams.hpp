@@ -57,6 +57,7 @@ namespace cvo {
     int is_using_kdtree;
     int is_exporting_association;
     int is_using_geometric_type;
+    int is_global_angle_registration;
 
     // for multiframe registration
     int multiframe_using_cpu;
@@ -112,6 +113,7 @@ namespace cvo {
       is_using_range_ell(0),
       is_using_kdtree(0),
       is_using_geometric_type(0),
+      is_global_angle_registration(0),
       is_exporting_association(0),
       multiframe_using_cpu(1),
       multiframe_max_iters(200),      
@@ -273,6 +275,9 @@ namespace cvo {
       params->is_using_kdtree = fs["is_using_kdtree"].as<int>();
     if (fs["is_using_geometric_type"])
       params->is_using_geometric_type = fs["is_using_geometric_type"].as<int>();
+    if (fs["is_global_angle_registration"])
+      params->is_global_angle_registration = fs["is_global_angle_registration"].as<int>();
+    
     if (fs["is_exporting_association"])
       params->is_exporting_association = fs["is_exporting_association"].as<int>();
     if (fs["nearest_neighbors_max"])

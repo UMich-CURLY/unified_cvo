@@ -1639,33 +1639,102 @@ namespace cvo{
     
   }
 
-  
+  /*
+  static  std::vector<Eigen::Matrix3f, Eigen::aligned_allocator<Eigen::Matrix3f>> gen_rand_init_pose(int discrete_rpy_num) {
+
+    std::vector<Eigen::Matrix3f, Eigen::aligned_allocator<Eigen::Matrix3f>> rot_all;
+    rot_all.reserve(discrete_rpy_num * discrete_rpy_num * discrete_rpy_num);
+    for (int i = 0; i < discrete_rpy_num; i++) {
+      for ( int j = 0; j < discrete_rpy_num; j++) {
+        for (int k = 0; k < discrete_rpy_num; k++) {
+          
+          Eigen::Matrix3f rot;
+        
+          rot = Eigen::AngleAxisf( i / (float)discrete_rpy_num * M_PI, Eigen::Vector3f::UnitZ())
+            * Eigen::AngleAxisf( j / (float)discrete_rpy_num * M_PI, Eigen::Vector3f::UnitY())
+            * Eigen::AngleAxisf( k / (float)discrete_rpy_num * M_PI, Eigen::Vector3f::UnitZ());
+          rot_all.emplace_back(rot);
+        //std::cout<<"push "<<rot<<"\n";
+        }
+      }
+    }
+    return rot_all;
+  }
+
+  static Eigen::Matrix4f get_nearest_init_pose(const CvoGPU & cvo_align,
+                                               const CvoPointCloud& source,
+                                               const CvoPointCloud& target,
+                                               float init_guess_ell,
+                                               int num_guess,
+                                               double * times) {
+    
+    std::vector<Eigen::Matrix3f, Eigen::aligned_allocator<Eigen::Matrix3f>> init_rots = gen_rand_init_pose(num_guess);
+    
+    auto start = std::chrono::system_clock::now();
+    Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
+    float curr_max_ip = 0;
+    for (auto && init_rot : init_rots) {
+      Eigen::Matrix4f tmp_init_guess =  Eigen::Matrix4f::Identity();
+      tmp_init_guess.block<3,3>(0,0) = init_rot;
+
+      Eigen::Matrix4f init_inv = tmp_init_guess.inverse();
+      float ip = cvo_align.function_angle(source, target, init_inv, init_guess_ell);
+      if (ip > curr_max_ip) {
+        curr_max_ip = ip;
+        init_guess = tmp_init_guess;
+      }
+    }
+    auto end = std::chrono::system_clock::now();
+    //double elapsed =
+    if (times)
+      *times += std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+    return init_guess;
+    //std::cout<<"Chosen init guess is "<<init_guess<<", with inner product "<<curr_max_ip<<", the init search takes "<<elapsed<< "ms\n";
+    
+  }
+
+  */
   int CvoGPU::align(// inputs
                     const CvoPointCloud& source_points,
                     const CvoPointCloud& target_points,
-                    const Eigen::Matrix4f & init_guess_transform,
+                    const Eigen::Matrix4f & init_guess_T,
                     // outputs
                     Eigen::Ref<Eigen::Matrix4f> transform,
                     Association * association_mat,
                     double *registration_seconds) const {
-    std::cout<<"[align] convert points to gpu\n"<<std::flush;
+    //std::cout<<"[align] convert points to gpu\n"<<std::flush;
     if (source_points.num_points() == 0 || target_points.num_points() == 0) {
       std::cout<<"[align] point clouds inputs are empty\n";
       return 0;
     }
+
+    Eigen::Matrix init_guess_transform = init_guess_T;
+    double global_guess_time = 0;
+    /*
+    if (this->params.is_global_angle_registration) {
+      init_guess_transform =  get_nearest_init_pose(*this,
+                                                    params,
+                                                    4,
+                                                    &global_guess_time);      
+                                                    } */
+      
+    
     CvoPointCloudGPU::SharedPtr source_gpu = CvoPointCloud_to_gpu(source_points);
     CvoPointCloudGPU::SharedPtr target_gpu = CvoPointCloud_to_gpu(target_points);
 
     CvoState cvo_state(source_gpu, target_gpu, params);
 
-    std::cout<<"construct new cvo state..., init ell is "<<cvo_state.ell<<std::endl;
+    //std::cout<<"construct new cvo state..., init ell is "<<cvo_state.ell<<std::endl;
 
     int ret = align_impl(params, params_gpu,
                          cvo_state, init_guess_transform,
                          transform,
                          association_mat,
                          registration_seconds);
-    //std::cout<<"Result Transform is "<<transform<<std::endl;
+    //if (registration_seconds)
+    //  *registration_seconds += global_guess_time;
+
     return ret;
   }
 
