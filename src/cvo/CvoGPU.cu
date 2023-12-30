@@ -1639,7 +1639,7 @@ namespace cvo{
     
   }
 
-  /*
+  
   static  std::vector<Eigen::Matrix3f, Eigen::aligned_allocator<Eigen::Matrix3f>> gen_rand_init_pose(int discrete_rpy_num) {
 
     std::vector<Eigen::Matrix3f, Eigen::aligned_allocator<Eigen::Matrix3f>> rot_all;
@@ -1694,7 +1694,6 @@ namespace cvo{
     
   }
 
-  */
   int CvoGPU::align(// inputs
                     const CvoPointCloud& source_points,
                     const CvoPointCloud& target_points,
@@ -1711,13 +1710,14 @@ namespace cvo{
 
     Eigen::Matrix init_guess_transform = init_guess_T;
     double global_guess_time = 0;
-    /*
     if (this->params.is_global_angle_registration) {
       init_guess_transform =  get_nearest_init_pose(*this,
-                                                    params,
+                                                    source_points,
+                                                    target_points,
+                                                    params.ell_init_first_frame * 100,
                                                     4,
                                                     &global_guess_time);      
-                                                    } */
+                                                    } 
       
     
     CvoPointCloudGPU::SharedPtr source_gpu = CvoPointCloud_to_gpu(source_points);
@@ -1732,8 +1732,8 @@ namespace cvo{
                          transform,
                          association_mat,
                          registration_seconds);
-    //if (registration_seconds)
-    //  *registration_seconds += global_guess_time;
+    if (registration_seconds)
+      *registration_seconds += global_guess_time;
 
     return ret;
   }
