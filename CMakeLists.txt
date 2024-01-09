@@ -519,6 +519,20 @@ set_target_properties(cvo_gpu_img_deep_feature_lib PROPERTIES
   CUDA_SEPERABLE_COMPILATION ON
   COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 
+add_library(cvo_gpu_fpfh SHARED ${CVO_GPU_SOURCE})
+add_dependencies(cvo_gpu_fpfh cvo_utils lie_group_utils)
+target_link_libraries(cvo_gpu_fpfh PRIVATE lie_group_utils cvo_utils yaml-cpp  Ceres::ceres )
+target_include_directories(cvo_gpu_fpfh PUBLIC
+  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_compile_definitions(cvo_gpu_fpfh PUBLIC -DNUM_CLASSES=33 -DFEATURE_DIMENSIONS=3 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=512
+)
+set_target_properties(cvo_gpu_fpfh PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+  CUDA_SEPERABLE_COMPILATION ON
+  COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
+
+
 
 if(${PROJECT_NAME}_ENABLE_LIDAR)
   add_library(cvo_gpu_lidar SHARED ${CVO_GPU_SOURCE})
@@ -635,7 +649,16 @@ target_include_directories(cvo_align_gpu_two_color_pcd_global PUBLIC
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-      target_link_libraries(cvo_align_gpu_two_color_pcd_global cvo_gpu_rgb cvo_utils boost_filesystem boost_system pcl_io pcl_common)
+      target_link_libraries(cvo_align_gpu_two_color_pcd_global cvo_gpu_fpfh cvo_utils boost_filesystem boost_system pcl_io pcl_common pcl_features)
+
+add_executable(cvo_align_gpu_benchmark_two_pcd_global ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_benchmark_two_pcd_global.cpp)
+target_include_directories(cvo_align_gpu_benchmark_two_pcd_global PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+      target_link_libraries(cvo_align_gpu_benchmark_two_pcd_global cvo_gpu_fpfh cvo_utils boost_filesystem boost_system pcl_io pcl_common pcl_features)
+      
       
 
 add_executable(kitti_depth_filtering ${PROJECT_SOURCE_DIR}/src/experiments/main_depth_filtering.cpp)

@@ -174,6 +174,8 @@ namespace cvo {
     void reserve(int num_points, int feature_dims, int num_classes);
     int add_point(int index, const Eigen::Vector3f & xyz, const Eigen::VectorXf & feature, const Eigen::VectorXf & label, const Eigen::VectorXf & geometric_type);
     void push_back(const cvo::CvoPoint & new_point);
+    void add_semantics(int num_class) { this->num_classes_ = num_class; }
+    void clear() { points_.clear(); num_points_ = 0; }
    
   private:
     int num_points_;

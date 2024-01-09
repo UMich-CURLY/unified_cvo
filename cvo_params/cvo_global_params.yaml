@@ -1,7 +1,7 @@
 %YAML:1.0
 ---
-ell_init_first_frame: 0.4
-ell_init: 0.2
+ell_init_first_frame: 1.0
+ell_init: 0.1
 ell_min: 0.05
 ell_max: 0.9
 dl: 0.0
@@ -14,12 +14,11 @@ c_ell: 0.075
 c_sigma: 1 
 s_ell: 0.1 #0.15 #0.04
 s_sigma: 1 #0.7
-MAX_ITER: 50
+MAX_ITER: 5000
 min_step: 0.000001
 max_step: 0.01
 eps: 0.00005
 eps_2: 0.000012
-nearest_neighbors_max: 256 #1024
 ell_decay_rate: 0.8 #0.95 #0.98
 ell_decay_rate_first_frame: 0.99
 ell_decay_start: 10 #60 #300 #60
@@ -30,12 +29,13 @@ is_ell_adaptive: 0
 is_dense_kernel: 0
 is_full_ip_matrix: 0
 is_using_geometry: 1
-is_using_intensity: 0 #1
+is_using_intensity: 0
 is_using_semantics: 1
 is_using_range_ell: 0
 is_using_kdtree: 0
-nearest_neighbors_max: 256 #20
-is_using_geometric_type: 0 #1
+nearest_neighbors_max: 512
+is_using_geometric_type: 0
+is_global_angle_registration: 4
 # for irls solver
 multiframe_using_cpu: 0
 multiframe_num_neighbors: 256
@@ -44,7 +44,7 @@ multiframe_ell_init: 0.5
 multiframe_ell_min: 0.05 #1.0
 multiframe_ell_decay_rate:  0.95
 multiframe_iterations_per_ell: 10
-multiframe_downsample_voxel_size: 3.0 #5 #3
+multiframe_downsample_voxel_size: 0.001 #5 #3
 multiframe_iterations_per_solve: 10
 multiframe_is_optimizing_ell: 0
 multiframe_is_sorting_inner_product: 0 #10

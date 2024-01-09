@@ -8,10 +8,15 @@
 #include "utils/def_assert.hpp"
 #include "utils/GassianMixture.hpp"
 #include "utils/eigen_utils.hpp"
+//#include "utils/Augmentation.hpp"
+//#include "utils/pcl_utils.hpp"
 #include <pcl/common/io.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/common/transforms.h>
 #include <pcl/impl/point_types.hpp>
+#include <pcl/features/normal_3d.h>
+#include <pcl/features/fpfh.h>
+
 #include <vector>
 #include <utility>
 #include <random>
@@ -33,6 +38,93 @@
 #include <pcl/point_types.h>
 namespace fs = boost::filesystem;
 
+namespace cvo {
+
+
+  
+
+  void crop_point_cloud(const CvoPointCloud & pc_in,
+                        CvoPointCloud & new_pc,
+                        float crop_ratio) {
+    int num_pts = pc_in.size();
+    crop_ratio = std::min(crop_ratio, 1-crop_ratio);
+    int num_pts_to_crop = (int)(num_pts * crop_ratio);
+
+    new_pc.clear();
+    std::vector<int> sorted_inds(num_pts);
+    std::vector<float> x(num_pts);
+    for (int i = 0; i < pc_in.size(); i++) {
+      sorted_inds[i] = i;
+      x[i] = pc_in.xyz_at(i)(0);
+    }
+    std::sort(sorted_inds.begin(), sorted_inds.end(), [&](int a, int b){ return x[a] < x[b];});
+    for (int j = 0; j < 10; j++)std::cout<<sorted_inds[j]<<",";
+    std::cout<<std::endl;
+    
+    int head_to_tail = rand() % 2;    
+    if (head_to_tail == 0) {
+      /// head to be cropped
+      for (int j = num_pts_to_crop; j < num_pts; j++) {
+        new_pc.push_back(pc_in.point_at(sorted_inds[j]));
+      }
+    } else {
+      /// tail
+      for (int j = 0; j < num_pts - num_pts_to_crop; j++) {
+        new_pc.push_back(pc_in.point_at(sorted_inds[j]));
+      }
+    }
+  }
+
+  
+  template <typename PointT>
+  pcl::PointCloud<pcl::FPFHSignature33>::Ptr calculate_fpfh_pcl(typename pcl::PointCloud< PointT>::Ptr cloud,
+                                                                float normal_radius,
+                                                                float fpfh_radius){
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal> ());
+
+    // Create the normal estimation class, and pass the input dataset to it
+    typename pcl::NormalEstimation<PointT, pcl::Normal> ne;
+    ne.setInputCloud (cloud);
+
+    // Create an empty kdtree representation, and pass it to the normal estimation object.
+    // Its content will be filled inside the object, based on the given input dataset (as no other search surface is given).
+    typename pcl::search::KdTree<PointT>::Ptr tree_normal (new typename pcl::search::KdTree<PointT> ());
+    ne.setSearchMethod (tree_normal);
+
+    // Output datasets
+    pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>);
+
+    // Use all neighbors in a sphere of radius 3cm
+    ne.setRadiusSearch (normal_radius);
+
+    // Compute the features
+    ne.compute (*cloud_normals);
+
+
+    // Create the FPFH estimation class, and pass the input dataset+normals to it
+
+    typename  pcl::FPFHEstimation<PointT, pcl::Normal, pcl::FPFHSignature33> fpfh;
+
+    fpfh.setInputCloud (cloud);
+    fpfh.setInputNormals (cloud_normals);
+
+    // Its content will be filled inside the object, based on the given input dataset (as no other search surface is given).
+    typename  pcl::search::KdTree<PointT>::Ptr tree (new pcl::search::KdTree<PointT>);
+    fpfh.setSearchMethod (tree);
+    pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfhs (new pcl::PointCloud<pcl::FPFHSignature33> ());
+    // IMPORTANT: the radius used here has to be larger than the radius used to estimate the surface normals!!!
+
+    fpfh.setRadiusSearch (fpfh_radius);
+
+    // Compute the features
+    fpfh.compute (*fpfhs);
+
+    return fpfhs;
+  }
+
+}
+
 Eigen::Vector3f get_pc_mean(const cvo::CvoPointCloud & pc) {
   Eigen::Vector3f p_mean_tmp = Eigen::Vector3f::Zero();
   for (int k = 0; k < pc.num_points(); k++)
@@ -43,32 +135,37 @@ Eigen::Vector3f get_pc_mean(const cvo::CvoPointCloud & pc) {
 }
 
 
-void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string & fname,
-                          std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > & colors) {
+void write_transformed_pc_pair(const cvo::CvoPointCloud & pc1, const cvo::CvoPointCloud & pc2,
+                               const Eigen::Matrix4f & T_frame_1_to_2,
+                               const std::tuple<uint8_t, uint8_t, uint8_t> & color1,
+                               const std::tuple<uint8_t, uint8_t, uint8_t> & color2,
+                               std::string & fname    
+                               ) {
   pcl::PointCloud<pcl::PointXYZRGB> pc_all;
-  for (int i = 0; i <  frames.size(); i++) {
-    auto ptr = frames[i];
-    cvo::CvoPointCloud new_pc(0,0);
-    Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
-    pose.block<3,4>(0,0) = Eigen::Map<cvo::Mat34d_row>(ptr->pose_vec);
-    
-    Eigen::Matrix4f pose_f = pose.cast<float>();
-    cvo::CvoPointCloud::transform(pose_f, *ptr->points, new_pc);
 
-    pcl::PointCloud<pcl::PointXYZ> pc_curr_xyz;
-    new_pc.export_to_pcd(pc_curr_xyz);
-    pcl::PointCloud<pcl::PointXYZRGB> pc_curr;
-    for (int j = 0; j <  pc_curr_xyz.size(); j++) {
-      pcl::PointXYZRGB p;
-      p.getVector3fMap() = pc_curr_xyz[j].getVector3fMap();
-      p.r = std::get<0>(colors[i]);
-      p.g = std::get<1>(colors[i]);
-      p.b = std::get<2>(colors[i]);
-      pc_curr.push_back(p);
-    }
-
-    pc_all += pc_curr;
+  // pc1
+  for (int j = 0; j <  pc1.size(); j++) {
+    pcl::PointXYZRGB p;
+    p.getVector3fMap() = pc1.at(j);
+    p.r = std::get<0>(color1);
+    p.g = std::get<1>(color1);
+    p.b = std::get<2>(color1);
+    pc_all.push_back(p);
   }
+
+  /// pc2
+  cvo::CvoPointCloud new_pc(0,0);
+  Eigen::Matrix4f pose_f = T_frame_1_to_2.cast<float>();
+  cvo::CvoPointCloud::transform(T_frame_1_to_2, pc2, new_pc);
+  for (int j = 0; j <  pc2.size(); j++) {
+    pcl::PointXYZRGB p;
+    p.getVector3fMap() = new_pc.at(j);
+    p.r = std::get<0>(color2);
+    p.g = std::get<1>(color2);
+    p.b = std::get<2>(color2);
+    pc_all.push_back(p);
+  }
+
   pcl::io::savePCDFileASCII(fname, pc_all);
 }
 
@@ -121,16 +218,18 @@ void gen_random_poses(std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eige
       Eigen::Vector3f axis;
       axis << (float)dist_trans(e2), (float)dist_trans(e2), (float)dist_trans(e2);
       axis = axis.normalized().eval();
-      
-      //rot = Eigen::AngleAxisf(dist(e2)*M_PI, Eigen::Vector3f::UnitX())
-      //  * Eigen::AngleAxisf(dist(e2)*M_PI,  Eigen::Vector3f::UnitY())
-      //  * Eigen::AngleAxisf(dist(e2)*M_PI, Eigen::Vector3f::UnitZ());
-      rot = Eigen::AngleAxisf(max_angle_axis * M_PI, axis);
+
+      Eigen::Vector3f angle_vec = axis * dist(e2) * M_PI;
+      rot = Eigen::AngleAxisf(angle_vec[0], Eigen::Vector3f::UnitX())
+        * Eigen::AngleAxisf(angle_vec[1],  Eigen::Vector3f::UnitY())
+        * Eigen::AngleAxisf(angle_vec[2], Eigen::Vector3f::UnitZ());
+      //rot = Eigen::AngleAxisf(max_angle_axis * M_PI, axis);
       poses[i] = Eigen::Matrix4f::Identity();
       poses[i].block<3,3>(0,0) = rot;
-      poses[i](0,3) = dist_trans(e2);
-      poses[i](1,3) = dist_trans(e2);
-      poses[i](2,3) = dist_trans(e2);
+
+      //poses[i](0,3) = dist_trans(e2);
+      //poses[i](1,3) = dist_trans(e2);
+      //poses[i](2,3) = dist_trans(e2);
     } else {
       poses[i] = Eigen::Matrix4f::Identity();
     }
@@ -141,18 +240,20 @@ void gen_random_poses(std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eige
   }
 }
 template <typename T>
-void pcd_rescale(typename pcl::PointCloud<T>::Ptr pcd ){
+float pcd_rescale(typename pcl::PointCloud<T>::Ptr pcd, float scale=-1.0 ){
   Eigen::MatrixXf pcd_eigen(3, pcd->size());
   for (int j = 0; j < pcd->size(); j++) {
     pcd_eigen.col(j) = pcd->at(j).getVector3fMap();
   }
 
-  float scale = (pcd_eigen.rowwise().maxCoeff() - pcd_eigen.rowwise().minCoeff()).norm();
+  if (scale < 0)
+    scale = (pcd_eigen.rowwise().maxCoeff() - pcd_eigen.rowwise().minCoeff()).norm();
   std::cout << "scale = " << scale << std::endl;
   pcd_eigen /= scale;
 
   for (int j = 0; j < pcd->size(); j++)
     pcd->at(j).getVector3fMap() = pcd_eigen.col(j);
+  return scale;
 }
 
 
@@ -180,8 +281,24 @@ void eval_poses(std::vector<Sophus::SE3f> & estimates,
   //std::cout<<"Total: "<<counter<<" success out of "<<gt.size()<<"\n";
 }
 
+void eval_poses(const Eigen::Matrix4f & estimates,
+                const Eigen::Matrix4f & gt,
+                std::string & fname
+                ){
+  assert(filesystem::exists(fname));
+  std::ofstream err_f(fname,std::fstream::out |   std::ios::app);
+  float total_err = 0;
+  float err = (estimates.inverse() * gt).log().norm();
+  total_err += err;
+  err_f << total_err<<"\n";
+  err_f.close();
+  //std::cout<<"Total: "<<counter<<" success out of "<<gt.size()<<"\n";
+}
+
+
 int main(int argc, char** argv) {
 
+   srand(time(NULL));
   omp_set_num_threads(24);
   std::string in_pcd_fname(argv[1]);
   std::string cvo_param_file(argv[2]);
@@ -192,19 +309,28 @@ int main(int argc, char** argv) {
   int is_adding_outliers = std::stoi(argv[7]);
   float ratio = 0.8;
   float sigma = 0.01;
-  float uniform_range = 0.5;
-  if (is_adding_outliers) {
-    ratio = std::stof(argv[8]);
-    sigma = std::stof(argv[9]);
-    uniform_range = std::stof(argv[10]);
-  }
+  float uniform_range = 0.1;
+  //if (is_adding_outliers) {
+  ratio = std::stof(argv[8]);
+  sigma = std::stof(argv[9]);
+  uniform_range = std::stof(argv[10]);
+
+  float normal_radius = std::stof(argv[11]);
+  float fpfh_radius = std::stof(argv[12]);
+
+  float crop_ratio = std::stof(argv[13]);
+    //}
   int num_frames = 2;
 
   /// assign one color to one frame
-  std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > colors(num_frames);
-  gen_rand_colors(colors);
+  std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > colors;
+  colors.push_back({255,0,0});
+  colors.push_back({0,0,255});
+  ///gen_rand_colors(colors);
 
+  
   cvo::CvoGPU cvo_align(cvo_param_file);
+  const Eigen::Matrix4f pose_idd = Eigen::Matrix4f::Identity();
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr raw_pcd(new pcl::PointCloud<pcl::PointXYZ>);
   pcl::PointCloud<pcl::PointNormal>::Ptr raw_pcd_normal(new pcl::PointCloud<pcl::PointNormal>);
@@ -215,12 +341,16 @@ int main(int argc, char** argv) {
   std::string fname(exp_folder + "/cvo_err_global.txt");
   std::ofstream err_f(fname);
   err_f.close();
+  float scale = -1.0;
   for (int k = 0; k < num_runs; k++) {
+
+    /// create exp log folder
     fs::path exp_curr_dir = exp_folder_dir / fs::path(std::to_string(k));
     std::string exp_curr_dir_str = exp_curr_dir.string();
     std::cout<<"Current exp folder is "<<exp_curr_dir_str<<"\n";
     fs::create_directories(exp_curr_dir);
 
+    /// gen init poses for each frame and log them as gt pose
     std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> tracking_poses;
     gen_random_poses(tracking_poses, num_frames, max_angle_per_axis );
     std::ofstream pose_f(exp_curr_dir_str + "/gt_poses.txt");
@@ -230,6 +360,7 @@ int main(int argc, char** argv) {
     }
     pose_f.close();
 
+
     std::vector<Sophus::SE3f> poses_gt;
     std::transform(tracking_poses.begin(), tracking_poses.end(), std::back_inserter(poses_gt),
                    [&](const Eigen::Matrix4f & in){
@@ -237,9 +368,8 @@ int main(int argc, char** argv) {
                      return pose.inverse();
                    });
 
-
-    // read point cloud
-    std::vector<cvo::CvoFrame::Ptr> frames;
+    /// read point cloud
+    //std::vector<cvo::CvoFrame::Ptr> frames;
     std::vector<std::shared_ptr<cvo::CvoPointCloud>> pcs;
     for (int i = 0; i<num_frames; i++) {
       // Create the filtering object
@@ -260,104 +390,148 @@ int main(int argc, char** argv) {
       // for visualzation
       copyPointCloud(*raw_pcd_curr, *raw_pcd);
       pcl::io::savePCDFileASCII(exp_curr_dir_str + "/" + std::to_string(i)+"normal.pcd", *raw_pcd);      
-      pcd_rescale<pcl::PointXYZ>(raw_pcd);
+      scale = pcd_rescale<pcl::PointXYZ>(raw_pcd, scale);
       
       pcl::PointCloud<pcl::PointXYZ>::Ptr raw_pcd_transformed(new pcl::PointCloud<pcl::PointXYZ>);
       pcl::transformPointCloud (*raw_pcd, *raw_pcd_transformed, tracking_poses[i]);
 
-      /*
-      pcl::VoxelGrid<pcl::PointXYZ> sor;
-      sor.setInputCloud (raw_pcd_transformed);
-      sor.setLeafSize (0.025f, 0.025f, 0.025f);
-      sor.filter (*raw_pcd_transformed);
-      */
+
+      /// downsample
+      std::cout<<"Before downsample, num of points of frame "<<i<<" is "<<raw_pcd->size()<<"\n";
       cvo::VoxelMap<pcl::PointXYZ> voxel_map(cvo_align.get_params().multiframe_downsample_voxel_size);
       for (int l = 0; l < raw_pcd_transformed->size(); l++) {
         voxel_map.insert_point(&raw_pcd_transformed->at(l));
       }
       std::vector<pcl::PointXYZ*> sampled =  voxel_map.sample_points();
-      pcl::PointCloud<pcl::PointXYZ> raw_pcd_downsampled;
+      pcl::PointCloud<pcl::PointXYZ>::Ptr raw_pcd_downsampled(new pcl::PointCloud<pcl::PointXYZ>);
       for (auto p : sampled)
-        raw_pcd_downsampled.push_back(*p);
-      
+        raw_pcd_downsampled->push_back(*p);
       std::cout<<"after downsampling, num of points is "<<raw_pcd_transformed->size()<<std::endl;
-      std::shared_ptr<cvo::CvoPointCloud> pc (new cvo::CvoPointCloud(raw_pcd_downsampled));  
-      //std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(0,0));
-    
-      // cvo::CvoPointCloud::transform(tracking_poses[i],
-      //                               *raw,
-      //                               *pc);
-    
-      cvo::Mat34d_row pose;
-      Eigen::Matrix<double, 4,4, Eigen::RowMajor> pose44 = Eigen::Matrix<double, 4,4, Eigen::RowMajor>::Identity();
-      pose = pose44.block<3,4>(0,0);
-    
+      pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfh = cvo::calculate_fpfh_pcl<pcl::PointXYZ>(raw_pcd_downsampled, 0.03, 0.05);
+      
+      std::shared_ptr<cvo::CvoPointCloud> pc (new cvo::CvoPointCloud(*raw_pcd_downsampled));
+      pc->add_semantics(33);
+      for (int k = 0 ; k < pc->size(); k++)  {
+        
+        memcpy((*pc)[k].label_distribution, (*fpfh)[k].histogram, sizeof(float)*33  );
+        Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, 1>> label_map((*pc)[k].label_distribution, 33);
+        label_map.normalize();
+        /*
+        if (k == 0) {
+        for (int l = 0; l < 33; l++)
+          std::cout<<(*fpfh)[k].histogram[l]<<",";
+        std::cout<<"\n";
+        }*/
+      }
 
-      cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pc.get(), pose.data()));
-      frames.push_back(new_frame);
+      if (crop_ratio > 0.001) {
+        std::shared_ptr<cvo::CvoPointCloud> pc_cropped(new cvo::CvoPointCloud(pc->num_features(), pc->num_classes() ));
+        cvo::crop_point_cloud(*pc, *pc_cropped, crop_ratio);
+
+        pc_cropped.swap(pc);
+        std::cout<<"crop from "<<pc_cropped->size()<<" to "<<pc->size()<<"\n";        
+      }
+
+      std::string pcd_name(exp_curr_dir_str + "/" + std::to_string(0)+".pcd");
+      pc->write_to_pcd(pcd_name);
+      
       pcs.push_back(pc);
+      
+      /// construct frame
+      //cvo::Mat34d_row pose;
+      //Eigen::Matrix<double, 4,4, Eigen::RowMajor> pose44 = Eigen::Matrix<double, 4,4, Eigen::RowMajor>::Identity();
+      //pose = pose44.block<3,4>(0,0);
+      //cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pc.get(), pose.data()));
+      //frames.push_back(new_frame);
+
     }
+
+
+    float ip = cvo_align.function_angle(*(pcs[0]), *(pcs[1]), poses_gt[1].inverse().matrix(), cvo_align.get_params().ell_init_first_frame);
+    std::cout<<"At gt, the inner product is "<<ip<<"\n";
+
 
     //std::vector<cvo::Mat34d_row, Eigen::aligned_allocator<cvo::Mat34d_row>> tracking_poses;
     std::cout<<"write to before_BA.pcd\n";
     std::string f_name(exp_curr_dir_str + "/before_BA_");
     f_name += std::to_string(k)+".pcd";
-    write_transformed_pc(frames, f_name, colors);
+    //write_transformed_pc(frames, f_name, colors);
+    write_transformed_pc_pair(*(pcs[0]), *(pcs[1]),
+                              pose_idd,
+                              colors[0], colors[1],
+                              f_name);
+    
 
-    std::cout<<"write to gt\n";    
+    
+    std::cout<<"write to gt\n";
+    /*
     for (int i = 0; i < num_frames; i++ ) {
       cvo::Mat34d_row pose;
       Eigen::Matrix<double, 4,4, Eigen::RowMajor> pose44 = tracking_poses[i].cast<double>().inverse();
-      memcpy(frames[i]->pose_vec, pose44.data(), sizeof(double) * 12);
+      memcpy(pcs[i]->pose_vec, pose44.data(), sizeof(double) * 12);
     }
-
+    */
     f_name =  exp_curr_dir_str + "/gt_BA_"+std::to_string(k)+".pcd" ;
-    write_transformed_pc(frames, f_name, colors);
+    //write_transformed_pc(frames, f_name, colors);
+    write_transformed_pc_pair(*(pcs[0]), *(pcs[1]),
+                              poses_gt[1].matrix(),
+                              colors[0], colors[1],
+                              f_name);
+    
 
+    /*
     for (int i = 0; i < num_frames; i++ ) {
       cvo::Mat34d_row pose;
       Eigen::Matrix<double, 4,4, Eigen::RowMajor> pose44 = Eigen::Matrix<double, 4,4, Eigen::RowMajor>::Identity();
       memcpy(frames[i]->pose_vec, pose44.data(), sizeof(double) * 12);
     }
-    
+    */
 
-    // std::list<std::pair<std::shared_ptr<cvo::CvoFrame::Ptr, cvo::CvoFrame::Ptr>> edges;
+    /// start registration
     std::cout<<"Centerizing\n";
-    std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> mean_all(num_frames);
-    for (int i = 0; i < num_frames; i++) {
-      Eigen::Vector3f source_mean = get_pc_mean(*pcs[i]);
-      for (int i = 0 ; i < source->size(); i++) 
-        pcs[i].getVector3fMap() = (pcs[i].getVector3fMap() - source_mean ).eval();
-      mean_all[i] = source_mean;
-    }
+    Eigen::Vector3f mean1, mean2;
+    cvo::CvoPointCloud pc1_center(*pcs[0]),pc2_center(*pcs[1]);
+    mean1 = get_pc_mean(*pcs[0]);
+    for (int j = 0 ; j < pcs[0]->size(); j++) 
+      pc1_center[j].getVector3fMap() = (pcs[0]->at(j) - mean1 ).eval();
+    mean2 = get_pc_mean(*pcs[1]);
+    for (int j = 0 ; j < pcs[1]->size(); j++) 
+      pc2_center[j].getVector3fMap() = (pcs[1]->at(j) - mean2 ).eval();
+    f_name =  exp_curr_dir_str + "/before_BA_centered_"+std::to_string(k)+".pcd" ;
+    write_transformed_pc_pair(pc1_center, pc2_center,
+                              pose_idd, //poses_gt[1].matrix(),
+                              colors[0], colors[1],
+                              f_name);
 
+    
     std::cout<<"start align\n";
-    Eigen::Matrix4f init_inv = Eigen::Matrix4f::Identity;
+    Eigen::Matrix4f init_inv = Eigen::Matrix4f::Identity();
     Eigen::Matrix4f result;
     double time = 0;
-    cvo_align.align(frames[0],frames[1], init_inv,
-                    result,  nullptr, time);
+    cvo_align.align(pc1_center, pc2_center, init_inv,
+                    result,  nullptr, &time);
 
-    //std::cout<<"Align ends. Total time is "<<time<<std::endl;
-    f_name=exp_curr_dir_str + "/after_BA_bunny_" + std::to_string(k)+".pcd";
-    write_transformed_pc(frames, f_name, colors);
+    f_name=exp_curr_dir_str + "/after_BA_bunny_" + std::to_string(k)+"_centered.pcd";
+    write_transformed_pc_pair(pc1_center, pc2_center,
+                              result,
+                              colors[0], colors[1],
+                              f_name);
+
     
-    std::vector<Sophus::SE3f> estimates;
-    std::transform(frames.begin(), frames.end(), std::back_inserter(estimates),
-                   [&](auto & frame){
-                     Eigen::Matrix<double, 3, 4, Eigen::RowMajor> pose_row = Eigen::Map<Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>(frame->pose_vec);
-                     Eigen::Matrix<double , 3,4> pose_col = pose_row;
-                     Eigen::Matrix<float, 4, 4> pose_eigen = Eigen::Matrix4f::Identity();
-                     pose_eigen.block<3,4>(0,0) = pose_col.cast<float>();
-                     Sophus::SE3f pose(pose_eigen);
-                     return pose;
-                   });
+    //Sophus::SE3f result_sophus(result.block<3,3>(0,0), result.block<3,1>(0,0));
+    Eigen::Vector3f t_actual = (result.block<3,1>(0,3) - result.block<3,3>(0,0) * mean2 + mean1).eval();
+    result.block<3,1>(0,3) = t_actual;    
 
+    std::cout<<"Align ends. Total time is "<<time<<std::endl<<"result is "<<result<<"\n";
+    f_name=exp_curr_dir_str + "/after_BA_bunny_" + std::to_string(k)+".pcd";
+    write_transformed_pc_pair(*(pcs[0]), *(pcs[1]),
+                              result,
+                              colors[0], colors[1],
+                              f_name);
 
-    eval_poses(estimates,
-               poses_gt,
-               fname
-               );
+    eval_poses(result,
+               poses_gt[1].matrix(),
+               fname);
 
 
   }

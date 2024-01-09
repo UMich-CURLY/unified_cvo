@@ -8,6 +8,10 @@
 #include <cmath>
 #include <chrono>
 #include <boost/filesystem.hpp>
+#include <pcl/features/normal_3d.h>
+#include <pcl/features/fpfh.h>
+
+///#include "utils/pcl_utils.hpp"
 //#include "dataset_handler/KittiHandler.hpp"
 #include "utils/ImageStereo.hpp"
 #include "utils/Calibration.hpp"
@@ -26,6 +30,79 @@ extern template class cvo::VoxelMap<pcl::PointXYZRGB>;
 extern template class cvo::Voxel<pcl::PointXYZRGB>;
 
 
+
+namespace cvo {
+
+  
+  template <typename PointT>
+  pcl::PointCloud<pcl::FPFHSignature33>::Ptr calculate_fpfh_pcl(typename pcl::PointCloud< PointT>::Ptr cloud,
+                                                                float normal_radius,
+                                                                float fpfh_radius){
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal> ());
+
+    // Create the normal estimation class, and pass the input dataset to it
+    typename pcl::NormalEstimation<PointT, pcl::Normal> ne;
+    ne.setInputCloud (cloud);
+
+    // Create an empty kdtree representation, and pass it to the normal estimation object.
+    // Its content will be filled inside the object, based on the given input dataset (as no other search surface is given).
+    typename pcl::search::KdTree<PointT>::Ptr tree_normal (new typename pcl::search::KdTree<PointT> ());
+    ne.setSearchMethod (tree_normal);
+
+    // Output datasets
+    pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>);
+
+    // Use all neighbors in a sphere of radius 3cm
+    ne.setRadiusSearch (normal_radius);
+
+    // Compute the features
+    ne.compute (*cloud_normals);
+
+
+    // Create the FPFH estimation class, and pass the input dataset+normals to it
+
+    typename  pcl::FPFHEstimation<PointT, pcl::Normal, pcl::FPFHSignature33> fpfh;
+
+    fpfh.setInputCloud (cloud);
+    fpfh.setInputNormals (cloud_normals);
+
+    // Its content will be filled inside the object, based on the given input dataset (as no other search surface is given).
+    typename  pcl::search::KdTree<PointT>::Ptr tree (new pcl::search::KdTree<PointT>);
+    fpfh.setSearchMethod (tree);
+    pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfhs (new pcl::PointCloud<pcl::FPFHSignature33> ());
+    // IMPORTANT: the radius used here has to be larger than the radius used to estimate the surface normals!!!
+
+    fpfh.setRadiusSearch (fpfh_radius);
+
+    // Compute the features
+    fpfh.compute (*fpfhs);
+
+    return fpfhs;
+  }
+
+
+  template <typename PointT>
+  std::shared_ptr<cvo::CvoPointCloud> load_pcd_and_fpfh(const std::string & source_file,
+                                                        float radius_normal,
+                                                        float radius_fpfh) {
+    
+    typename pcl::PointCloud<PointT>::Ptr source_pcd(new typename pcl::PointCloud<PointT>);
+    pcl::io::loadPCDFile(source_file, *source_pcd);
+    //std::cout<<"Read  source "<<source_pcd->size()<<" points\n";
+    pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfh_source = calculate_fpfh_pcl<pcl::PointXYZRGB>(source_pcd, radius_normal, radius_fpfh);
+    std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_pcd));
+    for (int i = 0 ; i < source->size(); i++)  {
+      memcpy((*source)[i].label_distribution, (*fpfh_source)[i].histogram, sizeof(float)*33  );
+    }
+    return source;
+    
+  }
+
+}
+
+
+
 float rand_rad() {
   float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
   return r * M_PI * 2;
@@ -34,7 +111,7 @@ float rand_rad() {
 Eigen::Matrix4f gen_rand_pose(float max_translation) {
   Eigen::Matrix3f rot;
   
-  rot = Eigen::AngleAxisf( rand_rad(), Eigen::Vector3f::UnitZ())
+  rot = Eigen::AngleAxisf( rand_rad(), Eigen::Vector3f::UnitX())
     * Eigen::AngleAxisf( rand_rad(), Eigen::Vector3f::UnitY())
     * Eigen::AngleAxisf( rand_rad(), Eigen::Vector3f::UnitZ());
 
@@ -117,39 +194,41 @@ int main(int argc, char *argv[]) {
   //	  ell = std::stof(argv[4]);
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr source_pcd(new pcl::PointCloud<pcl::PointXYZRGB>);
   pcl::io::loadPCDFile(source_file, *source_pcd);
-  std::cout<<"Read  source "<<source_pcd->size()<<" points\n";  
+  std::cout<<"Read  source "<<source_pcd->size()<<" points\n";
+  pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfh_source = cvo::calculate_fpfh_pcl<pcl::PointXYZRGB>(source_pcd, 0.02, 0.03);
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*source_pcd));  pcl::PointCloud<pcl::PointXYZRGB>::Ptr target_pcd(new pcl::PointCloud<pcl::PointXYZRGB>);
   pcl::io::loadPCDFile(target_file, *target_pcd);
-  std::cout<<"Read  target "<<target_pcd->size()<<" points\n";    
+  pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfh_target = cvo::calculate_fpfh_pcl<pcl::PointXYZRGB>(target_pcd, 0.02, 0.03);  
+  std::cout<<"Read  target "<<target_pcd->size()<<" points\n";
   std::shared_ptr<cvo::CvoPointCloud> target_tmp(new cvo::CvoPointCloud(*target_pcd));
-
-
-  Eigen::Vector3f source_mean = get_pc_mean(*source);
-  for (int i = 0 ; i < source->size(); i++) 
-    (*source)[i].getVector3fMap() = ((*source)[i].getVector3fMap() - source_mean ).eval();
-
   std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud());
   cvo::CvoPointCloud::transform(gen_rand_pose(1.0), *target_tmp, *target);
-  Eigen::Vector3f target_mean = get_pc_mean(*target);
+  
   name = "before_init_raw.pcd";
   save_two_cvo_pc(idd,
                   source,
                   target,
                   name 
                   );
-  for (int i = 0 ; i < target->size(); i++) 
-    (*target)[i].getVector3fMap() = ((*target)[i].getVector3fMap() - target_mean ).eval();
 
-  
+  /// subtract mean
+  Eigen::Vector3f source_mean = get_pc_mean(*source);
+  for (int i = 0 ; i < source->size(); i++)  {
+    (*source)[i].getVector3fMap() = ((*source)[i].getVector3fMap() - source_mean ).eval();
+    memcpy((*source)[i].label_distribution, (*fpfh_source)[i].histogram, sizeof(float)*33  );
+  }
+  Eigen::Vector3f target_mean = get_pc_mean(*target);
+  for (int i = 0 ; i < target->size(); i++)  {
+    (*target)[i].getVector3fMap() = ((*target)[i].getVector3fMap() - target_mean ).eval();
+    memcpy((*target)[i].label_distribution, (*fpfh_target)[i].histogram, sizeof(float)*33  );
+  }
   float dist = (source_mean - target_mean).norm();
   std::cout<<"source mean is "<<source_mean<<", target mean is "<<target_mean<<", dist is "<<dist<<std::endl;
 
-  Eigen::Vector3f dist_vec = source_mean - target_mean;
-  //for (int i = 0 ; i < source->size(); i++) {
-  //  (*source)[i].getVector3fMap() = ((*source)[i].getVector3fMap() - dist_vec ).eval();
-  //}
 
-  name = "before_init_idd.pcd";
+  //Eigen::Vector3f dist_vec = source_mean - target_mean;
+
+  name = "before_init_idd_centered.pcd";
   save_two_cvo_pc(idd,
                   source,
                   target,
@@ -160,7 +239,7 @@ int main(int argc, char *argv[]) {
   cvo::CvoGPU cvo_align(cvo_param_file );
   cvo::CvoParams & init_param = cvo_align.get_params();
   //init_param.ell_init = dist; //init_param.ell_init_first_frame;
-  init_param.ell_init = init_param.ell_init_first_frame ;
+  //init_param.ell_init = init_param.ell_init_first_frame ;
   init_param.ell_decay_rate = init_param.ell_decay_rate_first_frame;
   init_param.ell_decay_start  = init_param.ell_decay_start_first_frame;
   init_param.MAX_ITER = 10000;
@@ -177,14 +256,14 @@ int main(int argc, char *argv[]) {
     tmp_init_guess.block<3,3>(0,0) = init_rot;
 
     Eigen::Matrix4f init_inv = tmp_init_guess.inverse();
-    float ip = cvo_align.function_angle(*source, * target, init_inv, init_param.ell_init_first_frame * 30);
-    //std::cout<<"Init guess\n"<<tmp_init_guess<<", ip is "<<ip<<"\n";
+    float ip = cvo_align.function_angle(*source, * target, init_inv, init_param.ell_init_first_frame);
+    std::cout<<"Init guess\n"<<tmp_init_guess<<", ip is "<<ip<<"\n";
     name =  std::string("before_init_")+std::to_string(ip)+".pcd";
-    /*save_two_cvo_pc(tmp_init_guess,
+    save_two_cvo_pc(tmp_init_guess,
                     source,
                     target,
                     name);
-    */
+    
     if (ip > curr_max_ip) {
       curr_max_ip = ip;
       init_guess = tmp_init_guess;

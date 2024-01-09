@@ -1650,7 +1650,7 @@ namespace cvo{
           
           Eigen::Matrix3f rot;
         
-          rot = Eigen::AngleAxisf( i / (float)discrete_rpy_num * M_PI, Eigen::Vector3f::UnitZ())
+          rot = Eigen::AngleAxisf( i / (float)discrete_rpy_num * M_PI, Eigen::Vector3f::UnitX())
             * Eigen::AngleAxisf( j / (float)discrete_rpy_num * M_PI, Eigen::Vector3f::UnitY())
             * Eigen::AngleAxisf( k / (float)discrete_rpy_num * M_PI, Eigen::Vector3f::UnitZ());
           rot_all.emplace_back(rot);
@@ -1679,6 +1679,7 @@ namespace cvo{
 
       Eigen::Matrix4f init_inv = tmp_init_guess.inverse();
       float ip = cvo_align.function_angle(source, target, init_inv, init_guess_ell);
+      std::cout<<"inner product of init guess "<<tmp_init_guess<<" is "<<ip<<"\n";
       if (ip > curr_max_ip) {
         curr_max_ip = ip;
         init_guess = tmp_init_guess;
@@ -1710,14 +1711,17 @@ namespace cvo{
 
     Eigen::Matrix init_guess_transform = init_guess_T;
     double global_guess_time = 0;
-    if (this->params.is_global_angle_registration) {
+    if (this->params.is_global_angle_registration > 0) {
       init_guess_transform =  get_nearest_init_pose(*this,
                                                     source_points,
                                                     target_points,
-                                                    params.ell_init_first_frame * 100,
-                                                    4,
-                                                    &global_guess_time);      
-                                                    } 
+                                                    params.ell_init_first_frame,
+                                                    this->params.is_global_angle_registration ,
+                                                    &global_guess_time).inverse();
+      
+      std::cout<<"Use ell = "<<params.ell_init_first_frame<<" for "<<global_guess_time<<" seconds to get Global init guess: pose is \n";
+      std::cout<<init_guess_transform<<std::endl;
+    } 
       
     
     CvoPointCloudGPU::SharedPtr source_gpu = CvoPointCloud_to_gpu(source_points);
@@ -1957,7 +1961,7 @@ namespace cvo{
       }
     }
     cosine_value = fxfz / (fx_norm * fz_norm);
-    //std::cout<<"fxfz is "<<fxfz<<", fx_norm is "<<fx_norm<<", fz_norm is "<<fz_norm<<std::endl;
+    std::cout<<"fxfz is "<<fxfz<<", fx_norm is "<<fx_norm<<", fz_norm is "<<fz_norm<<std::endl;
     return cosine_value;
   }
 
