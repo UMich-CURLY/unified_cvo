@@ -1942,7 +1942,7 @@ namespace cvo{
       return 0;
     }
 
-    Eigen::Matrix4f identity = Eigen::Matrix4f::Identity();
+
     float fxfz = 0, fx_norm = 0, fz_norm = 0, cosine_value = 0;
     if (is_gpu)
       fxfz = inner_product_gpu(source_points, target_points, t2s_frame_transform, ell);
@@ -1953,9 +1953,11 @@ namespace cvo{
       fz_norm = sqrt(target_points.num_points());
     } else {
       if (is_gpu) {
+        Eigen::Matrix4f identity = Eigen::Matrix4f::Identity();        
         fx_norm = sqrt(inner_product_gpu(source_points, source_points, identity, ell));
         fz_norm = sqrt(inner_product_gpu(target_points, target_points, identity, ell));
       } else {
+        Eigen::Matrix4f identity = Eigen::Matrix4f::Identity();        
         fx_norm = sqrt(inner_product_cpu(source_points, source_points, identity, ell));
         fz_norm = sqrt(inner_product_cpu(target_points, target_points, identity, ell));        
       }

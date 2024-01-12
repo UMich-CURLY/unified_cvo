@@ -16,7 +16,7 @@
 #include <pcl/impl/point_types.hpp>
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/fpfh.h>
-
+#include <boost/filesystem.hpp>
 #include <vector>
 #include <utility>
 #include <random>
@@ -269,7 +269,7 @@ void eval_poses(std::vector<Sophus::SE3f> & estimates,
                 std::vector<Sophus::SE3f> & gt,
                 std::string & fname
                 ){
-  assert(filesystem::exists(fname));
+  assert(fs::exists(fname));
   std::ofstream err_f(fname,std::fstream::out |   std::ios::app);
   float total_err = 0;
   for (int i = 0; i < gt.size(); i ++) {
@@ -285,7 +285,7 @@ void eval_poses(const Eigen::Matrix4f & estimates,
                 const Eigen::Matrix4f & gt,
                 std::string & fname
                 ){
-  assert(filesystem::exists(fname));
+  assert(fs::exists(fname));
   std::ofstream err_f(fname,std::fstream::out |   std::ios::app);
   float total_err = 0;
   float err = (estimates.inverse() * gt).log().norm();
@@ -395,7 +395,7 @@ int main(int argc, char** argv) {
       pcl::PointCloud<pcl::PointXYZ>::Ptr raw_pcd_transformed(new pcl::PointCloud<pcl::PointXYZ>);
       pcl::transformPointCloud (*raw_pcd, *raw_pcd_transformed, tracking_poses[i]);
 
-
+/*
       /// downsample
       std::cout<<"Before downsample, num of points of frame "<<i<<" is "<<raw_pcd->size()<<"\n";
       cvo::VoxelMap<pcl::PointXYZ> voxel_map(cvo_align.get_params().multiframe_downsample_voxel_size);
@@ -407,6 +407,8 @@ int main(int argc, char** argv) {
       for (auto p : sampled)
         raw_pcd_downsampled->push_back(*p);
       std::cout<<"after downsampling, num of points is "<<raw_pcd_transformed->size()<<std::endl;
+*/
+      pcl::PointCloud<pcl::PointXYZ>::Ptr raw_pcd_downsampled = raw_pcd_transformed;
       pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfh = cvo::calculate_fpfh_pcl<pcl::PointXYZ>(raw_pcd_downsampled, 0.03, 0.05);
       
       std::shared_ptr<cvo::CvoPointCloud> pc (new cvo::CvoPointCloud(*raw_pcd_downsampled));
