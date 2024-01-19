@@ -45,7 +45,7 @@ multiframe_ell_max: 0.1
 multiframe_ell_min: 0.025
 multiframe_ell_decay_rate:  0.9 
 multiframe_iterations_per_ell: 10
-multiframe_downsample_voxel_size: 0.2
+multiframe_downsample_voxel_size: 0.5
 multiframe_num_neighbors: 128
 multiframe_min_nonzeros: 100
 multiframe_iterations_per_solve: 20

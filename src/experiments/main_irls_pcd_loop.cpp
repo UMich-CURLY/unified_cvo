@@ -257,8 +257,8 @@ void global_registration_batch(cvo::CvoGPU & cvo_align,
     Eigen::Matrix4f result;
     double time_curr;
     Eigen::Matrix4f init_guess_inv = Eigen::Matrix4f::Identity();
-
-    auto p = loop_closures[i];
+    auto p = loop_closures[i];    
+    std::cout<<__func__<<": global reg "<<p.first<<" and "<<p.second<<"\n";
     cvo_align.align(*pcs.at(p.first), *pcs.at(p.second), init_guess_inv, result, nullptr, &time_curr);
 
     lc_poses_f1_to_f2[i] = result;
@@ -459,8 +459,8 @@ void write_transformed_pc(std::map<int, cvo::CvoFrame::Ptr> & frames,
     pc_xyz_all += pc_xyz_curr;
 
   }
-  //pcl::io::savePCDFileASCII(fname, pc_all);
-  pcl::io::savePCDFileASCII(fname, pc_xyz_all);
+  pcl::io::savePCDFileASCII(fname, pc_all);
+  //pcl::io::savePCDFileASCII(fname, pc_xyz_all);
 }
 
 
@@ -567,7 +567,18 @@ int main(int argc, char** argv) {
   // read point cloud
 
   std::map<int, std::shared_ptr<cvo::CvoPointCloud>> pcs;
-  if (is_read_pcd) {
+  if (is_read_pcd == 2) {
+    for (auto i : result_selected_frames) {
+      pcl::PointCloud<cvo::CvoPoint>::Ptr pc_pcl(new pcl::PointCloud<cvo::CvoPoint>);
+      pcl::io::loadPCDFile<cvo::CvoPoint>(data_path+"/"+std::to_string(i)+".pcd", *pc_pcl);
+      std::shared_ptr<cvo::CvoPointCloud> ret(new cvo::CvoPointCloud(FEATURE_DIMENSIONS, NUM_CLASSES));
+      for (int k = 0; k < pc_pcl->size(); k++) {
+        cvo::CvoPoint p = (*pc_pcl)[k];
+        ret->push_back(p);
+      }
+      pcs.insert(std::make_pair(i, ret));
+    }
+  } else if (is_read_pcd == 1) {
     for (auto i : result_selected_frames) {
       pcl::PointCloud<cvo::CvoPoint>::Ptr pc_local(new pcl::PointCloud<cvo::CvoPoint>);
       for (int j = 0; j < 1+num_merging_sequential_frames; j++){
@@ -612,10 +623,11 @@ int main(int argc, char** argv) {
       pcs.insert(std::make_pair(i, ret));
 
       if (is_save_pcd) {
-        pcl::PointCloud<pcl::PointXYZRGB> pc_semantic_downsampled;
-        ret->export_semantics_to_color_pcd(pc_semantic_downsampled);
-        pcl::io::savePCDFileASCII(std::to_string(i)+"_color.pcd", pc_semantic_downsampled);
-
+        if (cvo_align.get_params().is_using_semantics) {
+          pcl::PointCloud<pcl::PointXYZRGB> pc_semantic_downsampled;
+          ret->export_semantics_to_color_pcd(pc_semantic_downsampled);
+          pcl::io::savePCDFileASCII(std::to_string(i)+"_color.pcd", pc_semantic_downsampled);
+        }
         pcl::PointCloud<cvo::CvoPoint> pc_cvo_downsampled;
         ret->export_to_pcd<cvo::CvoPoint>(pc_cvo_downsampled);
         pcl::io::savePCDFileASCII(std::to_string(i)+".pcd", pc_cvo_downsampled);
@@ -626,10 +638,11 @@ int main(int argc, char** argv) {
 
 
   ///  visualizion: lay out the point cloud based on tracking poses
-  pcl::PointCloud<pcl::PointXYZI>::Ptr pc_all_ptr(new pcl::PointCloud<pcl::PointXYZI>);
+  std::cout<<"Merge all with tracking poses\n";
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc_all_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
   for (auto && [ind, pc]: pcs) {
     Eigen::Matrix4f tracking_pose = tracking_poses[ind].cast<float>();
-    pcl::PointCloud<pcl::PointXYZI> pc_curr;
+    pcl::PointCloud<pcl::PointXYZRGB> pc_curr;
     pc_curr.resize(pc->size());
     #pragma omp parallel for
     for (int j = 0; j < pc->size(); j++)
@@ -637,6 +650,7 @@ int main(int argc, char** argv) {
     (*pc_all_ptr) += pc_curr;
   }
   pcl::io::savePCDFileASCII ("tracking.pcd", *pc_all_ptr);
+  std::cout<<"Just wrote to tracking.pcd";
 
   
   
@@ -644,6 +658,7 @@ int main(int argc, char** argv) {
   /// global registration
   if (is_read_pcd
       && is_global_registration) {
+    std::cout<<"Start global reg";    
     std::string g_reg_f("global.txt");    
     global_registration_batch(cvo_align,
                               loop_closures,
@@ -651,6 +666,7 @@ int main(int argc, char** argv) {
                               gt_poses,
                               g_reg_f,
                               lc_poses);
+    std::cout<<__func__<<": End global reg";        
   }
   
 
