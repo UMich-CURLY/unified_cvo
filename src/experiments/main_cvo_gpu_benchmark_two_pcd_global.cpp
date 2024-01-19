@@ -434,7 +434,7 @@ int main(int argc, char** argv) {
         std::cout<<"crop from "<<pc_cropped->size()<<" to "<<pc->size()<<"\n";        
       }
 
-      std::string pcd_name(exp_curr_dir_str + "/" + std::to_string(0)+".pcd");
+      std::string pcd_name(exp_curr_dir_str + "/" + std::to_string(i)+".pcd");
       pc->write_to_pcd(pcd_name);
       
       pcs.push_back(pc);

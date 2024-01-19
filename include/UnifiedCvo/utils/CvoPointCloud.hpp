@@ -165,6 +165,7 @@ namespace cvo {
 
     // IO helpers
     template<typename PointT> void export_to_pcd(pcl::PointCloud<PointT> & output) const;
+    void export_semantics_to_color_pcd(pcl::PointCloud<pcl::PointXYZRGB> & pc)  const;
     void write_to_color_pcd(const std::string & name) const;
     void write_to_label_pcd(const std::string & name) const;
     void write_to_pcd(const std::string & name) const;

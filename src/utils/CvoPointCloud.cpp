@@ -1272,6 +1272,65 @@ namespace cvo{
   }
 
 
+  void CvoPointCloud::export_semantics_to_color_pcd(pcl::PointCloud<pcl::PointXYZRGB> & pc)  const {
+
+    std::unordered_map<int, std::tuple<uint8_t, uint8_t, uint8_t>> label2color;
+    label2color[0]  =std::make_tuple(128, 64,128 ); // road
+    label2color[1]  =std::make_tuple(244, 35,232 ); // sidewalk
+    label2color[2]  =std::make_tuple(70, 70, 70 ); // sidewalk
+    label2color[3]  =std::make_tuple(102,102,156   ); // building
+    label2color[4] =std::make_tuple(190,153,153 ); // pole
+    label2color[5] =std::make_tuple(153,153,153  ); // sign
+    label2color[6]  =std::make_tuple(250,170, 30   ); // vegetation
+    label2color[7]  =std::make_tuple(220,220,  0   ); // terrain
+    label2color[8] =std::make_tuple(107,142, 35 ); // sky
+    label2color[9]  =std::make_tuple(152,251,152 ); // water
+    label2color[10]  =std::make_tuple(70,130,180  ); // person
+    label2color[11]  =std::make_tuple( 220, 20, 60   ); // car
+    label2color[12]  =std::make_tuple(255,  0,  0  ); // bike
+    label2color[13] =std::make_tuple( 0,  0,142 ); // stair
+    label2color[14]  =std::make_tuple(0,  0, 70 ); // background
+    label2color[15]  =std::make_tuple(0, 60,100 ); // background
+    label2color[16]  =std::make_tuple(0, 80,100 ); // background
+    label2color[17]  =std::make_tuple( 0,  0,230 ); // background
+    label2color[18]  =std::make_tuple(119, 11, 32 ); // background
+
+
+    pc.resize(num_points_);
+    for (int i = 0; i < num_points_; i++) {
+      pcl::PointXYZRGB p;
+      p.x = points_[i].x;
+      p.y = points_[i].y;
+      p.z = points_[i].z;
+
+     if (feature_dimensions_) {
+        uint8_t b = static_cast<uint8_t>(std::min(255, (int)((float)(points_[i].features[0]) * 255)));
+        uint8_t g = static_cast<uint8_t>(std::min(255, (int)((float)(points_[i].features[1]) * 255)));
+        uint8_t r = static_cast<uint8_t>(std::min(255, (int)((float)(points_[i].features[2]) * 255)));
+
+
+        if (num_classes_) {
+          int max_class;
+          Eigen::Map<const Eigen::Matrix<float, Eigen::Dynamic, 1>> semantics(points_[i].label_distribution, num_classes_);
+	  
+          semantics.maxCoeff(&max_class);
+          auto c = label2color[max_class];
+          r = std::get<0>(c);
+          g = std::get<1>(c);
+          b = std::get<2>(c);
+        }
+        //if (i == 0)
+        //  std::cout<<"export to pcd: color r is "<< (int )r <<std::endl;
+        p.r = r;
+        p.g = g;
+        p.b = b;
+     }
+     pc[i] = p;
+    }
+    
+  }
+  
+
   template <>
   void CvoPointCloud::export_to_pcd<pcl::PointXYZRGB>(pcl::PointCloud<pcl::PointXYZRGB> & pc)  const {
 

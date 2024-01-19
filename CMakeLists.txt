@@ -532,6 +532,18 @@ set_target_properties(cvo_gpu_fpfh PROPERTIES
   CUDA_SEPERABLE_COMPILATION ON
   COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 
+add_library(cvo_gpu_5_14 SHARED ${CVO_GPU_SOURCE})
+add_dependencies(cvo_gpu_5_14 cvo_utils lie_group_utils)
+target_link_libraries(cvo_gpu_5_14 PRIVATE lie_group_utils cvo_utils yaml-cpp  Ceres::ceres )
+target_include_directories(cvo_gpu_5_14 PUBLIC
+  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_compile_definitions(cvo_gpu_5_14 PUBLIC -DNUM_CLASSES=14 -DFEATURE_DIMENSIONS=5 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=512
+)
+set_target_properties(cvo_gpu_5_14 PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+  CUDA_SEPERABLE_COMPILATION ON
+  COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 
 
 if(${PROJECT_NAME}_ENABLE_LIDAR)
@@ -853,7 +865,14 @@ add_executable(cvo_irls_lidar_loop ${PROJECT_SOURCE_DIR}/src/experiments/main_ir
 target_include_directories(cvo_irls_lidar_loop PUBLIC
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_link_libraries(cvo_irls_lidar_loop cvo_gpu_lidar cvo_utils boost_filesystem boost_system kitti Ceres::ceres ethz)
+      target_link_libraries(cvo_irls_lidar_loop cvo_gpu_lidar cvo_utils boost_filesystem boost_system kitti Ceres::ceres ethz)
+
+add_executable(cvo_irls_pcd_loop ${PROJECT_SOURCE_DIR}/src/experiments/main_irls_pcd_loop.cpp)
+target_include_directories(cvo_irls_pcd_loop PUBLIC
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_irls_pcd_loop cvo_gpu_5_14 cvo_utils boost_filesystem boost_system   Ceres::ceres)
+      
 
 endif()
 

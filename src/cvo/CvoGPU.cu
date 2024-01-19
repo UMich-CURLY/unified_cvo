@@ -1952,8 +1952,12 @@ namespace cvo{
       fx_norm = sqrt(source_points.num_points());
       fz_norm = sqrt(target_points.num_points());
     } else {
+      Eigen::Matrix4f identity; //= Eigen::Matrix4f::Identity();
+      identity << 1,0,0,0,
+	 0,1,0,0,
+   0,0,1,0,
+0,0,0,1;   
       if (is_gpu) {
-        Eigen::Matrix4f identity = Eigen::Matrix4f::Identity();        
         fx_norm = sqrt(inner_product_gpu(source_points, source_points, identity, ell));
         fz_norm = sqrt(inner_product_gpu(target_points, target_points, identity, ell));
       } else {
