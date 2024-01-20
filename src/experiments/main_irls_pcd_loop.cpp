@@ -712,8 +712,14 @@ int main(int argc, char** argv) {
   if (is_doing_ba) {
 
     //if (is_read_loop_closure_poses_from_file == 2) {
-    for (int i = 0; i < tracking_poses.size(); i++) {
-      for (int j = i+100; j < tracking_poses.size(); j++) {
+    for (auto iter_i = result_selected_frames.begin(); iter_i != result_selected_frames.end(); iter_i++) {
+      int i = *iter_i;
+    
+      auto iter_j = iter_i;
+      iter_j++;
+      //for (; std::distance(iter_i, iter_j) <= num_neighbors_per_node && iter_j != frames.end() ; iter_j++) {
+      for (; iter_j != result_selected_frames.end() ; iter_j++) {
+        int j = *iter_j;
         double dist = (tracking_poses[i].block<3,1>(0,3) - tracking_poses[j].block<3,1>(0,3)).norm();
         if (dist < 2 ){
           std::cout<<"loop: dist betwee "<<i<<" and "<<j<<" is "<<dist<<"\n";
