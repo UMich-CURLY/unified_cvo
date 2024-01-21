@@ -1434,15 +1434,11 @@ namespace cvo{
   }
 
   void CvoPointCloud::write_to_pcd(const std::string & name) const {
-    //pcl::PointCloud<pcl::PointXYZ> pc;
-    //for (int i = 0; i < num_points_; i++) {
-    //  pcl::PointXYZ p;
-    //  p.x = points_[i].x;
-    //  p.y = points_[i].y;
-    //  p.z = points_[i].z;
-    //  pc.push_back(p);
-    //}
-    pcl::io::savePCDFileASCII(name, points_); 
+    pcl::PointCloud<cvo::CvoPoint> pc;
+    for (int i = 0; i < num_points_; i++) {
+      pc.push_back(points_[i]);
+    }
+    pcl::io::savePCDFileASCII(name, pc); 
     std::cout << "Finished write to pcd" << std::endl; 
   }
 
