@@ -32,7 +32,7 @@ cp $init_traj_file $folder/tracking_full.txt
 last_index=`cat ${init_traj_file} | wc -l`
 
 #gdb -ex run --args \
-  ./build/bin/cvo_irls_pcd_loop pcd $data_dir cvo_params/cvo_irls_pcd_params.yaml 2 $folder/tracking_full.txt $lc_file  ba.txt 0 0 $last_index 1.0 0.05  20 1 1 0 1 1 0 #> log_kitti_loop_${i}.txt
+  ./build/bin/cvo_irls_pcd_loop pcd $data_dir cvo_params/cvo_irls_pcd_params.yaml 2 $folder/tracking_full.txt $lc_file  ba.txt 0 0 $last_index 1.0 0.05  19 1 1 0 1 1 1 #> log_kitti_loop_${i}.txt
 	        
 	        
   mv [0-9]*.pcd ${folder}/pcds/

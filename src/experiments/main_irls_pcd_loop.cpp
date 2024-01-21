@@ -123,7 +123,7 @@ void write_loop_closure_pcds(std::map<int, cvo::CvoFrame::Ptr> & frames,
     
     Eigen::Matrix4f pose_f = (pose1.inverse() * pose2).cast<float>();
     cvo::CvoPointCloud::transform(pose_f, *frames[f2]->points, new_pc);
-    new_pc += *frames[1]->points;
+    new_pc += *frames[f1]->points;
 
     new_pc.write_to_pcd(name_prefix + "_loop_"+std::to_string(f1)+"_"+std::to_string(f2)+".pcd");
     
@@ -716,12 +716,14 @@ int main(int argc, char** argv) {
       int i = *iter_i;
     
       auto iter_j = iter_i;
-      iter_j++;
+      for (int k = 0; k < num_neighbors_per_node; k++)
+        iter_j++;
+
       //for (; std::distance(iter_i, iter_j) <= num_neighbors_per_node && iter_j != frames.end() ; iter_j++) {
-      for (; iter_j != result_selected_frames.end() ; iter_j++) {
+      for (; iter_j < result_selected_frames.end() ; iter_j++) {
         int j = *iter_j;
         double dist = (tracking_poses[i].block<3,1>(0,3) - tracking_poses[j].block<3,1>(0,3)).norm();
-        if (dist < 2 ){
+        if (dist < 3 ){
           std::cout<<"loop: dist betwee "<<i<<" and "<<j<<" is "<<dist<<"\n";
           loop_closures.push_back(std::make_pair(i,j));
         }

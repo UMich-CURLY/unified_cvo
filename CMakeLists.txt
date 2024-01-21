@@ -691,6 +691,16 @@ target_include_directories(cvo_align_gpu_two_color_pcd PUBLIC
 target_link_libraries(cvo_align_gpu_two_color_pcd cvo_gpu_rgb cvo_utils boost_filesystem boost_system pcl_io pcl_common)
 
 
+add_executable(cvo_align_gpu_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_pcd.cpp)
+target_include_directories(cvo_align_gpu_pcd PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+      target_link_libraries(cvo_align_gpu_pcd cvo_gpu_5_14 cvo_utils boost_filesystem boost_system pcl_io pcl_common)
+      
+
+
 add_executable(cvo_irls_tum ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_tum.cpp)
 target_include_directories(cvo_irls_tum PUBLIC
 	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 

@@ -53,7 +53,7 @@ namespace cvo {
   
   template <>
   CvoPointCloud::CvoPointCloud(const pcl::PointCloud<CvoPoint> & pc) {
-    num_points_ = pc.size();
+
     num_classes_ = NUM_CLASSES;
     feature_dimensions_ = FEATURE_DIMENSIONS;
 
@@ -61,10 +61,13 @@ namespace cvo {
 //    features_.resize(num_points_, feature_dimensions_);
 //    labels_.resize(num_points_, num_classes_);
 //    geometric_types_.resize(num_points_*2);
-    for (int i = 0; i < num_points_; i++) {
+    for (int i = 0; i < pc.size(); i++) {
 //      Eigen::Vector3f xyz;
       auto & p = (pc)[i];
       CvoPoint point(p.x, p.y, p.z);
+      point.r = p.r;
+      point.g = p.g;
+      point.b = p.b;
 //      xyz << p.x, p.y, p.z;
 //      positions_[i] = xyz;
 
@@ -79,8 +82,12 @@ namespace cvo {
 
       point.geometric_type[0] = p.geometric_type[0];
       point.geometric_type[1] = p.geometric_type[1];
+
+      points_.push_back(point);
       
     }
+
+    num_points_ = points_.size();
     
   }
 
