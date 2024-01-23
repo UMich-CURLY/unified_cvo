@@ -716,11 +716,11 @@ int main(int argc, char** argv) {
       int i = *iter_i;
     
       auto iter_j = iter_i;
-      for (int k = 0; k < num_neighbors_per_node; k++)
+      for (int k = 0; k < num_neighbors_per_node && iter_j != result_selected_frames.end(); k++)
         iter_j++;
 
       //for (; std::distance(iter_i, iter_j) <= num_neighbors_per_node && iter_j != frames.end() ; iter_j++) {
-      for (; iter_j < result_selected_frames.end() ; iter_j++) {
+      for (; iter_j != result_selected_frames.end() ; iter_j++) {
         int j = *iter_j;
         double dist = (tracking_poses[i].block<3,1>(0,3) - tracking_poses[j].block<3,1>(0,3)).norm();
         if (dist < 3 ){

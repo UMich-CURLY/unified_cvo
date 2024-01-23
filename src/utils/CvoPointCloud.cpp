@@ -1321,9 +1321,12 @@ namespace cvo{
         }
         //if (i == 0)
         //  std::cout<<"export to pcd: color r is "<< (int )r <<std::endl;
-        p.r = r;
-        p.g = g;
-        p.b = b;
+
+        std::uint32_t rgb = ((std::uint32_t)r << 16 | (std::uint32_t)g << 8 | (std::uint32_t)b);
+        p.rgb = *reinterpret_cast<float*>(&rgb);
+//p.r = r;
+//      p.g = g;
+//      p.b = b;
      }
      pc[i] = p;
     }

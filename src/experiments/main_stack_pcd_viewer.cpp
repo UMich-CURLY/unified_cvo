@@ -271,12 +271,12 @@ int main(int argc, char** argv) {
     std::cout<<"all poses size is "<<all_poses.size()<<"\n";
 
   }
-      std::string path("/home/rayzhang/media/Samsung_T5/tartanair/hospital/Easy/P001");
-      reader.reset(new cvo::TartanAirHandler(path));
-      std::string calib_file;
-      calib_file = path + "/cvo_calib_deep_depth.txt"; 
-      cvo::Calibration calib(calib_file, cvo::Calibration::RGBD);
-      reader->set_depth_folder_name("deep_depth");
+  std::string path("/home/rayzhang/media/Samsung_T5/tartanair/hospital/Easy/P001");
+  reader.reset(new cvo::TartanAirHandler(path));
+  std::string calib_file;
+  calib_file = path + "/cvo_calib_deep_depth.txt"; 
+  cvo::Calibration calib(calib_file, cvo::Calibration::RGBD);
+  reader->set_depth_folder_name("deep_depth");
 
   
   int total_graphs = std::stoi(total_graphs_arg);

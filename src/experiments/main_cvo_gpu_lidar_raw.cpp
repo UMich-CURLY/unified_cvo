@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
   std::cout<<"start\n";
   // list all files in current directory.
   //You could put any file path in here, e.g. "/home/me/mwah" to list that directory
-  cvo::KittiHandler kitti(argv[1], 1);
+  cvo::KittiHandler kitti(argv[1], 1, 2);
   int total_iters = kitti.get_total_number();
   string cvo_param_file(argv[2]);
   string calib_file;
@@ -62,20 +62,35 @@ int main(int argc, char *argv[]) {
     // calculate initial guess
     std::cout<<"\n\n\n\n============================================="<<std::endl;
     std::cout<<"Aligning "<<i<<" and "<<i+1<<" with GPU "<<std::endl;
+    kitti.set_start_index(i);    
     pcl::PointCloud<pcl::PointXYZI>::Ptr source_pc(new pcl::PointCloud<pcl::PointXYZI>);
+    
     //std::vector<int> semantics_source;
-    kitti.read_next_lidar(source_pc);
+    if (kitti.read_next_lidar(source_pc) != 0)
+      break;
     
     std::cout<<"read next lidar\n"; 
-    cvo::CvoPointCloud source(source_pc, 5000, 64);
+    //cvo::CvoPointCloud source(source_pc, 5000, 64);
+    std::shared_ptr<cvo::CvoPointCloud> source_full(new cvo::CvoPointCloud(source_pc, 10000, 64 ));
+    std::shared_ptr<cvo::CvoPointCloud> source = cvo::downsample_lidar_points(false,
+                                                                              source_pc,
+                                                                              leaf_size
+                                                                              );
+    
 
-    kitti.next_frame_index();
+    kitti.set_start_index(i+1);
     pcl::PointCloud<pcl::PointXYZI>::Ptr target_pc(new pcl::PointCloud<pcl::PointXYZI>);
     if (kitti.read_next_lidar(target_pc) != 0) {
       std::cout<<"finish all files\n";
       break;
     }
-    cvo::CvoPointCloud target(target_pc, 5000, 64);
+    //cvo::CvoPointCloud target(target_pc, 5000, 64);
+    std::shared_ptr<cvo::CvoPointCloud> target_full(new cvo::CvoPointCloud(source_pc, 10000, 64 ));
+    std::shared_ptr<cvo::CvoPointCloud> target = cvo::downsample_lidar_points(false,
+                                                                              target_pc,
+                                                                              leaf_size
+                                                                              );
+    
     //std::shared_ptr<cvo::Frame> target(new cvo::Frame(i+1, target_pc, calib));
 
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
@@ -87,7 +102,8 @@ int main(int argc, char *argv[]) {
     double this_time = 0;
     cvo_align.align(source, target, init_guess_inv, result, &this_time);
     total_time += this_time;
-    
+
+    /*
     // get tf and inner product from cvo getter
     double in_product = cvo_align.inner_product(source, target, result);
 
@@ -96,7 +112,7 @@ int main(int argc, char *argv[]) {
     std::cout<<"The gpu inner product between "<<i-1 <<" and "<< i <<" is "<<in_product<<"\n";
     //std::cout<<"The normalized inner product between "<<i-1 <<" and "<< i <<" is "<<in_product_normalized<<"\n";
     std::cout<<"Transform is "<<result <<"\n\n";
-
+    */
     // append accum_tf_list for future initialization
     init_guess = result;
     accum_mat = accum_mat * result;

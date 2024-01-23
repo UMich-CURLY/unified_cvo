@@ -16,7 +16,8 @@ namespace cvo{
 
     enum LidarCamCalibType {
       CAM0,
-      CAM2
+      CAM2,
+      LIDAR_FRAME
     };
     
     KittiHandler(std::string kitti_folder, DataType data_type, LidarCamCalibType calib_type=CAM0);
