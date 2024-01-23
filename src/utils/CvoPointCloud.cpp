@@ -1310,20 +1310,24 @@ namespace cvo{
 
 
         if (num_classes_) {
-          int max_class;
-          Eigen::Map<const Eigen::Matrix<float, Eigen::Dynamic, 1>> semantics(points_[i].label_distribution, num_classes_);
+          int max_class = points_[i].label;
+          //Eigen::Map<const Eigen::Matrix<float, Eigen::Dynamic, 1>> semantics(points_[i].label_distribution, num_classes_);
 	  
-          semantics.maxCoeff(&max_class);
+          //semantics.maxCoeff(&max_class);
           auto c = label2color[max_class];
           r = std::get<0>(c);
           g = std::get<1>(c);
           b = std::get<2>(c);
         }
+	//std::uint8_t r = 255, g = 0, b = 0;    // Example: Red color
+	std::uint32_t rgb = ((std::uint32_t)r << 16 | (std::uint32_t)g << 8 | (std::uint32_t)b);
+	p.rgb = *reinterpret_cast<float*>(&rgb);
         //if (i == 0)
         //  std::cout<<"export to pcd: color r is "<< (int )r <<std::endl;
-        p.r = r;
-        p.g = g;
-        p.b = b;
+        //p.r = r;
+        //p.g = g;
+        //p.b = b;
+	
      }
      pc[i] = p;
     }

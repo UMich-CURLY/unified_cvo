@@ -65,9 +65,7 @@ namespace cvo {
 //      Eigen::Vector3f xyz;
       auto & p = (pc)[i];
       CvoPoint point(p.x, p.y, p.z);
-      point.r = p.r;
-      point.g = p.g;
-      point.b = p.b;
+      point.rgb = p.rgb;
 //      xyz << p.x, p.y, p.z;
 //      positions_[i] = xyz;
 

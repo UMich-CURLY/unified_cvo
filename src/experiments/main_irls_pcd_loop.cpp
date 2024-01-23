@@ -125,7 +125,7 @@ void write_loop_closure_pcds(std::map<int, cvo::CvoFrame::Ptr> & frames,
     cvo::CvoPointCloud::transform(pose_f, *frames[f2]->points, new_pc);
     new_pc += *frames[f1]->points;
 
-    new_pc.write_to_pcd(name_prefix + "_loop_"+std::to_string(f1)+"_"+std::to_string(f2)+".pcd");
+    new_pc.write_to_color_pcd(name_prefix + "_loop_"+std::to_string(f1)+"_"+std::to_string(f2)+".pcd");
     
   }
 }
@@ -438,7 +438,7 @@ void write_transformed_pc(std::map<int, cvo::CvoFrame::Ptr> & frames,
                           std::string & fname,
                           int start_frame_ind=0, int end_frame_ind=1000000){
   pcl::PointCloud<pcl::PointXYZRGB> pc_all;
-  pcl::PointCloud<pcl::PointXYZ> pc_xyz_all;
+  pcl::PointCloud<cvo::CvoPoint> pc_xyz_all;
   for (auto & [i, ptr] : frames) {
   //for (int i = start_frame_ind; i <= std::min((int)frames.size(), end_frame_ind); i++) {
   //auto ptr = frames[i];
@@ -451,7 +451,7 @@ void write_transformed_pc(std::map<int, cvo::CvoFrame::Ptr> & frames,
     cvo::CvoPointCloud::transform(pose_f, *ptr->points, new_pc);
 
     pcl::PointCloud<pcl::PointXYZRGB> pc_curr;
-    pcl::PointCloud<pcl::PointXYZ> pc_xyz_curr;
+    pcl::PointCloud<cvo::CvoPoint> pc_xyz_curr;
     new_pc.export_to_pcd(pc_curr);
     new_pc.export_to_pcd(pc_xyz_curr);
 
@@ -459,8 +459,8 @@ void write_transformed_pc(std::map<int, cvo::CvoFrame::Ptr> & frames,
     pc_xyz_all += pc_xyz_curr;
 
   }
-  pcl::io::savePCDFileASCII(fname, pc_all);
-  //pcl::io::savePCDFileASCII(fname, pc_xyz_all);
+  //pcl::io::savePCDFileASCII(fname, pc_all);
+  pcl::io::savePCDFileASCII(fname, pc_xyz_all);
 }
 
 
@@ -626,11 +626,12 @@ int main(int argc, char** argv) {
         if (cvo_align.get_params().is_using_semantics) {
           pcl::PointCloud<pcl::PointXYZRGB> pc_semantic_downsampled;
           ret->export_semantics_to_color_pcd(pc_semantic_downsampled);
-          pcl::io::savePCDFileASCII(std::to_string(i)+"_color.pcd", pc_semantic_downsampled);
+          pcl::io::save(std::to_string(i)+"_color.pcd", pc_semantic_downsampled);
         }
         pcl::PointCloud<cvo::CvoPoint> pc_cvo_downsampled;
         ret->export_to_pcd<cvo::CvoPoint>(pc_cvo_downsampled);
-        pcl::io::savePCDFileASCII(std::to_string(i)+".pcd", pc_cvo_downsampled);
+        //pcl::io::savePCDFileASCII(std::to_string(i)+".pcd", pc_cvo_downsampled);
+        pcl::io::save(std::to_string(i)+".pcd", pc_cvo_downsampled);
       }
     }
 
