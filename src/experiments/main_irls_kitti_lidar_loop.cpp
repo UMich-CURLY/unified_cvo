@@ -518,7 +518,7 @@ int main(int argc, char** argv) {
   cvo::KittiHandler::DataType dtype;
   if (std::strcmp(data_type.c_str(), "kitti_stereo") == 0) {
     dtype = cvo::KittiHandler::DataType::STEREO;
-    dataset.reset(new cvo::KittiHandler(data_path, dtype));    
+    dataset.reset(new cvo::KittiHandler(data_path, dtype, cvo::KittiHandler::LidarCamCalibType::LIDAR_FRAME));    
   } else if (std::strcmp(data_type.c_str(), "kitti_lidar") == 0) {
     dtype = cvo::KittiHandler::DataType::LIDAR;
     dataset.reset(new cvo::KittiHandler(data_path, dtype));    

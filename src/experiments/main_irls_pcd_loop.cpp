@@ -452,14 +452,15 @@ void write_transformed_pc(std::map<int, cvo::CvoFrame::Ptr> & frames,
 
     pcl::PointCloud<pcl::PointXYZRGB> pc_curr;
     pcl::PointCloud<cvo::CvoPoint> pc_xyz_curr;
-    new_pc.export_to_pcd(pc_curr);
+    new_pc.export_semantics_to_color_pcd(pc_curr);
     new_pc.export_to_pcd(pc_xyz_curr);
 
     pc_all += pc_curr;
     pc_xyz_all += pc_xyz_curr;
 
   }
-  //pcl::io::savePCDFileASCII(fname, pc_all);
+  std::string fname_color = fname + ".semantic_color.pcd";
+  pcl::io::savePCDFileASCII(fname_color, pc_all);
   pcl::io::savePCDFileASCII(fname, pc_xyz_all);
 }
 
@@ -626,12 +627,12 @@ int main(int argc, char** argv) {
         if (cvo_align.get_params().is_using_semantics) {
           pcl::PointCloud<pcl::PointXYZRGB> pc_semantic_downsampled;
           ret->export_semantics_to_color_pcd(pc_semantic_downsampled);
-          pcl::io::save(std::to_string(i)+"_color.pcd", pc_semantic_downsampled);
+          pcl::io::savePCDFile(std::to_string(i)+"_color.pcd", pc_semantic_downsampled);
         }
         pcl::PointCloud<cvo::CvoPoint> pc_cvo_downsampled;
         ret->export_to_pcd<cvo::CvoPoint>(pc_cvo_downsampled);
         //pcl::io::savePCDFileASCII(std::to_string(i)+".pcd", pc_cvo_downsampled);
-        pcl::io::save(std::to_string(i)+".pcd", pc_cvo_downsampled);
+        pcl::io::savePCDFile(std::to_string(i)+".pcd", pc_cvo_downsampled);
       }
     }
 
@@ -717,11 +718,11 @@ int main(int argc, char** argv) {
       int i = *iter_i;
     
       auto iter_j = iter_i;
-      for (int k = 0; k < num_neighbors_per_node; k++)
+      for (int k = 0; k < num_neighbors_per_node && iter_j != result_selected_frames.end(); k++)
         iter_j++;
 
       //for (; std::distance(iter_i, iter_j) <= num_neighbors_per_node && iter_j != frames.end() ; iter_j++) {
-      for (; iter_j < result_selected_frames.end() ; iter_j++) {
+      for (; iter_j != result_selected_frames.end() ; iter_j++) {
         int j = *iter_j;
         double dist = (tracking_poses[i].block<3,1>(0,3) - tracking_poses[j].block<3,1>(0,3)).norm();
         if (dist < 3 ){

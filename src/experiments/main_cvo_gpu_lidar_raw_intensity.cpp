@@ -115,7 +115,7 @@ std::shared_ptr<cvo::CvoPointCloud> downsample_lidar_points(bool is_edge_only,
 int main(int argc, char *argv[]) {
   // list all files in current directory.
   //You could put any file path in here, e.g. "/home/me/mwah" to list that directory
-  cvo::KittiHandler kitti(argv[1], cvo::KittiHandler::DataType::LIDAR);
+  cvo::KittiHandler kitti(argv[1], cvo::KittiHandler::DataType::LIDAR, cvo::KittiHandler::LidarCamCalibType::LIDAR_FRAME);
   int total_iters = kitti.get_total_number();
   string cvo_param_file(argv[2]);
   string calib_file;

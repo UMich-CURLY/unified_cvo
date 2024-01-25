@@ -19,6 +19,8 @@ namespace cvo {
     for (int i = 0; i < num_points_; i++) {
 //      Eigen::Vector3f xyz;
       auto & p = (pc)[i];
+	CvoPoint point = p;
+      /*
       CvoPoint point(p.x, p.y, p.z);
 //      xyz << p.x, p.y, p.z;
 //      positions_[i] = xyz;
@@ -33,7 +35,7 @@ namespace cvo {
       for (int j = 0 ; j < NUM_CLASSES; j++) {
         point.label_distribution[j] = pc[i].label_distribution[j];
       }
-
+	*/
       point.geometric_type[0] = p.geometric_type[0];
       point.geometric_type[1] = p.geometric_type[1];
       if (gtype == GeometryType::SURFACE) {
@@ -64,7 +66,8 @@ namespace cvo {
     for (int i = 0; i < pc.size(); i++) {
 //      Eigen::Vector3f xyz;
       auto & p = (pc)[i];
-      CvoPoint point(p.x, p.y, p.z);
+      CvoPoint point = p;
+      /*
       point.rgb = p.rgb;
 //      xyz << p.x, p.y, p.z;
 //      positions_[i] = xyz;
@@ -73,14 +76,24 @@ namespace cvo {
 //        features_(i, j) = pc[i].features[j];
         point.features[j] = pc[i].features[j];
       }
-
+      point.label = pc[i].label; 
       for (int j = 0 ; j < NUM_CLASSES; j++) {
         point.label_distribution[j] = pc[i].label_distribution[j];
       }
 
       point.geometric_type[0] = p.geometric_type[0];
       point.geometric_type[1] = p.geometric_type[1];
+      
+      
+      for (int j = 0 ; j < 3; j++) {
+          point.normal[j] = pc[i].normal[j];
+      }
+      for (int j = 0 ; j < 9; j++) 
+    	point.covariance[j] = pc[i].covariance[j];
+      for (int j = 0 ; j < 3; j++) 
+        point.cov_eigenvalues[j] = pc[i].cov_eigenvalues[j] ;
 
+*/
       points_.push_back(point);
       
     }
@@ -94,7 +107,8 @@ namespace cvo {
   void CvoPointCloud::export_to_pcd<CvoPoint>(pcl::PointCloud<CvoPoint> & pc)  const {
 
     for (int i = 0; i < num_points_; i++) {
-      CvoPoint p;
+      /*
+	    CvoPoint p;
       p.x = points_[i].x;
       p.y = points_[i].y;
       p.z = points_[i].z;
@@ -121,8 +135,8 @@ namespace cvo {
 
       p.geometric_type[0] = points_[i].geometric_type[0];
       p.geometric_type[1] = points_[i].geometric_type[1];
-      
-      pc.push_back(p);
+      */
+      pc.push_back(points_[i]);
     }
     
   }  

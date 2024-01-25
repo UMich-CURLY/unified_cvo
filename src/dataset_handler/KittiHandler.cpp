@@ -38,12 +38,17 @@ namespace cvo
                  boost::filesystem::exists( folder_name + "/calib.txt" )) {
         this->read_lidar_calib(folder_name + "/calib.txt", calib_type);
       } else {
+        /// stay in the lidar frame
+        Eigen::Matrix<float, 3,4> lidar_to_cam = Eigen::Matrix<float, 3,4>::Zero();
+        lidar_to_cam.block<3,3>(0,0) = Eigen::Matrix3f::Identity();
+        /*
         Eigen::Affine3f rx = Eigen::Affine3f::Identity();
         Eigen::Affine3f ry = Eigen::Affine3f(Eigen::AngleAxisf(-M_PI / 2.0, Eigen::Vector3f::UnitY()));
         Eigen::Affine3f rz = Eigen::Affine3f(Eigen::AngleAxisf(M_PI / 2.0, Eigen::Vector3f::UnitZ()));
         Eigen::Affine3f tf_change_basis = rz * ry * rx;
-        Eigen::Matrix<float, 3,4> lidar_to_cam = Eigen::Matrix<float, 3,4>::Zero();
+
         lidar_to_cam.block<3,3>(0,0) = tf_change_basis.matrix().block<3,3>(0,0);
+        */
         this->set_lidar_calib(lidar_to_cam);
       }
     }

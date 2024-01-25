@@ -1,6 +1,6 @@
 
 cd build && make -j6 && cd .. && \
-for i in 04 10 
+for i in 05
 #for i in   00 01 02 03 04 07 08 09
 do
     #gdb -ex run --args \

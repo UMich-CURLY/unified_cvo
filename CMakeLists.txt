@@ -886,6 +886,15 @@ target_link_libraries(cvo_irls_pcd_loop cvo_gpu_5_14 cvo_utils boost_filesystem 
 
 endif()
 
+add_executable(kitti_lidar_to_pcd ${PROJECT_SOURCE_DIR}/src/experiments/kitti_lidar_to_pcd.cpp)
+target_include_directories(kitti_lidar_to_pcd PUBLIC
+    #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+    #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+    "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+    $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(kitti_lidar_to_pcd cvo_utils boost_filesystem boost_system  pcl_common pcl_io pcl_visualization  pcd_qt_viewer tartan cvo_gpu_lidar kitti)
+
+
 add_executable(gicp_align_two ${PROJECT_SOURCE_DIR}/src/experiments/gicp_align_two.cpp)
 target_include_directories(gicp_align_two PUBLIC
 	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
