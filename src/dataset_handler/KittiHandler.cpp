@@ -201,7 +201,7 @@ namespace cvo
       return -1;
 
     string semantic_bin_path = folder_name + "/labels/" + names[curr_index] + ".label";
-    int num_semantic_class = 19;
+    int num_semantic_class = 20;
     std::ifstream fLidar_sem(semantic_bin_path.c_str(), std::ios::in | std::ios::binary);
 
     if (fLidar_sem.is_open())
@@ -226,7 +226,15 @@ namespace cvo
         uint16_t semantic_label = (uint16_t)(temp_semantics.data()[i] & 0x0000FFFFuL);
         uint16_t instance_label = (uint16_t)(temp_semantics.data()[i] >> 16);
 
-        semantics_lidar.push_back(label_map[semantic_label] - 1);
+        int label = 0;
+        if (label_map.find((int)semantic_label ) == label_map.end())
+          label = 0;
+        else
+          label = label_map[(int)semantic_label];// - 1;
+        if (label < 0 || label > num_semantic_class)
+          std::cout<<__func__<<"label is negative, semantic_label is  "<<semantic_label<<"\n"<<std::flush;
+
+        semantics_lidar.push_back(label);
       }
 
       return 0;

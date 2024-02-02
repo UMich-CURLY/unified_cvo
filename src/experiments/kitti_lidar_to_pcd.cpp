@@ -40,6 +40,7 @@ int main(int argc, char ** argv) {
                           cvo::KittiHandler::LidarCamCalibType::LIDAR_FRAME);
   std::string result_pcd_folder(argv[2]);
   float leaf_size = std::stof(argv[3]);
+  int is_export_semantic_and_color = std::stoi(argv[4]);
 
   for (int i = 0; i<= kitti.get_total_number(); i++) {
     
@@ -49,20 +50,31 @@ int main(int argc, char ** argv) {
     if (-1 == kitti.read_next_lidar(pc_pcl, semantics)) 
       break;
 
-    std::shared_ptr<cvo::CvoPointCloud> pc_full(new cvo::CvoPointCloud(pc_pcl, 10000, 64 ));
-    std::shared_ptr<cvo::CvoPointCloud> pc = cvo::downsample_lidar_points(false,
-                                                                     pc_pcl,
-                                                                     leaf_size,
-                                                                     semantics
-                                                                     );
-    std::cout<<"After downsampling, # of points for frame "<<i<<" is "<<pc->size()<<"\n";
-    
-    pcl::PointCloud<pcl::PointXYZRGB> pc_curr;
-    pc->export_semantics_to_color_pcd(pc_curr);
-    std::string fname = result_pcd_folder + "/" + std::to_string(i)+".pcd";
-    std::cout<<"fname "<<fname<<"\n";
-    pcl::io::savePCDFileASCII(fname, pc_curr);
-    std::cout<<" just write "<<pc_curr.size()<<" points to "<<fname<<"\n";
+    if (is_export_semantic_and_color) {
+    	std::shared_ptr<cvo::CvoPointCloud> pc_full(new cvo::CvoPointCloud(pc_pcl, 10000, 64 ));
+    	std::shared_ptr<cvo::CvoPointCloud> pc = cvo::downsample_lidar_points(false,
+        	                                                             pc_pcl,
+                	                                                     leaf_size,
+                        	                                             semantics
+                                	                                     );
+   	std::cout<<"After downsampling, # of points for frame "<<i<<" is "<<pc->size()<<"\n";
+    	//pcl::PointCloud<pcl::PointXYZRGB> pc_curr;
+    	pcl::PointCloud<cvo::CvoPoint> pc_curr;
+    	pc->export_to_pcd(pc_curr);
+    	std::string fname = result_pcd_folder + "/" + std::to_string(i)+".pcd";
+    	std::cout<<"fname "<<fname<<"\n";
+    	pcl::io::savePCDFileASCII(fname, pc_curr);
+    } else {
+    	std::shared_ptr<cvo::CvoPointCloud> pc_full(new cvo::CvoPointCloud(pc_pcl, 10000, 64 ));
+    	std::shared_ptr<cvo::CvoPointCloud> pc = cvo::downsample_lidar_points(false,
+        	                                                             pc_pcl,
+                	                                                     leaf_size,
+                        	                                             semantics
+                                	                                     );
+    	std::string fname = result_pcd_folder + "/" + std::to_string(i)+".pcd";
+	pc->write_to_intensity_pcd(fname);
+    	std::cout<<" just write "<<pc->size()<<" points to "<<fname<<"\n";
+    }
   }
   return 0;
   

@@ -94,7 +94,7 @@ namespace cvo {
     /// declare voxel map
     cvo::VoxelMap<pcl::PointXYZIL> edge_voxel(edge_leaf_size); 
     cvo::VoxelMap<pcl::PointXYZIL> surface_voxel(surface_leaf_size);
-    std::unordered_map<pcl::PointXYZIL*, int> edge_pt_to_ind, surface_pt_to_ind;
+    //std::unordered_map<pcl::PointXYZIL*, int> edge_pt_to_ind, surface_pt_to_ind;
 
     /// edge and surface downsample
     for (int k = 0; k < pc_edge.size(); k++) 
@@ -361,34 +361,47 @@ namespace cvo {
                                     int is_edge_only,
                                     int is_semantic,
                                     std::map<int, std::shared_ptr<cvo::CvoPointCloud>> & pcs) {
-    for (auto i : result_selected_frames) {
-      //for (int i = 0; i<gt_poses.size(); i++) {
+    std::vector<int> selected_inds;
+    for (auto  i : result_selected_frames) selected_inds.push_back(i);
+
+    #pragma omp parallel for
+    for (auto it = selected_inds.begin(); it != selected_inds.end(); it++) {
+      int i = *it;
+      std::cout<<"Processing "<<i<<"\n";
+    //for (auto i : result_selected_frames) {
+    //for (int i = 0; i<gt_poses.size(); i++) {
       
       pcl::PointCloud<pcl::PointXYZIL>::Ptr pc_edge(new pcl::PointCloud<pcl::PointXYZIL>);
       pcl::PointCloud<pcl::PointXYZIL>::Ptr pc_surface(new pcl::PointCloud<pcl::PointXYZIL>);
       std::vector<int> semantics_local;      
       for (int j = 0; j < 1+num_merging_sequential_frames; j++){
-        dataset.set_start_index(i+j);
+
         pcl::PointCloud<pcl::PointXYZI>::Ptr pc_pcl(new pcl::PointCloud<pcl::PointXYZI>);
         std::vector<int> semantics_single;
-        if (is_semantic) {
-          if (-1 == dataset.read_next_lidar(pc_pcl, semantics_single))
-            break;
-        } else {
-          if (-1 == dataset.read_next_lidar(pc_pcl)) 
-            break;
+        int read_result = -1;
+        #pragma omp critical                 
+        { 
+          dataset.set_start_index(i+j);         
+          if (is_semantic) {
+            read_result = dataset.read_next_lidar(pc_pcl, semantics_single);
+          } else {
+            read_result = dataset.read_next_lidar(pc_pcl);
+          }
         }
+        if (read_result == -1) break;
         if (j > 0) {
           Eigen::Matrix4f pose_fi_to_fj = (tracking_poses[i].inverse() * tracking_poses[j+i]).cast<float>();
-          #pragma omp parallel for 
+
           for (int k = 0; k < pc_pcl->size(); k++) {
             auto & p = pc_pcl->at(k);
             p.getVector3fMap() = pose_fi_to_fj.block(0,0,3,3) * p.getVector3fMap() + pose_fi_to_fj.block(0,3,3,1);
           }
         }
+        std::cout<<"pc before dwonampel size "<<pc_pcl->size()<<"\n";
         select_pc_inds_edge_surface(pc_pcl,
                                     semantics_single,
                                     *pc_edge, *pc_surface);
+        std::cout<<"pc after dwonampel size "<<pc_edge->size()<<"\n";        
       }
       //if (i == 0)
       //  pcl::io::savePCDFileASCII(std::to_string(i) + ".pcd", *pc_local);
@@ -400,8 +413,14 @@ namespace cvo {
                                                                                          edge_voxel_size,
                                                                                          surface_voxel_size
                                                                                          );
-        std::cout<<"new frame "<<i<<" downsampled from  to "<<pc->size()<<"\n";
-        pcs.insert(std::make_pair(i, pc));
+
+        #pragma omp critical                 
+        {
+          std::cout<<"new frame "<<i<<" downsampled from  to "<<pc->size()<<"\n";
+          pcs.insert(std::make_pair(i, pc));
+        }
+
+        /*
         if (i == 0) {
           std::cout<<"is_semantic="<<is_semantic<<"\n";
           if (is_semantic) {
@@ -411,9 +430,12 @@ namespace cvo {
             pc->write_to_label_pcd("0.pcd");
           } else
             pc->write_to_pcd("0.pcd");
+
         }
+        */      
       }
     }
+    std::cout<<"Downsample end\n";
     
   }
   

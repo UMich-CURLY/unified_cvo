@@ -365,7 +365,7 @@ void construct_loop_BA_problem(cvo::CvoGPU & cvo_align,
                                                                   &params,
                                                                   cvo_align.get_params_gpu(),
                                                                   params.multiframe_num_neighbors,
-                                                                  params.multiframe_ell_init * 4
+                                                                  params.multiframe_ell_init// * 4
                                                                   ));
       edge_states.push_back(edge_state);
       added_edges.insert(id1, id2, 1);
@@ -506,7 +506,7 @@ void sample_frame_inds(int start_ind, int end_ind, int num_merged_frames,
 
 int main(int argc, char** argv) {
 
-  //  omp_set_num_threads(24);
+  omp_set_num_threads(112);
   //argparse::ArgumentParser parser("irls_kitti_loop_closure_test");
   /// assume start_ind and last_ind has overlap
 
@@ -521,9 +521,12 @@ int main(int argc, char** argv) {
     dataset.reset(new cvo::KittiHandler(data_path, dtype, cvo::KittiHandler::LidarCamCalibType::LIDAR_FRAME));    
   } else if (std::strcmp(data_type.c_str(), "kitti_lidar") == 0) {
     dtype = cvo::KittiHandler::DataType::LIDAR;
-    dataset.reset(new cvo::KittiHandler(data_path, dtype));    
+    dataset.reset(new cvo::KittiHandler(data_path, dtype, cvo::KittiHandler::LidarCamCalibType::LIDAR_FRAME));    
   } else if (std::strcmp(data_type.c_str(), "ethz" ) == 0) {
     dataset.reset(new cvo::EthzHandler(data_path, cvo::EthzHandler::FrameType::LOCAL));
+  } else if (std::strcmp(data_type.c_str(), "kitti_stereo") == 0) {
+    dtype = cvo::KittiHandler::DataType::STEREO;
+    dataset.reset(new cvo::KittiHandler(data_path, dtype, cvo::KittiHandler::LidarCamCalibType::LIDAR_FRAME));    
   } else {
     ASSERT(false, "unknown dtype");
   }
@@ -638,13 +641,13 @@ int main(int argc, char** argv) {
   // read point cloud
   std::map<int, cvo::CvoFrame::Ptr> frames;
   std::map<int, std::shared_ptr<cvo::CvoPointCloud>> pcs;
-  if (is_store_pcd_each_frame || is_doing_pgo ||  (is_global_registration && !is_read_loop_closure_poses_from_file)) {
+  if (is_doing_ba || is_store_pcd_each_frame || is_doing_pgo ||  (is_global_registration && !is_read_loop_closure_poses_from_file)) {
     if (std::strcmp(data_type.c_str(), "kitti_lidar") == 0) {
       cvo::read_and_downsample_lidar_pc(result_selected_frames,
                                         *dataset,
                                         tracking_poses,                                        
                                         num_merging_sequential_frames,
-                                        cvo_align.get_params().multiframe_downsample_voxel_size / 4,
+                                        cvo_align.get_params().multiframe_downsample_voxel_size / 3,
                                         cvo_align.get_params().multiframe_downsample_voxel_size,
                                         is_edge_only,
                                         cvo_align.get_params().is_using_semantics,
@@ -749,7 +752,7 @@ int main(int argc, char** argv) {
   /// Multiframe alignment
   std::cout<<"Construct loop BA problem\n";
   ASSERT(frames.size() == gt_poses.size(), "frame size must be equal to gt_poses size");
-  write_loop_closure_pcds( frames, loop_closures, true, "before_ba_");
+  write_loop_closure_pcds( frames, loop_closures, false, "before_ba_");
   construct_loop_BA_problem(cvo_align,
                             loop_closures,
                             frames, gt_pose_selected_vec, num_neighbors_per_node,
@@ -761,4 +764,4 @@ int main(int argc, char** argv) {
   std::cout<<"Write traj to file\n";
   write_traj_file_kitti_format(BA_traj_file,frames);
   return 0;
-}
+}	
