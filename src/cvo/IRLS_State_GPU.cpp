@@ -133,7 +133,6 @@ namespace cvo {
       } else if (ell_ <  ell_last_ * params_cpu_->multiframe_ell_decay_rate ){
         ell_ = ell_last_ * params_cpu_->multiframe_ell_decay_rate;          
       } 
-      std::cout<<", ell changes to "<<ell_<<"\n";
       
     }
 
@@ -142,6 +141,7 @@ namespace cvo {
     } else  if (ell_ > this->ell_max_ ) {
       ell_ =  this->ell_max_;
     }
+    std::cout<<", ell changes to "<<ell_<<"\n";
     ell_last_ = ell_;
   }
   
