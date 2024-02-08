@@ -24,14 +24,15 @@ from evo.tools import file_interface
 from scipy.spatial.transform import Rotation 
 import numpy as np
 import argparse
-from .trajectory_change_basis import T_change_of_basis
+#from .trajectory_change_basis import T_change_of_basis
 
 
 def xyzquat_to_kitti(original_f, output_f, start_ind, end_ind, is_wxyz, is_transforming_lidar_to_gt):
     original = np.loadtxt(original_f, dtype=float)
     print("read file {} with shape {}".format(original_f, original.shape))
-
-    T_b = T_change_of_basis()
+    
+    if is_transforming_lidar_to_gt:
+        T_b = T_change_of_basis()
     
     with open(output_f, 'w') as f:
         if len(original.shape) == 1:
@@ -53,9 +54,11 @@ def xyzquat_to_kitti(original_f, output_f, start_ind, end_ind, is_wxyz, is_trans
             T[1,3] = xyzq[1]
             T[2,3] = xyzq[2]
             if is_wxyz:
-                quat = Rotation.from_quat([xyzq[-4], xyzq[-3], xyzq[-2], xyzq[-1]])                
+                ### [ w x y z]
+                ### need input: [ x y z w] 
+                quat = Rotation.from_quat([xyzq[-3], xyzq[-2], xyzq[-1], xyzq[-4]])                
             else:
-                quat = Rotation.from_quat([xyzq[-1], xyzq[-4], xyzq[-3], xyzq[-2]])
+                quat = Rotation.from_quat([xyzq[-4], xyzq[-3], xyzq[-2], xyzq[-1]])
             r_mat = quat.as_matrix()
             T[:3,:3] = r_mat
             if is_transforming_lidar_to_gt:
