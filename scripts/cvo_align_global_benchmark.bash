@@ -7,7 +7,7 @@ cd build
 make -j
 cd ..
 
-for isglobal in 0 # 1
+for isglobal in 0  1
 do
 for angle in 180 90
 do

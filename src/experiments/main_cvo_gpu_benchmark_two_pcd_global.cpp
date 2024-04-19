@@ -418,7 +418,6 @@ int main(int argc, char** argv) {
       std::cout<<"after downsampling, num of points is "<<raw_pcd_transformed->size()<<std::endl;
 */
       /// downsample
-      std::cout<<"Start downsample\n";
       pcl::PointCloud<pcl::PointXYZ>::Ptr raw_pcd_downsampled (new pcl::PointCloud<pcl::PointXYZ>);      
       pcl::RandomSample <pcl::PointXYZ> random;
       random.setInputCloud(raw_pcd_transformed);
@@ -535,8 +534,9 @@ int main(int argc, char** argv) {
     Eigen::Matrix4f init_inv = Eigen::Matrix4f::Identity();
     Eigen::Matrix4f result;
     double time = 0;
+    if (is_using_irls) {
       
-      //} else 
+    } else 
       cvo_align.align(pc1_center, pc2_center, init_inv,
                       result,  nullptr, &time);
     /*
