@@ -32,8 +32,8 @@ namespace cvo {
                  const CvoParams * params
                  );
 
-    void solve();
-    void solve(const std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> & gt,
+    int solve();
+    int solve(const std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> & gt,
                const std::string & err_file_name);
 
   private:

@@ -14,7 +14,7 @@ c_ell: 0.075
 c_sigma: 1 
 s_ell: 0.1 #0.15 #0.04
 s_sigma: 1 #0.7
-MAX_ITER: 5000
+MAX_ITER: 1000
 min_step: 0.000001
 max_step: 0.01
 eps: 0.00005
@@ -35,7 +35,7 @@ is_using_range_ell: 0
 is_using_kdtree: 0
 nearest_neighbors_max: 512
 is_using_geometric_type: 0
-is_global_angle_registration: 4
+is_global_angle_registration: 0 #4
 # for irls solver
 multiframe_using_cpu: 0
 multiframe_num_neighbors: 256

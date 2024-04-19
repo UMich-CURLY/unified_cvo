@@ -90,10 +90,10 @@ namespace cvo {
   }
 
 
-  void CvoBatchIRLS::solve() {
+  int CvoBatchIRLS::solve() {
     std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> gt;
     std::string err_file_name;
-    solve(gt, err_file_name);
+    return solve(gt, err_file_name);
   }
 
   static void transform_vector_of_poses(const std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> & poses_in,
@@ -118,7 +118,7 @@ namespace cvo {
   }
 
 
-  void CvoBatchIRLS::solve(const std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> & gt,
+  int CvoBatchIRLS::solve(const std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> & gt,
                            const std::string & err_file_name) {
 
     
@@ -328,10 +328,12 @@ namespace cvo {
       //err_f << param_err<<"\n";
       err_f.close();
     }
-
+    
+    std::cout<<"Total iters are "<<total_iters<<"\n";
     std::cout<<"kernel eval time is "<<kernel_eval_time<<"\n";
     std::cout<<"ceres add residual time is "<<ceres_add_residual_time<<"\n";    
     std::cout<<"ceres running time is "<<ceres_time<<"\n";
+    return total_iters;
   }
-
+  
 }

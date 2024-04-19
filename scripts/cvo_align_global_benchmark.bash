@@ -7,7 +7,7 @@ cd build
 make -j
 cd ..
 
-for angle in 180 #90
+for angle in 180 90
 do
 for outlier_on in  1
 do

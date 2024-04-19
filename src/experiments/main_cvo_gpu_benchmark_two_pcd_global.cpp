@@ -341,6 +341,10 @@ int main(int argc, char** argv) {
   std::string fname(exp_folder + "/cvo_err_global.txt");
   std::ofstream err_f(fname);
   err_f.close();
+  std::string time_file_name = exp_folder + "/BA_time.txt";
+  std::ofstream time_file(time_file_name);//, std::ofstream::out | std::ofstream::app);
+  time_file.close();
+  
   float scale = -1.0;
   for (int k = 0; k < num_runs; k++) {
 
@@ -535,7 +539,15 @@ int main(int argc, char** argv) {
                poses_gt[1].matrix(),
                fname);
 
+    //std::ofstream err_f(fname,std::fstream::out |   std::ios::app);
+    time_file.open(time_file_name,std::fstream::out |   std::ios::app);
+    if (time_file.is_open()) {
+      time_file << time<<"\n";
+    }
+    time_file.close();
+
 
   }
+
   return 0;
 }

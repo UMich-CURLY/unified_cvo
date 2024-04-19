@@ -663,6 +663,15 @@ target_include_directories(cvo_align_gpu_two_color_pcd_global PUBLIC
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
       target_link_libraries(cvo_align_gpu_two_color_pcd_global cvo_gpu_fpfh cvo_utils boost_filesystem boost_system pcl_io pcl_common pcl_features)
 
+add_executable(cvo_align_gpu_irls_vs_grad ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_two_color_pcd_irls_vs_gradient.cpp)
+target_include_directories(cvo_align_gpu_irls_vs_grad PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+      target_link_libraries(cvo_align_gpu_irls_vs_grad cvo_gpu_fpfh cvo_utils boost_filesystem boost_system pcl_io pcl_common pcl_features)
+
+      
 add_executable(cvo_align_gpu_benchmark_two_pcd_global ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_benchmark_two_pcd_global.cpp)
 target_include_directories(cvo_align_gpu_benchmark_two_pcd_global PUBLIC
 	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 

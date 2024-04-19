@@ -1,3 +1,4 @@
+#pragma once
 #include "CvoFrameGPU.hpp"
 #include "cvo/IRLS_State.hpp"
 //#include "cvo/KDTreeVectorOfVectorsAdaptor.h"

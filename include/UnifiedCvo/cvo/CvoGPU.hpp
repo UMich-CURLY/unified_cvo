@@ -40,7 +40,15 @@ namespace cvo{
 
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
+/*
+    struct CvoResultInfo {
+      bool is_result_converged;
+      Eigen::Matrix4f transform;
+      Association association;
+      double registration_seconds;
+      int num_iters;
+    };
+*/
     // constructor and destructor
     /**
      * CvoGPU constructor
@@ -53,6 +61,20 @@ namespace cvo{
     const CvoParams  * get_params_gpu() {return params_gpu;}
     void write_params(const CvoParams * p_cpu);
 
+    /**
+     * @brief Aligning two point clouds in the CvoPointCloud format
+     * @param source_points The first point cloud
+     * @param target_points The second point cloud
+     * @param T_target_frame_to_source_frame The transformation from the second frame to the 
+     *                                       first frame.
+     * @return return result
+     */
+    //CvoResultInfo align(// inputs
+    //                    const CvoPointCloud& source_points,
+    //                    const CvoPointCloud& target_points,
+    //                    const Eigen::Matrix4f & T_target_frame_to_source_frame) const;
+
+    
     
     /**
      * @brief Aligning two point clouds in the CvoPointCloud format
@@ -63,6 +85,7 @@ namespace cvo{
      * @param transform The resulting transformation from the first frame to the second frame
      * @param association The resulting data correspondence
      * @param registration_seconds The running time in seconds
+     * @param iters The total number of iterations 
      * @return 0 if sucessful, otherwise failure
      */
     int align(// inputs
@@ -72,7 +95,8 @@ namespace cvo{
               // outputs
               Eigen::Ref<Eigen::Matrix4f> transform,
               Association * association=nullptr,
-              double *registration_seconds=nullptr ) const;
+              double *registration_seconds=nullptr,
+              int *iters=nullptr) const;
 
     /**
      * @brief Aligning two point clouds in the pcl::PointCloud format
@@ -121,6 +145,7 @@ attribute of CvoFrame.
 edge connects two.
      * @param registration_seconds The running time in seconds
      * @param inliers Inliers include the association results
+     * @param num_iters Total number of running iterations
      * @return 0 if sucessful, otherwise failure
      */
     int align(// inputs
@@ -129,7 +154,8 @@ edge connects two.
               const std::list<std::shared_ptr<BinaryState>> & edge_states,
               // outputs
               double *registration_seconds=nullptr,
-              std::list<std::shared_ptr<Association>> * inliers=nullptr
+              std::list<std::shared_ptr<Association>> * inliers=nullptr,
+              int *num_iters=nullptr
               ) const;
 
     

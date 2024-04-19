@@ -1382,7 +1382,8 @@ namespace cvo{
                  // output
                  Eigen::Ref<Eigen::Matrix4f> transform,
                  Association * association_mat,
-                 double * registration_seconds
+                 double * registration_seconds,
+                 int * num_iters
                  ) {
     
     std::ofstream ell_file;
@@ -1592,6 +1593,9 @@ namespace cvo{
                              cvo_state.num_fixed,
                              cvo_state.num_moving,
                              num_neighbors);
+    if (num_iters) {
+      *num_iters = k;
+    }
 
     if (registration_seconds)
       //*registration_seconds = t_all.count();
@@ -1628,12 +1632,13 @@ namespace cvo{
 
     CvoState cvo_state(source_gpu, target_gpu, params);
     std::cout<<"construct new cvo state..., init ell is "<<cvo_state.ell<<std::endl;
-
+    int iters = 0;
     int ret = align_impl(params, params_gpu,
                          cvo_state, init_guess_transform, 
                          transform,
                          association_mat,
-                         registration_seconds);
+                         registration_seconds,
+			 &iters);
     //std::cout<<"Result Transform is "<<transform<<std::endl;
     return ret;
     
@@ -1695,6 +1700,8 @@ namespace cvo{
     
   }
 
+
+  
   int CvoGPU::align(// inputs
                     const CvoPointCloud& source_points,
                     const CvoPointCloud& target_points,
@@ -1702,7 +1709,15 @@ namespace cvo{
                     // outputs
                     Eigen::Ref<Eigen::Matrix4f> transform,
                     Association * association_mat,
-                    double *registration_seconds) const {
+                    double *registration_seconds,
+                    int * num_iters) const {
+    //}
+
+  //CvoResultInfo align(
+  //                    const CvoPointCloud& source_points,
+  //                    const CvoPointCloud& target_points,
+  //                   const Eigen::Matrix4f & T_target_frame_to_source_frame) const {
+
     //std::cout<<"[align] convert points to gpu\n"<<std::flush;
     if (source_points.num_points() == 0 || target_points.num_points() == 0) {
       std::cout<<"[align] point clouds inputs are empty\n";
@@ -1735,7 +1750,8 @@ namespace cvo{
                          cvo_state, init_guess_transform,
                          transform,
                          association_mat,
-                         registration_seconds);
+                         registration_seconds,
+                         num_iters);
     if (registration_seconds)
       *registration_seconds += global_guess_time;
 
@@ -2127,7 +2143,8 @@ namespace cvo{
                     const std::list<BinaryState::Ptr> & edge_states,
                     // outputs
                     double *registration_seconds,
-                    std::list<std::shared_ptr<Association>> * inliers
+                    std::list<std::shared_ptr<Association>> * inliers,
+                    int *num_iters
                     ) const {
     /*
     std::cout<<"CvoGPU.cpp:align() get called\n";
@@ -2147,7 +2164,9 @@ namespace cvo{
                                     edge_states, &params);
     
     batch_irls_problem.solve();
-    
+
+    //if (num_iters)
+    //  *num_iters = iters;
     
     auto end = std::chrono::system_clock::now();
     std::chrono::duration<double, std::milli> t_all = end - start;

@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 cd build
 make -j
 cd ..
@@ -9,3 +10,14 @@ mkdir -p ~/media/sdg1/rzh/kitti_lidar/dataset/sequences/$i/pcd_semantic_downsamp
 done
 
 
+=======
+
+cd build
+make -j12
+cd ..
+
+seq=05
+rm -rf kitti_lidar_pcd_lidar_frame_$seq
+mkdir -p kitti_lidar_pcd_lidar_frame_$seq #lidar frame lidar observations
+./build/bin/kitti_lidar_to_pcd /home/`whoami`/media/Samsung_T5/kitti_lidar/dataset/sequences/${seq}/ kitti_lidar_pcd_lidar_frame_$seq 0.1 
+>>>>>>> Stashed changes
