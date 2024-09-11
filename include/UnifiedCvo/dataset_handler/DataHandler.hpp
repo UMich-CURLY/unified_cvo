@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <iostream>
 #include <string>
 #include <memory>
@@ -6,6 +7,7 @@
 #include <opencv2/opencv.hpp>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <vector>
 namespace cvo {
 
   class DatasetHandler {
@@ -13,6 +15,11 @@ namespace cvo {
 
     virtual int read_next_rgbd(cv::Mat & rgb_img, 
                                cv::Mat & depth_img) { return 0; }
+    virtual int read_next_rgbd(cv::Mat & rgb_img, 
+                               std::vector<float> & depth) { return 0; }
+    virtual int read_next_rgbd(cv::Mat & rgb_img, 
+                               std::vector<uint16_t> & depth) { return 0; }
+
 
     virtual int read_next_stereo(cv::Mat & left,
                                  cv::Mat & right) { return 0; }

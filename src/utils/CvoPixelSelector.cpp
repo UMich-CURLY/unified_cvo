@@ -53,7 +53,7 @@ namespace cvo
     w(w_), h(h_)
   {
     randomPattern.resize(w*h);
-    std::srand(3141592);	// want to be deterministic.
+    //std::srand(3141592);	// want to be deterministic.
     for(int i=0;i<w*h;i++) randomPattern[i] = rand() & 0xFF;
 
     currentPotential=3;

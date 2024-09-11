@@ -22,6 +22,8 @@
 #include "utils/VoxelMap.hpp"
 #include "utils/data_type.hpp"
 #include "graph_optimizer/PoseGraphOptimization.hpp"
+//#include <pcl/filters/farthest_point_sampling.h>
+
 //#include "argparse/argparse.hpp"
 #include "dataset_handler/KittiHandler.hpp"
 #include "dataset_handler/EthzHandler.hpp"
@@ -40,7 +42,6 @@ extern template class cvo::VoxelMap<pcl::PointXYZRGB>;
 extern template class cvo::Voxel<pcl::PointXYZRGB>;
 extern template class cvo::Voxel<pcl::PointXYZI>;
 extern template class cvo::VoxelMap<pcl::PointXYZI>;
-
 
 void  log_lc_pc_pairs( //const cvo::aligned_vector<cvo::Mat34d_row> &BA_poses,
                        const std::map<int, cvo::Mat34d_row> & BA_poses,
@@ -265,6 +266,19 @@ void global_registration_batch(cvo::CvoGPU & cvo_align,
     
     std::cout<<"====================================\nFinish running global registration between "<<p.first<<" and "<<p.second<<", result is\n"<<result<<"\n";
     time += time_curr;
+
+    cvo::CvoPointCloud old_pc;
+    cvo::CvoPointCloud::transform(init_guess_inv, *pcs.at(p.second), old_pc);
+    old_pc += *pcs.at(p.first);
+    old_pc.write_to_color_pcd("cvo_before_loop_"+std::to_string(p.first)+"_"+std::to_string(p.second)+".pcd");
+
+
+    cvo::CvoPointCloud new_pc;
+    cvo::CvoPointCloud::transform(result, *pcs.at(p.second), new_pc);
+    new_pc += *pcs.at(p.first);
+    new_pc.write_to_color_pcd("cvo_after_loop_"+std::to_string(p.first)+"_"+std::to_string(p.second)+".pcd");
+
+    
   }
   init_param.ell_init = ell_init;
   init_param.ell_decay_rate = ell_decay_rate;
@@ -452,7 +466,8 @@ void write_transformed_pc(std::map<int, cvo::CvoFrame::Ptr> & frames,
 
     pcl::PointCloud<pcl::PointXYZRGB> pc_curr;
     pcl::PointCloud<cvo::CvoPoint> pc_xyz_curr;
-    new_pc.export_semantics_to_color_pcd(pc_curr);
+    //new_pc.export_semantics_to_color_pcd(pc_curr);
+    new_pc.export_to_pcd<pcl::PointXYZRGB>(pc_curr);
     new_pc.export_to_pcd(pc_xyz_curr);
 
     pc_all += pc_curr;
@@ -571,7 +586,16 @@ int main(int argc, char** argv) {
   if (is_read_pcd == 2) {
     for (auto i : result_selected_frames) {
       pcl::PointCloud<cvo::CvoPoint>::Ptr pc_pcl(new pcl::PointCloud<cvo::CvoPoint>);
-      pcl::io::loadPCDFile<cvo::CvoPoint>(data_path+"/"+std::to_string(i)+".pcd", *pc_pcl);
+
+      if (cvo_align.get_params().is_using_semantics)
+        pcl::io::loadPCDFile<cvo::CvoPoint>(data_path+"/"+std::to_string(i)+".pcd", *pc_pcl);
+      else {
+
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc_rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
+        pcl::io::loadPCDFile<pcl::PointXYZRGB>(data_path+"/"+std::to_string(i)+".pcd", *pc_rgb);
+        pcl::PointSeg_from_PointXYZRGB<FEATURE_DIMENSIONS,NUM_CLASSES,pcl::PointXYZRGB>(*pc_rgb, *pc_pcl);
+        
+      }
       std::shared_ptr<cvo::CvoPointCloud> ret(new cvo::CvoPointCloud(FEATURE_DIMENSIONS, NUM_CLASSES));
       for (int k = 0; k < pc_pcl->size(); k++) {
         cvo::CvoPoint p = (*pc_pcl)[k];
@@ -585,41 +609,79 @@ int main(int argc, char** argv) {
       for (int j = 0; j < 1+num_merging_sequential_frames; j++){
         int index_j = i+j;
         pcl::PointCloud<cvo::CvoPoint>::Ptr pc_pcl(new pcl::PointCloud<cvo::CvoPoint>);
-        pcl::io::loadPCDFile<cvo::CvoPoint>(data_path+"/"+std::to_string(index_j)+".pcd", *pc_pcl);
-        if (j > 0) {
-          Eigen::Matrix4f pose_fi_to_fj = (tracking_poses[i].inverse() * tracking_poses[j+i]).cast<float>();
-#pragma omp parallel for 
-          for (int k = 0; k < pc_pcl->size(); k++) {
-            auto & p = pc_pcl->at(k);
-            p.getVector3fMap() = pose_fi_to_fj.block(0,0,3,3) * p.getVector3fMap() + pose_fi_to_fj.block(0,3,3,1);
-          }
+        if (cvo_align.get_params().is_using_semantics)
+          pcl::io::loadPCDFile<cvo::CvoPoint>(data_path+"/"+std::to_string(index_j)+".pcd", *pc_pcl);
+        else {
+          pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc_rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
+          pcl::io::loadPCDFile<pcl::PointXYZRGB>(data_path+"/"+std::to_string(i)+".pcd", *pc_rgb);
+          pcl::PointSeg_from_PointXYZRGB<FEATURE_DIMENSIONS,NUM_CLASSES,pcl::PointXYZRGB>(*pc_rgb, *pc_pcl);
+        
         }
+        //if (j > 0) {
+        Eigen::Matrix4f pose_fi_to_fj = (tracking_poses[i].inverse() * tracking_poses[j+i]).cast<float>();
+#pragma omp parallel for 
+        for (int k = 0; k < pc_pcl->size(); k++) {
+          auto & p = pc_pcl->at(k);
+          
+          p.getVector3fMap() = pose_fi_to_fj.block(0,0,3,3) * p.getVector3fMap() + pose_fi_to_fj.block(0,3,3,1);
+          if (k == 0) {
+            auto & p_c = (*pc_pcl)[k];            
+            Eigen::Matrix3f feat_map;
+            feat_map(0) = static_cast<float>(p_c.r);
+            feat_map(1) = static_cast<float>(p_c.g);
+            feat_map(2) = static_cast<float>(p_c.b);
+            std::cout<<"Read rgb: "<<feat_map * 255<<"\n";          
+            std::cout<<"Read rgb end\n " ;
+          }
+
+        }
+          //}
         *pc_local += *pc_pcl;
       }
 
       /// downsample
-      std::cout<<"frame "<<i<<" before downsample points "<<pc_local->size()<<std::endl;      
+      std::cout<<"frame "<<i<<" before downsample points "<<pc_local->size()<<std::endl;
+      /*
+      pcl::PointCloud<cvo::CvoPoint>::Ptr pcd_downsampled(new pcl::PointCloud<cvo::CvoPoint>);
+      pcl::PassThrough<cvo::CvoPoint> pass;
+      pass.setInputCloud (pc_local);
+      pass.setFilterFieldName ("z");
+      pass.setFilterLimits (0.0, 3.0);
+      pass.filter (*pcd_downsampled);
+      
+      pcl::FarthestPointSampling downsample;
+      downsample.setSample(1024);
+      downsample.setInputCloud (pcd_downsampled);
+      downsample.filter (*pcd_downsampled);
+      
+      std::shared_ptr<cvo::CvoPointCloud> ret(new cvo::CvoPointCloud(*pcd_downsampled));
+      //pcs.push_back(pc);
+      */
+      
       cvo::VoxelMap<cvo::CvoPoint> edge_voxel(cvo_align.get_params().multiframe_downsample_voxel_size); 
-      /// edge and surface downsample
-      for (int k = 0; k < pc_local->size(); k++) 
-        edge_voxel.insert_point(&(*pc_local)[k]);
+      for (int k = 0; k < pc_local->size(); k++) {
+        if ( (*pc_local)[k].getVector3fMap().norm() < 10.0 ) {
+          edge_voxel.insert_point(&(*pc_local)[k]);
+        }
+      }
       std::vector<cvo::CvoPoint*> edge_results = edge_voxel.sample_points();
       std::shared_ptr<cvo::CvoPointCloud> ret(new cvo::CvoPointCloud(FEATURE_DIMENSIONS, NUM_CLASSES));
       std::cout<<"frame "<<i<<" selected points "<<edge_results.size()<<std::endl;
-
-      /// push
       for (int k = 0; k < edge_results.size(); k++) {
         cvo::CvoPoint p = *edge_results[k];
-        Eigen::Map<Eigen::Matrix<float, FEATURE_DIMENSIONS, 1>> feat_map(p.features);
-        //std::cout<<"Read rgb, ";
-        feat_map(0) = static_cast<float>(p.r);
-        feat_map(1) = static_cast<float>(p.g);
-        feat_map(2) = static_cast<float>(p.b);
-        //std::cout<<"Read rgb end\n " ;       
-        feat_map.normalize();
+        //Eigen::Map<Eigen::Matrix<float, FEATURE_DIMENSIONS, 1>> feat_map(p.features);
+        if (k == 0) {
+          Eigen::Matrix3f feat_map;
+          feat_map(0) = static_cast<float>(p.r);
+          feat_map(1) = static_cast<float>(p.g);
+          feat_map(2) = static_cast<float>(p.b);
+          std::cout<<"Read rgb: "<<feat_map * 255<<"\n";          
+          std::cout<<"Read rgb end\n " ;
+        }
+        //feat_map.normalize();
         ret->push_back(p);
       }
-
+      
 
       pcs.insert(std::make_pair(i, ret));
 
@@ -647,8 +709,10 @@ int main(int argc, char** argv) {
     pcl::PointCloud<pcl::PointXYZRGB> pc_curr;
     pc_curr.resize(pc->size());
     #pragma omp parallel for
-    for (int j = 0; j < pc->size(); j++)
+    for (int j = 0; j < pc->size(); j++)  {
       pc_curr[j].getVector3fMap() = tracking_pose.block(0,0,3,3) * pc->at(j) + tracking_pose.block(0,3,3,1);
+      pc_curr[j].rgb = pc->point_at(j).rgb;
+    }
     (*pc_all_ptr) += pc_curr;
   }
   pcl::io::savePCDFileASCII ("tracking.pcd", *pc_all_ptr);
@@ -718,6 +782,7 @@ int main(int argc, char** argv) {
       int i = *iter_i;
     
       auto iter_j = iter_i;
+      iter_j++;
       for (int k = 0; k < num_neighbors_per_node && iter_j != result_selected_frames.end(); k++)
         iter_j++;
 
@@ -725,7 +790,7 @@ int main(int argc, char** argv) {
       for (; iter_j != result_selected_frames.end() ; iter_j++) {
         int j = *iter_j;
         double dist = (tracking_poses[i].block<3,1>(0,3) - tracking_poses[j].block<3,1>(0,3)).norm();
-        if (dist < 3 ){
+        if (dist < 0.2 ){
           std::cout<<"loop: dist betwee "<<i<<" and "<<j<<" is "<<dist<<"\n";
           loop_closures.push_back(std::make_pair(i,j));
         }

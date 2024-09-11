@@ -9,7 +9,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <pcl/filters/voxel_grid.h>
-
+//#include <pcl/filters/farthest_point_sampling.h>
 #include "cvo/CvoGPU.hpp"
 #include "cvo/IRLS_State_CPU.hpp"
 #include "cvo/IRLS_State_GPU.hpp"
@@ -239,17 +239,23 @@ int main(int argc, char** argv) {
 
   std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> gt_poses_all, gt_poses(frame_inds.size());
   cvo::read_pose_file_tartan_format(gt_pose_name,
-                               0,
-                               frame_inds.back(),
-                               gt_poses_all);
+                                    0,
+                                    frame_inds.back(),
+                                    gt_poses_all);
+
+  Eigen::Matrix3d m;
+  m << 0, 1, 0,
+    0, 0, 1,
+    1, 0, 0;
+  //m = Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitZ())
+  //  * Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitX());
+  Eigen::Matrix4d ned_to_cam = Eigen::Matrix4d::Identity();
+  ned_to_cam.block<3,3>(0,0) = m;
+  //std::cout<<"ned_from_"
+    
   for (int j = 0; j < frame_inds.size(); j++) {
-    Eigen::Matrix3d m;
-    m = Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitZ())
-      * Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitX());
-    Eigen::Matrix4d ned_from_us = Eigen::Matrix4d::Identity();
-    ned_from_us.block<3,3>(0,0) = m.inverse();
-    /// convert from NED to our coordinate system    
-    gt_poses[j] = ned_from_us * gt_poses_all[frame_inds[j]] * ned_from_us.inverse();
+    /// convert from NED to our camera coordinate system    
+    gt_poses[j] = ned_to_cam * gt_poses_all[frame_inds[j]] * ned_to_cam.inverse();
 
     std::cout<<"gt pose at "<<frame_inds[j]<<"\n"<<gt_poses[j]<<"\n";
   }
@@ -294,6 +300,8 @@ int main(int argc, char** argv) {
 
     std::cout<<"is_edge_only is "<<is_edge_only<<"\n";
     if ( is_edge_only == 0) {
+
+      
       pcl::PointCloud<pcl::PointXYZRGB>::Ptr raw_pcd_edge(new pcl::PointCloud<pcl::PointXYZRGB>);
       pc_edge_raw->export_to_pcd<pcl::PointXYZRGB>(*raw_pcd_edge);
     
@@ -331,12 +339,7 @@ int main(int argc, char** argv) {
         std::cout<<"surface voxel selected points "<<surface_pcl.size()<<std::endl;
 
         int total_selected_pts_num = edge_results.size() + surface_results.size();
-        /*if (total_selected_pts_num > 1500)
-          leaf_size = leaf_size * 1.2;
-          else if (total_selected_pts_num < 500)
-          leaf_size = leaf_size * 0.8;
-          else
-        */
+
         break;
     
       }
@@ -361,6 +364,21 @@ int main(int argc, char** argv) {
       pcl::PointCloud<pcl::PointXYZRGB> pcd_to_save;
       pc->write_to_color_pcd(std::to_string(curr_frame_id)+".pcd");
       
+      /*
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr raw_pcd(new pcl::PointCloud<pcl::PointXYZRGB>);    
+      pc_full->export_to_pcd<pcl::PointXYZRGB>(*raw_pcd);
+
+      pcl::FarthestPointSampling downsample();
+      downsample.setSample(1024);
+      downsample.setInputCloud (raw_pcd);
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcd_downsampled(new pcl::PointCloud<pcl::PointXYZRGB>);    
+      downsample.filter (*pcd_downsampled);
+
+      std::shared_ptr<cvo::CvoPointCloud> pc(new cvo::CvoPointCloud(*pcd_downsampled));
+      pcs.push_back(pc);
+      */
+      
+      
       
     } else {
       pcs.push_back(pc_edge_raw);
@@ -374,9 +392,9 @@ int main(int argc, char** argv) {
     //if (BA_poses.size())
 
     Eigen::Matrix4d id_mat = Eigen::Matrix4d::Identity();
-    //if (BA_poses.size() == frame_inds.size())
-    //  poses_data = BA_poses[i].data();
-    //else 
+    if (BA_poses.size() == frame_inds.size())
+      poses_data = BA_poses[i].data();
+    else 
       poses_data = id_mat.data();
     
     cvo::CvoFrame::Ptr new_frame(new cvo::CvoFrameGPU(pcs.back().get(), poses_data, cvo_align.get_params().is_using_kdtree));

@@ -9,6 +9,7 @@
 #include <cmath>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
+#include "argparse/argparse.hpp"
 #include "cvo/CvoGPU.hpp"
 #include "cvo/IRLS_State_CPU.hpp"
 #include "cvo/IRLS_State_GPU.hpp"
@@ -281,85 +282,160 @@ void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string 
   pcl::io::savePCDFileASCII(fname, pc_xyz_all);
 }
 
+std::unique_ptr<cvo::Calibration> create_calib(const std::string & data_type, 
+                                               const std::string & calib_file){
+  std::unique_ptr<cvo::Calibration> calib;
+  cvo::KittiHandler::DataType dtype;
+  if (std::strcmp(data_type.c_str(), "tum_rgbd") == 0) {
+    dataset.reset(cvo::TumHandler(dataset_path) );
+    calib.reset(new cvo::Calibration(calib_file, cvo::Calibration::RGBD));
+    cvo::read_pose_file_tum_format(tracking_traj_file,
+                                   start_ind,
+                                   last_ind,
+                                   tracking_poses);
+    
+  } else if (std::strcmp(data_type.c_str(), "tartan_rgbd") == 0) {
+    dataset.reset(cvo::TartanAirHandler(dataset_path) );
+    dataset.set_depth_folder_name("deep_depth");
+    calib.reset(new cvo::Calibration(calib_file, cvo::Calibration::RGBD));
+    cvo::read_pose_file_tartan_format(tracking_traj_file,
+                                      start_ind,
+                                      last_ind,
+                                      tracking_poses);
+    
+  } else if (std::strcmp(data_type.c_str(), "kitti_stereo") == 0) {
+    dtype = cvo::KittiHandler::DataType::STEREO;
+    dataset.reset(new cvo::KittiHandler(dataset_path, dtype, cvo::KittiHandler::LidarCamCalibType::LIDAR_FRAME));
+    calib.reset(new cvo::Calibration(calib_file, cvo::Calibration::STEREO));        
+  } else if (std::strcmp(data_type.c_str(), "kitti_lidar") == 0) {
+    dtype = cvo::KittiHandler::DataType::LIDAR;
+    dataset.reset(new cvo::KittiHandler(dataset_path, dtype, cvo::KittiHandler::LidarCamCalibType::LIDAR_FRAME));    
+  } else {
+    ASSERT(false, "unknown data type");
+  }
+  return std::move(dataset);  
+  
+}
+
+
+std::unique_ptr<cvo::DatasetHandler> create_dataset(const std::string & data_type,
+                                                    const std::string & dataset_path) {
+
+  std::unique_ptr<cvo::DatasetHandler> dataset;
+  std::unique_ptr<cvo::Calibration> calib;
+  cvo::KittiHandler::DataType dtype;
+  if (std::strcmp(data_type.c_str(), "tum_rgbd") == 0) {
+    dataset.reset(cvo::TumHandler(dataset_path) );
+    calib.reset(new cvo::Calibration(calib_file, cvo::Calibration::RGBD));
+    cvo::read_pose_file_tum_format(tracking_traj_file,
+                                   start_ind,
+                                   last_ind,
+                                   tracking_poses);
+    
+  } else if (std::strcmp(data_type.c_str(), "tartan_rgbd") == 0) {
+    dataset.reset(cvo::TartanAirHandler(dataset_path) );
+    dataset.set_depth_folder_name("deep_depth");
+    calib.reset(new cvo::Calibration(calib_file, cvo::Calibration::RGBD));
+    cvo::read_pose_file_tartan_format(tracking_traj_file,
+                                      start_ind,
+                                      last_ind,
+                                      tracking_poses);
+    
+  } else if (std::strcmp(data_type.c_str(), "kitti_stereo") == 0) {
+    dtype = cvo::KittiHandler::DataType::STEREO;
+    dataset.reset(new cvo::KittiHandler(dataset_path, dtype, cvo::KittiHandler::LidarCamCalibType::LIDAR_FRAME));
+    calib.reset(new cvo::Calibration(calib_file, cvo::Calibration::STEREO));        
+  } else if (std::strcmp(data_type.c_str(), "kitti_lidar") == 0) {
+    dtype = cvo::KittiHandler::DataType::LIDAR;
+    dataset.reset(new cvo::KittiHandler(dataset_path, dtype, cvo::KittiHandler::LidarCamCalibType::LIDAR_FRAME));    
+  } else {
+    ASSERT(false, "unknown data type");
+  }
+  return std::move(dataset);  
+}
+
+
+argparse::ArgumentParser parser(int argc, char** argv) {
+
+  argparse::ArgumentParser parser("irls_odom");
+  parser.add_argument("--data-type").required();
+  parser.add_argument("--dataset-path").required();
+  parser.add_argument("--cvo-param-file").required();
+  parser.add_argument("--cvo-calib-file").required();
+  parser.add_argument("--num-ba-frames").default_value(4);
+  parser.add_argument("--init-traj-file").default_value(std::string{""});
+  parser.add_argument("--ba-traj-file").required();
+  parser.add_argument("--is-edge-only").default_value(false);
+  parser.add_argument("--start-ind").default_value(0).scan<'i', int>();
+  parser.add_argument("--max-last-ind").default_value(10000).scan<'i',int>();
+  parser.add_argument("--sky-label").default_value(-1).scan<'i', int>();
+
+  try {
+    parser.parse_args(argc, argv);
+  }
+  catch (const std::exception& err) {
+    std::cerr << err.what() << std::endl;
+    std::cerr << program;
+    return 1;
+  }
+  return parser;
+}
+
+
 int main(int argc, char** argv) {
 
   //  omp_set_num_threads(24);
+  auto parser = parse(argc, argv);
 
-  cvo::TartanAirHandler tartan(argv[1]);
-  tartan.set_depth_folder_name("deep_depth");
-  string cvo_param_file(argv[2]);    
-  string calib_file_name(argv[3]);
-  int num_BA_frames = std::stoi(argv[4]);
-  std::string tracking_traj_file(argv[5]);
-  std::string BA_traj_file(argv[6]);
-  int is_edge_only = std::stoi(argv[7]);
-  std::cout<<"is edge only is "<<is_edge_only<<"\n";
-  int start_ind = std::stoi(argv[8]);
-  std::cout<<"start_ind is  "<<start_ind<<"\n";
-  int max_last_ind = std::stoi(argv[9]);
-  std::cout<<"last_ind is  "<<max_last_ind<<"\n";
-  int sky_label = std::stoi(argv[10]);
-  std::cout<<"sky_label is  "<<sky_label<<"\n";
-  int last_ind = std::min(max_last_ind+1, tartan.get_total_number())-1;
+  //cvo::TartanAirHandler tartan(argv[1]);
+  //dataset.set_depth_folder_name("deep_depth");
+  std::string data_type(parser.get<std::string>("--data-type"));
+  std::string dataset_path(parser.get<std::string>("--dataset-path"));
+  string cvo_param_file(parser.get<std::string>("--cvo-param-file"));    
+  string calib_file_name(parser.get<std::string>("--cvo-calib-file"));
+  int num_BA_frames = std::stoi(parser.get<int>("--num-ba-frames"));
+  std::string tracking_traj_file(parser.get<std::string>("--init-traj-file"));
+  std::string BA_traj_file(parser.get<std::string>("--ba-traj-file"));
+  int is_edge_only = std::stoi(parser.get<bool>("--is-edge-only"));
+  int start_ind = std::stoi(parser.get<int>("--start-ind"));
+  int max_last_ind = std::stoi(parser.get<int>("--max-last-ind"));
+  int sky_label = std::stoi(parser.get<int>("--sky-label"));
+  int last_ind = std::min(max_last_ind+1, dataset.get_total_number())-1;
+  int total_iters = last_ind - start_ind ;  
   bool is_recording_full = false;
-
-  std::cout<<"Finish reading all arguments\n";
-  int total_iters = last_ind - start_ind ;
 
   cvo::CvoGPU cvo_align(cvo_param_file);
   string calib_file, gt_pose_name;
-  calib_file = string(argv[1] ) +"/" + calib_file_name;
-  gt_pose_name = std::string(argv[1]) + "/pose_left.txt";
-  cvo::Calibration calib(calib_file, cvo::Calibration::RGBD);
+  calib_file = std::string(dataset_path) +"/" + calib_file_name;
 
-  /// read poses
-  std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> gt_poses_gt_frame,
-    gt_poses(total_iters);
+  std::unique_ptr<cvo::DatasetHandler> dataset;
+  std::unique_ptr<cvo::Calibration> calib;
+  std::vector<Eigen::Matrix4d,
+              Eigen::aligned_allocator<Eigen::Matrix4d>> tracking_poses(total_iters);
+
+
+  
   std::vector<cvo::Mat34d_row,
               Eigen::aligned_allocator<cvo::Mat34d_row>> BA_poses(total_iters);
 
-  std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> tracking_poses(total_iters);
-  cvo::read_pose_file_tartan_format(gt_pose_name,
-                                    start_ind,
-                                    last_ind,
-                                    gt_poses_gt_frame);
-
-  /// change frame from gt frame to camera frame
-  Eigen::Matrix4d our_frame_from_gt_cam_frame;
-  for (int j = 0; j < gt_poses_gt_frame.size(); j++) {
-    Eigen::Matrix3d m;
-    m = Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitZ())
-      * Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitX());
-    Eigen::Matrix4d ned_from_us = Eigen::Matrix4d::Identity();
-    ned_from_us.block<3,3>(0,0) = m.inverse();
-    /// convert from NED to our coordinate system    
-    gt_poses[j] = ned_from_us * gt_poses_gt_frame[j] * ned_from_us.inverse();
-    if (j == 0) {
-      our_frame_from_gt_cam_frame = gt_poses[0].inverse();
-      gt_poses[0] = Eigen::Matrix4d::Identity();
-    }  else {
-      gt_poses[j] = (our_frame_from_gt_cam_frame * gt_poses[j]).eval();
-    }
-      
-  }
-
+  
   // read point cloud
-  std::vector<cvo::CvoFrame::Ptr> frames;
-  std::vector<std::shared_ptr<cvo::CvoPointCloud>> pcs;
-  std::vector<std::shared_ptr<cvo::CvoPointCloud>> pcs_full;
-  std::vector<std::shared_ptr<cvo::CvoFrame>> frames_full;
-  for (int i = 0; i<gt_poses.size(); i++) {
-    std::cout<<"new frame "<<i+start_ind<<" out of "<<gt_poses.size() + start_ind<<"\n";
+  std::map<int, cvo::CvoFrame::Ptr> frames;
+  std::map<int, std::shared_ptr<cvo::CvoPointCloud>> pcs;
+  std::map<int, std::shared_ptr<cvo::CvoPointCloud>> pcs_full;
+  for (int i = 0; i< tracking_poses.size(); i++) {
+    std::cout<<"new frame "<<i+start_ind<<" out of "<<total_iters<<"\n";
     
-    tartan.set_start_index(i+start_ind);
+    dataset->set_start_index(i+start_ind);
     cv::Mat rgb;
     vector<float> depth, semantics;
-    tartan.read_next_rgbd_without_sky(rgb, depth, NUM_CLASSES, semantics, sky_label);
-    
+    dataset->read_next_rgbd_without_sky(rgb, depth, NUM_CLASSES, semantics, sky_label);
     std::shared_ptr<cvo::ImageRGBD<float>> raw(new cvo::ImageRGBD<float>(rgb, depth));
+
+    
     std::shared_ptr<cvo::CvoPointCloud> pc_full;
-    pc_full = std::make_shared<cvo::CvoPointCloud> (*raw,  calib, cvo::CvoPointCloud::FULL);
-    std::shared_ptr<cvo::CvoPointCloud> pc_edge_raw(new cvo::CvoPointCloud(*raw, calib, cvo::CvoPointCloud::DSO_EDGES));
+    pc_full = std::make_shared<cvo::CvoPointCloud> (*raw,  *calib, cvo::CvoPointCloud::FULL);
+    std::shared_ptr<cvo::CvoPointCloud> pc_edge_raw(new cvo::CvoPointCloud(*raw, *calib, cvo::CvoPointCloud::DSO_EDGES));
 
     std::cout<<"is_edge_only is "<<is_edge_only<<"\n";
     std::shared_ptr<cvo::CvoPointCloud> pc;

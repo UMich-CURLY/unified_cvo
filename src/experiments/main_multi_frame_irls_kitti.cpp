@@ -59,14 +59,15 @@ void read_graph_file(std::string &graph_file_path,
                      Eigen::aligned_allocator<cvo::Mat34d_row>> & poses_all){
 
   std::ifstream graph_file(graph_file_path);
-  
+  if (!graph_file.is_open())
+	 std::cerr<<"file "<<graph_file_path<<" not exist.\n"; 
   int num_frames, num_edges;
   graph_file>>num_frames >> num_edges;
   frame_inds.resize(num_frames);
   std::cout<<"Frame indices include ";
   for (int i = 0; i < num_frames; i++) {
     graph_file >> frame_inds[i];
-    std::cout<<frame_inds[i]<<", ";
+    std::cout<<"Just read "<<i<<"-th frame, index: "<<frame_inds[i]<<", ";
   }
   std::cout<<"\nEdges include ";
 
@@ -306,7 +307,7 @@ int main(int argc, char** argv) {
     std::cout<<"first ind "<<first_ind<<", second ind "<<second_ind<<std::endl;
     std::pair<cvo::CvoFrame::Ptr, cvo::CvoFrame::Ptr> p(frames[first_ind], frames[second_ind]);
     edges.push_back(p);
-
+	/*
     Eigen::Vector3f p_mean_covis = Eigen::Vector3f::Zero();
     Eigen::Vector3f p_mean_tmp = Eigen::Vector3f::Zero();
     for (int k = 0; k < frames[first_ind]->points->num_points(); k++)
@@ -317,7 +318,7 @@ int main(int argc, char** argv) {
     p_mean_covis = (p_mean_covis) / frames[second_ind]->points->num_points();
     float dist = (p_mean_covis - p_mean_tmp).norm();
     std::cout<<"dist between tmp and covis is "<<dist<<"\n";
-    
+    */
     
     const cvo::CvoParams & params = cvo_align.get_params();
     cvo::BinaryStateGPU::Ptr edge_state(new cvo::BinaryStateGPU(std::dynamic_pointer_cast<cvo::CvoFrameGPU>(frames[first_ind]),
@@ -335,6 +336,7 @@ int main(int argc, char** argv) {
     Eigen::Matrix<double, 4,4, Eigen::RowMajor > T_target_frame =  Eigen::Matrix<double, 4,4, Eigen::RowMajor >::Identity();
     T_target_frame.block<3,4>(0,0) = Eigen::Map<Eigen::Matrix<double, 3,4, Eigen::RowMajor>>(frames[second_ind]->pose_vec);
     Eigen::Matrix4f TT = (T_target_frame.inverse() * T_source_frame).cast<float>();
+    /*
     std::cout<<"cos between "<<first_ind<<" and "<<second_ind<<" is "<<cvo_align.function_angle(
                                                                                                 *frames[first_ind]->points,
                                                                                                 *frames[second_ind]->points,
@@ -346,7 +348,7 @@ int main(int argc, char** argv) {
 										      
 										      
 												)<<std::endl;
-    
+    */
   }
 
   double time = 0;

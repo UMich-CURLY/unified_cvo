@@ -52,11 +52,12 @@ find_package(CUDA REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(TBB REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread timer chrono filesystem)
-find_package(PCL REQUIRED)
+find_package(JsonCpp REQUIRED)
+find_package(PCL 1.9 REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Ceres REQUIRED)
 find_package(yaml-cpp)
-#find_package(VTK REQUIRED)
+find_package(Glog REQUIRED)
 #include(${VTK_USE_FILE})
 
 find_package(OpenMP REQUIRED)
@@ -77,7 +78,8 @@ add_definitions(-DOPENMP)
 
 find_package(CUDA)
 #set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_61,code=sm_61  -gencode arch=compute_52,code=sm_52 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_86,code=sm_86 "  )
-set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_86,code=sm_86  -gencode arch=compute_75,code=sm_75 "  )
+#set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_86,code=sm_86  -gencode arch=compute_75,code=sm_75 "  )
+set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  --expt-extended-lambda  -gencode arch=compute_86,code=sm_86"  )
 foreach(flag IN LISTS " -use_fast_math -rdc=true; -Wno-deprecated-gpu-targets; -lgsl; -lgslcblas; -lm; -fPIC"  )
   add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${flag}>")
 endforeach()
@@ -225,13 +227,14 @@ set (CVO_INCLUDE_DIRS
   ${PROJECT_SOURCE_DIR}/thirdparty/libelas/
   ${PROJECT_SOURCE_DIR}/thirdparty/cugicp/
   ${PROJECT_SOURCE_DIR}/thirdparty/cnpy/
+  ${PROJECT_SOURCE_DIR}/thirdparty/argparse/  
   )
 
 set (CVO_PUBLIC_HEADERS
   ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/
   ${PROJECT_SOURCE_DIR}/thirdparty/libelas/
   ${PROJECT_SOURCE_DIR}/thirdparty/cugicp/
-  #${PROJECT_SOURCE_DIR}/thirdparty/argparse/
+  ${PROJECT_SOURCE_DIR}/thirdparty/argparse/
   )
 
 message("CXX_FLAGS are ${CMAKE_CXX_FLAGS}")
@@ -725,6 +728,15 @@ target_include_directories(cvo_irls_tartan PUBLIC
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
       target_link_libraries(cvo_irls_tartan cvo_gpu_img cvo_utils tartan boost_filesystem boost_system pcl_filters)
+
+add_executable(cvo_inv_depth_tartan ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_inv_depth.cpp)
+target_include_directories(cvo_inv_depth_tartan PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+      target_link_libraries(cvo_inv_depth_tartan cvo_gpu_img cvo_utils tartan boost_filesystem boost_system pcl_filters lie_group_utils glog Ceres::ceres kitti tum)
+      
       
 add_executable(cvo_irls_finnforest ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_finnforest.cpp)
 target_include_directories(cvo_irls_finnforest PUBLIC

@@ -1693,7 +1693,7 @@ namespace cvo{
     auto end = std::chrono::system_clock::now();
     //double elapsed =
     if (times)
-      *times += std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+      *times += std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
 
     return init_guess;
     //std::cout<<"Chosen init guess is "<<init_guess<<", with inner product "<<curr_max_ip<<", the init search takes "<<elapsed<< "ms\n";

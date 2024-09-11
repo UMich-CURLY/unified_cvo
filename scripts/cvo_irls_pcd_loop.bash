@@ -12,7 +12,6 @@ cd ..
 export CUDA_VISIBLE_DEVICES=0
 
 dataset_folder=$1
-
 date=$2
 clear
 

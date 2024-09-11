@@ -15,6 +15,7 @@
 #include <pcl/common/transforms.h>
 #include <pcl/impl/point_types.hpp>
 #include <pcl/features/normal_3d.h>
+#include <pcl/filters/random_sample.h>
 #include <pcl/features/fpfh.h>
 #include <boost/filesystem.hpp>
 #include <vector>
@@ -41,7 +42,10 @@ namespace fs = boost::filesystem;
 namespace cvo {
 
 
-  
+  void run_IRLS(const cvo::CvoPointCloud & pc1,
+                const cvo::CvoPointCloud & pc2) {
+    
+  }
 
   void crop_point_cloud(const CvoPointCloud & pc_in,
                         CvoPointCloud & new_pc,
@@ -319,6 +323,8 @@ int main(int argc, char** argv) {
   float fpfh_radius = std::stof(argv[12]);
 
   float crop_ratio = std::stof(argv[13]);
+  int is_using_global = std::stoi(argv[14]);
+  int num_pts = std::stoi(argv[15]);
     //}
   int num_frames = 2;
 
@@ -339,12 +345,11 @@ int main(int argc, char** argv) {
   fs::path exp_folder_dir(exp_folder);
   fs::create_directories(exp_folder_dir);
   std::string fname(exp_folder + "/cvo_err_global.txt");
+  std::string time_fname(exp_folder + "/cvo_time.txt");
   std::ofstream err_f(fname);
   err_f.close();
-  std::string time_file_name = exp_folder + "/BA_time.txt";
-  std::ofstream time_file(time_file_name);//, std::ofstream::out | std::ofstream::app);
-  time_file.close();
-  
+  std::ofstream err_t(time_fname);
+  err_t.close();
   float scale = -1.0;
   for (int k = 0; k < num_runs; k++) {
 
@@ -412,14 +417,29 @@ int main(int argc, char** argv) {
         raw_pcd_downsampled->push_back(*p);
       std::cout<<"after downsampling, num of points is "<<raw_pcd_transformed->size()<<std::endl;
 */
-      pcl::PointCloud<pcl::PointXYZ>::Ptr raw_pcd_downsampled = raw_pcd_transformed;
-      pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfh = cvo::calculate_fpfh_pcl<pcl::PointXYZ>(raw_pcd_downsampled, 0.03, 0.05);
+      /// downsample
+      std::cout<<"Start downsample\n";
+      pcl::PointCloud<pcl::PointXYZ>::Ptr raw_pcd_downsampled (new pcl::PointCloud<pcl::PointXYZ>);      
+      pcl::RandomSample <pcl::PointXYZ> random;
+      random.setInputCloud(raw_pcd_transformed);
+      random.setSeed (std::rand ());
+      random.setSample((unsigned int)(num_pts));
+      std::vector<int> ind_downsampled(num_pts);
+      random.filter(ind_downsampled);
+      for (auto m : ind_downsampled)
+        raw_pcd_downsampled->push_back((*raw_pcd_transformed)[m]);
+      std::cout<<"downsample to "<<raw_pcd_downsampled->size()<<"points\n";
+      
+      //pcl::PointCloud<pcl::PointXYZ>::Ptr raw_pcd_downsampled = raw_pcd_transformed;
+      pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfh = cvo::calculate_fpfh_pcl<pcl::PointXYZ>(raw_pcd_transformed, 0.03, 0.05);
+
       
       std::shared_ptr<cvo::CvoPointCloud> pc (new cvo::CvoPointCloud(*raw_pcd_downsampled));
       pc->add_semantics(33);
       for (int k = 0 ; k < pc->size(); k++)  {
+      //for (int m = 0 ; m < ind_downsampled->size(); m++)  {
         
-        memcpy((*pc)[k].label_distribution, (*fpfh)[k].histogram, sizeof(float)*33  );
+        memcpy((*pc)[k].label_distribution, (*fpfh)[ind_downsampled[k]].histogram, sizeof(float)*33  );
         Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, 1>> label_map((*pc)[k].label_distribution, 33);
         label_map.normalize();
         /*
@@ -439,7 +459,7 @@ int main(int argc, char** argv) {
       }
 
       std::string pcd_name(exp_curr_dir_str + "/" + std::to_string(i)+".pcd");
-      pc->write_to_pcd(pcd_name);
+      //pc->write_to_pcd(pcd_name);
       
       pcs.push_back(pc);
       
@@ -461,12 +481,12 @@ int main(int argc, char** argv) {
     std::cout<<"write to before_BA.pcd\n";
     std::string f_name(exp_curr_dir_str + "/before_BA_");
     f_name += std::to_string(k)+".pcd";
-    //write_transformed_pc(frames, f_name, colors);
+    /*
     write_transformed_pc_pair(*(pcs[0]), *(pcs[1]),
                               pose_idd,
                               colors[0], colors[1],
                               f_name);
-    
+    */
 
     
     std::cout<<"write to gt\n";
@@ -478,12 +498,11 @@ int main(int argc, char** argv) {
     }
     */
     f_name =  exp_curr_dir_str + "/gt_BA_"+std::to_string(k)+".pcd" ;
-    //write_transformed_pc(frames, f_name, colors);
-    write_transformed_pc_pair(*(pcs[0]), *(pcs[1]),
+    /*    write_transformed_pc_pair(*(pcs[0]), *(pcs[1]),
                               poses_gt[1].matrix(),
                               colors[0], colors[1],
                               f_name);
-    
+    */
 
     /*
     for (int i = 0; i < num_frames; i++ ) {
@@ -492,6 +511,7 @@ int main(int argc, char** argv) {
       memcpy(frames[i]->pose_vec, pose44.data(), sizeof(double) * 12);
     }
     */
+
 
     /// start registration
     std::cout<<"Centerizing\n";
@@ -504,50 +524,49 @@ int main(int argc, char** argv) {
     for (int j = 0 ; j < pcs[1]->size(); j++) 
       pc2_center[j].getVector3fMap() = (pcs[1]->at(j) - mean2 ).eval();
     f_name =  exp_curr_dir_str + "/before_BA_centered_"+std::to_string(k)+".pcd" ;
+    /*
     write_transformed_pc_pair(pc1_center, pc2_center,
                               pose_idd, //poses_gt[1].matrix(),
                               colors[0], colors[1],
                               f_name);
-
+    */
     
     std::cout<<"start align\n";
     Eigen::Matrix4f init_inv = Eigen::Matrix4f::Identity();
     Eigen::Matrix4f result;
     double time = 0;
-    cvo_align.align(pc1_center, pc2_center, init_inv,
-                    result,  nullptr, &time);
-
+      
+      //} else 
+      cvo_align.align(pc1_center, pc2_center, init_inv,
+                      result,  nullptr, &time);
+    /*
     f_name=exp_curr_dir_str + "/after_BA_bunny_" + std::to_string(k)+"_centered.pcd";
     write_transformed_pc_pair(pc1_center, pc2_center,
                               result,
                               colors[0], colors[1],
                               f_name);
-
+    */
     
-    //Sophus::SE3f result_sophus(result.block<3,3>(0,0), result.block<3,1>(0,0));
     Eigen::Vector3f t_actual = (result.block<3,1>(0,3) - result.block<3,3>(0,0) * mean2 + mean1).eval();
     result.block<3,1>(0,3) = t_actual;    
 
     std::cout<<"Align ends. Total time is "<<time<<std::endl<<"result is "<<result<<"\n";
+    /*
     f_name=exp_curr_dir_str + "/after_BA_bunny_" + std::to_string(k)+".pcd";
     write_transformed_pc_pair(*(pcs[0]), *(pcs[1]),
                               result,
                               colors[0], colors[1],
                               f_name);
-
+    */
+    std::ofstream time_outfile(time_fname, std::ofstream::out | std::ofstream::app);
+    time_outfile << time <<"\n";
+    time_outfile.close();
+    
     eval_poses(result,
                poses_gt[1].matrix(),
                fname);
 
-    //std::ofstream err_f(fname,std::fstream::out |   std::ios::app);
-    time_file.open(time_file_name,std::fstream::out |   std::ios::app);
-    if (time_file.is_open()) {
-      time_file << time<<"\n";
-    }
-    time_file.close();
-
 
   }
-
   return 0;
 }

@@ -119,6 +119,30 @@ namespace pcl {
     }
     pc_rgb.header = pc_seg.header;
   }
+
+  template <unsigned int FEATURE_DIM, unsigned int NUM_CLASS, typename PointWithXYZRGB>
+    void PointSeg_from_PointXYZRGB(const typename pcl::PointCloud<PointWithXYZRGB> & pc_rgb,
+                                   pcl::PointCloud<pcl::PointSegmentedDistribution<FEATURE_DIM, NUM_CLASS>> & pc_seg
+                                 ) {
+    pc_seg.resize(pc_rgb.size());
+    for (int i = 0; i < pc_seg.size(); i++) {
+      auto & p_rgb = pc_rgb[i];
+      auto & p_seg = pc_seg[i];
+
+      p_seg.x = p_rgb.x;
+      p_seg.y = p_rgb.y;
+      p_seg.z = p_rgb.z;
+      p_seg.rgb = p_rgb.rgb;
+      p_seg.features[0] = ((float)(int)p_rgb.r) / 255.0;
+      p_seg.features[1] = ((float)(int)p_rgb.g) / 255.0;
+      p_seg.features[2] = ((float)(int)p_rgb.b) / 255.0;
+      p_seg.geometric_type[0] = 0;
+      p_seg.geometric_type[1] = 1;
+      
+    }
+    pc_seg.header = pc_rgb.header;
+  }
+  
     
 
   template <unsigned int FEATRURE_DIM, unsigned int NUM_CLASS >

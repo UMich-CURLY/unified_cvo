@@ -19,16 +19,18 @@
 
 
 
-from evo.core.trajectory import PoseTrajectory3D
-from evo.tools import file_interface
+#from evo.core.trajectory import PoseTrajectory3D
+#from evo.tools import file_interface
 from scipy.spatial.transform import Rotation 
 import numpy as np
 import argparse
 #from .trajectory_change_basis import T_change_of_basis
 
 
-def xyzquat_to_kitti(original_f, output_f, start_ind, end_ind, is_wxyz, is_transforming_lidar_to_gt):
+def xyzquat_to_kitti(original_f, output_f, start_ind, end_ind, is_wxyz, is_transforming_lidar_to_gt, is_skipping_first_col=False):
     original = np.loadtxt(original_f, dtype=float)
+    if is_skipping_first_col:
+        original = original[:, 1:]
     print("read file {} with shape {}".format(original_f, original.shape))
     
     if is_transforming_lidar_to_gt:
@@ -83,7 +85,9 @@ if __name__ == "__main__":
     parser.add_argument("--is-change-of-basis", action="store_true", help="whether change basis of lidar frame to gt frame")
     parser.add_argument("start_ind", nargs='?', type=int, default=0, help="starting index")
     parser.add_argument("end_ind", nargs='?', type=int, default=-1, help="last index")
+    parser.add_argument("--is-skipping-first-col", action='store_true', help='whether skipping the first colume')
 
     args = parser.parse_args()
     trajectory = xyzquat_to_kitti(args.poses_file, args.trajectory_out, args.start_ind, args.end_ind,
-                                  args.is_wxyz, args.is_change_of_basis)
+                                  args.is_wxyz, args.is_change_of_basis,
+                                  args.is_skipping_first_col)

@@ -413,7 +413,76 @@ namespace cvo {
     }
     outfile.close();
   }
+
+  /* graph file format:
+   * ############ start of file #############
+   * num_frames  num_edges
+   * edge_1(frame_id1, frame_id2)
+   * edge_2
+   * ...
+   * edge_last
+   *
+   * pose_1_kitti_format
+   * pose_2_kitti_format
+   * ...
+   * ### end of file ########################
+   *
+   */
+
+  template <typename DTYPE, unsigned int ROWS, unsigned int COLS, unsigned int RC_MAJOR>
+  void read_graph_file(const std::string &graph_file_path,
+                       std::vector<int> & frame_inds,
+                       std::vector<std::pair<int, int>> & edges,
+                       // optional
+                       std::vector<Eigen::Matrix<DTYPE, ROWS, COLS, RC_MAJOR>,
+                       Eigen::aligned_allocator<Eigen::Matrix<DTYPE, ROWS, COLS, RC_MAJOR>>> & poses_all){
+
+    using Matrix = Eigen::Matrix<DTYPE, ROWS, COLS, RC_MAJOR>;
+
+    std::ifstream graph_file(graph_file_path);
+    if (!graph_file.is_open())
+      std::cerr<<"file "<<graph_file_path<<" not exist.\n"; 
+    int num_frames, num_edges;
+    graph_file>>num_frames >> num_edges;
+    frame_inds.resize(num_frames);
+    std::cout<<"Frame indices include ";
+    for (int i = 0; i < num_frames; i++) {
+      graph_file >> frame_inds[i];
+      std::cout<<"Just read "<<i<<"-th frame, index: "<<frame_inds[i]<<", ";
+    }
+    std::cout<<"\nEdges include ";
+    for (int i =0; i < num_edges; i++ ) {
+      std::pair<int, int> p;
+      graph_file >> p.first >> p.second;
+      edges.push_back(p);
+      std::cout<<"("<<p.first<<", "<<p.second <<"), ";
+    }
+    std::cout<<"\n";
+    if (graph_file.eof() == false){
+      std::cout<<"poses included in the graph file\n";
+      poses_all.resize(num_frames);
+      for (int i = 0; i < num_frames; i++) {
+        std::vector<double> pose_vec(ROWS*COLS);
+        poses_all[i] = Matrix::Zero();
+        if (ROWS == COLS)
+          poses_all[i] = Matrix::Identity();
+        else
+          poses_all[i].block(0,0, ROWS, ROWS) = Eigen::Matrix<DTYPE, ROWS, ROWS, RC_MAJOR>::Identity();
+        for (int j = 0; j < ROWS*COLS; j++) {
+          graph_file>>pose_vec[j];
+          poses_all[i](j / COLS, j % COLS) = pose_vec[j]; 
+        }
+        //poses_all[i]  << pose_vec[0] , pose_vec[1], pose_vec[2], pose_vec[3],
+        //  pose_vec[4], pose_vec[5], pose_vec[6], pose_vec[7],
+        //  pose_vec[8], pose_vec[9], pose_vec[10], pose_vec[11];
+        std::cout<<"read pose["<<i<<"] as \n"<<poses_all[i]<<"\n";
+      }
+    }
   
+    graph_file.close();  
+  }
+
+
 
   
   

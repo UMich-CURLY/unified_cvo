@@ -310,7 +310,7 @@ namespace cvo{
     /*****************************************/
     // using DSO semi dense point selector
     else if (pt_selection_method == CvoPointCloud::DSO_EDGES) {
-      int expected_points = 10000;
+      int expected_points = 2000; //10000;
       dso_select_pixels(left_image,
                         expected_points,
                         output_uv);
@@ -586,9 +586,9 @@ namespace cvo{
     for (int i = 0; i < num_points_; i++) {
       auto & p = (pc)[i];
       cvo::CvoPoint point(p.x, p.y, p.z);
-      point.r = (int)p.r;
-      point.g = (int)p.g;
-      point.b = (int)p.b;
+      point.rgb = p.rgb;
+      //point.g = (int)p.g;
+      //point.b = (int)p.b;
       point.features[0] = ((float)(int)p.r) / 255.0;
       point.features[1] = ((float)(int)p.g) / 255.0;
       point.features[2] = ((float)(int)p.b) / 255.0;
@@ -1372,9 +1372,9 @@ namespace cvo{
       p.z = points_[i].z;
 
       if (feature_dimensions_) {
-        uint8_t b = static_cast<uint8_t>(std::min(255, (int)((float)(points_[i].features[0]) * 255)));
+        uint8_t r = static_cast<uint8_t>(std::min(255, (int)((float)(points_[i].features[0]) * 255)));
         uint8_t g = static_cast<uint8_t>(std::min(255, (int)((float)(points_[i].features[1]) * 255)));
-        uint8_t r = static_cast<uint8_t>(std::min(255, (int)((float)(points_[i].features[2]) * 255)));
+        uint8_t b = static_cast<uint8_t>(std::min(255, (int)((float)(points_[i].features[2]) * 255)));
         /*
         if (num_classes_) {
           int max_class;

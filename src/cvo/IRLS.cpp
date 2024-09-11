@@ -70,6 +70,33 @@ namespace cvo {
       write_traj_file(fname, poses_curr);
     }
   }
+  /*
+  static
+  void state_error_snapshot(const std::vector<cvo::CvoFrame::Ptr> & frames,
+                            const std::list<std::shared_ptr<BinaryState>> & states,
+                            const std::vector<Sophus::SE3d> & gt,
+                            std::list<Sophus::SE3d> & errors,             
+                            const std::string & fname) {
+    errors.resize(states.size());
+    for( auto state : states) {
+      const CvoFrame * f1 = state->get_frame1();
+      const CvoFrame * f2 = state->get_frame2();
+
+      Mat34d_row pose1_eigen = Eigen::Map<Mat34d_row>(f1->pose_vec);
+      Sophus::SE3d pose1(pose1_eigen.block<3,3>(0,0), pose1_eigen.block<3,1>(0,3));
+      Mat34d_row pose2_eigen = Eigen::Map<Mat34d_row>(f2->pose_vec);
+      Sophus::SE3d pose2(pose2_eigen.block<3,3>(0,0), pose2_eigen.block<3,1>(0,3));
+      Sophus::SE3d p12 = pose1.inverse() * pose2();
+
+      Sophus::SE3d gt12 = gt[]
+      
+      poses_curr[i] = pose;
+    }
+    if (fname.size() > 0) {
+      write_traj_file(fname, poses_curr);
+    }
+  }
+  */
 
   static
   double change_of_all_poses(std::vector<Sophus::SE3d> & poses_old,
@@ -129,9 +156,11 @@ namespace cvo {
     //std::ofstream nonzeros("nonzeros.txt");
     //std::ofstream loss_change("loss_change.txt");
     std::cout<<"gt.size()   is "<< (gt.size()) <<"\n"
-             <<"frame szie is "<<frames_->size()<<"\n"
+              <<"frame size is "<<frames_->size()<<"\n"
              <<" err_file_name.size() = "<< err_file_name.size()<<"\n";
-    bool is_comparing_with_gt = (gt.size() == frames_->size() && err_file_name.size() > 0);
+    bool is_comparing_with_gt = (//gt.size() == states_->size() && // frames_->size() &&
+                                 err_file_name.size() > 0);
+
     std::vector<Sophus::SE3d> gt_aligned(gt.size());
     std::vector<double> err_history;
     std::ofstream err_f;
