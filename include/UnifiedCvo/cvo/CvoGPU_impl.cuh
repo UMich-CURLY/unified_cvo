@@ -174,6 +174,10 @@ namespace cvo {
    */
   void compute_flow(CvoState * cvo_state, const CvoParams * params_gpu );
 
+  void compute_flow(CvoState * cvo_state, const CvoParams * params_gpu,
+                    Eigen::Vector3f * omega, Eigen::Vector3f * v, int num_neighbors);
+  
+
   void compute_step_size(CvoState * cvo_state, const CvoParams * params_cpu);
 
 
@@ -208,4 +212,7 @@ namespace cvo {
                               int num_target,
                               int num_neighbors=-1
                               );
+
+  
+  
 }

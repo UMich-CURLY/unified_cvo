@@ -62,8 +62,6 @@ namespace cvo{
 
 
   
-
-  
   CvoGPU::CvoGPU(const std::string & param_file) {
     // read_CvoParams(param_file.c_str(), &params);
     read_CvoParams_yaml(param_file.c_str(), &params);
@@ -87,6 +85,7 @@ namespace cvo{
     
   }
 
+  
 
   __device__
   float compute_range_ell(float curr_ell, float curr_dist_to_sensor, float min_dist, float max_dist ) {
@@ -130,27 +129,6 @@ namespace cvo{
     //if (debug_print) std::cout<<"transform mat R"<<transform.block<3,3>(0,0)<<"\nT: "<<transform.block<3,1>(0,3)<<std::endl;
   }
   
-
-  /*
-  void update_tf(const Mat33f & R, const Vec3f & T,
-                 // outputs
-                 CvoState * cvo_state,
-                 Eigen::Ref<Eigen::Matrix<float,3,4>> transform
-                 )  {
-    // transform = [R', -R'*T; 0,0,0,1]
-    Mat33f R_inv = R.transpose();
-    Vec3f T_inv = -R_inv * T;
-    
-    transform.block<3,3>(0,0) = R_inv;
-    transform.block<3,1>(0,3) = T_inv;
-
-    cudaMemcpy(cvo_state->R_gpu->data(), R_inv.data(), sizeof(Eigen::Matrix3f), cudaMemcpyHostToDevice);
-    cudaMemcpy(cvo_state->T_gpu->data(), T_inv.data(), sizeof(Eigen::Vector3f), cudaMemcpyHostToDevice );
-    //if (debug_print) std::cout<<"R,T is "<<R<<std::endl<<T<<std::endl;
-    //if (debug_print) std::cout<<"transform mat R"<<transform.block<3,3>(0,0)<<"\nT: "<<transform.block<3,1>(0,3)<<std::endl;
-  }
-  */
-
   typedef KDTreeVectorOfVectorsAdaptor<cloud_t, float>  kd_tree_t;
 
   __device__
@@ -233,8 +211,7 @@ namespace cvo{
 
     
   }
-
-  __device__
+ __device__
   float compute_geometric_type_ip(const float * geo_type_a,
                                   const float * geo_type_b,
                                   int size
@@ -248,644 +225,9 @@ namespace cvo{
     return geo_sim;
   }
 
-  __global__
-  void fill_in_A_mat_gpu_dense_mat_kernel(// input
-                                          const CvoParams * cvo_params,
-                                          CvoPoint * points_a,
-                                          int a_size,
-                                          CvoPoint * points_b,
-                                          int b_size,
-                                          int num_neighbors,
-                                          Eigen::Matrix3f * kernel,
-                                          // output
-                                          SparseKernelMat * A_mat // the inner product matrix!
-                                          ) {
 
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i > a_size - 1)
-      return;
-
-    // params
-    float sigma_square= cvo_params->sigma * cvo_params->sigma;
-    float c_ell_square = cvo_params->c_ell*cvo_params->c_ell;
-    float s_ell_square = cvo_params->s_ell*cvo_params->s_ell;
-    float sp_thres = cvo_params->sp_thres;
-    float c_sigma_square = cvo_params->c_sigma*cvo_params->c_sigma;
-    float s_sigma_square = cvo_params->s_sigma*cvo_params->s_sigma;
-
-    // point a in the first point cloud
-    CvoPoint * p_a =  &points_a[i];
-
-    //A_mat->max_index[i] = -1;
-    //float curr_max_ip = cvo_params->sp_thres;
-    
-    float d2_thres=1, d2_c_thres=1, d2_s_thres=1;
-    //if (cvo_params->is_using_geometry)
-    //  d2_thres = -2.0*l*l*log(cvo_params->sp_thres/sigma2);
-    if (cvo_params->is_using_intensity)
-      d2_c_thres = -2.0*c_ell_square*log(sp_thres/c_sigma_square);
-    if (cvo_params->is_using_semantics)
-      d2_s_thres = -2.0*s_ell_square*log(sp_thres/s_sigma_square);
-    
-    float * label_a = p_a ->label_distribution;
-
-    unsigned int num_inds = 0;
-
-    for (int j = 0; j < b_size ; j++) {
-      int ind_b = j;
-      if (num_inds == num_neighbors) break;
-      CvoPoint * p_b = &points_b[ind_b];
-
-
-      //float ell_shrink_ratio = ell_curr / cvo_params->ell_init;
-      
-      //float d2 = eigenvalue_distance(*p_a, *p_b, ell_shrink_ratio)  ;
-      //if (i == 0 && j == 0) {
-      //  float d2_l2 = squared_dist(*p_a, *p_b) / 0.25;
-      //  printf("i==%d, ell is %f, mahananobis_distance is %f, while d2_l2 is %f\n", i,ell_curr, d2, d2_l2);
-      //}
-
-      //float d2_iso =  squared_dist(*p_a, *p_b) / ell_curr / ell_curr;
-      //float d2_iso =  squared_dist(*p_a, *p_b) / cvo_params->ell_init / cvo_params->ell_init;
-      //d2 = d2 < d2_iso ? d2 : d2_iso;
-
-      // float l = ell_curr;
-      float a = 1, sk=1, ck=1, k=1, geo_sim = 1;
-
-      if (cvo_params->is_using_geometric_type) {
-        geo_sim = compute_geometric_type_ip(p_a->geometric_type,
-                                            p_b->geometric_type,
-                                            2
-                                            );
-        if(geo_sim < 0.01)
-          continue;        
-      }
-      
-      if (cvo_params->is_using_geometry) {
-        //if (i == 0)
-        //  printf("computing mahanobis_dist");
-        Eigen::Matrix3f rotated_kernel_inv = rotate_kernel_and_inverse( *p_a  ,*kernel);
-        float d2 = mahananobis_distance(*p_a, *p_b, rotated_kernel_inv);        
-        //k= cvo_params->sigma * cvo_params->sigma*exp(-d2/(2.0*l*l));
-        k = sigma_square * exp(-d2 / 2.0);
-      }
-      //if (i==0)
-      //  printf("i==%d, geometric: k is %f\n", i, k); 
-      if (cvo_params->is_using_intensity) {
-        float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
-        if (d2_color < d2_c_thres)
-          ck = c_sigma_square* exp(-d2_color/(2.0*c_ell_square ));
-        else
-          continue;
-      }
-      if (cvo_params->is_using_semantics) {
-        float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
-        if (d2_semantic < d2_s_thres)
-          sk = s_sigma_square * exp(-d2_semantic/(2.0*s_ell_square));
-        else
-          continue;
-      }
-      a = ck*k*sk*geo_sim;
-      if (a > cvo_params->sp_thres){
-        A_mat->mat[i * num_neighbors + num_inds] = a;
-        A_mat->ind_row2col[i * num_neighbors + num_inds] = ind_b;
-        
-        num_inds++;
-        //if (i == 4058)
-        //  printf("i==%d, j==%d, num_inds of %d, a is %f\n", i,ind_b, num_inds, a );        
-      }
-
-
-    }
-    //printf("max row num is %d, num_inds of %d is %d\n", a_size, i, num_inds );
-    A_mat->nonzeros[i] = num_inds;
-  }
-
-  __global__
-  void fill_in_A_mat_cukdtree(const CvoParams * cvo_params,
-                              CvoPoint * points_a, int a_size,
-                              CvoPoint * points_b, int size_y,
-                              int * kdtree_inds_results,
-                              int num_neighbors,                              
-                              float ell,
-                              // output
-                              SparseKernelMat * A_mat
-                              ) {
-    
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    //printf("\ni is %d\n\n", i);
-    if (i > a_size - 1)
-      return;
-    
-    //A_mat->max_index[i] = -1;
-    float curr_max_ip = cvo_params->sp_thres;
-
-    float sigma2= cvo_params->sigma * cvo_params->sigma;
-    float c2 = cvo_params->c_ell * cvo_params->c_ell;
-    float c_sigma2 = cvo_params->c_sigma * cvo_params->c_sigma;
-    float s_ell = cvo_params->s_ell;
-    float s_sigma2 = cvo_params->s_sigma * cvo_params->s_sigma;
-
-    CvoPoint * p_a =  &points_a[i];
-
-    //float a_to_sensor = sqrtf(p_a->x * p_a->x + p_a->y * p_a->y + p_a->z * p_a->z);
-    //float l = compute_range_ell(ell, a_to_sensor , 1, 80 );
-    float l = ell;
-
-    float d2_thres=1, d2_c_thres=1, d2_s_thres=1;
-    if (cvo_params->is_using_geometry)
-      d2_thres = -2.0*l*l*log(cvo_params->sp_thres/sigma2);
-    if (cvo_params->is_using_intensity)
-      d2_c_thres = -2.0*c2*log(cvo_params->sp_thres/c_sigma2);
-    if (cvo_params->is_using_semantics)
-      d2_s_thres = -2.0*s_ell*s_ell*log(cvo_params->sp_thres/s_sigma2 );
-    
-
-    float * label_a = nullptr;
-    if (cvo_params->is_using_semantics)
-      label_a = p_a ->label_distribution;
-
-    unsigned int num_inds = 0;
-    for (int j = 0; j < num_neighbors ; j++) {
-      int ind_b = kdtree_inds_results[j + i * num_neighbors];
-
-      if (ind_b == -1) break;
-      
-      CvoPoint * p_b = &points_b[ind_b];
-      //if (i <= 1)
-      //  printf("p_a is (%f, %f, %f), p_b is (%f, %f, %f\n)", p_a->x,p_a->y, p_a->z, p_b->x, p_b->y, p_b->z);
-
-      /*
-      if (i==0)  {
-        float d2 = (squared_dist( *p_b ,*p_a ));
-        float d2_semantic = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
-        
-        printf("point_a is (%f,%f,%f), point_b with index %d is (%f,%f,%f), d2=%f,d2_thresh=%f, d2_color=%f, d2_color_thresh=%f \n", p_a->x, p_a->y, p_a->z, ind_b,  p_b->x, p_b->y, p_b->z,  d2, d2_thres, d2_semantic, d2_c_thres );
-      }
-      */
-      
-
-      float a = 1, sk=1, ck=1, k=1, geo_sim=1;
-      if (cvo_params->is_using_geometric_type) {
-        geo_sim = compute_geometric_type_ip(p_a->geometric_type,
-                                            p_b->geometric_type,
-                                            2
-                                            );
-
-
-        if(geo_sim < 0.001)
-          continue;
-      }
-      
-      if (cvo_params->is_using_geometry) {
-        float d2 = (squared_dist( *p_b ,*p_a ));
-        if (d2 < d2_thres)
-          k= sigma2*exp(-d2/(2.0*l*l));
-        else continue;
-      }
-
-      if (cvo_params->is_using_intensity) {
-        float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
-        if (d2_color < d2_c_thres)
-          ck = c_sigma2*exp(-d2_color/(2.0*c2 ));
-        else
-          continue;
-      }
-      if (cvo_params->is_using_semantics) {
-        float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
-        if (d2_semantic < d2_s_thres )
-          sk = s_sigma2*exp(-d2_semantic/(2.0*s_ell*s_ell));
-        else
-          continue;
-      }
-      a = ck*k*sk*geo_sim;
-      // if (i==0) 
-      //  printf("point_a is (%f,%f,%f), point_b is (%f,%f,%f), ind_b=%d, k=%f,ck=%f, sk=%f, a=%f, \n", p_a->x, p_a->y, p_a->z, p_b->x, p_b->y, p_b->z, ind_b,  k, ck, sk,a );
-      
-
-      if (a > cvo_params->sp_thres){
-        A_mat->mat[i * num_neighbors + num_inds] = a;
-        A_mat->ind_row2col[i * num_neighbors + num_inds] = ind_b;
-        
-        //if (a > curr_max_ip) {
-        //  curr_max_ip = a;
-        //  A_mat->max_index[i] = ind_b;
-        //}
-        
-        num_inds++;
-      }
-
-    }
-    A_mat->nonzeros[i] = num_inds;
-    //printf("i=%d, nonzeros is %d\n",i, num_inds);
-  }
-
-  __global__
-  void fill_in_A_mat_gpu(const CvoParams * cvo_params,
-                         const CvoPoint * points_a,
-                         int a_size,
-                         const CvoPoint * points_b,
-                         int b_size,
-                         int num_neighbors,
-                         float ell,
-                         // output
-                         SparseKernelMat * A_mat // the kernel matrix!
-                         ) {
-
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i > a_size - 1)
-      return;
-    
-    float curr_max_ip = cvo_params->sp_thres;
-
-    float sigma2= cvo_params->sigma * cvo_params->sigma;
-    float c2 = cvo_params->c_ell * cvo_params->c_ell;
-    float c_sigma2 = cvo_params->c_sigma * cvo_params->c_sigma;
-    float s_ell = cvo_params->s_ell;
-    float s_sigma2 = cvo_params->s_sigma * cvo_params->s_sigma;
-    //printf("params_gpu_ are %f, %f, %f, %f\n",ell, sigma2, c2, s_ell);
-
-    const CvoPoint * p_a =  &points_a[i];
-
-    float a_to_sensor = sqrtf(p_a->x * p_a->x + p_a->y * p_a->y + p_a->z * p_a->z);
-    float l = compute_range_ell(ell, a_to_sensor , 1, 80 );
-
-    float d2_thres=1, d2_c_thres=1, d2_s_thres=1;
-    if (cvo_params->is_using_geometry)
-      d2_thres = -2.0*l*l*log(cvo_params->sp_thres/sigma2);
-    if (cvo_params->is_using_intensity)
-      d2_c_thres = -2.0*c2*log(cvo_params->sp_thres/c_sigma2);
-    if (cvo_params->is_using_semantics)
-      d2_s_thres = -2.0*s_ell*s_ell*log(cvo_params->sp_thres/s_sigma2 );
-    
-
-    const float * label_a = p_a ->label_distribution; //nullptr;
-
-    unsigned int num_inds = 0;
-    //printf("a_size is %d, i=%d, b_size=%d, num_neighbors=%d\n", a_size, i, b_size, num_neighbors);
-    for (int j = 0; j < b_size ; j++) {
-      int ind_b = j;
-      if (num_inds == num_neighbors) break;
-      const CvoPoint * p_b = &points_b[ind_b];
-      /*
-      if (i == 0) {
-        printf(" pointcloud_b.size is %d, num_neighbors is %d,  p_a[%d] is (%f, %f, %f), p_b[%d] is (%f, %f, %f\n)",    b_size, num_neighbors,
-               i, p_a->x,p_a->y, p_a->z,
-               ind_b, p_b->x, p_b->y, p_b->z);
-               }*/
-      float a = 1, sk=1, ck=1, k=1, geo_sim=1;
-      if (cvo_params->is_using_geometric_type) {
-        geo_sim = compute_geometric_type_ip(p_a->geometric_type,
-                                            p_b->geometric_type,
-                                            2
-                                            );
-        
-        /* for debug use
-        if (i == 0 )
-          printf("p_a is (%f, %f, %f), p_b is (%f, %f, %f), geo_sim is %f\n", p_a->x,p_a->y, p_a->z, p_b->x, p_b->y, p_b->z, geo_sim);
-        */
-        if(geo_sim < 0.01)
-          continue;        
-      }
-
-      
-      if (cvo_params->is_using_geometry) {
-        float d2 = (squared_dist( *p_b ,*p_a ));
-        if (d2 < d2_thres)
-          k= sigma2*exp(-d2/(2.0*l*l));
-        else continue;
-      }
-
-                              //if (i==0)  {
-                              /*
-                              float d2 = (squared_dist( *p_b ,*p_a ));
-        float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
-          
-        printf("point_a is (%f,%f,%f), point_b with index %d is (%f,%f,%f), d2=%f,d2_thresh=%f, d2_semantic=%f, d2_semantic_thresh=%f \n", p_a->x, p_a->y, p_a->z, ind_b,  p_b->x, p_b->y, p_b->z,  d2, d2_thres, d2_semantic, d2_s_thres );
-                                                                                                                                         */
-                              //}
-      
-                              
-
-      if (cvo_params->is_using_intensity) {
-        float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
-        if (d2_color < d2_c_thres)
-          ck = c_sigma2*exp(-d2_color/(2.0*c2 ));
-        else
-          continue;
-      }
-      
-      if (cvo_params->is_using_semantics) {
-        float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
-                
-        if (d2_semantic < d2_s_thres )
-          sk = cvo_params->s_sigma*cvo_params->s_sigma*exp(-d2_semantic/(2.0*s_ell*s_ell));
-        else
-          continue;
-      }
-      a = ck*k*sk*geo_sim;
-      
-
-      //if (i==0)  {
-      //  printf("point_a is (%f,%f,%f), point_b with index %d is (%f,%f,%f), k=%f,ck=%f, sk=%f , a=%f\n", p_a->x, p_a->y, p_a->z, ind_b,  p_b->x, p_b->y, p_b->z,  k, ck, sk, a );
-      //  }
-      
-      if (a > cvo_params->sp_thres){
-        A_mat->mat[i * num_neighbors + num_inds] = a;
-        A_mat->ind_row2col[i * num_neighbors + num_inds] = ind_b;
-        //if (i==10)  {
-            //printf("point_a is (%f,%f,%f), point_b with index %d is (%f,%f,%f), k=%f,ck=%f, sk=%f \n", p_a->x, p_a->y, p_a->z, ind_b,  p_b->x, p_b->y, p_b->z,  k, ck, sk );
-        //}
-        
-        //if (a > curr_max_ip) {
-        //  curr_max_ip = a;
-        //  A_mat->max_index[i] = ind_b;
-        //}
-        
-        num_inds++;
-      }
-
-
-    }
-    A_mat->nonzeros[i] = num_inds;
-
-    if (cvo_params->multiframe_is_sorting_inner_product &&
-        num_inds > cvo_params->multiframe_is_sorting_inner_product ) {
-      thrust::sort_by_key(thrust::seq, A_mat->mat+num_neighbors * i,
-                          A_mat->mat + num_neighbors * (i+1),
-                          A_mat->ind_row2col + num_neighbors * i,
-                          thrust::greater<float>());
-      /*
-      if (i == 1) {
-
-        for (int k = 0; k < num_neighbors; k++) {
-          printf("A_mat[k]=%f, a_mat[k] ind = %d\n", *(A_mat->mat + num_neighbors * i + k),
-                 *(A_mat->ind_row2col + num_neighbors * i + k));
-        }
-        }*/
-      
-    }
-     
-
-
-  }
-
-  static
-  void se_kernel_kdtree(//input
-                        const CvoParams & params_cpu, const CvoParams * params_gpu,
-                        std::shared_ptr<CvoPointCloudGPU> points_fixed,
-                        std::shared_ptr<CvoPointCloudGPU> points_moving,
-                        float ell,
-                        perl_registration::cuKdTree<CvoPoint> & kdtree,
-                        const Eigen::Matrix4f & transform_cpu_tf2sf,
-                        int num_neighbors,
-                        // output
-                        std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu_transformed_kdtree,
-                        thrust::device_vector<int> & cukdtree_inds_results,
-                        SparseKernelMat * A_mat,
-                        SparseKernelMat * A_mat_gpu
-                        ) {
-
-    find_nearby_source_points_cukdtree(points_fixed, kdtree, transform_cpu_tf2sf, num_neighbors,
-                                       cloud_x_gpu_transformed_kdtree, cukdtree_inds_results);
-
-    /*
-    std::cout<<"1st point neighbors are:\n";
-    int inds[64];
-    cudaMemcpy(inds, thrust::raw_pointer_cast(cukdtree_inds_results.data()), sizeof(int)*64, cudaMemcpyDeviceToHost);
-    std::cout<<"neighbors of pt_fixed[0]: ";
-    for (int i = 0; i < 32; i++) {
-      std::cout<<inds[i]<<" ";
-    }
-    
-    std::cout<<"neighbors of pt_fixed[1]: ";
-    for (int i = 32; i < 64; i++) {
-      std::cout<<inds[i]<<" ";
-    }
-    */
-    
-    fill_in_A_mat_cukdtree<<< (points_fixed->points.size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>
-      (params_gpu, thrust::raw_pointer_cast(points_fixed->points.data()), points_fixed->size(),
-       thrust::raw_pointer_cast(points_moving->points.data()), points_moving->size(),
-       thrust::raw_pointer_cast(cukdtree_inds_results.data()),
-       num_neighbors, ell,
-       A_mat_gpu
-       );
-    cudaDeviceSynchronize();    
-    cudaError_t err = cudaGetLastError();
-    if (err != cudaSuccess) { 
-        fprintf(stderr, "Failed to run fill_in_A_mat_cukdtree %s .\n", cudaGetErrorString(err)); 
-        exit(EXIT_FAILURE); 
-    }
-
-    compute_nonzeros(A_mat);
-    
-  }
   
-
-  static
-  void se_kernel(// input
-                 const CvoParams * params_gpu,
-                 std::shared_ptr<CvoPointCloudGPU> points_fixed,
-                 std::shared_ptr<CvoPointCloudGPU> points_moving,
-                 int num_neighbors,
-                 float ell,
-                 // output
-                 SparseKernelMat * A_mat,
-                 SparseKernelMat * A_mat_gpu
-                 )  {
-
-    auto start = chrono::system_clock::now();
-    int fixed_size = points_fixed->points.size();
-    CvoPoint * points_fixed_raw = thrust::raw_pointer_cast (  points_fixed->points.data() );
-    CvoPoint * points_moving_raw = thrust::raw_pointer_cast( points_moving->points.data() );
-
-    fill_in_A_mat_gpu<<<(points_fixed->points.size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(params_gpu,
-                                                                                                points_fixed_raw,
-                                                                                                fixed_size,
-                                                                                                points_moving_raw,
-                                                                                                points_moving->points.size(),
-                                                                                                num_neighbors,
-                                                                                                ell,
-                                                                                                // output
-                                                                                                A_mat_gpu // the kernel mat
-                                                                                                );
-    cudaDeviceSynchronize();    
-    cudaError_t err = cudaGetLastError();
-    if (err != cudaSuccess) { 
-        fprintf(stderr, "Failed to run fill_in_A_mat_gpu %s .\n", cudaGetErrorString(err)); 
-        exit(EXIT_FAILURE); 
-    }
-
-    compute_nonzeros(A_mat);
-  }
-
-  static
-  void se_kernel_dense(// input
-                       const CvoParams * params_gpu,
-                       std::shared_ptr<CvoPointCloudGPU> points_fixed,
-                       std::shared_ptr<CvoPointCloudGPU> points_moving,
-                       int num_neighbors,
-                       const Eigen::Matrix3f & kernel_cpu,
-                       // output
-                       SparseKernelMat * A_mat,
-                       SparseKernelMat * A_mat_gpu
-                       )  {
-    
-    auto start = chrono::system_clock::now();
-    int fixed_size = points_fixed->points.size();
-    CvoPoint * points_fixed_raw = thrust::raw_pointer_cast (  points_fixed->points.data() );
-    CvoPoint * points_moving_raw = thrust::raw_pointer_cast( points_moving->points.data() );
-
-    Eigen::Matrix3f * kernel_gpu;
-    cudaMalloc((void**)&kernel_gpu, sizeof(Eigen::Matrix3f));
-    cudaMemcpy(kernel_gpu, &kernel_cpu, sizeof(decltype(kernel_cpu)), cudaMemcpyHostToDevice);
-    //std::cout<<"Start fill_in_A_mat_gpu_dense_mat_kernel\n"<<std::endl;
-    fill_in_A_mat_gpu_dense_mat_kernel<<<(points_fixed->points.size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(params_gpu,
-                                                                                                                 points_fixed_raw,
-                                                                                                                 fixed_size,
-                                                                                                                 points_moving_raw,
-                                                                                                                 points_moving->points.size(),
-                                                                                                                 num_neighbors,
-                                                                                                                 kernel_gpu,
-                                                                                                                 // output
-                                                                                                                 A_mat_gpu // the kernel mat
-                                                                                                                 );
-    cudaDeviceSynchronize();    
-    cudaError_t err = cudaGetLastError();
-    if (err != cudaSuccess) { 
-        fprintf(stderr, "Failed to run fill_in_A_mat_gpu_dense_mat_kernel %s .\n", cudaGetErrorString(err)); 
-        exit(EXIT_FAILURE); 
-    }
-    
-    compute_nonzeros(A_mat);
-    cudaFree(kernel_gpu);
-
-  }
   
-
-  __global__ void compute_flow_gpu_no_eigen(const CvoParams * cvo_params,
-                                            CvoPoint * cloud_x, CvoPoint * cloud_y,
-                                            SparseKernelMat * A,
-                                            int num_neighbors,
-                                            // outputs: thrust vectors
-                                            Eigen::Vector3d * omega_all_gpu,
-                                            Eigen::Vector3d * v_all_gpu
-                                            ) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i > A->rows - 1)
-      return;
-    int A_rows = A->rows;
-    int A_cols = A->cols;
-    //float * Ai = A->mat + i * A->cols;
-    float * Ai = A->mat + i * num_neighbors;
-    
-    CvoPoint * px = &cloud_x[i];
-    Eigen::Vector3f px_eig;
-    px_eig<< px->x , px->y, px->z;
-    float px_arr[3] = {px->x, px->y, px->z};
-
-    Eigen::Vector3f omega_i = Eigen::Vector3f::Zero();
-    Eigen::Vector3f v_i = Eigen::Vector3f::Zero();
-    //#ifdef IS_USING_COVARIANCE
-    //Eigen::Matrix3f cov_i = Eigen::Map<Eigen::Matrix3f>(px->covariance);
-    //#endif    
-    float dl_i = 0;
-    for (int j = 0; j < num_neighbors; j++) {
-      int idx = A->ind_row2col[i*num_neighbors+j];
-      if (idx == -1) break;
-      
-      CvoPoint * py = &cloud_y[idx];
-      float py_arr[3] = {py->x, py->y, py->z};
-      Eigen::Vector3f py_eig;
-      py_eig << py->x, py->y, py->z;
-      
-      Eigen::Vector3f cross_xy_j = px_eig.cross(py_eig) ;
-      Eigen::Vector3f diff_yx_j = py_eig - px_eig;
-      float sum_diff_yx_2_j = diff_yx_j.squaredNorm();
-      /*
-        #ifdef IS_USING_COVARIANCE      
-        Eigen::Matrix3f cov_j = Eigen::Map<Eigen::Matrix3f>(py->covariance);
-        omega_i = omega_i + cov_j * cross_xy_j *  *(Ai + j );
-        v_i = v_i + cov_j * diff_yx_j *  *(Ai + j);
-        //float eigenvalue_sum = px->cov_eigenvalues(0)
-
-        //omega_i = omega_i +  cross_xy_j *  *(Ai + j );
-        // v_i = v_i + diff_yx_j *  *(Ai + j);      
-      
-        #else   
-      */   
-      omega_i = omega_i + cross_xy_j *  *(Ai + j );
-      v_i = v_i + diff_yx_j *  *(Ai + j);
-
-    }
-
-    Eigen::Vector3d & omega_i_eig = omega_all_gpu[i];
-    omega_i_eig = (omega_i / cvo_params->c ).cast<double>();
-    Eigen::Vector3d & v_i_eig = v_all_gpu[i];
-    v_i_eig = (v_i /  cvo_params->d).cast<double>();
-
-  }
-
-
-  void compute_flow(CvoState * cvo_state, const CvoParams * params_gpu,
-                    Eigen::Vector3f * omega, Eigen::Vector3f * v, int num_neighbors)  {
-
-    if (debug_print ) {
-      std::cout<<"nonzeros in A "<<nonzeros(&cvo_state->A_host)<<std::endl;
-      std::cout<<"A rows is "<<cvo_state->A_host.rows<<", A cols is "<<cvo_state->A_host.cols<<std::endl;
-    }
-    auto start = chrono::system_clock::now();
-    compute_flow_gpu_no_eigen<<<cvo_state->A_host.rows / CUDA_BLOCK_SIZE + 1 ,CUDA_BLOCK_SIZE>>>(params_gpu,
-                                                                                                 thrust::raw_pointer_cast(cvo_state->cloud_x_gpu->points.data()   ),
-                                                                                                 thrust::raw_pointer_cast(cvo_state->cloud_y_gpu->points.data()   ),
-                                                                                                 cvo_state->A,
-                                                                                                 num_neighbors,
-                                                                                                 thrust::raw_pointer_cast(cvo_state->omega_gpu.data()  ),
-                                                                                                 thrust::raw_pointer_cast(cvo_state->v_gpu.data() ));
-    ;
-    //cudaDeviceSynchronize();
-    if (debug_print) {
-      printf("finish compute_flow_gpu_no_eigen\n");
-
-    }
-    
-    auto end = chrono::system_clock::now();
-    //std::cout<<"time for compute_gradient is "<<std::chrono::duration_cast<std::chrono::milliseconds>((end- start)).count()<<std::endl;
-    
-    start = chrono::system_clock::now();
-    // update them to class-wide variables
-    //thrust::plus<double> plus_double;
-    //thrust::plus<Eigen::Vector3d> plus_vector;
-    
-    //(thrust::reduce(thrust::device, cvo_state->omega_gpu.begin(), cvo_state->omega_gpu.end(), Eigen::Vector3d(0,0,0)  ) );
-    *omega = (thrust::reduce(thrust::device, cvo_state->omega_gpu.begin(), cvo_state->omega_gpu.end(), Eigen::Vector3d(0,0,0) )).cast<float>();
-    *v = (thrust::reduce(thrust::device, cvo_state->v_gpu.begin(), cvo_state->v_gpu.end(), Eigen::Vector3d(0,0,0))).cast<float>();
-    // normalize the gradient
-    Eigen::Matrix<float, 6, 1> ov;
-    ov.segment<3>(0) = *omega;
-    ov.segment<3>(3) = *v;
-    ov.normalize();
-    *omega = ov.segment<3>(0);
-    *v = ov.segment<3>(3);
-    //omega->normalize();
-    //v->normalize();
-
-    // Eigen::Vector3d::Zero(), plus_vector)).cast<float>();
-    cudaMemcpy(cvo_state->omega, omega, sizeof(Eigen::Vector3f), cudaMemcpyHostToDevice );
-    cudaMemcpy(cvo_state->v, v, sizeof(Eigen::Vector3f), cudaMemcpyHostToDevice );
-
-    
-    end = chrono::system_clock::now();
-    //std::cout<<"time for thrust_reduce is "<<std::chrono::duration_cast<std::chrono::milliseconds>((end- start)).count()<<std::endl;
-    start = chrono::system_clock::now();
-    int A_nonzero = nonzeros(&cvo_state->A_host);
-    if (debug_print) std::cout<<"compute flow result: omega "<<omega->transpose()<<", v: "<<v->transpose()<<std::endl;
-    end = chrono::system_clock::now();
-    //std::cout<<"time for nonzeros "<<std::chrono::duration_cast<std::chrono::milliseconds>((end- start)).count()<<std::endl;
-  }
-
-
   __global__ void fill_in_residual_and_jacobian(float ell,
                                                 CvoPoint * cloud_x, CvoPoint * cloud_y,
                                                 SparseKernelMat * A,
@@ -1373,8 +715,529 @@ namespace cvo{
     
   }
 
+
+    __global__
+  void fill_in_A_mat_gpu_dense_mat_kernel(// input
+                                          const CvoParams * cvo_params,
+                                          CvoPoint * points_a,
+                                          int a_size,
+                                          CvoPoint * points_b,
+                                          int b_size,
+                                          int num_neighbors,
+                                          Eigen::Matrix3f * kernel,
+                                          // output
+                                          SparseKernelMat * A_mat // the inner product matrix!
+                                          ) {
+
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i > a_size - 1)
+      return;
+
+    // params
+    float sigma_square= cvo_params->sigma * cvo_params->sigma;
+    float c_ell_square = cvo_params->c_ell*cvo_params->c_ell;
+    float s_ell_square = cvo_params->s_ell*cvo_params->s_ell;
+    float sp_thres = cvo_params->sp_thres;
+    float c_sigma_square = cvo_params->c_sigma*cvo_params->c_sigma;
+    float s_sigma_square = cvo_params->s_sigma*cvo_params->s_sigma;
+
+    // point a in the first point cloud
+    CvoPoint * p_a =  &points_a[i];
+
+    //A_mat->max_index[i] = -1;
+    //float curr_max_ip = cvo_params->sp_thres;
+    
+    float d2_thres=1, d2_c_thres=1, d2_s_thres=1;
+    //if (cvo_params->is_using_geometry)
+    //  d2_thres = -2.0*l*l*log(cvo_params->sp_thres/sigma2);
+    if (cvo_params->is_using_intensity)
+      d2_c_thres = -2.0*c_ell_square*log(sp_thres/c_sigma_square);
+    if (cvo_params->is_using_semantics)
+      d2_s_thres = -2.0*s_ell_square*log(sp_thres/s_sigma_square);
+    
+    float * label_a = p_a ->label_distribution;
+
+    unsigned int num_inds = 0;
+
+    for (int j = 0; j < b_size ; j++) {
+      int ind_b = j;
+      if (num_inds == num_neighbors) break;
+      CvoPoint * p_b = &points_b[ind_b];
+
+
+      //float ell_shrink_ratio = ell_curr / cvo_params->ell_init;
+      
+      //float d2 = eigenvalue_distance(*p_a, *p_b, ell_shrink_ratio)  ;
+      //if (i == 0 && j == 0) {
+      //  float d2_l2 = squared_dist(*p_a, *p_b) / 0.25;
+      //  printf("i==%d, ell is %f, mahananobis_distance is %f, while d2_l2 is %f\n", i,ell_curr, d2, d2_l2);
+      //}
+
+      //float d2_iso =  squared_dist(*p_a, *p_b) / ell_curr / ell_curr;
+      //float d2_iso =  squared_dist(*p_a, *p_b) / cvo_params->ell_init / cvo_params->ell_init;
+      //d2 = d2 < d2_iso ? d2 : d2_iso;
+
+      // float l = ell_curr;
+      float a = 1, sk=1, ck=1, k=1, geo_sim = 1;
+
+      if (cvo_params->is_using_geometric_type) {
+        geo_sim = compute_geometric_type_ip(p_a->geometric_type,
+                                            p_b->geometric_type,
+                                            2
+                                            );
+        if(geo_sim < 0.01)
+          continue;        
+      }
+      
+      if (cvo_params->is_using_geometry) {
+        //if (i == 0)
+        //  printf("computing mahanobis_dist");
+        Eigen::Matrix3f rotated_kernel_inv = rotate_kernel_and_inverse( *p_a  ,*kernel);
+        float d2 = mahananobis_distance(*p_a, *p_b, rotated_kernel_inv);        
+        //k= cvo_params->sigma * cvo_params->sigma*exp(-d2/(2.0*l*l));
+        k = sigma_square * exp(-d2 / 2.0);
+      }
+      //if (i==0)
+      //  printf("i==%d, geometric: k is %f\n", i, k); 
+      if (cvo_params->is_using_intensity) {
+        float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
+        if (d2_color < d2_c_thres)
+          ck = c_sigma_square* exp(-d2_color/(2.0*c_ell_square ));
+        else
+          continue;
+      }
+      if (cvo_params->is_using_semantics) {
+        float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
+        if (d2_semantic < d2_s_thres)
+          sk = s_sigma_square * exp(-d2_semantic/(2.0*s_ell_square));
+        else
+          continue;
+      }
+      a = ck*k*sk*geo_sim;
+      if (a > cvo_params->sp_thres){
+        A_mat->mat[i * num_neighbors + num_inds] = a;
+        A_mat->ind_row2col[i * num_neighbors + num_inds] = ind_b;
+        
+        num_inds++;
+        //if (i == 4058)
+        //  printf("i==%d, j==%d, num_inds of %d, a is %f\n", i,ind_b, num_inds, a );        
+      }
+
+
+    }
+    //printf("max row num is %d, num_inds of %d is %d\n", a_size, i, num_inds );
+    A_mat->nonzeros[i] = num_inds;
+  }
+
+  __global__
+  void fill_in_A_mat_cukdtree(const CvoParams * cvo_params,
+                              CvoPoint * points_a, int a_size,
+                              CvoPoint * points_b, int size_y,
+                              int * kdtree_inds_results,
+                              int num_neighbors,                              
+                              float ell,
+                              // output
+                              SparseKernelMat * A_mat
+                              ) {
+    
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    //printf("\ni is %d\n\n", i);
+    if (i > a_size - 1)
+      return;
+    
+    //A_mat->max_index[i] = -1;
+    float curr_max_ip = cvo_params->sp_thres;
+
+    float sigma2= cvo_params->sigma * cvo_params->sigma;
+    float c2 = cvo_params->c_ell * cvo_params->c_ell;
+    float c_sigma2 = cvo_params->c_sigma * cvo_params->c_sigma;
+    float s_ell = cvo_params->s_ell;
+    float s_sigma2 = cvo_params->s_sigma * cvo_params->s_sigma;
+
+    CvoPoint * p_a =  &points_a[i];
+
+    //float a_to_sensor = sqrtf(p_a->x * p_a->x + p_a->y * p_a->y + p_a->z * p_a->z);
+    //float l = compute_range_ell(ell, a_to_sensor , 1, 80 );
+    float l = ell;
+
+    float d2_thres=1, d2_c_thres=1, d2_s_thres=1;
+    if (cvo_params->is_using_geometry)
+      d2_thres = -2.0*l*l*log(cvo_params->sp_thres/sigma2);
+    if (cvo_params->is_using_intensity)
+      d2_c_thres = -2.0*c2*log(cvo_params->sp_thres/c_sigma2);
+    if (cvo_params->is_using_semantics)
+      d2_s_thres = -2.0*s_ell*s_ell*log(cvo_params->sp_thres/s_sigma2 );
+    
+
+    float * label_a = nullptr;
+    if (cvo_params->is_using_semantics)
+      label_a = p_a ->label_distribution;
+
+    unsigned int num_inds = 0;
+    for (int j = 0; j < num_neighbors ; j++) {
+      int ind_b = kdtree_inds_results[j + i * num_neighbors];
+
+      if (ind_b == -1) break;
+      
+      CvoPoint * p_b = &points_b[ind_b];
+      //if (i <= 1)
+      //  printf("p_a is (%f, %f, %f), p_b is (%f, %f, %f\n)", p_a->x,p_a->y, p_a->z, p_b->x, p_b->y, p_b->z);
+
+      /*
+      if (i==0)  {
+        float d2 = (squared_dist( *p_b ,*p_a ));
+        float d2_semantic = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
+        
+        printf("point_a is (%f,%f,%f), point_b with index %d is (%f,%f,%f), d2=%f,d2_thresh=%f, d2_color=%f, d2_color_thresh=%f \n", p_a->x, p_a->y, p_a->z, ind_b,  p_b->x, p_b->y, p_b->z,  d2, d2_thres, d2_semantic, d2_c_thres );
+      }
+      */
+      
+
+      float a = 1, sk=1, ck=1, k=1, geo_sim=1;
+      if (cvo_params->is_using_geometric_type) {
+        geo_sim = compute_geometric_type_ip(p_a->geometric_type,
+                                            p_b->geometric_type,
+                                            2
+                                            );
+
+
+        if(geo_sim < 0.001)
+          continue;
+      }
+      
+      if (cvo_params->is_using_geometry) {
+        float d2 = (squared_dist( *p_b ,*p_a ));
+        if (d2 < d2_thres)
+          k= sigma2*exp(-d2/(2.0*l*l));
+        else continue;
+      }
+
+      if (cvo_params->is_using_intensity) {
+        float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
+        if (d2_color < d2_c_thres)
+          ck = c_sigma2*exp(-d2_color/(2.0*c2 ));
+        else
+          continue;
+      }
+      if (cvo_params->is_using_semantics) {
+        float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
+        if (d2_semantic < d2_s_thres )
+          sk = s_sigma2*exp(-d2_semantic/(2.0*s_ell*s_ell));
+        else
+          continue;
+      }
+      a = ck*k*sk*geo_sim;
+      // if (i==0) 
+      //  printf("point_a is (%f,%f,%f), point_b is (%f,%f,%f), ind_b=%d, k=%f,ck=%f, sk=%f, a=%f, \n", p_a->x, p_a->y, p_a->z, p_b->x, p_b->y, p_b->z, ind_b,  k, ck, sk,a );
+      
+
+      if (a > cvo_params->sp_thres){
+        A_mat->mat[i * num_neighbors + num_inds] = a;
+        A_mat->ind_row2col[i * num_neighbors + num_inds] = ind_b;
+        
+        //if (a > curr_max_ip) {
+        //  curr_max_ip = a;
+        //  A_mat->max_index[i] = ind_b;
+        //}
+        
+        num_inds++;
+      }
+
+    }
+    A_mat->nonzeros[i] = num_inds;
+    //printf("i=%d, nonzeros is %d\n",i, num_inds);
+  }
+
+  __global__
+  void fill_in_A_mat_gpu(const CvoParams * cvo_params,
+                         const CvoPoint * points_a,
+                         int a_size,
+                         const CvoPoint * points_b,
+                         int b_size,
+                         int num_neighbors,
+                         float ell,
+                         // output
+                         SparseKernelMat * A_mat // the kernel matrix!
+                         ) {
+
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i > a_size - 1)
+      return;
+    
+    float curr_max_ip = cvo_params->sp_thres;
+
+    float sigma2= cvo_params->sigma * cvo_params->sigma;
+    float c2 = cvo_params->c_ell * cvo_params->c_ell;
+    float c_sigma2 = cvo_params->c_sigma * cvo_params->c_sigma;
+    float s_ell = cvo_params->s_ell;
+    float s_sigma2 = cvo_params->s_sigma * cvo_params->s_sigma;
+    //printf("params_gpu_ are %f, %f, %f, %f\n",ell, sigma2, c2, s_ell);
+
+    const CvoPoint * p_a =  &points_a[i];
+
+    float a_to_sensor = sqrtf(p_a->x * p_a->x + p_a->y * p_a->y + p_a->z * p_a->z);
+    float l = compute_range_ell(ell, a_to_sensor , 1, 80 );
+
+    float d2_thres=1, d2_c_thres=1, d2_s_thres=1;
+    if (cvo_params->is_using_geometry)
+      d2_thres = -2.0*l*l*log(cvo_params->sp_thres/sigma2);
+    if (cvo_params->is_using_intensity)
+      d2_c_thres = -2.0*c2*log(cvo_params->sp_thres/c_sigma2);
+    if (cvo_params->is_using_semantics)
+      d2_s_thres = -2.0*s_ell*s_ell*log(cvo_params->sp_thres/s_sigma2 );
+    
+
+    const float * label_a = p_a ->label_distribution; //nullptr;
+
+    unsigned int num_inds = 0;
+    //printf("a_size is %d, i=%d, b_size=%d, num_neighbors=%d\n", a_size, i, b_size, num_neighbors);
+    for (int j = 0; j < b_size ; j++) {
+      int ind_b = j;
+      if (num_inds == num_neighbors) break;
+      const CvoPoint * p_b = &points_b[ind_b];
+      /*
+      if (i == 0) {
+        printf(" pointcloud_b.size is %d, num_neighbors is %d,  p_a[%d] is (%f, %f, %f), p_b[%d] is (%f, %f, %f\n)",    b_size, num_neighbors,
+               i, p_a->x,p_a->y, p_a->z,
+               ind_b, p_b->x, p_b->y, p_b->z);
+               }*/
+      float a = 1, sk=1, ck=1, k=1, geo_sim=1;
+      if (cvo_params->is_using_geometric_type) {
+        geo_sim = compute_geometric_type_ip(p_a->geometric_type,
+                                            p_b->geometric_type,
+                                            2
+                                            );
+        
+        /* for debug use
+        if (i == 0 )
+          printf("p_a is (%f, %f, %f), p_b is (%f, %f, %f), geo_sim is %f\n", p_a->x,p_a->y, p_a->z, p_b->x, p_b->y, p_b->z, geo_sim);
+        */
+        if(geo_sim < 0.01)
+          continue;        
+      }
+
+      
+      if (cvo_params->is_using_geometry) {
+        float d2 = (squared_dist( *p_b ,*p_a ));
+        if (d2 < d2_thres)
+          k= sigma2*exp(-d2/(2.0*l*l));
+        else continue;
+      }
+
+                              //if (i==0)  {
+                              /*
+                              float d2 = (squared_dist( *p_b ,*p_a ));
+        float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
+          
+        printf("point_a is (%f,%f,%f), point_b with index %d is (%f,%f,%f), d2=%f,d2_thresh=%f, d2_semantic=%f, d2_semantic_thresh=%f \n", p_a->x, p_a->y, p_a->z, ind_b,  p_b->x, p_b->y, p_b->z,  d2, d2_thres, d2_semantic, d2_s_thres );
+                                                                                                                                         */
+                              //}
+      
+                              
+
+      if (cvo_params->is_using_intensity) {
+        float d2_color = squared_dist<float>(p_a->features, p_b->features, FEATURE_DIMENSIONS);
+        if (d2_color < d2_c_thres)
+          ck = c_sigma2*exp(-d2_color/(2.0*c2 ));
+        else
+          continue;
+      }
+      
+      if (cvo_params->is_using_semantics) {
+        float d2_semantic = squared_dist<float>(p_a->label_distribution, p_b->label_distribution, NUM_CLASSES);
+                
+        if (d2_semantic < d2_s_thres )
+          sk = cvo_params->s_sigma*cvo_params->s_sigma*exp(-d2_semantic/(2.0*s_ell*s_ell));
+        else
+          continue;
+      }
+      a = ck*k*sk*geo_sim;
+      
+
+      //if (i==0)  {
+      //  printf("point_a is (%f,%f,%f), point_b with index %d is (%f,%f,%f), k=%f,ck=%f, sk=%f , a=%f\n", p_a->x, p_a->y, p_a->z, ind_b,  p_b->x, p_b->y, p_b->z,  k, ck, sk, a );
+      //  }
+      
+      if (a > cvo_params->sp_thres){
+        A_mat->mat[i * num_neighbors + num_inds] = a;
+        A_mat->ind_row2col[i * num_neighbors + num_inds] = ind_b;
+        //if (i==10)  {
+            //printf("point_a is (%f,%f,%f), point_b with index %d is (%f,%f,%f), k=%f,ck=%f, sk=%f \n", p_a->x, p_a->y, p_a->z, ind_b,  p_b->x, p_b->y, p_b->z,  k, ck, sk );
+        //}
+        
+        //if (a > curr_max_ip) {
+        //  curr_max_ip = a;
+        //  A_mat->max_index[i] = ind_b;
+        //}
+        
+        num_inds++;
+      }
+
+
+    }
+    A_mat->nonzeros[i] = num_inds;
+
+    if (cvo_params->multiframe_is_sorting_inner_product &&
+        num_inds > cvo_params->multiframe_is_sorting_inner_product ) {
+      thrust::sort_by_key(thrust::seq, A_mat->mat+num_neighbors * i,
+                          A_mat->mat + num_neighbors * (i+1),
+                          A_mat->ind_row2col + num_neighbors * i,
+                          thrust::greater<float>());
+      /*
+      if (i == 1) {
+
+        for (int k = 0; k < num_neighbors; k++) {
+          printf("A_mat[k]=%f, a_mat[k] ind = %d\n", *(A_mat->mat + num_neighbors * i + k),
+                 *(A_mat->ind_row2col + num_neighbors * i + k));
+        }
+        }*/
+      
+    }
+     
+
+
+  }
+
+  
+
+
   static
-  __attribute__((force_align_arg_pointer)) 
+  void se_kernel_kdtree(//input
+                        const CvoParams & params_cpu, const CvoParams * params_gpu,
+                        std::shared_ptr<CvoPointCloudGPU> points_fixed,
+                        std::shared_ptr<CvoPointCloudGPU> points_moving,
+                        float ell,
+                        perl_registration::cuKdTree<CvoPoint> & kdtree,
+                        const Eigen::Matrix4f & transform_cpu_tf2sf,
+                        int num_neighbors,
+                        // output
+                        std::shared_ptr<CvoPointCloudGPU> cloud_x_gpu_transformed_kdtree,
+                        thrust::device_vector<int> & cukdtree_inds_results,
+                        SparseKernelMat * A_mat,
+                        SparseKernelMat * A_mat_gpu
+                        ) {
+
+    find_nearby_source_points_cukdtree(points_fixed, kdtree, transform_cpu_tf2sf, num_neighbors,
+                                       cloud_x_gpu_transformed_kdtree, cukdtree_inds_results);
+
+    /*
+    std::cout<<"1st point neighbors are:\n";
+    int inds[64];
+    cudaMemcpy(inds, thrust::raw_pointer_cast(cukdtree_inds_results.data()), sizeof(int)*64, cudaMemcpyDeviceToHost);
+    std::cout<<"neighbors of pt_fixed[0]: ";
+    for (int i = 0; i < 32; i++) {
+      std::cout<<inds[i]<<" ";
+    }
+    
+    std::cout<<"neighbors of pt_fixed[1]: ";
+    for (int i = 32; i < 64; i++) {
+      std::cout<<inds[i]<<" ";
+    }
+    */
+    
+    fill_in_A_mat_cukdtree<<< (points_fixed->points.size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>
+      (params_gpu, thrust::raw_pointer_cast(points_fixed->points.data()), points_fixed->size(),
+       thrust::raw_pointer_cast(points_moving->points.data()), points_moving->size(),
+       thrust::raw_pointer_cast(cukdtree_inds_results.data()),
+       num_neighbors, ell,
+       A_mat_gpu
+       );
+    cudaDeviceSynchronize();    
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) { 
+        fprintf(stderr, "Failed to run fill_in_A_mat_cukdtree %s .\n", cudaGetErrorString(err)); 
+        exit(EXIT_FAILURE); 
+    }
+
+    compute_nonzeros(A_mat);
+    
+  }
+  
+
+  static
+  void se_kernel(// input
+                 const CvoParams * params_gpu,
+                 std::shared_ptr<CvoPointCloudGPU> points_fixed,
+                 std::shared_ptr<CvoPointCloudGPU> points_moving,
+                 int num_neighbors,
+                 float ell,
+                 // output
+                 SparseKernelMat * A_mat,
+                 SparseKernelMat * A_mat_gpu
+                 )  {
+
+    auto start = chrono::system_clock::now();
+    int fixed_size = points_fixed->points.size();
+    CvoPoint * points_fixed_raw = thrust::raw_pointer_cast (  points_fixed->points.data() );
+    CvoPoint * points_moving_raw = thrust::raw_pointer_cast( points_moving->points.data() );
+
+    fill_in_A_mat_gpu<<<(points_fixed->points.size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(params_gpu,
+                                                                                                points_fixed_raw,
+                                                                                                fixed_size,
+                                                                                                points_moving_raw,
+                                                                                                points_moving->points.size(),
+                                                                                                num_neighbors,
+                                                                                                ell,
+                                                                                                // output
+                                                                                                A_mat_gpu // the kernel mat
+                                                                                                );
+    cudaDeviceSynchronize();    
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) { 
+        fprintf(stderr, "Failed to run fill_in_A_mat_gpu %s .\n", cudaGetErrorString(err)); 
+        exit(EXIT_FAILURE); 
+    }
+
+    compute_nonzeros(A_mat);
+  }
+
+  static
+  void se_kernel_dense(// input
+                       const CvoParams * params_gpu,
+                       std::shared_ptr<CvoPointCloudGPU> points_fixed,
+                       std::shared_ptr<CvoPointCloudGPU> points_moving,
+                       int num_neighbors,
+                       const Eigen::Matrix3f & kernel_cpu,
+                       // output
+                       SparseKernelMat * A_mat,
+                       SparseKernelMat * A_mat_gpu
+                       )  {
+    
+    auto start = chrono::system_clock::now();
+    int fixed_size = points_fixed->points.size();
+    CvoPoint * points_fixed_raw = thrust::raw_pointer_cast (  points_fixed->points.data() );
+    CvoPoint * points_moving_raw = thrust::raw_pointer_cast( points_moving->points.data() );
+
+    Eigen::Matrix3f * kernel_gpu;
+    cudaMalloc((void**)&kernel_gpu, sizeof(Eigen::Matrix3f));
+    cudaMemcpy(kernel_gpu, &kernel_cpu, sizeof(decltype(kernel_cpu)), cudaMemcpyHostToDevice);
+    //std::cout<<"Start fill_in_A_mat_gpu_dense_mat_kernel\n"<<std::endl;
+    fill_in_A_mat_gpu_dense_mat_kernel<<<(points_fixed->points.size() / CUDA_BLOCK_SIZE)+1, CUDA_BLOCK_SIZE  >>>(params_gpu,
+                                                                                                                 points_fixed_raw,
+                                                                                                                 fixed_size,
+                                                                                                                 points_moving_raw,
+                                                                                                                 points_moving->points.size(),
+                                                                                                                 num_neighbors,
+                                                                                                                 kernel_gpu,
+                                                                                                                 // output
+                                                                                                                 A_mat_gpu // the kernel mat
+                                                                                                                 );
+    cudaDeviceSynchronize();    
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) { 
+        fprintf(stderr, "Failed to run fill_in_A_mat_gpu_dense_mat_kernel %s .\n", cudaGetErrorString(err)); 
+        exit(EXIT_FAILURE); 
+    }
+    
+    compute_nonzeros(A_mat);
+    cudaFree(kernel_gpu);
+
+  }
+  
+  
+
+  static
+  //__attribute__((force_align_arg_pointer)) 
   int align_impl(const CvoParams & params,
                  const CvoParams * params_gpu,
                  CvoState & cvo_state,
@@ -1613,6 +1476,9 @@ namespace cvo{
     return ret;
   }
 
+  
+
+
   int CvoGPU::align(const pcl::PointCloud<CvoPoint>& source_points,
                     const pcl::PointCloud<CvoPoint>& target_points,
                     const Eigen::Matrix4f & init_guess_transform,
@@ -1645,63 +1511,8 @@ namespace cvo{
   }
 
   
-  static  std::vector<Eigen::Matrix3f, Eigen::aligned_allocator<Eigen::Matrix3f>> gen_rand_init_pose(int discrete_rpy_num) {
-
-    std::vector<Eigen::Matrix3f, Eigen::aligned_allocator<Eigen::Matrix3f>> rot_all;
-    rot_all.reserve(discrete_rpy_num * discrete_rpy_num * discrete_rpy_num);
-    for (int i = 0; i < discrete_rpy_num; i++) {
-      for ( int j = 0; j < discrete_rpy_num; j++) {
-        for (int k = 0; k < discrete_rpy_num; k++) {
-          
-          Eigen::Matrix3f rot;
-        
-          rot = Eigen::AngleAxisf( i / (float)discrete_rpy_num * M_PI, Eigen::Vector3f::UnitX())
-            * Eigen::AngleAxisf( j / (float)discrete_rpy_num * M_PI, Eigen::Vector3f::UnitY())
-            * Eigen::AngleAxisf( k / (float)discrete_rpy_num * M_PI, Eigen::Vector3f::UnitZ());
-          rot_all.emplace_back(rot);
-        //std::cout<<"push "<<rot<<"\n";
-        }
-      }
-    }
-    return rot_all;
-  }
-
-  static Eigen::Matrix4f get_nearest_init_pose(const CvoGPU & cvo_align,
-                                               const CvoPointCloud& source,
-                                               const CvoPointCloud& target,
-                                               float init_guess_ell,
-                                               int num_guess,
-                                               double * times) {
-    
-    std::vector<Eigen::Matrix3f, Eigen::aligned_allocator<Eigen::Matrix3f>> init_rots = gen_rand_init_pose(num_guess);
-    
-    auto start = std::chrono::system_clock::now();
-    Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
-    float curr_max_ip = 0;
-    for (auto && init_rot : init_rots) {
-      Eigen::Matrix4f tmp_init_guess =  Eigen::Matrix4f::Identity();
-      tmp_init_guess.block<3,3>(0,0) = init_rot;
-
-      Eigen::Matrix4f init_inv = tmp_init_guess.inverse();
-      float ip = cvo_align.function_angle(source, target, init_inv, init_guess_ell);
-      std::cout<<"inner product of init guess "<<tmp_init_guess<<" is "<<ip<<"\n";
-      if (ip > curr_max_ip) {
-        curr_max_ip = ip;
-        init_guess = tmp_init_guess;
-      }
-    }
-    auto end = std::chrono::system_clock::now();
-    //double elapsed =
-    if (times)
-      *times += std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-
-    return init_guess;
-    //std::cout<<"Chosen init guess is "<<init_guess<<", with inner product "<<curr_max_ip<<", the init search takes "<<elapsed<< "ms\n";
-    
-  }
 
 
-  
   int CvoGPU::align(// inputs
                     const CvoPointCloud& source_points,
                     const CvoPointCloud& target_points,
@@ -1711,23 +1522,16 @@ namespace cvo{
                     Association * association_mat,
                     double *registration_seconds,
                     int * num_iters) const {
-    //}
 
-  //CvoResultInfo align(
-  //                    const CvoPointCloud& source_points,
-  //                    const CvoPointCloud& target_points,
-  //                   const Eigen::Matrix4f & T_target_frame_to_source_frame) const {
-
-    //std::cout<<"[align] convert points to gpu\n"<<std::flush;
     if (source_points.num_points() == 0 || target_points.num_points() == 0) {
       std::cout<<"[align] point clouds inputs are empty\n";
       return 0;
     }
 
-    Eigen::Matrix init_guess_transform = init_guess_T;
+    Eigen::Matrix4f init_guess_transform = init_guess_T;
     double global_guess_time = 0;
     if (this->params.is_global_angle_registration > 0) {
-      init_guess_transform =  get_nearest_init_pose(*this,
+      init_guess_transform =  this->get_nearest_init_pose(
                                                     source_points,
                                                     target_points,
                                                     params.ell_init_first_frame,
@@ -1759,7 +1563,54 @@ namespace cvo{
   }
 
 
+  CvoResultInfo CvoGPU::align(// inputs
+                              const CvoPointCloud& source_points,
+                              const CvoPointCloud& target_points,
+                              const Eigen::Matrix4f & init_guess_T_s2t,
+                              bool is_returning_association)  const {
 
+    CvoResultInfo result;    
+    if (source_points.num_points() == 0 || target_points.num_points() == 0) {
+      std::cout<<"[align] point clouds inputs are empty\n";
+      result.return_code = -1;
+      return result;
+    }
+
+    Eigen::Matrix4f init_guess_transform = init_guess_T_s2t.inverse();
+    double global_guess_time = 0;
+    if (this->params.is_global_angle_registration > 0) {
+      init_guess_transform =  this->get_nearest_init_pose(
+                                                    source_points,
+                                                    target_points,
+                                                    params.ell_init_first_frame,
+                                                    this->params.is_global_angle_registration ,
+                                                    &global_guess_time);//.inverse();
+      
+      std::cout<<"Use ell = "<<params.ell_init_first_frame<<" for "<<global_guess_time<<" seconds to get Global init guess: pose is \n";
+      std::cout<<init_guess_transform<<std::endl;
+    } 
+      
+    
+    CvoPointCloudGPU::SharedPtr source_gpu = CvoPointCloud_to_gpu(source_points);
+    CvoPointCloudGPU::SharedPtr target_gpu = CvoPointCloud_to_gpu(target_points);
+
+    CvoState cvo_state(source_gpu, target_gpu, params);
+
+    //std::cout<<"construct new cvo state..., init ell is "<<cvo_state.ell<<std::endl;
+
+    result.return_code = align_impl(params, params_gpu,
+                                    cvo_state, init_guess_transform,
+                                    result.T_s2t,
+                                    is_returning_association? &result.association : nullptr,
+                                    &(result.registration_seconds),
+                                    &result.num_iters);
+    result.registration_seconds += global_guess_time;
+      
+
+    return result;
+  }
+  
+  
   
   int CvoGPU::align(// inputs
                     //const std::vector<pcl::PointCloud<CvoPoint>> & pcs,
@@ -1818,39 +1669,6 @@ namespace cvo{
     
   }
 
-  
-  /*
-  float CvoGPU::inner_product(const CvoPointCloud& source_points,
-                              const CvoPointCloud& target_points,
-                              const Eigen::Matrix4f & s2t_frame_transform
-                              ) const {
-    if (source_points.num_points() == 0 || target_points.num_points() == 0) {
-      return 0;
-    }
-    ArrayVec3f fixed_positions = source_points.positions();
-    ArrayVec3f moving_positions = target_points.positions();
-    Eigen::Matrix3f rot = s2t_frame_transform.block<3,3>(0,0) ;
-    Eigen::Vector3f trans = s2t_frame_transform.block<3,1>(0,3) ;
-    // transform moving points
-    tbb::parallel_for(int(0), target_points.num_points(), [&]( int j ){
-      moving_positions[j] = (rot*moving_positions[j]+trans).eval();
-    });
-    Eigen::SparseMatrix<float,Eigen::RowMajor> A_mat;
-    tbb::concurrent_vector<Trip_t> A_trip_concur_;
-    A_trip_concur_.reserve(target_points.num_points() * 20);
-    A_mat.resize(source_points.num_points(), target_points.num_points());
-    A_mat.setZero();
-    se_kernel_init_ell_cpu(&source_points, &target_points, &fixed_positions, &moving_positions, A_mat, A_trip_concur_ , params );
-
-    //std::cout<<"num of non-zeros in A: "<<A_mat.nonZeros()<<std::endl;
-    //return float(A_mat.sum())/float(A_mat.nonZeros());
-    //return A_mat.sum()/(fixed_positions.size())*1e5/moving_positions.size() ;
-    //return float(A_mat.nonZeros()) / float(fixed_positions.size()) / float(moving_positions.size() ) * 100 ;
-    //}
-  
-    return A_mat.sum()/fixed_positions.size()/moving_positions.size() ;
-  }
-  */
 
   static
   //  __attribute__((force_align_arg_pointer)) 
@@ -2127,9 +1945,6 @@ namespace cvo{
     CvoPointCloudGPU::SharedPtr source_gpu = CvoPointCloud_to_gpu(source_points);
     CvoPointCloudGPU::SharedPtr target_gpu = CvoPointCloud_to_gpu(target_points);
 
-    //CvoParams params_tmp = params;
-    //params_tmp.ell_init = params.ell_min;
-    //this->write_params(&params_tmp);
     inner_product_non_isotropic_impl(source_gpu, target_gpu, T_target_frame_to_source_frame, params, params_gpu,
                                      &non_isotropic_kernel,
                                      &association);
@@ -2183,6 +1998,129 @@ namespace cvo{
     
   }
   
+  __global__ void compute_flow_gpu_no_eigen(const CvoParams * cvo_params,
+                                            CvoPoint * cloud_x, CvoPoint * cloud_y,
+                                            SparseKernelMat * A,
+                                            int num_neighbors,
+                                            // outputs: thrust vectors
+                                            Eigen::Vector3d * omega_all_gpu,
+                                            Eigen::Vector3d * v_all_gpu
+                                            ) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i > A->rows - 1)
+      return;
+    int A_rows = A->rows;
+    int A_cols = A->cols;
+    //float * Ai = A->mat + i * A->cols;
+    float * Ai = A->mat + i * num_neighbors;
+    
+    CvoPoint * px = &cloud_x[i];
+    Eigen::Vector3f px_eig;
+    px_eig<< px->x , px->y, px->z;
+    float px_arr[3] = {px->x, px->y, px->z};
+
+    Eigen::Vector3f omega_i = Eigen::Vector3f::Zero();
+    Eigen::Vector3f v_i = Eigen::Vector3f::Zero();
+    //#ifdef IS_USING_COVARIANCE
+    //Eigen::Matrix3f cov_i = Eigen::Map<Eigen::Matrix3f>(px->covariance);
+    //#endif    
+    float dl_i = 0;
+    for (int j = 0; j < num_neighbors; j++) {
+      int idx = A->ind_row2col[i*num_neighbors+j];
+      if (idx == -1) break;
+      
+      CvoPoint * py = &cloud_y[idx];
+      float py_arr[3] = {py->x, py->y, py->z};
+      Eigen::Vector3f py_eig;
+      py_eig << py->x, py->y, py->z;
+      
+      Eigen::Vector3f cross_xy_j = px_eig.cross(py_eig) ;
+      Eigen::Vector3f diff_yx_j = py_eig - px_eig;
+      float sum_diff_yx_2_j = diff_yx_j.squaredNorm();
+      /*
+        #ifdef IS_USING_COVARIANCE      
+        Eigen::Matrix3f cov_j = Eigen::Map<Eigen::Matrix3f>(py->covariance);
+        omega_i = omega_i + cov_j * cross_xy_j *  *(Ai + j );
+        v_i = v_i + cov_j * diff_yx_j *  *(Ai + j);
+        //float eigenvalue_sum = px->cov_eigenvalues(0)
+
+        //omega_i = omega_i +  cross_xy_j *  *(Ai + j );
+        // v_i = v_i + diff_yx_j *  *(Ai + j);      
+      
+        #else   
+      */   
+      omega_i = omega_i + cross_xy_j *  *(Ai + j );
+      v_i = v_i + diff_yx_j *  *(Ai + j);
+
+    }
+
+    Eigen::Vector3d & omega_i_eig = omega_all_gpu[i];
+    omega_i_eig = (omega_i / cvo_params->c ).cast<double>();
+    Eigen::Vector3d & v_i_eig = v_all_gpu[i];
+    v_i_eig = (v_i /  cvo_params->d).cast<double>();
+
+  }
 
 
+  void compute_flow(CvoState * cvo_state, const CvoParams * params_gpu,
+                    Eigen::Vector3f * omega, Eigen::Vector3f * v, int num_neighbors)  {
+
+    if (debug_print ) {
+      std::cout<<"nonzeros in A "<<nonzeros(&cvo_state->A_host)<<std::endl;
+      std::cout<<"A rows is "<<cvo_state->A_host.rows<<", A cols is "<<cvo_state->A_host.cols<<std::endl;
+    }
+    auto start = chrono::system_clock::now();
+    compute_flow_gpu_no_eigen<<<cvo_state->A_host.rows / CUDA_BLOCK_SIZE + 1 ,CUDA_BLOCK_SIZE>>>(params_gpu,
+                                                                                                 thrust::raw_pointer_cast(cvo_state->cloud_x_gpu->points.data()   ),
+                                                                                                 thrust::raw_pointer_cast(cvo_state->cloud_y_gpu->points.data()   ),
+                                                                                                 cvo_state->A,
+                                                                                                 num_neighbors,
+                                                                                                 thrust::raw_pointer_cast(cvo_state->omega_gpu.data()  ),
+                                                                                                 thrust::raw_pointer_cast(cvo_state->v_gpu.data() ));
+    ;
+    //cudaDeviceSynchronize();
+    if (debug_print) {
+      printf("finish compute_flow_gpu_no_eigen\n");
+
+    }
+    
+    auto end = chrono::system_clock::now();
+    //std::cout<<"time for compute_gradient is "<<std::chrono::duration_cast<std::chrono::milliseconds>((end- start)).count()<<std::endl;
+    
+    start = chrono::system_clock::now();
+    // update them to class-wide variables
+    //thrust::plus<double> plus_double;
+    //thrust::plus<Eigen::Vector3d> plus_vector;
+    
+    //(thrust::reduce(thrust::device, cvo_state->omega_gpu.begin(), cvo_state->omega_gpu.end(), Eigen::Vector3d(0,0,0)  ) );
+    *omega = (thrust::reduce(thrust::device, cvo_state->omega_gpu.begin(), cvo_state->omega_gpu.end(), Eigen::Vector3d(0,0,0) )).cast<float>();
+    *v = (thrust::reduce(thrust::device, cvo_state->v_gpu.begin(), cvo_state->v_gpu.end(), Eigen::Vector3d(0,0,0))).cast<float>();
+    // normalize the gradient
+    Eigen::Matrix<float, 6, 1> ov;
+    ov.segment<3>(0) = *omega;
+    ov.segment<3>(3) = *v;
+    ov.normalize();
+    *omega = ov.segment<3>(0);
+    *v = ov.segment<3>(3);
+    //omega->normalize();
+    //v->normalize();
+
+    // Eigen::Vector3d::Zero(), plus_vector)).cast<float>();
+    cudaMemcpy(cvo_state->omega, omega, sizeof(Eigen::Vector3f), cudaMemcpyHostToDevice );
+    cudaMemcpy(cvo_state->v, v, sizeof(Eigen::Vector3f), cudaMemcpyHostToDevice );
+
+    
+    end = chrono::system_clock::now();
+    //std::cout<<"time for thrust_reduce is "<<std::chrono::duration_cast<std::chrono::milliseconds>((end- start)).count()<<std::endl;
+    start = chrono::system_clock::now();
+    int A_nonzero = nonzeros(&cvo_state->A_host);
+    if (debug_print) std::cout<<"compute flow result: omega "<<omega->transpose()<<", v: "<<v->transpose()<<std::endl;
+    end = chrono::system_clock::now();
+    //std::cout<<"time for nonzeros "<<std::chrono::duration_cast<std::chrono::milliseconds>((end- start)).count()<<std::endl;
+  }
+
+
+
+
+  
 }

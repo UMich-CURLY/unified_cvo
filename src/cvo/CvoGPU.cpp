@@ -276,6 +276,62 @@ namespace cvo {
     batch_irls_problem.solve();
   }
 
+  static  std::vector<Eigen::Matrix3f, Eigen::aligned_allocator<Eigen::Matrix3f>> gen_rand_init_pose(int discrete_rpy_num) {
+
+    std::vector<Eigen::Matrix3f, Eigen::aligned_allocator<Eigen::Matrix3f>> rot_all;
+    rot_all.reserve(discrete_rpy_num * discrete_rpy_num * discrete_rpy_num);
+    for (int i = 0; i < discrete_rpy_num; i++) {
+      for ( int j = 0; j < discrete_rpy_num; j++) {
+        for (int k = 0; k < discrete_rpy_num; k++) {
+          
+          Eigen::Matrix3f rot;
+        
+          rot = Eigen::AngleAxisf( i / (float)discrete_rpy_num * M_PI, Eigen::Vector3f::UnitX())
+            * Eigen::AngleAxisf( j / (float)discrete_rpy_num * M_PI, Eigen::Vector3f::UnitY())
+            * Eigen::AngleAxisf( k / (float)discrete_rpy_num * M_PI, Eigen::Vector3f::UnitZ());
+          rot_all.emplace_back(rot);
+        //std::cout<<"push "<<rot<<"\n";
+        }
+      }
+    }
+    return rot_all;
+  }
+  
+
+
+  Eigen::Matrix4f CvoGPU::get_nearest_init_pose(const CvoPointCloud& source,
+                                                const CvoPointCloud& target,
+                                                float init_guess_ell,
+                                                int num_guess,
+                                                double * times) const {
+    
+    std::vector<Eigen::Matrix3f, Eigen::aligned_allocator<Eigen::Matrix3f>> init_rots = gen_rand_init_pose(num_guess);
+    
+    auto start = std::chrono::system_clock::now();
+    Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();  // from source frame to the target frame
+    float curr_max_ip = 0;
+    for (auto && init_rot : init_rots) {
+      Eigen::Matrix4f tmp_init_guess =  Eigen::Matrix4f::Identity();
+      tmp_init_guess.block<3,3>(0,0) = init_rot;
+
+      Eigen::Matrix4f init_inv = tmp_init_guess.inverse();
+      float ip = this->function_angle(source, target, init_inv, init_guess_ell);
+      std::cout<<"inner product of init guess "<<tmp_init_guess<<" is "<<ip<<"\n";
+      if (ip > curr_max_ip) {
+        curr_max_ip = ip;
+        init_guess = tmp_init_guess;
+      }
+    }
+    auto end = std::chrono::system_clock::now();
+    //double elapsed =
+    if (times)
+      *times += std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+
+    return init_guess;
+    //std::cout<<"Chosen init guess is "<<init_guess<<", with inner product "<<curr_max_ip<<", the init search takes "<<elapsed<< "ms\n";
+    
+  }
+
 
 
 

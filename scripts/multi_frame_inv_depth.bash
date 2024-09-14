@@ -1,7 +1,4 @@
- cd build_debug
-make -j
-cd ..
- cd build
+ cd build_new
 make -j
 cd ..
 
@@ -13,7 +10,7 @@ cd ..
 
 ####### tum
 #gdb -ex run --args \
-	./build_debug/bin/cvo_inv_depth_tartan /home/rayzhang/media/Samsung_T5/tum/freiburg1_desk/ 2 ~/media/Samsung_T5/tum/freiburg1_desk/${1}_graph.txt  /run/media/rayzhang/Samsung_T5/tum/freiburg1_desk/groundtruth.txt   1 1
+	./build_new/bin/cvo_inv_depth_tartan /home/rayzhang/media/Samsung_T5/tum/freiburg1_desk/ 2 ~/media/Samsung_T5/tum/freiburg1_desk/${1}_graph.txt  /run/media/rayzhang/Samsung_T5/tum/freiburg1_desk/groundtruth.txt   1 1
 
 
 ####### kitti

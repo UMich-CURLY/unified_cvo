@@ -534,7 +534,7 @@ int main(int argc, char** argv) {
     Eigen::Matrix4f init_inv = Eigen::Matrix4f::Identity();
     Eigen::Matrix4f result;
     double time = 0;
-    if (is_using_irls) {
+    if (false) {
       
     } else 
       cvo_align.align(pc1_center, pc2_center, init_inv,

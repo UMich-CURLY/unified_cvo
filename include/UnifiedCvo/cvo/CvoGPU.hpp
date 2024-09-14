@@ -1,7 +1,7 @@
 #pragma once
 #include "utils/data_type.hpp"
 #include "cvo/CvoParams.hpp"
-//#include "cvo/Association.hpp"
+#include "cvo/Association.hpp"
 #include "utils/CvoPointCloud.hpp"
 #include "utils/CvoPoint.hpp"
 //#include "utils/CvoFrame.hpp"
@@ -30,6 +30,15 @@ namespace cvo{
   class CvoFrame;
   class BinaryState;
   class Association;
+
+  struct CvoResultInfo {
+    int return_code;
+    Eigen::Matrix4f T_s2t;
+    Association association;
+    double registration_seconds;
+    int num_iters;
+  };
+  
   
   class CvoGPU{
 
@@ -40,15 +49,7 @@ namespace cvo{
 
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-/*
-    struct CvoResultInfo {
-      bool is_result_converged;
-      Eigen::Matrix4f transform;
-      Association association;
-      double registration_seconds;
-      int num_iters;
-    };
-*/
+
     // constructor and destructor
     /**
      * CvoGPU constructor
@@ -61,6 +62,8 @@ namespace cvo{
     const CvoParams  * get_params_gpu() {return params_gpu;}
     void write_params(const CvoParams * p_cpu);
 
+
+    
     /**
      * @brief Aligning two point clouds in the CvoPointCloud format
      * @param source_points The first point cloud
@@ -69,10 +72,12 @@ namespace cvo{
      *                                       first frame.
      * @return return result
      */
-    //CvoResultInfo align(// inputs
-    //                    const CvoPointCloud& source_points,
-    //                    const CvoPointCloud& target_points,
-    //                    const Eigen::Matrix4f & T_target_frame_to_source_frame) const;
+    CvoResultInfo align(// inputs
+                        const CvoPointCloud& source_points,
+                        const CvoPointCloud& target_points,
+                        const Eigen::Matrix4f & T_source_frame_to_target_frame,
+                        bool is_returning_association=false
+                        ) const;
 
     
     
@@ -241,6 +246,11 @@ edge connects two.
                                  Association & association
                                  ) const;
     
+    Eigen::Matrix4f get_nearest_init_pose(const CvoPointCloud& source,
+                                          const CvoPointCloud& target,
+                                          float init_guess_ell,
+                                          int num_guess,
+                                          double * times) const;
 
     
     /// The below are helper functions

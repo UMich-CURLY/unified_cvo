@@ -185,6 +185,7 @@ set (ACVO_CPU_SOURCE
 
 set (CVO_GPU_SOURCE
   ${PROJECT_SOURCE_DIR}/src/cvo/CvoGPU.cu
+    ${PROJECT_SOURCE_DIR}/src/cvo/CvoGPU_helper.cu
   ${PROJECT_SOURCE_DIR}/src/cvo/CvoGPU_impl.cu
   ${PROJECT_SOURCE_DIR}/src/cvo/CvoState.cu
   ${PROJECT_SOURCE_DIR}/src/cvo/CvoGPU.cpp
@@ -375,27 +376,12 @@ target_include_directories(acvo_cpu_semantic_lib PUBLIC
 target_link_libraries(acvo_cpu_semantic_lib lie_group_utils ${TBB_LIBRARIES} pcl_io  cxsparse)
 endif()
 
-#add_library(pose_graph_lib SHARED ${POSE_GRAPH_SOURCE})
-#target_link_libraries(pose_graph_lib PRIVATE cvo_utils bki_mapping_lib cvo_cpu_lib opencv_core opencv_imgcodecs boost_filesystem  gtsam gtsam_unstable pcl_io pcl_search pcl_visualization)
 
-#add_library(pose_graph_cov_lib SHARED ${POSE_GRAPH_SOURCE})
-#target_compile_definitions(pose_graph_cov_lib PRIVATE -DIS_USING_COVARIANCE)
-#target_link_libraries(pose_graph_cov_lib PRIVATE cvo_utils_cov_lib bki_mapping_cov_lib cvo_cpu_lib  opencv_core opencv_imgcodecs boost_filesystem  gtsam gtsam_unstable pcl_io pcl_search pcl_visualization)
-
-
-#add_library(pose_graph_normal_lib SHARED ${POSE_GRAPH_SOURCE})
-#target_link_libraries(pose_graph_normal_lib PRIVATE cvo_utils_normal_lib bki_mapping_lib cvo_cpu_lib open#cv_core opencv_imgcodecs boost_filesystem  gtsam gtsam_unstable pcl_io )
 if (${PROJECT_NAME}_ENABLE_LIDAR)
 #add_library(pose_graph_loam_lib SHARED ${POSE_GRAPH_SOURCE})
 #target_compile_definitions(pose_graph_loam_lib PRIVATE -DIS_USING_LOAM)
 #target_link_libraries(pose_graph_loam_lib PRIVATE cvo_utils bki_mapping_lib cvo_cpu_lib opencv_core opencv_imgcodecs boost_filesystem  gtsam gtsam_unstable pcl_io )
 endif()
-
-#add_executable(cvo_f2f ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_align_f2f.cpp )
-#target_link_libraries(cvo_f2f cvo_cpu_lib boost_system pose_graph_lib cvo_utils kitti boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
-
-#add_executable(cvo_align ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_align.cpp )
-#target_link_libraries(cvo_align cvo_cpu_lib cvo_utils boost_system boost_thread kitti pose_graph_lib cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES})
 
 #add_executable(cvo_align_normal ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_align.cpp )
 #target_compile_definitions(cvo_align_normal PRIVATE -DIS_USING_NORMALS)
@@ -666,13 +652,13 @@ target_include_directories(cvo_align_gpu_two_color_pcd_global PUBLIC
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
       target_link_libraries(cvo_align_gpu_two_color_pcd_global cvo_gpu_fpfh cvo_utils boost_filesystem boost_system pcl_io pcl_common pcl_features)
 
-add_executable(cvo_align_gpu_irls_vs_grad ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_two_color_pcd_irls_vs_gradient.cpp)
-target_include_directories(cvo_align_gpu_irls_vs_grad PUBLIC
+#add_executable(cvo_align_gpu_irls_vs_grad ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_two_color_pcd_irls_vs_gradient.cpp)
+#target_include_directories(cvo_align_gpu_irls_vs_grad PUBLIC
 	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
-        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
-        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-      target_link_libraries(cvo_align_gpu_irls_vs_grad cvo_gpu_fpfh cvo_utils boost_filesystem boost_system pcl_io pcl_common pcl_features)
+#        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+#        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+#      target_link_libraries(cvo_align_gpu_irls_vs_grad cvo_gpu_fpfh cvo_utils boost_filesystem boost_system pcl_io pcl_common pcl_features)
 
       
 add_executable(cvo_align_gpu_benchmark_two_pcd_global ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_benchmark_two_pcd_global.cpp)
