@@ -1,7 +1,7 @@
 %YAML:1.0
 ---
-ell_init_first_frame: 0.4
-ell_init: 0.2 #0.2 #0.15 
+ell_init_first_frame: 1.0 #2.0
+ell_init: 0.5 #0.2 #0.15 
 ell_min: 0.05
 ell_max: 0.9
 dl: 0.0
@@ -10,7 +10,7 @@ sigma: 0.1
 sp_thres: 0.006 #0.0006 #0.0006
 c: 7.0
 d: 7.0
-c_ell: 0.1 #0.05 #0.05 #0.025 #0.02
+c_ell: 0.05 #0.05 #0.025 #0.02
 c_sigma: 1 
 s_ell: 0.1 #0.15 #0.04
 s_sigma: 1 #0.7
@@ -31,7 +31,7 @@ is_dense_kernel: 0
 is_full_ip_matrix: 0
 is_using_geometry: 1
 is_using_intensity: 1
-is_using_semantics: 1
+is_using_semantics: 0
 is_using_range_ell: 0
 is_using_kdtree: 0
 is_using_cpu: 0
@@ -45,7 +45,7 @@ multiframe_ell_max: 2.0
 multiframe_ell_min: 0.075
 multiframe_ell_decay_rate:  0.9 
 multiframe_iterations_per_ell: 20
-multiframe_downsample_voxel_size: 1.0
+multiframe_downsample_voxel_size: 0.1
 multiframe_num_neighbors: 128
 multiframe_min_nonzeros: 100
 multiframe_iterations_per_solve: 20

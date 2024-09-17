@@ -1,12 +1,12 @@
 mkdir -p build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j
+make -j6
 cd ..
 mkdir -p build_debug
 cd build_debug
 cmake .. -DCMAKE_BUILD_TYPE=Debug
-make -j
+make -j6
 cd ..
 export CUDA_VISIBLE_DEVICES=0
 dtype=$1

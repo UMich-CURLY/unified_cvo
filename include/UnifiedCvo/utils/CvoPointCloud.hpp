@@ -121,7 +121,8 @@ namespace cvo {
     */
     // Constructor from continuous maps
     CvoPointCloud(const semantic_bki::SemanticBKIOctoMap * map,
-                  int num_semantic_class);
+		  const  int num_features,
+                  const int num_semantic_class);
 
 
     int read_cvo_pointcloud_from_file(const std::string & filename);
@@ -136,6 +137,8 @@ namespace cvo {
     // getters
     std::vector<cvo::CvoPoint> get_points() const {return points_;}
     const cvo::CvoPoint & point_at(unsigned int index) const {return points_.at(index);}
+    cvo::CvoPoint & point_at(unsigned int index) {return points_.at(index);}
+    
     int num_points() const {return num_points_;}
     int size() const {return num_points_;}
     int num_classes() const {return num_classes_;}

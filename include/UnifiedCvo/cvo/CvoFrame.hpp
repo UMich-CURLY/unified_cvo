@@ -16,7 +16,7 @@ namespace cvo {
     
     CvoFrame(const CvoPointCloud * pts,
              const double poses[12],
-             bool is_using_kdtree);
+             bool is_using_kdtree=false);
 
     virtual ~CvoFrame() {}
 

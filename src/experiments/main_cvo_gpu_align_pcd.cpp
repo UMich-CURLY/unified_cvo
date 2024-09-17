@@ -15,6 +15,8 @@
 #include "cvo/Cvo.hpp"
 #include "cvo/CvoParams.hpp"
 #include "utils/ImageRGBD.hpp"
+#include "viewer/viewer.h"
+
 using namespace std;
 using namespace boost::filesystem;
 
@@ -29,6 +31,7 @@ int main(int argc, char *argv[]) {
   int start_frame = std::stoi(argv[4]);
   int last_frame = std::stoi(argv[5]);
   int is_stacking_results = std::stoi(argv[6]);
+  int is_visualize = std::stoi(argv[7]);
 
   int num_frames = last_frame - start_frame + 1;
   
@@ -61,11 +64,28 @@ int main(int argc, char *argv[]) {
   pcl::PointCloud<cvo::CvoPoint>::Ptr raw_pcd(new pcl::PointCloud<cvo::CvoPoint>);
   pcl::io::loadPCDFile<cvo::CvoPoint> (fname, *raw_pcd);
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*raw_pcd));
+  for (int j = 0; j < source->size(); j++) {
+    auto & p = source->point_at(j);
+    p.features[0] = static_cast<float>(p.b) / 255.0;
+    p.features[1] = static_cast<float>(p.g) / 255.0;
+    p.features[2] = static_cast<float>(p.r) / 255.0;
+  }
   std::cout<<"read source cvo point cloud\n";  
   std::cout<<"source point cloud size is "<<source->size()<<std::endl;
 
   cvo::CvoPointCloud pc_all(FEATURE_DIMENSIONS, NUM_CLASSES);
   pc_all += *source;
+
+
+  std::unique_ptr<perl_registration::Viewer> viewer;
+  if (is_visualize)  {
+    viewer = std::make_unique<perl_registration::Viewer>();
+    std::string s("title");
+    viewer->addOrUpdateText (s,
+                             0,
+                             0,
+                             "title");
+  }
   
   for (int i = start_frame+1; i< num_frames ; i++) {
     
@@ -77,6 +97,13 @@ int main(int argc, char *argv[]) {
     pcl::PointCloud<cvo::CvoPoint>::Ptr raw_pcd_target(new pcl::PointCloud<cvo::CvoPoint>);
     pcl::io::loadPCDFile<cvo::CvoPoint> (fname, *raw_pcd_target);
     std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*raw_pcd_target));
+  for (int j = 0; j < target->size(); j++) {
+    auto & p = target->point_at(j);
+    p.features[0] = static_cast<float>(p.b) / 255.0;
+    p.features[1] = static_cast<float>(p.g) / 255.0;
+    p.features[2] = static_cast<float>(p.r) / 255.0;
+  }
+    
 
 
     if (i == start_frame+1){
@@ -102,9 +129,23 @@ int main(int argc, char *argv[]) {
     std::cout<<"Transform is "<<result <<"\n\n";
 
     // append accum_tf_list for future initialization
-    init_guess = result;
+    //init_guess = result;
     accum_mat = accum_mat * result;
     std::cout<<"accum tf: \n"<<accum_mat<<std::endl;
+
+    if (is_visualize) {
+      Eigen::Matrix<double, 3, 4, Eigen::RowMajor> m = accum_mat.block<3,4>(0,0).cast<double>();
+    //std::cout<<__func__<<": send \n"<<m.col(3).transpose()<<" for index "<<j<<" to viewer\n";
+      viewer->drawTrajectory(m);
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
+      pcl::PointSeg_to_PointXYZRGB<cvo::CvoPoint::FEATURE_DIMENSION,
+                                   cvo::CvoPoint::LABEL_DIMENSION,
+                                   pcl::PointXYZRGB>(*raw_pcd_target, *cloud);
+      pcl::transformPointCloud (*cloud, *cloud, accum_mat);
+      std::string viewer_id = std::to_string(i);
+      viewer->updateColorPointCloud(*cloud, viewer_id);
+    }
+    
     
     
     // log accumulated pose
@@ -147,6 +188,14 @@ int main(int argc, char *argv[]) {
   }
 
   accum_output.close();
+
+
+  if (is_visualize) {
+    while (!viewer->wasStopped()) {
+      std::this_thread::sleep_for(std::chrono::microseconds(1000000));
+    }
+    
+  }
 
   
 

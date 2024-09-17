@@ -589,9 +589,9 @@ namespace cvo{
       point.rgb = p.rgb;
       //point.g = (int)p.g;
       //point.b = (int)p.b;
-      point.features[0] = ((float)(int)p.r) / 255.0;
+      point.features[0] = ((float)(int)p.b) / 255.0;
       point.features[1] = ((float)(int)p.g) / 255.0;
-      point.features[2] = ((float)(int)p.b) / 255.0;
+      point.features[2] = ((float)(int)p.r) / 255.0;
       point.geometric_type[0] = 0;
       point.geometric_type[1] = 1;
       //features_(i, 3) = 0;
@@ -1372,9 +1372,9 @@ namespace cvo{
       p.z = points_[i].z;
 
       if (feature_dimensions_) {
-        uint8_t r = static_cast<uint8_t>(std::min(255, (int)((float)(points_[i].features[0]) * 255)));
+        uint8_t b = static_cast<uint8_t>(std::min(255, (int)((float)(points_[i].features[0]) * 255)));
         uint8_t g = static_cast<uint8_t>(std::min(255, (int)((float)(points_[i].features[1]) * 255)));
-        uint8_t b = static_cast<uint8_t>(std::min(255, (int)((float)(points_[i].features[2]) * 255)));
+        uint8_t r = static_cast<uint8_t>(std::min(255, (int)((float)(points_[i].features[2]) * 255)));
         /*
         if (num_classes_) {
           int max_class;

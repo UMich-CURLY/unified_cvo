@@ -185,7 +185,7 @@ set (ACVO_CPU_SOURCE
 
 set (CVO_GPU_SOURCE
   ${PROJECT_SOURCE_DIR}/src/cvo/CvoGPU.cu
-    ${PROJECT_SOURCE_DIR}/src/cvo/CvoGPU_helper.cu
+  #  ${PROJECT_SOURCE_DIR}/src/cvo/CvoGPU_helper.cu
   ${PROJECT_SOURCE_DIR}/src/cvo/CvoGPU_impl.cu
   ${PROJECT_SOURCE_DIR}/src/cvo/CvoState.cu
   ${PROJECT_SOURCE_DIR}/src/cvo/CvoGPU.cpp
@@ -328,11 +328,11 @@ target_link_libraries(cvo_utils
 #target_link_libraries(cvo_utils_range_ell_lib opencv_core opencv_photo opencv_features2d opencv_highgui elas opencv_imgcodecs pcl_filters pcl_features pcl_io pcl_search ${TBB_LIBRARIES})
 
 
-add_library(bki_mapping_lib SHARED ${BKI_MAPPING_SOURCE})
-target_include_directories(bki_mapping_lib PUBLIC
+add_library(bki_mapping_5_14 SHARED ${BKI_MAPPING_SOURCE})
+target_include_directories(bki_mapping_5_14 PUBLIC
   "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"  
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_link_libraries(bki_mapping_lib cvo_utils cvo_gpu_img pcl_filters pcl_io pcl_search pcl_visualization )
+target_link_libraries(bki_mapping_5_14 cvo_utils cvo_gpu_5_14 pcl_filters pcl_io pcl_search pcl_visualization )
 
 
 #############################################
@@ -695,7 +695,7 @@ target_include_directories(cvo_align_gpu_pcd PUBLIC
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-      target_link_libraries(cvo_align_gpu_pcd cvo_gpu_5_14 cvo_utils boost_filesystem boost_system pcl_io pcl_common)
+      target_link_libraries(cvo_align_gpu_pcd cvo_gpu_5_14 cvo_utils boost_filesystem boost_system pcl_io pcl_common pcl_visualization  pcd_qt_viewer)
       
 
 
@@ -952,10 +952,10 @@ target_include_directories(main_cvo_gpu_align_stereo_tartan PUBLIC
 target_link_libraries(main_cvo_gpu_align_stereo_tartan cvo_gpu_img cvo_cpu_lib tum cvo_utils boost_filesystem boost_system tartan)
 endif()
 
-#add_executable(cvo_local_mapping ${PROJECT_SOURCE_DIR}/src/main_local_mapping.cpp )
-#target_link_libraries(cvo_local_mapping cvo boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES}  )
-add_executable(eth3d_local_mapping ${PROJECT_SOURCE_DIR}/src/experiments/main_local_mapping_eth3d.cpp )
-target_link_libraries(eth3d_local_mapping cvo_gpu_img boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES} tum bki_mapping_lib)
+add_executable(bki_local_mapping_5_14 ${PROJECT_SOURCE_DIR}/src/experiments/main_local_mapping.cpp )
+target_link_libraries(bki_local_mapping_5_14 bki_mapping_5_14 cvo_utils cvo_gpu_5_14 boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES}  )
+#add_executable(bki_local_mapping ${PROJECT_SOURCE_DIR}/src/experiments/main_local_mapping_eth3d.cpp )
+#target_link_libraries(bki_local_mapping cvo_gpu_img boost_system boost_thread cxsparse  ${OpenCV_LIBS}  ${TBB_LIBRARIES} ${PCL_LIBRARIES} tum bki_mapping_lib)
 
 
 #################################################################

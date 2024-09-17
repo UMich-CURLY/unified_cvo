@@ -26,7 +26,7 @@ namespace semantic_bki {
     }
 
     void Semantics::get_occupied_probs(std::vector<float>& probs) const {
-      assert (probs.size() == num_class - 1);
+      assert (probs.size() >= num_class - 1);
       float sum = 0;
       for (auto m : ms)
         sum += m;

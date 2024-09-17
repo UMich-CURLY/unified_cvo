@@ -34,7 +34,10 @@ namespace pcl {
     float normal[3];
     float covariance[9];
     float cov_eigenvalues[3];
-    //EIGEN_MAKE_ALIGNED_OPERATOR_NEW   // make sure our new allocators are aligned
+
+    static const unsigned int FEATURE_DIMENSION = FEATURE_DIM;
+    static const unsigned int LABEL_DIMENSION = NUM_CLASS;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW   // make sure our new allocators are aligned
 
 
     // methods
@@ -143,7 +146,17 @@ namespace pcl {
     pc_seg.header = pc_rgb.header;
   }
   
-    
+
+  template <unsigned int FEATURE_DIM, unsigned int NUM_CLASS>
+    unsigned int feature_dimension(const pcl::PointSegmentedDistribution<FEATURE_DIM, NUM_CLASS>& p) {
+    return FEATURE_DIM;
+  }
+
+  template <unsigned int FEATURE_DIM, unsigned int NUM_CLASS>
+    unsigned int label_dimension(const pcl::PointSegmentedDistribution<FEATURE_DIM, NUM_CLASS>& p) {
+    return NUM_CLASS;
+  }
+  
 
   template <unsigned int FEATRURE_DIM, unsigned int NUM_CLASS >
   void PointSeg_to_PointXYZ(const pcl::PointCloud<pcl::PointSegmentedDistribution<FEATRURE_DIM, NUM_CLASS>> & pc_seg,

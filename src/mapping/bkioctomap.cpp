@@ -20,64 +20,36 @@ std::cout << "Debug: " << msg << std::endl; }
 namespace cvo {
     
   CvoPointCloud::CvoPointCloud(const semantic_bki::SemanticBKIOctoMap * map,
+                               const int num_features,
                                const int num_classes) {
     num_classes_ = num_classes;
-    int num_point_counter = 0;
-    std::vector<std::vector<float> > features;
-    std::vector<std::vector<float> > labels;
-    points_.reserve(65536);
-//    positions_.reserve(65536);
-    features.reserve(65536);
-    labels.reserve(65536);
-    feature_dimensions_ = 5;
+    feature_dimensions_ = num_features;
     
     for (auto it = map->begin_leaf(); it != map->end_leaf(); ++it) {
       if (it.get_node().get_state() == semantic_bki::State::OCCUPIED) {
         // position
         semantic_bki::point3f  p = it.get_loc();
-        Vec3f xyz;
-        xyz << p.x(), p.y(), p.z();
-        CvoPoint point(xyz(0),xyz(1),xyz(2));
-        points_.push_back(point);
-//        positions_.push_back(xyz);
-               
-        // features
-        if(feature_dimensions_==5){
-          std::vector<float> feature(5, 0);
-          it.get_node().get_features(feature);
-          features.push_back(feature);
-        }
-        else if(feature_dimensions_==1){
-          std::vector<float> feature_1(1, 0);
-          it.get_node().get_features(feature_1);
-          features.push_back(feature_1);
-        }
+        cvo::CvoPoint p_cvo;
+        p_cvo.x = p.x();
+        p_cvo.y = p.y();
+        p_cvo.z = p.z();
+
+        std::vector<float> feature(feature_dimensions_, 0);
+        it.get_node().get_features(feature);
+        std::memcpy(p_cvo.features, feature.data(), sizeof(float)*feature_dimensions_);
         
         // labels
         std::vector<float> label(num_classes_, 0);
         it.get_node().get_occupied_probs(label);
-        labels.push_back(label);
-        num_point_counter++;
+        std::memcpy(p_cvo.label_distribution, label.data(), sizeof(float)*num_classes_);
+        this->push_back(p_cvo);
+
       }
     }
       
-    num_points_ = num_point_counter ;
-//    features_.resize(num_points_, feature_dimensions_);
-//    labels_.resize(num_points_, num_classes);
-
-    for (int i = 0; i < num_points_; i++) {
-      //memcpy(labels_.data()+ num_classes * sizeof(float) * i, labels[i].data(), num_classes * sizeof(float));
-//      labels_.row(i) = Eigen::Map<VecXf_row>(labels[i].data(), num_classes);
-      std::copy(labels[i].begin(), labels[i].end(), points_[i].label_distribution);
-
-      if(feature_dimensions_==5){
-        std::copy(features[i].begin(), features[i].end(), points_[i].features);
-      }
-      else if(feature_dimensions_==1){
-        points_[i].features[0] = features[i][0];
-      }
-
-    }
+    num_points_ = this->size();
+    num_geometric_types_ = 2;
+      
     //std::cout<<"Read labels from map:\nlabel" << labels_.row(0)<<"\n"<<labels_.row(num_points_-1)<<", color: ";
     //std::cout<< features_.row(0)<<"\n"<<features_.row(num_points_-1)<<"\n";
   }

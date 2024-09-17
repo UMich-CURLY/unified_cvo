@@ -1,6 +1,6 @@
 %YAML:1.0
 ---
-ell_init_first_frame: 2.0
+ell_init_first_frame: 3.0
 ell_init: 2.0 #0.2 #0.15 
 ell_min: 0.05
 ell_max: 0.9
@@ -39,17 +39,17 @@ is_using_geometric_type: 0
 is_global_angle_registration: 1
 # for irls solver
 multiframe_using_cpu: 0
-multiframe_max_iters: 1000
-multiframe_ell_init: 1.0
-multiframe_ell_max: 1.0
-multiframe_ell_min: 0.9
+multiframe_max_iters: 10
+multiframe_ell_init: 0.05
+multiframe_ell_max: 0.05
+multiframe_ell_min: 0.025
 multiframe_ell_decay_rate:  0.9 
 multiframe_iterations_per_ell: 20
-multiframe_downsample_voxel_size: 0.5
+multiframe_downsample_voxel_size: 0.05
 multiframe_num_neighbors: 128
 multiframe_min_nonzeros: 100
 multiframe_iterations_per_solve: 20
 multiframe_least_squares_num_threads: 100
 multiframe_is_optimizing_ell: 0
-multiframe_is_sorting_inner_product: 8
-multiframe_is_free_memory_each_iter: 0
+multiframe_is_sorting_inner_product: 4
+multiframe_is_free_memory_each_iter: 1

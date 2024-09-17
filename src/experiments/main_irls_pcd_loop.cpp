@@ -63,7 +63,7 @@ void  log_lc_pc_pairs( //const cvo::aligned_vector<cvo::Mat34d_row> &BA_poses,
 
     cvo::CvoPointCloud pc;
     pc = pc1_T + pc2_T;
-    pc.write_to_intensity_pcd(fname_prefix + std::to_string(id1)+"_"+std::to_string(id2)+".pcd");
+    pc.write_to_color_pcd(fname_prefix + std::to_string(id1)+"_"+std::to_string(id2)+".pcd");
   }
 }
 
@@ -587,9 +587,10 @@ int main(int argc, char** argv) {
     for (auto i : result_selected_frames) {
       pcl::PointCloud<cvo::CvoPoint>::Ptr pc_pcl(new pcl::PointCloud<cvo::CvoPoint>);
 
-      if (cvo_align.get_params().is_using_semantics)
+      if (cvo_align.get_params().is_using_semantics){
         pcl::io::loadPCDFile<cvo::CvoPoint>(data_path+"/"+std::to_string(i)+".pcd", *pc_pcl);
-      else {
+        std::cout<<"Load pcd "<<i<<"\n";
+      } else {
 
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc_rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
         pcl::io::loadPCDFile<pcl::PointXYZRGB>(data_path+"/"+std::to_string(i)+".pcd", *pc_rgb);
@@ -599,6 +600,10 @@ int main(int argc, char** argv) {
       std::shared_ptr<cvo::CvoPointCloud> ret(new cvo::CvoPointCloud(FEATURE_DIMENSIONS, NUM_CLASSES));
       for (int k = 0; k < pc_pcl->size(); k++) {
         cvo::CvoPoint p = (*pc_pcl)[k];
+        p.features[0] = static_cast<float>(p.b) / 255.0;
+        p.features[1] = static_cast<float>(p.g) / 255.0;
+        p.features[2] = static_cast<float>(p.r) / 255.0;
+        
         ret->push_back(p);
       }
       pcs.insert(std::make_pair(i, ret));
@@ -608,10 +613,12 @@ int main(int argc, char** argv) {
       pcl::PointCloud<cvo::CvoPoint>::Ptr pc_local(new pcl::PointCloud<cvo::CvoPoint>);
       for (int j = 0; j < 1+num_merging_sequential_frames; j++){
         int index_j = i+j;
+	std::cout<<" Merging "<<index_j<<" into selected kf "<<i<<"\n";
         pcl::PointCloud<cvo::CvoPoint>::Ptr pc_pcl(new pcl::PointCloud<cvo::CvoPoint>);
-        if (cvo_align.get_params().is_using_semantics)
+        if (cvo_align.get_params().is_using_semantics) {
           pcl::io::loadPCDFile<cvo::CvoPoint>(data_path+"/"+std::to_string(index_j)+".pcd", *pc_pcl);
-        else {
+          std::cout<<"Load pcd "<<index_j<<"\n";
+      } else {
           pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc_rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
           pcl::io::loadPCDFile<pcl::PointXYZRGB>(data_path+"/"+std::to_string(i)+".pcd", *pc_rgb);
           pcl::PointSeg_from_PointXYZRGB<FEATURE_DIMENSIONS,NUM_CLASSES,pcl::PointXYZRGB>(*pc_rgb, *pc_pcl);
@@ -624,16 +631,9 @@ int main(int argc, char** argv) {
           auto & p = pc_pcl->at(k);
           
           p.getVector3fMap() = pose_fi_to_fj.block(0,0,3,3) * p.getVector3fMap() + pose_fi_to_fj.block(0,3,3,1);
-          if (k == 0) {
-            auto & p_c = (*pc_pcl)[k];            
-            Eigen::Matrix3f feat_map;
-            feat_map(0) = static_cast<float>(p_c.r);
-            feat_map(1) = static_cast<float>(p_c.g);
-            feat_map(2) = static_cast<float>(p_c.b);
-            std::cout<<"Read rgb: "<<feat_map * 255<<"\n";          
-            std::cout<<"Read rgb end\n " ;
-          }
-
+          p.features[0] = static_cast<float>(p.b) / 255.0;
+          p.features[1] = static_cast<float>(p.g) / 255.0;
+          p.features[2] = static_cast<float>(p.r) / 255.0;
         }
           //}
         *pc_local += *pc_pcl;
@@ -660,7 +660,7 @@ int main(int argc, char** argv) {
       
       cvo::VoxelMap<cvo::CvoPoint> edge_voxel(cvo_align.get_params().multiframe_downsample_voxel_size); 
       for (int k = 0; k < pc_local->size(); k++) {
-        if ( (*pc_local)[k].getVector3fMap().norm() < 10.0 ) {
+        if ( (*pc_local)[k].getVector3fMap().norm() < 20.0 ) {
           edge_voxel.insert_point(&(*pc_local)[k]);
         }
       }
@@ -671,10 +671,10 @@ int main(int argc, char** argv) {
         cvo::CvoPoint p = *edge_results[k];
         //Eigen::Map<Eigen::Matrix<float, FEATURE_DIMENSIONS, 1>> feat_map(p.features);
         if (k == 0) {
-          Eigen::Matrix3f feat_map;
-          feat_map(0) = static_cast<float>(p.r);
-          feat_map(1) = static_cast<float>(p.g);
-          feat_map(2) = static_cast<float>(p.b);
+          Eigen::Vector3f feat_map;
+          feat_map(0) = static_cast<float>(p.b) / 255.0;
+          feat_map(1) = static_cast<float>(p.g) / 255.0;
+          feat_map(2) = static_cast<float>(p.r) / 255.0;
           std::cout<<"Read rgb: "<<feat_map * 255<<"\n";          
           std::cout<<"Read rgb end\n " ;
         }
@@ -790,7 +790,7 @@ int main(int argc, char** argv) {
       for (; iter_j != result_selected_frames.end() ; iter_j++) {
         int j = *iter_j;
         double dist = (tracking_poses[i].block<3,1>(0,3) - tracking_poses[j].block<3,1>(0,3)).norm();
-        if (dist < 0.2 ){
+        if (dist < 0.25 ){
           std::cout<<"loop: dist betwee "<<i<<" and "<<j<<" is "<<dist<<"\n";
           loop_closures.push_back(std::make_pair(i,j));
         }
