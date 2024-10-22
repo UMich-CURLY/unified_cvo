@@ -152,6 +152,7 @@ namespace cvo {
     int iter_ = 0;
     bool converged = false;
     double ell = params_->multiframe_ell_init;
+    bool is_logging_each_iter = true;
 
     //std::ofstream nonzeros("nonzeros.txt");
     //std::ofstream loss_change("loss_change.txt");
@@ -191,7 +192,7 @@ namespace cvo {
       }
 
       std::vector<Sophus::SE3d> poses_old(frames_->size());
-      pose_log_fname = "";
+      pose_log_fname = is_logging_each_iter ?  std::string("rkhs_irls_iter_") + std::to_string(iter_)+".txt" : "";
       pose_snapshot(*frames_, poses_old, pose_log_fname);
       std::vector<float> ell_old;
       ell_old.reserve(states_->size());
@@ -297,8 +298,8 @@ namespace cvo {
       //loss_change << ell <<", "<< summary.final_cost - summary.initial_cost <<std::endl;
         
       std::vector<Sophus::SE3d> poses_new(frames_->size());
-      if (is_comparing_with_gt)      
-        pose_log_fname = "pose_iter_"+std::to_string(iter_)+".txt";      
+      //if (is_comparing_with_gt)      
+      //  pose_log_fname = "pose_iter_"+std::to_string(iter_)+".txt";      
       pose_snapshot(*frames_, poses_new, pose_log_fname);
       double param_change = change_of_all_poses(poses_old, poses_new);
       std::cout<<"Pose Update is "<<param_change<<std::endl;

@@ -14,7 +14,7 @@
 #include "utils/Calibration.hpp"
 #include "utils/CvoPointCloud.hpp"
 
-#include "viewer/viewer.h"
+#include "utils/viewer.hpp"
 #include <Eigen/Dense>
 using Mat34d_row = Eigen::Matrix<double, 3, 4, Eigen::RowMajor>;
 
@@ -281,10 +281,10 @@ int main(int argc, char** argv) {
   
   int total_graphs = std::stoi(total_graphs_arg);
 
-  std::unique_ptr<perl_registration::Viewer> viewer;
+  std::unique_ptr<cvo::Viewer<pcl::PointXYZRGB>> viewer;
   constexpr bool run_viewer = true;
   if (run_viewer) {
-    viewer = std::make_unique<perl_registration::Viewer>();
+    viewer = std::make_unique<cvo::Viewer<pcl::PointXYZRGB>>();
   }
   
   //std::string graph_file_name(argv[2]);
@@ -417,9 +417,9 @@ int main(int argc, char** argv) {
       std::string viewer_id = std::to_string(curr_frame_id);
       if (cloud->size() > 0 ) {
         if ( idx_to_viewerid.find(curr_frame_id) != idx_to_viewerid.end()) {
-          viewer->updateColorPointCloud(*cloud, viewer_id);
+          viewer->updatePointCloud(*cloud, viewer_id);
         } else {
-          viewer->updateColorPointCloud(*cloud, viewer_id);
+          viewer->updatePointCloud(*cloud, viewer_id);
           std::pair<int, std::string> p;
           p.first = curr_frame_id;
           p.second = viewer_id;

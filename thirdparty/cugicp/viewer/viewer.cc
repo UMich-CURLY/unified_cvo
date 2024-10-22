@@ -44,9 +44,22 @@ namespace perl_registration {
       colorCloudsToUpdate[id] = cloudPtr;
     } else
       colorCloudsToAdd[id] = cloudPtr;    
-      
-    
   }
+
+  void Viewer::updateColorPointCloud(const pcl::PointCloud<pcl::PointXYZI> & cloud,
+                                     const std::string &id) {
+    pcl::PointCloud<pcl::PointXYZI>::Ptr cloudPtr(
+                                                  new pcl::PointCloud<pcl::PointXYI>(cloud));
+    std::lock_guard<std::mutex> lockClouds(cloudsGuard);
+
+    if (addedColorCloud.find(id) != addedColorCloud.end()) {
+
+      colorCloudsToUpdate[id] = cloudPtr;
+    } else
+      colorCloudsToAdd[id] = cloudPtr;    
+  }
+  
+  
   
     
   void Viewer::addPointCloudIntensity(

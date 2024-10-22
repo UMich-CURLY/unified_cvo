@@ -22,5 +22,13 @@ POINT_CLOUD_REGISTER_POINT_STRUCT (cvo::CvoPoint,
                                    (float[3], cov_eigenvalues, cov_eigenvalues)
                                    )
 
-
-
+template <typename PointT> struct CvoPointToPCL {};
+template <> struct CvoPointToPCL<pcl::PointSegmentedDistribution<1, NUM_CLASSES>> {
+  using type = pcl::PointXYZI;
+};
+template <> struct CvoPointToPCL<pcl::PointSegmentedDistribution<5, NUM_CLASSES>> {
+  using type = pcl::PointXYZRGB;
+};
+template <> struct CvoPointToPCL<pcl::PointSegmentedDistribution<3, NUM_CLASSES>> {
+  using type = pcl::PointXYZRGB;
+};

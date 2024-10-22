@@ -281,6 +281,10 @@ int main(int argc, char *argv[]) {
   std::cout<<std::flush;
 
   double this_time = 0;
+  //init_param.is_using_kdtree = true;
+  cvo_align.write_params(&init_param);
+
+
   cvo_align.align(*source, *target, init_guess_inv, result, nullptr,&this_time);
 
 

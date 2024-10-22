@@ -32,6 +32,7 @@ int main(int argc, char *argv[]) {
   int start_frame = stoi(argv[3]);
   int num_frames = stoi(argv[4]);
   std::string pose_fname = std::string(argv[5]);
+  int step_size = stoi(argv[6]);
   
   vector<string> files;
   std::cout<<" cycle through the directory\n";
@@ -54,11 +55,11 @@ int main(int argc, char *argv[]) {
   double sf2 = 1.0;
   double ell = 1.0;
   float prior = 0.0f;
-  float var_thresh = 1.0f;
-  double free_thresh = 0.65;
-  double occupied_thresh = 0.9;
-  double resolution = 0.05;
-  double free_resolution = 1;
+  float var_thresh = 2.0f;
+  double free_thresh = 0.1;
+  double occupied_thresh = 0.15;
+  double resolution = 0.2;
+  double free_resolution = 0.2;
   double ds_resolution = -1;
   double max_range = -1;
 
@@ -72,16 +73,20 @@ int main(int argc, char *argv[]) {
                                    start_frame,
                                    num_frames-start_frame-1,
                                    poses);
+
+
   
   std::cout<<"Just read poses\n";
   // Build map
-  std::vector<cvo::CvoPointCloud> pc_vec(files.size(), cvo::CvoPointCloud(cvo::CvoPoint::FEATURE_DIMENSION, cvo::CvoPoint::LABEL_DIMENSION));
-  semantic_bki::SemanticBKIOctoMap map_csm(resolution, block_depth, cvo::CvoPoint::LABEL_DIMENSION + 1, sf2, ell, prior, var_thresh, free_thresh, occupied_thresh);
+  cvo::CvoPointCloud pc_all(cvo::CvoPoint::FEATURE_DIMENSION, cvo::CvoPoint::LABEL_DIMENSION);
+  semantic_bki::SemanticBKIOctoMap map_csm(resolution, block_depth, cvo::CvoPoint::LABEL_DIMENSION + 1,
+                                           cvo::CvoPoint::FEATURE_DIMENSION + 1,
+                                           sf2, ell, prior, var_thresh, free_thresh, occupied_thresh);
   int i = 0;
   for (int i = start_frame; i < num_frames-start_frame; i++) {
 
     //pc_vec[i].read_cvo_pointcloud_from_file(f);
-    std::string fname = pcd_dir + "/" + std::to_string(i)+".pcd";
+    std::string fname = pcd_dir + "/" + std::to_string(i*step_size)+".pcd";
 
     if (!std::filesystem::exists(fname))
       break;
@@ -94,15 +99,18 @@ int main(int argc, char *argv[]) {
       p.features[0] = static_cast<float>(p.b) / 255.0;
       p.features[1] = static_cast<float>(p.g) / 255.0;
       p.features[2] = static_cast<float>(p.r) / 255.0;
-
+      p.geometric_type[0] = 1.0;
     }
-    pcl::io::savePCDFileASCII(pcd_dir+"/../segmented_color_pcd/"+std::to_string(i)+".pcd", *pc_pcl);
+    //pcl::io::savePCDFileASCII(pcd_dir+"/../segmented_color_pcd/"+std::to_string(i)+".pcd", *pc_pcl);
     
     
     // transform point cloud
     Eigen::Matrix4f transform = poses[i].cast<float>();
+    std::cout<<"Pose "<<i<<": \n"<<transform<<"\n";
+    Eigen::Matrix4f idd = Eigen::Matrix4f::Identity();
     cvo::CvoPointCloud transformed_pc(cvo::CvoPoint::FEATURE_DIMENSION, cvo::CvoPoint::LABEL_DIMENSION);
     cvo::CvoPointCloud::transform(transform, *pc_pcl, transformed_pc);
+    pc_all += transformed_pc;
 
     if (i == start_frame) {
       transformed_pc.write_to_color_pcd(std::to_string(i)+"color.pcd");
@@ -118,7 +126,8 @@ int main(int argc, char *argv[]) {
     map_csm.insert_pointcloud_csm(&transformed_pc, origin, ds_resolution, free_resolution, max_range);
 
   }
-  
+
+  pc_all.write_to_color_pcd("pc_all.pcd");
   // Map to CVOPointCloud
   std::cout<<" cvt to pcd \n";
   cvo::CvoPointCloud cloud_out(&map_csm,  cvo::CvoPoint::FEATURE_DIMENSION, cvo::CvoPoint::LABEL_DIMENSION);

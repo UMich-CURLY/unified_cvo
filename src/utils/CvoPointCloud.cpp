@@ -1412,6 +1412,24 @@ namespace cvo{
     
   }
 
+  template <>
+  void CvoPointCloud::export_to_pcd<pcl::PointXYZI>(pcl::PointCloud<pcl::PointXYZI> & pc)  const {
+    pc.resize(num_points_);
+    for (int i = 0; i < num_points_; i++) {
+      pcl::PointXYZI p;
+//      p.x = positions_[i](0);
+//      p.y = positions_[i](1);
+//      p.z = positions_[i](2);
+      p.x = points_[i].x;
+      p.y = points_[i].y;
+      p.z = points_[i].z;
+      p.intensity = points_[i].features[0] * 255.0;
+      pc[i] = p;
+    }
+    
+  }
+  
+
   Eigen::Vector3f CvoPointCloud::xyz_at(unsigned int index) const {
     Eigen::Vector3f p(points_[index].x, points_[index].y, points_[index].z);
     return p;

@@ -22,9 +22,9 @@ mkdir -p $folder
 
 
 
-data_dir=$dataset_folder/segmented_pcd
-lc_file=${dataset_folder}/loop_pairs.txt
-init_traj_file=${dataset_folder}/cassie_pose.txt
+data_dir=$dataset_folder/intensity_pcd
+lc_file=${dataset_folder}/loop_pairs_intensity.txt
+init_traj_file=${dataset_folder}/poses.txt
 rm *.pcd
 mkdir -p ${folder}/pcds
 cp $init_traj_file $folder/tracking_full.txt
@@ -33,7 +33,7 @@ last_index=`cat ${init_traj_file} | wc -l`
 last_index=$((last_index - 1))
 
 #gdb -ex run --args \
-  ./build/bin/cvo_irls_pcd_loop pcd $data_dir cvo_params/cvo_irls_pcd_params.yaml 1 $folder/tracking_full.txt $lc_file  ba.txt 0 0 $last_index 1.0 0.05  9 1 1 1 1 1 1 8.0 #> log_kitti_loop_${i}.txt
+  ./build/bin/cvo_irls_pcd_intensity_loop pcd $data_dir cvo_params/cvo_irls_pcd_params.yaml 1 $folder/tracking_full.txt $lc_file  ba.txt 0 0 $last_index 1.0 0.05  9 1 1 1 1 1 1 25.0 #> log_kitti_loop_${i}.txt
 	        
   mv [0-9]*.pcd ${folder}/pcds/
   mv *.pcd $folder/

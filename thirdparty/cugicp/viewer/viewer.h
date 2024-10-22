@@ -32,6 +32,9 @@ class Viewer {
 
   //void addColorPointCloud(const pcl::PointCloud<pcl::PointXYZRGB> & cloud,
   //                         const std::string &id);
+  
+  void updateIntensityPointCloud(const pcl::PointCloud<pcl::PointXYZI> & cloud,
+                                 const std::string &id);
 
   void updateColorPointCloud(const pcl::PointCloud<pcl::PointXYZRGB> & cloud,
                              const std::string &id);

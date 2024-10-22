@@ -31,6 +31,7 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
 
 void write_transformed_pc(std::vector<cvo::CvoFrame::Ptr> & frames, std::string & fname,
@@ -157,7 +158,7 @@ void eval_poses(std::vector<Sophus::SE3f> & estimates,
                 std::vector<Sophus::SE3f> & gt,
                 std::string & fname
                 ){
-  assert(filesystem::exists(fname));
+  assert(fs::exists(fname));
   std::ofstream err_f(fname,std::fstream::out |   std::ios::app);
   float total_err = 0;
   for (int i = 0; i < gt.size(); i ++) {

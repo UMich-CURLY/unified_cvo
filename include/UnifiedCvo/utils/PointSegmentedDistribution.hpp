@@ -24,6 +24,7 @@ namespace pcl {
 
   PointSegmentedDistribution
   {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW   // make sure our new allocators are aligned    
     // data
     PCL_ADD_POINT4D;                 
     PCL_ADD_RGB;
@@ -37,7 +38,14 @@ namespace pcl {
 
     static const unsigned int FEATURE_DIMENSION = FEATURE_DIM;
     static const unsigned int LABEL_DIMENSION = NUM_CLASS;
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW   // make sure our new allocators are aligned
+    static const unsigned int GEOMETRIC_TYPE_DIMENSION = 2;
+
+    unsigned int feature_dimension() const {return  FEATURE_DIM;}
+    unsigned int label_dimension() const { return  NUM_CLASS;}
+    unsigned int geometric_type_dimension() const {return  2;}
+
+
+      
 
 
     // methods
@@ -123,6 +131,40 @@ namespace pcl {
     pc_rgb.header = pc_seg.header;
   }
 
+  template <unsigned int FEATURE_DIM, unsigned int NUM_CLASS, typename PointWithXYZI>
+  void PointSeg_to_PointXYZI(const pcl::PointCloud<pcl::PointSegmentedDistribution<FEATURE_DIM, NUM_CLASS>> & pc_seg,
+                               typename pcl::PointCloud<PointWithXYZI> & pc_i) {
+    pc_i.resize(pc_seg.size());
+    for (int i = 0; i < pc_i.size(); i++) {
+      auto & p_i = pc_i[i];
+      auto & p_seg = pc_seg[i];
+      p_i.x = p_seg.x;
+      p_i.y = p_seg.y;
+      p_i.z = p_seg.z;
+      p_i.intensity = p_seg.features[0] * 255.0;
+    }
+    pc_i.header = pc_seg.header;
+  }
+
+  template <unsigned int FEATURE_DIM, unsigned int NUM_CLASS, typename PointWithXYZI>
+  void PointSeg_from_PointXYZI(
+                               const typename pcl::PointCloud<PointWithXYZI> & pc_i,
+                               pcl::PointCloud<pcl::PointSegmentedDistribution<FEATURE_DIM, NUM_CLASS>> & pc_seg
+                               ) {
+    pc_seg.resize(pc_i.size());
+    for (int i = 0; i < pc_i.size(); i++) {
+      auto & p_seg = pc_seg[i];
+      auto & p_i = pc_i[i];
+      p_seg.x = p_i.x;
+      p_seg.y = p_i.y;
+      p_seg.z = p_i.z;
+      p_seg.features[0] = p_i.intensity / 255.0;
+    }
+    pc_seg.header = pc_i.header;
+  }
+  
+  
+
   template <unsigned int FEATURE_DIM, unsigned int NUM_CLASS, typename PointWithXYZRGB>
     void PointSeg_from_PointXYZRGB(const typename pcl::PointCloud<PointWithXYZRGB> & pc_rgb,
                                    pcl::PointCloud<pcl::PointSegmentedDistribution<FEATURE_DIM, NUM_CLASS>> & pc_seg
@@ -155,6 +197,11 @@ namespace pcl {
   template <unsigned int FEATURE_DIM, unsigned int NUM_CLASS>
     unsigned int label_dimension(const pcl::PointSegmentedDistribution<FEATURE_DIM, NUM_CLASS>& p) {
     return NUM_CLASS;
+  }
+
+  template <unsigned int FEATURE_DIM, unsigned int NUM_CLASS>
+    unsigned int geometric_type_dimension(const pcl::PointSegmentedDistribution<FEATURE_DIM, NUM_CLASS>& p) {
+    return 2;
   }
   
 
@@ -201,6 +248,45 @@ namespace pcl {
       std::cout<<std::endl;
                            
     }
+
+
+    template <unsigned int FEATRURE_DIM, unsigned int NUM_CLASS>
+      void PointSeg_to_PCL(const pcl::PointCloud<pcl::PointSegmentedDistribution<FEATRURE_DIM, NUM_CLASS>> & pc_seg,
+                                           pcl::PointCloud<pcl::PointXYZI> & pc_i) {
+      pc_i.resize(pc_seg.size());
+      for (int i = 0; i < pc_i.size(); i++) {
+        auto & p_i = pc_i[i];
+        auto & p_seg = pc_seg[i];
+        p_i.x = p_seg.x;
+        p_i.y = p_seg.y;
+        p_i.z = p_seg.z;
+        p_i.intensity = p_seg.features[0] * 255.0;
+      }
+      pc_i.header = pc_seg.header;
+    }
+
+    template <unsigned int FEATRURE_DIM, unsigned int NUM_CLASS>
+      void PointSeg_to_PCL(const pcl::PointCloud<pcl::PointSegmentedDistribution<FEATRURE_DIM, NUM_CLASS>> & pc_seg,
+                           pcl::PointCloud<pcl::PointXYZRGB> & pc_rgb) {
+      pc_rgb.resize(pc_seg.size());
+      for (int i = 0; i < pc_rgb.size(); i++) {
+        auto & p_rgb = pc_rgb[i];
+        auto & p_seg = pc_seg[i];
+
+        p_rgb.x = p_seg.x;
+        p_rgb.y = p_seg.y;
+        p_rgb.z = p_seg.z;
+        p_rgb.r = p_seg.r;
+        p_rgb.g = p_seg.g;
+        p_rgb.b = p_seg.b;
+      
+      }
+      pc_rgb.header = pc_seg.header;
+    }
+    
+
+
+    
 
 }
 

@@ -101,6 +101,7 @@ namespace cvo {
 
   void BinaryStateGPU::free_state_memory() {
     if (state_ == ALLOCATED) {
+      nonzeros_last_ = A_host_.nonzero_sum;
       if (params_cpu_->multiframe_is_free_memory_each_iter) {
         num_neighbors_ =  max_neighbors(&A_host_);
         if (is_optimizing_ell_) {
@@ -141,8 +142,11 @@ namespace cvo {
   }
 
   int BinaryStateGPU::update_inner_product() {
-    nonzeros_last_ = A_host_.nonzero_sum;
+    //if (A_host_.nonzero_sum > 0)
+
+    //std::cout<<"Assigning nonzero_last to "<< A_host_.nonzero_sum<<"\n";
     if (!params_cpu_->multiframe_is_free_memory_each_iter) {
+      nonzeros_last_ = A_host_.nonzero_sum;      
       int last_num_neibors = max_neighbors(&A_host_);
       if (last_num_neibors > 0)
         num_neighbors_ = std::min(init_num_neighbors_, (int)(last_num_neibors*1.1));

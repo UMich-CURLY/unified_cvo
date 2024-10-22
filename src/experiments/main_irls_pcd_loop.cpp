@@ -15,6 +15,7 @@
 #include "cvo/IRLS_State_CPU.hpp"
 #include "cvo/IRLS_State_GPU.hpp"
 #include "cvo/IRLS_State.hpp"
+#include "utils/CvoPoint.hpp"
 #include "utils/CvoPointCloud.hpp"
 #include "cvo/CvoFrame.hpp"
 #include "cvo/CvoFrameGPU.hpp"
@@ -22,7 +23,7 @@
 #include "utils/VoxelMap.hpp"
 #include "utils/data_type.hpp"
 #include "graph_optimizer/PoseGraphOptimization.hpp"
-//#include <pcl/filters/farthest_point_sampling.h>
+#include <pcl/filters/farthest_point_sampling.h>
 
 //#include "argparse/argparse.hpp"
 #include "dataset_handler/KittiHandler.hpp"
@@ -35,14 +36,18 @@
 #include "utils/SymbolHash.hpp"
 #include "utils/g2o_parser.hpp"
 #include "utils/LidarPointDownsampler.hpp"
+#include "utils/PointSegmentedDistribution.hpp"
+#include "utils/PointCloudIO.hpp"
 
 using namespace std;
 
 extern template class cvo::VoxelMap<pcl::PointXYZRGB>;
 extern template class cvo::Voxel<pcl::PointXYZRGB>;
 extern template class cvo::Voxel<pcl::PointXYZI>;
-extern template class cvo::VoxelMap<pcl::PointXYZI>;
+extern template class cvo::VoxelMap<pcl::PointXYZI>;  
 
+
+template <typename PointT>
 void  log_lc_pc_pairs( //const cvo::aligned_vector<cvo::Mat34d_row> &BA_poses,
                        const std::map<int, cvo::Mat34d_row> & BA_poses,
                        const std::vector<std::pair<int, int>> &loop_closures,
@@ -63,7 +68,12 @@ void  log_lc_pc_pairs( //const cvo::aligned_vector<cvo::Mat34d_row> &BA_poses,
 
     cvo::CvoPointCloud pc;
     pc = pc1_T + pc2_T;
-    pc.write_to_color_pcd(fname_prefix + std::to_string(id1)+"_"+std::to_string(id2)+".pcd");
+    pcl::PointCloud<PointT> pc_curr;
+    pc.export_to_pcd<PointT>(pc_curr);
+    pcl::io::savePCDFileASCII(fname_prefix + std::to_string(id1)+"_"+std::to_string(id2)+".pcd",
+                              pc_curr);
+
+    //pc.write_to_color_pcd();
   }
 }
 
@@ -102,10 +112,12 @@ void parse_lc_file(std::vector<std::pair<int, int>> & loop_closures,
   }
 }
 
+template <typename PointT>
 void write_loop_closure_pcds(std::map<int, cvo::CvoFrame::Ptr> & frames,
                              std::vector<std::pair<int, int>> & loop_closures,
                              bool is_recording_frames,
-                             const std::string & name_prefix) {
+                             const std::string & name_prefix,
+                             std::map<int, std::unordered_map<int, float>> & cos_map) {
   if (is_recording_frames) {
     for (auto && [ind, frame ]:frames) {
       frame->points->write_to_pcd(name_prefix + "_"+std::to_string(ind)+".pcd");
@@ -115,6 +127,7 @@ void write_loop_closure_pcds(std::map<int, cvo::CvoFrame::Ptr> & frames,
 
     int f1 = p.first;
     int f2 = p.second;
+    float cos_val = cos_map[f1][f2];
     
     cvo::CvoPointCloud new_pc;
     Eigen::Matrix4d pose1 = Eigen::Matrix4d::Identity();
@@ -126,8 +139,12 @@ void write_loop_closure_pcds(std::map<int, cvo::CvoFrame::Ptr> & frames,
     cvo::CvoPointCloud::transform(pose_f, *frames[f2]->points, new_pc);
     new_pc += *frames[f1]->points;
 
-    new_pc.write_to_color_pcd(name_prefix + "_loop_"+std::to_string(f1)+"_"+std::to_string(f2)+".pcd");
     
+    pcl::PointCloud<PointT> pc_curr;
+    new_pc.export_to_pcd<PointT>(pc_curr);
+    pcl::io::savePCDFileASCII(name_prefix + "_loop_"+std::to_string(f1)+"_"+std::to_string(f2)+"_"+std::to_string(cos_val)+".pcd",
+                              pc_curr);
+
   }
 }
 
@@ -270,13 +287,13 @@ void global_registration_batch(cvo::CvoGPU & cvo_align,
     cvo::CvoPointCloud old_pc;
     cvo::CvoPointCloud::transform(init_guess_inv, *pcs.at(p.second), old_pc);
     old_pc += *pcs.at(p.first);
-    old_pc.write_to_color_pcd("cvo_before_loop_"+std::to_string(p.first)+"_"+std::to_string(p.second)+".pcd");
+    old_pc.write_to_pcd("cvo_before_loop_"+std::to_string(p.first)+"_"+std::to_string(p.second)+".pcd");
 
 
     cvo::CvoPointCloud new_pc;
     cvo::CvoPointCloud::transform(result, *pcs.at(p.second), new_pc);
     new_pc += *pcs.at(p.first);
-    new_pc.write_to_color_pcd("cvo_after_loop_"+std::to_string(p.first)+"_"+std::to_string(p.second)+".pcd");
+    new_pc.write_to_pcd("cvo_after_loop_"+std::to_string(p.first)+"_"+std::to_string(p.second)+".pcd");
 
     
   }
@@ -442,43 +459,13 @@ void write_traj_file(std::string & fname,
     auto q_eigen = q.unit_quaternion().coeffs();
     Eigen::Vector3d t(pose.block<3,1>(0,3));
     outfile <<timestamps[i]<<" "<< t(0) <<" "<< t(1)<<" "<<t(2)<<" "
-            <<q_eigen[0]<<" "<<q_eigen[1]<<" "<<q_eigen[2]<<" "<<q_eigen[3]<<std::endl;
-    
+            <<q_eigen[0]<<" "<<q_eigen[1]<<" "<<q_eigen[2]<<"
+"<<q_eigen[3]<<std::endl;
+
   }
   outfile.close();
 }
 */
-void write_transformed_pc(std::map<int, cvo::CvoFrame::Ptr> & frames,
-                          std::string & fname,
-                          int start_frame_ind=0, int end_frame_ind=1000000){
-  pcl::PointCloud<pcl::PointXYZRGB> pc_all;
-  pcl::PointCloud<cvo::CvoPoint> pc_xyz_all;
-  for (auto & [i, ptr] : frames) {
-  //for (int i = start_frame_ind; i <= std::min((int)frames.size(), end_frame_ind); i++) {
-  //auto ptr = frames[i];
-
-    cvo::CvoPointCloud new_pc;
-    Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
-    pose.block<3,4>(0,0) = Eigen::Map<cvo::Mat34d_row>(ptr->pose_vec);
-    
-    Eigen::Matrix4f pose_f = pose.cast<float>();
-    cvo::CvoPointCloud::transform(pose_f, *ptr->points, new_pc);
-
-    pcl::PointCloud<pcl::PointXYZRGB> pc_curr;
-    pcl::PointCloud<cvo::CvoPoint> pc_xyz_curr;
-    //new_pc.export_semantics_to_color_pcd(pc_curr);
-    new_pc.export_to_pcd<pcl::PointXYZRGB>(pc_curr);
-    new_pc.export_to_pcd(pc_xyz_curr);
-
-    pc_all += pc_curr;
-    pc_xyz_all += pc_xyz_curr;
-
-  }
-  std::string fname_color = fname + ".semantic_color.pcd";
-  pcl::io::savePCDFileASCII(fname_color, pc_all);
-  pcl::io::savePCDFileASCII(fname, pc_xyz_all);
-}
-
 
 
 
@@ -536,6 +523,7 @@ int main(int argc, char** argv) {
   int is_global_registration = std::stoi(argv[17]);
   int is_doing_ba = std::stoi(argv[18]);
   int is_save_pcd = std::stoi(argv[19]);
+  double dist_lc_thresh = std::stod(argv[20]);
   //int is_semantic = std::stoi(argv[19]);
 
   std::size_t num_pcds = (std::size_t)std::distance(std::filesystem::directory_iterator{std::filesystem::path(data_path)}, std::filesystem::directory_iterator{});
@@ -591,19 +579,29 @@ int main(int argc, char** argv) {
         pcl::io::loadPCDFile<cvo::CvoPoint>(data_path+"/"+std::to_string(i)+".pcd", *pc_pcl);
         std::cout<<"Load pcd "<<i<<"\n";
       } else {
-
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc_rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
-        pcl::io::loadPCDFile<pcl::PointXYZRGB>(data_path+"/"+std::to_string(i)+".pcd", *pc_rgb);
-        pcl::PointSeg_from_PointXYZRGB<FEATURE_DIMENSIONS,NUM_CLASSES,pcl::PointXYZRGB>(*pc_rgb, *pc_pcl);
+        if (cvo::CvoPoint::FEATURE_DIMENSION > 1) { 
+          pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc_rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
+          pcl::io::loadPCDFile<pcl::PointXYZRGB>(data_path+"/"+std::to_string(i)+".pcd", *pc_rgb);
+          pcl::PointSeg_from_PointXYZRGB<FEATURE_DIMENSIONS,NUM_CLASSES,pcl::PointXYZRGB>(*pc_rgb, *pc_pcl);
+        } else if (cvo::CvoPoint::FEATURE_DIMENSION  == 1) {
+          pcl::PointCloud<pcl::PointXYZI>::Ptr pc_i(new pcl::PointCloud<pcl::PointXYZI>);
+          pcl::io::loadPCDFile<pcl::PointXYZI>(data_path+"/"+std::to_string(i)+".pcd", *pc_i);
+          pcl::PointSeg_from_PointXYZI<FEATURE_DIMENSIONS,NUM_CLASSES,pcl::PointXYZI>(*pc_i, *pc_pcl);
+          
+        } else {
+          std::cerr<<" unknown point dimension \n";
+          return -1;
+        }
         
       }
       std::shared_ptr<cvo::CvoPointCloud> ret(new cvo::CvoPointCloud(FEATURE_DIMENSIONS, NUM_CLASSES));
       for (int k = 0; k < pc_pcl->size(); k++) {
         cvo::CvoPoint p = (*pc_pcl)[k];
-        p.features[0] = static_cast<float>(p.b) / 255.0;
-        p.features[1] = static_cast<float>(p.g) / 255.0;
-        p.features[2] = static_cast<float>(p.r) / 255.0;
-        
+        if (cvo::CvoPoint::FEATURE_DIMENSION  >= 3) {
+          p.features[0] = static_cast<float>(p.b) / 255.0;
+          p.features[1] = static_cast<float>(p.g) / 255.0;
+          p.features[2] = static_cast<float>(p.r) / 255.0;
+        }
         ret->push_back(p);
       }
       pcs.insert(std::make_pair(i, ret));
@@ -613,27 +611,37 @@ int main(int argc, char** argv) {
       pcl::PointCloud<cvo::CvoPoint>::Ptr pc_local(new pcl::PointCloud<cvo::CvoPoint>);
       for (int j = 0; j < 1+num_merging_sequential_frames; j++){
         int index_j = i+j;
-	std::cout<<" Merging "<<index_j<<" into selected kf "<<i<<"\n";
+	std::cout<<" Merging "<<index_j<<" into selected kf "<<i<<", feature_dim = "<<cvo::CvoPoint::FEATURE_DIMENSION<<"\n";
         pcl::PointCloud<cvo::CvoPoint>::Ptr pc_pcl(new pcl::PointCloud<cvo::CvoPoint>);
         if (cvo_align.get_params().is_using_semantics) {
-          pcl::io::loadPCDFile<cvo::CvoPoint>(data_path+"/"+std::to_string(index_j)+".pcd", *pc_pcl);
-          std::cout<<"Load pcd "<<index_j<<"\n";
-      } else {
-          pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc_rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
-          pcl::io::loadPCDFile<pcl::PointXYZRGB>(data_path+"/"+std::to_string(i)+".pcd", *pc_rgb);
-          pcl::PointSeg_from_PointXYZRGB<FEATURE_DIMENSIONS,NUM_CLASSES,pcl::PointXYZRGB>(*pc_rgb, *pc_pcl);
-        
+          pcl::io::loadPCDFile<cvo::CvoPoint>(data_path+"/"+std::to_string(index_j)+".pcd", *pc_pcl)
+;          std::cout<<"Load pcd "<<index_j<<"\n";
+      	} else {
+          if (cvo::CvoPoint::FEATURE_DIMENSION >= 3) {
+            pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc_rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
+            pcl::io::loadPCDFile<pcl::PointXYZRGB>(data_path+"/"+std::to_string(index_j)+".pcd", *pc_rgb);
+            pcl::PointSeg_from_PointXYZRGB<FEATURE_DIMENSIONS,NUM_CLASSES,pcl::PointXYZRGB>(*pc_rgb, *pc_pcl);
+          } else if (cvo::CvoPoint::FEATURE_DIMENSION  == 1) {
+            std::cout<<"Load lidar pcd "<<index_j<<"\n";            
+            pcl::PointCloud<pcl::PointXYZI>::Ptr pc_i(new pcl::PointCloud<pcl::PointXYZI>);
+            pcl::io::loadPCDFile<pcl::PointXYZI>(data_path+"/"+std::to_string(index_j)+".pcd", *pc_i);
+            pcl::PointSeg_from_PointXYZI<FEATURE_DIMENSIONS,NUM_CLASSES,pcl::PointXYZI>(*pc_i, *pc_pcl);
+          }
         }
         //if (j > 0) {
         Eigen::Matrix4f pose_fi_to_fj = (tracking_poses[i].inverse() * tracking_poses[j+i]).cast<float>();
+	std::cout<<"Pose index_j is "<<tracking_poses[j+i]<<"\n";
 #pragma omp parallel for 
         for (int k = 0; k < pc_pcl->size(); k++) {
           auto & p = pc_pcl->at(k);
-          
           p.getVector3fMap() = pose_fi_to_fj.block(0,0,3,3) * p.getVector3fMap() + pose_fi_to_fj.block(0,3,3,1);
-          p.features[0] = static_cast<float>(p.b) / 255.0;
-          p.features[1] = static_cast<float>(p.g) / 255.0;
-          p.features[2] = static_cast<float>(p.r) / 255.0;
+          if (cvo::CvoPoint::FEATURE_DIMENSION  >=3) {
+            p.features[0] = static_cast<float>(p.b) / 255.0;
+            p.features[1] = static_cast<float>(p.g) / 255.0;
+            p.features[2] = static_cast<float>(p.r) / 255.0;
+           } else {
+            //p.features[0] = p.features[0] / 255.0;
+	   }
         }
           //}
         *pc_local += *pc_pcl;
@@ -641,26 +649,18 @@ int main(int argc, char** argv) {
 
       /// downsample
       std::cout<<"frame "<<i<<" before downsample points "<<pc_local->size()<<std::endl;
-      /*
+
       pcl::PointCloud<cvo::CvoPoint>::Ptr pcd_downsampled(new pcl::PointCloud<cvo::CvoPoint>);
-      pcl::PassThrough<cvo::CvoPoint> pass;
-      pass.setInputCloud (pc_local);
-      pass.setFilterFieldName ("z");
-      pass.setFilterLimits (0.0, 3.0);
-      pass.filter (*pcd_downsampled);
-      
-      pcl::FarthestPointSampling downsample;
-      downsample.setSample(1024);
-      downsample.setInputCloud (pcd_downsampled);
-      downsample.filter (*pcd_downsampled);
-      
-      std::shared_ptr<cvo::CvoPointCloud> ret(new cvo::CvoPointCloud(*pcd_downsampled));
-      //pcs.push_back(pc);
+      /*
+      pcl::FarthestPointSampling<cvo::CvoPoint> downsample;
+      downsample.setSample(4096);
+      downsample.setInputCloud (pc_local);
+      downsample.filter (*pc_local);
+      std::cout<<"Farthest point downsmapel to "<<pc_local->size()<<" points\n";
       */
-      
       cvo::VoxelMap<cvo::CvoPoint> edge_voxel(cvo_align.get_params().multiframe_downsample_voxel_size); 
       for (int k = 0; k < pc_local->size(); k++) {
-        if ( (*pc_local)[k].getVector3fMap().norm() < 20.0 ) {
+        if ( (*pc_local)[k].getVector3fMap().norm() < 50.0 ) {
           edge_voxel.insert_point(&(*pc_local)[k]);
         }
       }
@@ -672,30 +672,54 @@ int main(int argc, char** argv) {
         //Eigen::Map<Eigen::Matrix<float, FEATURE_DIMENSIONS, 1>> feat_map(p.features);
         if (k == 0) {
           Eigen::Vector3f feat_map;
-          feat_map(0) = static_cast<float>(p.b) / 255.0;
-          feat_map(1) = static_cast<float>(p.g) / 255.0;
-          feat_map(2) = static_cast<float>(p.r) / 255.0;
-          std::cout<<"Read rgb: "<<feat_map * 255<<"\n";          
-          std::cout<<"Read rgb end\n " ;
+          if (cvo::CvoPoint::FEATURE_DIMENSION  >= 3) {
+            feat_map(0) = static_cast<float>(p.b) / 255.0;
+            feat_map(1) = static_cast<float>(p.g) / 255.0;
+            feat_map(2) = static_cast<float>(p.r) / 255.0;
+            std::cout<<"Read rgb: "<<feat_map * 255<<"\n";          
+            std::cout<<"Read rgb end\n " ;
+          }
         }
         //feat_map.normalize();
         ret->push_back(p);
       }
-      
-
-      pcs.insert(std::make_pair(i, ret));
-
-      if (is_save_pcd) {
+      if (is_save_pcd ) {
+        /*
         if (cvo_align.get_params().is_using_semantics) {
           pcl::PointCloud<pcl::PointXYZRGB> pc_semantic_downsampled;
           ret->export_semantics_to_color_pcd(pc_semantic_downsampled);
           pcl::io::savePCDFile(std::to_string(i)+"_color.pcd", pc_semantic_downsampled);
-        }
-        pcl::PointCloud<cvo::CvoPoint> pc_cvo_downsampled;
-        ret->export_to_pcd<cvo::CvoPoint>(pc_cvo_downsampled);
-        //pcl::io::savePCDFileASCII(std::to_string(i)+".pcd", pc_cvo_downsampled);
-        pcl::io::savePCDFile(std::to_string(i)+".pcd", pc_cvo_downsampled);
+          }*/
+          if (cvo::CvoPoint::FEATURE_DIMENSION  >= 3) {
+            pcl::PointCloud<pcl::PointXYZRGB> pc_cvo_downsampled;
+            ret->export_to_pcd<pcl::PointXYZRGB>(pc_cvo_downsampled);
+            pcl::io::savePCDFileASCII(std::to_string(i)+".pcd", pc_cvo_downsampled);
+
+          } else {
+            pcl::PointCloud<pcl::PointXYZI> pc_cvo_downsampled;
+            ret->export_to_pcd<pcl::PointXYZI>(pc_cvo_downsampled);
+            pcl::io::savePCDFileASCII(std::to_string(i)+".pcd", pc_cvo_downsampled);
+            
+          }
+        
+        //std::cout<<"feat [0] is "<<pc_local->at(0).features[0]<<"\n";
+      
+        //downsample.setInputCloud (pc_local);
+        //downsample.setLeafSize (0.25f, 0.25f, 0.25f);
+        //downsample.filter (*pc_local);
+        //std::cout<<"Farthest point downsmapel to "<<pc_local->size()<<" points\n";
+
+        //pcl::io::savePCDFile(std::to_string(i)+".pcd", *pc_local);
       }
+      
+      
+
+
+      
+      //pcs.push_back(pc);
+
+      pcs.insert(std::make_pair(i, ret));
+
     }
 
   }
@@ -703,6 +727,16 @@ int main(int argc, char** argv) {
 
   ///  visualizion: lay out the point cloud based on tracking poses
   std::cout<<"Merge all with tracking poses\n";
+  std::string tracking_fname("tracking.pcd");
+  // if (cvo::CvoPoint::FEATURE_DIMENSION  >= 3) {
+  cvo::write_transformed_pc<CvoPointToPCL<cvo::CvoPoint>::type>(pcs, tracking_poses, tracking_fname);
+    //} else if (cvo::CvoPoint::FEATURE_DIMENSION == 1) {
+    //cvo::write_transformed_pc<pcl::PointXYZI>(pcs, tracking_poses, tracking_fname);
+    //}
+  //pcl::io::savePCDFileASCII ("tracking.pcd", *pc_all_ptr);
+  std::cout<<"Just wrote to tracking.pcd";
+
+  /*  
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc_all_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
   for (auto && [ind, pc]: pcs) {
     Eigen::Matrix4f tracking_pose = tracking_poses[ind].cast<float>();
@@ -715,8 +749,7 @@ int main(int argc, char** argv) {
     }
     (*pc_all_ptr) += pc_curr;
   }
-  pcl::io::savePCDFileASCII ("tracking.pcd", *pc_all_ptr);
-  std::cout<<"Just wrote to tracking.pcd";
+  */
 
   
   
@@ -758,8 +791,13 @@ int main(int argc, char** argv) {
     for (auto i : result_selected_frames) pgo_poses.push_back(BA_poses[i]);
     cvo::write_traj_file_kitti_format<double, 3, Eigen::RowMajor>(pgo_fname, pgo_poses);
     std::string lc_prefix(("loop_closure_"));
-    if (pcs.size())
-      log_lc_pc_pairs(BA_poses, loop_closures, pcs, lc_prefix);
+    if (pcs.size()) {
+      //if (cvo::CvoPoint::FEATURE_DIMENSION >= 3)
+        log_lc_pc_pairs<CvoPointToPCL<cvo::CvoPoint>::type>(BA_poses, loop_closures, pcs, lc_prefix);
+        //else
+        //log_lc_pc_pairs<pcl::PointXYZI>(BA_poses, loop_closures, pcs, lc_prefix);
+    }
+
   }
 
   /// construct BA CvoFrame struct  
@@ -772,8 +810,12 @@ int main(int argc, char** argv) {
     frames.insert(std::make_pair(i, new_frame));
   }
   std::string f_name = std::string("before_BA_loop.pcd");
-  write_transformed_pc(frames, f_name, 0, frames.size()-1);
+  if (cvo::CvoPoint::FEATURE_DIMENSION  >= 3)
+    cvo::write_transformed_pc<pcl::PointXYZRGB>(frames, f_name, 0, frames.size()-1);
+  else
+    cvo::write_transformed_pc<pcl::PointXYZI>(frames, f_name, 0, frames.size()-1);
 
+  std::map<int, std::unordered_map<int, float>> cos_map;
   /// Multiframe alignment  
   if (is_doing_ba) {
 
@@ -790,23 +832,53 @@ int main(int argc, char** argv) {
       for (; iter_j != result_selected_frames.end() ; iter_j++) {
         int j = *iter_j;
         double dist = (tracking_poses[i].block<3,1>(0,3) - tracking_poses[j].block<3,1>(0,3)).norm();
-        if (dist < 0.25 ){
-          std::cout<<"loop: dist betwee "<<i<<" and "<<j<<" is "<<dist<<"\n";
+        cvo::Mat44d_row T1 = cvo::Mat44d_row::Identity();
+        T1.block<3,4>(0,0) = Eigen::Map<cvo::Mat34d_row>(frames[i]->pose_vec);
+        cvo::Mat44d_row T2 = cvo::Mat44d_row::Identity();
+        T2.block<3,4>(0,0) = Eigen::Map<cvo::Mat34d_row>(frames[j]->pose_vec);        
+        Eigen::Matrix4f T_tf_to_sf = (T1.inverse() * T2).cast<float>();
+        float cos_val =  cvo_align.function_angle(*(frames[i]->points),
+                                                  *(frames[j]->points),
+                                                  T_tf_to_sf, 1.0);
+        if (cos_map.find(i) == cos_map.end())
+          cos_map.insert(std::make_pair(i,
+                                        std::unordered_map<int, float>()));
+
+        if (//dist < dist_lc_thresh  &&
+			cos_val > 0.00001){
+          std::cout<<"loop: dist betwee "<<i<<" and "<<j<<" is "<<dist<<", cos is "<<cos_val<<"\n";
+          cos_map[i].insert(std::make_pair(j, cos_val));
           loop_closures.push_back(std::make_pair(i,j));
         }
       }
     }
       //}    
     std::cout<<"Construct loop BA problem\n";
-    write_loop_closure_pcds( frames, loop_closures, true, "before_ba_");
+    //if (cvo::CvoPoint::FEATURE_DIMENSION >= 3)
+      write_loop_closure_pcds<CvoPointToPCL<cvo::CvoPoint>::type>( frames, loop_closures, true, "before_ba_",
+                                                 cos_map);
+      //else
+      // write_loop_closure_pcds<pcl::PointXYZI>( frames, loop_closures, true, "before_ba_",
+      //                                       cos_map);
+      
     construct_loop_BA_problem(cvo_align,
                               loop_closures,
                               frames, gt_poses, num_neighbors_per_node,
                               num_merging_sequential_frames);
-    write_loop_closure_pcds( frames, loop_closures, false, "after_ba_");
+    //if (cvo::CvoPoint::FEATURE_DIMENSION  >=3)
+    write_loop_closure_pcds<CvoPointToPCL<cvo::CvoPoint>::type>( frames, loop_closures, false, "after_ba_",
+                                                 cos_map);
+      //else
+      //write_loop_closure_pcds<pcl::PointXYZI>( frames, loop_closures, false, "after_ba_",
+      //                                        cos_map);
+      
     std::cout<<"Write stacked point cloud\n";
     f_name = std::string("after_BA_loop.pcd") ;
-    write_transformed_pc(frames, f_name,0, frames.size()-1);
+    //if (cvo::CvoPoint::FEATURE_DIMENSION >= 3)
+    cvo::write_transformed_pc<CvoPointToPCL<cvo::CvoPoint>::type>(frames, f_name,0, frames.size()-1);
+      //
+    //  else
+      //cvo::write_transformed_pc<pcl::PointXYZI>(frames, f_name,0, frames.size()-1);
     std::cout<<"Write traj to file\n";
     write_traj_file_kitti_format(BA_traj_file,frames);
   }

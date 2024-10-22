@@ -1801,7 +1801,7 @@ namespace cvo{
       }
     }
     cosine_value = fxfz / (fx_norm * fz_norm);
-    std::cout<<"fxfz is "<<fxfz<<", fx_norm is "<<fx_norm<<", fz_norm is "<<fz_norm<<std::endl;
+    //std::cout<<"fxfz is "<<fxfz<<", fx_norm is "<<fx_norm<<", fz_norm is "<<fz_norm<<std::endl;
     return cosine_value;
   }
 

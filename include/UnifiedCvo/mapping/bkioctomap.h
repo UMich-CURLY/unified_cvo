@@ -50,11 +50,12 @@ namespace semantic_bki {
          * @param max_var maximum variance in Occupancy (default 1000)
          * @param max_known_var maximum variance for Occuapncy to be classified as KNOWN State (default 0.02)
          * @param free_thresh free threshold for Occupancy probability (default 0.3)
-         * @param occupied_thresh occupied threshold for Occupancy probability (default 0.7)
+        * @param occupied_thresh occupied threshold for Occupancy probability (default 0.7)
          */
         SemanticBKIOctoMap(float resolution,
                 unsigned short block_depth,
                 int num_class,
+                           int num_features,
                 float sf2=1.0,
                 float ell=1.0,
                 float prior=0.0,
@@ -86,12 +87,21 @@ namespace semantic_bki {
          * @param free_res resolution for sampling free training points along sensor beams (default 2.0)
          * @param max_range maximum range for beams to be considered as valid measurements (-1 if no limitation)
          */
+
+      
         void insert_pointcloud_csm(const CVOPointCloud * cloud, const point3f &origin, float ds_resolution,
                                float free_res = 2.0f,
                                float max_range = -1);
 
+      template<typename PointT>
+      void insert_pointcloud_csm(const std::vector<PointT*> & cloud, const point3f &origin, float ds_resolution,
+                               float free_res = 2.0f,
+                               float max_range = -1);
 
-        void insert_pointcloud(const PCLPointCloud &cloud, const point3f &origin, float ds_resolution,
+      
+
+
+        void insert_pointcloud(const CVOPointCloud *cloud, const point3f &origin, float ds_resolution,
                                float free_res = 2.0f,
                                float max_range = -1);
 
@@ -212,6 +222,80 @@ namespace semantic_bki {
                 n--;
                 return valid;
             }
+
+
+            SemanticOcTreeNode * next(point3f &p,  BlockHashKey &block_key, OcTreeHashKey &node_key) {
+                assert(!end());
+                bool valid = false;
+                unsigned short index = x + y * lim + z * lim * lim;
+                node_key = Block::index_map[index];
+                block_key = _block_key;
+                SemanticOcTreeNode * node = nullptr;
+                if (block != nullptr) {
+                    valid = true;
+                    node = &((*block)[node_key]);
+                    current_p = block->get_point(x, y, z);
+                    p = current_p;
+                } else {
+                    p = current_p;
+                }
+
+                if (xy_error > 0 && xz_error > 0) {
+                    x += x_inc;
+                    current_p.x() += x_inc * resolution;
+                    xy_error -= dy;
+                    xz_error -= dz;
+                    if (x >= lim || x < 0) {
+                        block_lim.x() += x_inc * block_size;
+                        _block_key = block_to_hash_key(block_lim);
+                        block = map->search(_block_key);
+                        x = x_inc > 0 ? 0 : lim - 1;
+                    }
+                } else if (xy_error < 0 && yz_error > 0) {
+                    y += y_inc;
+                    current_p.y() += y_inc * resolution;
+                    xy_error += dx;
+                    yz_error -= dz;
+                    if (y >= lim || y < 0) {
+                        block_lim.y() += y_inc * block_size;
+                        _block_key = block_to_hash_key(block_lim);
+                        block = map->search(_block_key);
+                        y = y_inc > 0 ? 0 : lim - 1;
+                    }
+                } else if (yz_error < 0 && xz_error < 0) {
+                    z += z_inc;
+                    current_p.z() += z_inc * resolution;
+                    xz_error += dx;
+                    yz_error += dy;
+                    if (z >= lim || z < 0) {
+                        block_lim.z() += z_inc * block_size;
+                        _block_key = block_to_hash_key(block_lim);
+                        block = map->search(_block_key);
+                        z = z_inc > 0 ? 0 : lim - 1;
+                    }
+                } else if (xy_error == 0) {
+                    x += x_inc;
+                    y += y_inc;
+                    n -= 2;
+                    current_p.x() += x_inc * resolution;
+                    current_p.y() += y_inc * resolution;
+                    if (x >= lim || x < 0) {
+                        block_lim.x() += x_inc * block_size;
+                        _block_key = block_to_hash_key(block_lim);
+                        block = map->search(_block_key);
+                        x = x_inc > 0 ? 0 : lim - 1;
+                    }
+                    if (y >= lim || y < 0) {
+                        block_lim.y() += y_inc * block_size;
+                        _block_key = block_to_hash_key(block_lim);
+                        block = map->search(_block_key);
+                        y = y_inc > 0 ? 0 : lim - 1;
+                    }
+                }
+                n--;
+                return node;
+            }
+          
 
         private:
             const SemanticBKIOctoMap *map;
@@ -382,6 +466,9 @@ namespace semantic_bki {
         /// Get training data from one sensor scan.
         void get_training_data(const PCLPointCloud & cloud, const point3f &origin, float ds_resolution,
                                float free_resolution, float max_range, GPPointCloud &xy) const;
+      template<typename PointT>
+      void get_training_data(const std::vector<PointT*> & cloud, const point3f &origin, float ds_resolution,
+                               float free_resolution, float max_range, GPPointCloud &xy) const;      
       void get_training_data(const cvo::CvoPointCloud * cloud, const point3f &origin, float ds_resolution,
                                float free_resolution, float max_range, GPPointCloud &xy) const;
       
@@ -392,5 +479,19 @@ namespace semantic_bki {
         std::unordered_map<BlockHashKey, Block *> block_arr;
         MyRTree rtree;
     };
+
+  void map_to_pc(  semantic_bki::SemanticBKIOctoMap & map,
+                   cvo::CvoPointCloud & pc,
+                   int num_features,
+                   int num_class,
+                   int num_geometric_types);
+
+  void uncertainty_map_to_pc(  semantic_bki::SemanticBKIOctoMap & map,
+                               cvo::CvoPointCloud & pc,
+                               int num_features,
+                               int num_class,
+                               int num_geometric_types);
+  
+  
 
 }

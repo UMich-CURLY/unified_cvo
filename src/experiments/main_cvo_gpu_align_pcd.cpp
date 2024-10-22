@@ -15,7 +15,7 @@
 #include "cvo/Cvo.hpp"
 #include "cvo/CvoParams.hpp"
 #include "utils/ImageRGBD.hpp"
-#include "viewer/viewer.h"
+#include "utils/viewer.hpp"
 
 using namespace std;
 using namespace boost::filesystem;
@@ -62,7 +62,11 @@ int main(int argc, char *argv[]) {
 
   std::string fname = in_pcd_folder + "/" + std::to_string(start_frame) + ".pcd";
   pcl::PointCloud<cvo::CvoPoint>::Ptr raw_pcd(new pcl::PointCloud<cvo::CvoPoint>);
-  pcl::io::loadPCDFile<cvo::CvoPoint> (fname, *raw_pcd);
+  if (cvo_align.get_params().is_using_semantics)
+    pcl::io::loadPCDFile<cvo::CvoPoint> (fname, *raw_pcd);
+  else {
+    
+  }
   std::shared_ptr<cvo::CvoPointCloud> source(new cvo::CvoPointCloud(*raw_pcd));
   for (int j = 0; j < source->size(); j++) {
     auto & p = source->point_at(j);
@@ -77,9 +81,9 @@ int main(int argc, char *argv[]) {
   pc_all += *source;
 
 
-  std::unique_ptr<perl_registration::Viewer> viewer;
+  std::unique_ptr<cvo::Viewer<pcl::PointXYZRGB>> viewer;
   if (is_visualize)  {
-    viewer = std::make_unique<perl_registration::Viewer>();
+    viewer = std::make_unique<cvo::Viewer<pcl::PointXYZRGB>>();
     std::string s("title");
     viewer->addOrUpdateText (s,
                              0,
@@ -97,19 +101,19 @@ int main(int argc, char *argv[]) {
     pcl::PointCloud<cvo::CvoPoint>::Ptr raw_pcd_target(new pcl::PointCloud<cvo::CvoPoint>);
     pcl::io::loadPCDFile<cvo::CvoPoint> (fname, *raw_pcd_target);
     std::shared_ptr<cvo::CvoPointCloud> target(new cvo::CvoPointCloud(*raw_pcd_target));
-  for (int j = 0; j < target->size(); j++) {
-    auto & p = target->point_at(j);
-    p.features[0] = static_cast<float>(p.b) / 255.0;
-    p.features[1] = static_cast<float>(p.g) / 255.0;
-    p.features[2] = static_cast<float>(p.r) / 255.0;
-  }
+    for (int j = 0; j < target->size(); j++) {
+      auto & p = target->point_at(j);
+      p.features[0] = static_cast<float>(p.b) / 255.0;
+      p.features[1] = static_cast<float>(p.g) / 255.0;
+      p.features[2] = static_cast<float>(p.r) / 255.0;
+    }
     
 
 
-    if (i == start_frame+1){
-        std::cout<<"Write first pcd\n";
-        //target->write_to_color_pcd(std::to_string(i+1)+".pcd");
-    }
+    // if (i == start_frame+1){
+    //      std::cout<<"Write first pcd\n";
+    //target->write_to_color_pcd(std::to_string(i+1)+".pcd");
+    //  }
     //std::cout<<"First point is "<<target->at(0).transpose()<<std::endl;
 
     // std::cout<<"reading "<<files[cur_kf]<<std::endl;
@@ -129,13 +133,13 @@ int main(int argc, char *argv[]) {
     std::cout<<"Transform is "<<result <<"\n\n";
 
     // append accum_tf_list for future initialization
-    //init_guess = result;
+    init_guess = result;
     accum_mat = accum_mat * result;
     std::cout<<"accum tf: \n"<<accum_mat<<std::endl;
 
     if (is_visualize) {
       Eigen::Matrix<double, 3, 4, Eigen::RowMajor> m = accum_mat.block<3,4>(0,0).cast<double>();
-    //std::cout<<__func__<<": send \n"<<m.col(3).transpose()<<" for index "<<j<<" to viewer\n";
+      //std::cout<<__func__<<": send \n"<<m.col(3).transpose()<<" for index "<<j<<" to viewer\n";
       viewer->drawTrajectory(m);
       pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
       pcl::PointSeg_to_PointXYZRGB<cvo::CvoPoint::FEATURE_DIMENSION,
@@ -143,7 +147,7 @@ int main(int argc, char *argv[]) {
                                    pcl::PointXYZRGB>(*raw_pcd_target, *cloud);
       pcl::transformPointCloud (*cloud, *cloud, accum_mat);
       std::string viewer_id = std::to_string(i);
-      viewer->updateColorPointCloud(*cloud, viewer_id);
+      viewer->updatePointCloud(*cloud, viewer_id);
     }
     
     

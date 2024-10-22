@@ -120,7 +120,7 @@ namespace cvo {
 
     if (params_cpu_->multiframe_is_optimizing_ell == 0)  {
       std::cout<<"curr nonzero_sum is "<<A_result_cpu_.nonzero_sum<<", nonzeros_last_ is "<<nonzeros_last_<<"\n";      
-      if (nonzeros_last_ > 0 && A_result_cpu_.nonzero_sum == nonzeros_last_
+      if (nonzeros_last_ > 0 && A_result_cpu_.nonzero_sum <= nonzeros_last_
           && num_iters_per_ell_ / params_cpu_->multiframe_iter_per_ell > 0) {
         ell_ = ell_ * params_cpu_->multiframe_ell_decay_rate;
         nonzeros_last_ = 0;

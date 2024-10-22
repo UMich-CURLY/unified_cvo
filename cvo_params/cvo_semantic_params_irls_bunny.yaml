@@ -31,7 +31,7 @@ is_dense_kernel: 0
 is_full_ip_matrix: 0
 is_using_geometry: 1
 is_using_intensity: 0
-is_using_semantics: 0
+is_using_semantics: 1
 is_using_range_ell: 0
 is_using_kdtree: 0
 is_using_geometric_type: 0
@@ -40,8 +40,15 @@ multiframe_using_cpu: 0
 multiframe_max_iters: 5000
 multiframe_ell_init: 3.0 #1.0
 multiframe_ell_min: 0.025
-multiframe_ell_decay_rate: 0.5
-multiframe_iterations_per_ell: 10 #15
+multiframe_ell_decay_rate: 0.95
+multiframe_iterations_per_ell: 20 #15
 multiframe_downsample_voxel_size: 0.05 #3
 multiframe_iterations_per_solve: 20
-multiframe_min_nonzeros: 400
+multiframe_min_nonzeros: 300
+multiframe_num_neighbors: 256
+multiframe_iterations_per_solve: 20
+multiframe_least_squares_num_threads: 100
+multiframe_is_optimizing_ell: 0
+multiframe_is_sorting_inner_product: 32
+multiframe_is_free_memory_each_iter: 0
+

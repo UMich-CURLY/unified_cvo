@@ -105,7 +105,8 @@ set(CUKDTREE_LIB_SOURCE
 
 set(QT_VIEWER_SOURCE
   ${PROJECT_SOURCE_DIR}/thirdparty/cugicp/viewer/color_handler.cc
-  ${PROJECT_SOURCE_DIR}/thirdparty/cugicp/viewer/viewer.cc
+  #${PROJECT_SOURCE_DIR}/thirdparty/cugicp/viewer/viewer.cc
+  ${PROJECT_SOURCE_DIR}/src/utils/viewer.cpp
   )
 
 set(CVO_UTILS_SOURCE
@@ -534,6 +535,19 @@ set_target_properties(cvo_gpu_5_14 PROPERTIES
   CUDA_SEPERABLE_COMPILATION ON
   COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
 
+add_library(cvo_gpu_1_14 SHARED ${CVO_GPU_SOURCE})
+add_dependencies(cvo_gpu_1_14 cvo_utils lie_group_utils)
+target_link_libraries(cvo_gpu_1_14 PRIVATE lie_group_utils cvo_utils yaml-cpp  Ceres::ceres )
+target_include_directories(cvo_gpu_1_14 PUBLIC
+  "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_compile_definitions(cvo_gpu_1_14 PUBLIC -DNUM_CLASSES=14 -DFEATURE_DIMENSIONS=1 -DCUDA_BLOCK_SIZE=512 -DCVO_POINT_NEIGHBORS=512
+)
+set_target_properties(cvo_gpu_1_14 PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+  CUDA_SEPERABLE_COMPILATION ON
+  COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-fPIC>")
+
 
 if(${PROJECT_NAME}_ENABLE_LIDAR)
   add_library(cvo_gpu_lidar SHARED ${CVO_GPU_SOURCE})
@@ -611,13 +625,24 @@ target_include_directories(cvo_irls_pcd PUBLIC
 target_link_libraries(cvo_irls_pcd cvo_gpu_img  cvo_utils boost_filesystem boost_system)
 
 
-#add_executable(cvo_irls_rand_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_bunny_random.cpp)
-#target_include_directories(cvo_irls_rand_pcd PUBLIC
+add_executable(cvo_irls_rand_bunny_pcd ${PROJECT_SOURCE_DIR}/src/experiments/main_multi_frame_irls_bunny_random.cpp)
+target_include_directories(cvo_irls_rand_bunny_pcd PUBLIC
 	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
 	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
-#        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
-#        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-#target_link_libraries(cvo_irls_rand_pcd cvo_gpu_img  cvo_utils boost_filesystem boost_system pcl_filters pcl_common)
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+      target_link_libraries(cvo_irls_rand_bunny_pcd cvo_gpu_img  cvo_utils boost_filesystem boost_system pcl_filters pcl_common)
+
+add_executable(cvo_irls_rand_bunny_f2f ${PROJECT_SOURCE_DIR}/src/experiments/main_irls_bunny_frame_to_frame.cpp)
+target_include_directories(cvo_irls_rand_bunny_f2f PUBLIC
+	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+	#$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_irls_rand_bunny_f2f cvo_gpu_fpfh  cvo_utils boost_filesystem boost_system pcl_filters pcl_common pcl_features)
+      
+
+      
 add_executable(cvo_align_gpu_img_finnforest ${PROJECT_SOURCE_DIR}/src/experiments/main_cvo_gpu_align_finnforest.cpp)
 target_include_directories(cvo_align_gpu_img_finnforest PUBLIC
 	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
@@ -820,11 +845,15 @@ if (${PROJECT_NAME}_ENABLE_QT_VIEWER)
   add_executable(ellipse_viewer ${PROJECT_SOURCE_DIR}/src/experiments/main_ellipse_viewer.cpp)
   target_compile_definitions(ellipse_viewer PRIVATE -DNUM_CLASSES=20 -DFEATURE_DIMENSIONS=5)
   target_include_directories(ellipse_viewer PUBLIC
-    #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
-    #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
     "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
     $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
   target_link_libraries(ellipse_viewer cvo_gpu_img cvo_utils boost_filesystem boost_system  pcl_common pcl_io pcl_visualization  pcd_qt_viewer  kitti pcl_features)
+
+  add_executable(ba_iter_viewer ${PROJECT_SOURCE_DIR}/src/experiments/main_ba_iteration_viewer.cpp)
+  target_include_directories(ba_iter_viewer PUBLIC
+    "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+    $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+  target_link_libraries(ba_iter_viewer cvo_utils boost_filesystem boost_system  pcl_common pcl_io pcl_visualization  pcd_qt_viewer tartan cvo_gpu_1_14)
   
   
 endif()
@@ -888,7 +917,14 @@ add_executable(cvo_irls_pcd_loop ${PROJECT_SOURCE_DIR}/src/experiments/main_irls
 target_include_directories(cvo_irls_pcd_loop PUBLIC
         "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
         $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
-target_link_libraries(cvo_irls_pcd_loop cvo_gpu_5_14 cvo_utils boost_filesystem boost_system   Ceres::ceres)
+      target_link_libraries(cvo_irls_pcd_loop cvo_gpu_5_14 cvo_utils boost_filesystem boost_system   Ceres::ceres)
+
+add_executable(cvo_irls_pcd_intensity_loop ${PROJECT_SOURCE_DIR}/src/experiments/main_irls_pcd_loop.cpp)
+target_include_directories(cvo_irls_pcd_intensity_loop PUBLIC
+        "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvo_irls_pcd_intensity_loop cvo_gpu_1_14 cvo_utils boost_filesystem boost_system   Ceres::ceres)
+      
       
 
 endif()
@@ -901,6 +937,13 @@ target_include_directories(kitti_lidar_to_pcd PUBLIC
     $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
 target_link_libraries(kitti_lidar_to_pcd cvo_utils boost_filesystem boost_system  pcl_common pcl_io pcl_visualization  pcd_qt_viewer tartan cvo_gpu_lidar kitti)
 
+add_executable(cvopoint_to_pcl ${PROJECT_SOURCE_DIR}/src/experiments/main_cvopoint_to_pcl.cpp)
+target_include_directories(cvopoint_to_pcl PUBLIC
+    #$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}> 
+    #$<BUILD_INTERFACE:${UnifiedCvo_BINARY_DIR}/include>
+    "$<BUILD_INTERFACE:${CVO_INCLUDE_DIRS}>"                
+    $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/${PROJECT_NAME}-${${PROJECT_NAME}_VERSION}> )
+target_link_libraries(cvopoint_to_pcl cvo_utils pcl_common pcl_io cvo_gpu_lidar )
 
 add_executable(gicp_align_two ${PROJECT_SOURCE_DIR}/src/experiments/gicp_align_two.cpp)
 target_include_directories(gicp_align_two PUBLIC
